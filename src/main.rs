@@ -1,5 +1,5 @@
 use clap::Parser;
-use simulation_framework::{SimulationConfig, SimulationEngine, SimulationResult};
+use simulation_framework::{SimulationConfig, SimulationEngine};
 use std::time::Instant;
 
 #[derive(Parser)]
