@@ -1,4 +1,4 @@
-use crate::{Entity, EntityId, SimulationConfig, SimulationResult};
+use crate::{Entity, SimulationConfig, SimulationResult};
 use crate::physics::PhysicsEngine;
 use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
@@ -10,7 +10,6 @@ pub struct SimulationEngine {
         entities: Vec<Entity>,
             physics: PhysicsEngine,
                 current_step: usize,
-                    rng: StdRng,
                     }
 
                     impl SimulationEngine {
@@ -23,16 +22,18 @@ pub struct SimulationEngine {
                                                                                 entities,
                                                                                             physics: PhysicsEngine::new(),
                                                                                                         current_step: 0,
-                                                                                                                    rng,
                                                                                                                             }
                                                                                                                                 }
                                                                                                                                     
                                                                                                                                         fn initialize_entities(count: usize, rng: &mut StdRng) -> Vec<Entity> {
-                                                                                                                                                (0..count)
+                                                                                                                                                let seeds: Vec<u64> = (0..count).map(|_| rng.gen()).collect();
+                                                                                                                                                seeds
                                                                                                                                                             .into_par_iter()
+                                                                                                                                                            .enumerate()
                                                                                                                                                                         .map_init(
-                                                                                                                                                                                        || StdRng::seed_from_u64(rng.gen()),
-                                                                                                                                                                                                        |local_rng, id| {
+                                                                                                                                                                                        || StdRng::from_seed([0u8; 32]), // Dummy-Initialisierung, wird durch den Seed überschrieben
+                                                                                                                                                                                                        |local_rng, (id, seed_val)| {
+                                                                                                                                                                                                            *local_rng = StdRng::seed_from_u64(seed_val);
                                                                                                                                                                                                                             let mut entity = Entity::new(id);
                                                                                                                                                                                                                                                 entity.state.position.x = local_rng.gen_range(-10.0..10.0);
                                                                                                                                                                                                                                                                     entity.state.position.y = local_rng.gen_range(-10.0..10.0);
