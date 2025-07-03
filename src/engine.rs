@@ -1,17 +1,16 @@
-use crate::{Entity, SimulationConfig, SimulationResult, Market, Skill, skill, SkillId};
+use crate::{Entity, SimulationConfig, SimulationResult, Market, Skill, SkillId};
 use rand::{Rng, SeedableRng, seq::SliceRandom};
 use rand::rngs::StdRng;
-use rayon::prelude::*;
 use std::time::Instant;
-use std::collections::{HashSet, HashMap};
+use std::collections::HashMap;
 
 pub struct SimulationEngine {
     config: SimulationConfig,
-    entities: Vec<Entity>, // These are Persons wrapped in Entity
+    entities: Vec<Entity>,
     market: Market,
     current_step: usize,
-    rng: StdRng, // RNG for use throughout the simulation
-    all_skill_ids: Vec<SkillId>, // Cache all available skill IDs
+    rng: StdRng,
+    all_skill_ids: Vec<SkillId>,
 }
 
 impl SimulationEngine {
@@ -19,6 +18,7 @@ impl SimulationEngine {
         let mut rng = StdRng::seed_from_u64(config.seed);
         let mut market = Market::new(config.base_skill_price);
 
+        // This is the version from feat/economic-simulation-model
         let entities = Self::initialize_entities(&config, &mut rng, &mut market);
 
         let all_skill_ids = market.skills.keys().cloned().collect::<Vec<SkillId>>();
@@ -33,9 +33,10 @@ impl SimulationEngine {
         }
     }
 
+    // This is the version from feat/economic-simulation-model
     fn initialize_entities(
         config: &SimulationConfig,
-        rng: &mut StdRng,
+        _rng: &mut StdRng, // Prefixed with _ as it was marked unused after prior cleanup
         market: &mut Market,
     ) -> Vec<Entity> {
         let mut available_skills_for_market = Vec::new();
@@ -90,7 +91,6 @@ impl SimulationEngine {
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
         let total_duration = start_time.elapsed();
 
-        // Collect data for SimulationResult
         let mut final_money_distribution: Vec<f64> = self.entities.iter()
             .filter(|e| e.active)
             .map(|e| e.person_data.money)
@@ -131,7 +131,6 @@ impl SimulationEngine {
             .map(|(id, price)| crate::result::SkillPriceInfo { id, price })
             .collect();
 
-        // Sort by price descending (most valuable first)
         final_skill_prices_vec.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
 
         let most_valuable_skill = final_skill_prices_vec.first().cloned();
@@ -147,13 +146,12 @@ impl SimulationEngine {
             final_skill_prices: final_skill_prices_vec,
             most_valuable_skill,
             least_valuable_skill,
-            skill_price_history: self.market.skill_price_history.clone(), // Clone the history
+            skill_price_history: self.market.skill_price_history.clone(),
             final_persons_data: self.entities.clone(),
         }
     }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
     fn step(&mut self) {
-        // 1. Reset market demand counts and person's satisfied needs for the new step
         self.market.reset_demand_counts();
         for entity in self.entities.iter_mut() {
             if entity.active {
@@ -162,31 +160,25 @@ impl SimulationEngine {
             }
         }
 
-        // 2. Generate demand for skills for each person
-        // This can be parallelized if entity list is large, but for 100 entities, sequential is fine.
-        // Making it parallel requires self.rng to be handled carefully (e.g. by creating local RNGs per thread).
-        // For now, let's keep it sequential for simplicity with the shared rng.
         for entity in self.entities.iter_mut() {
             if !entity.active {
                 continue;
             }
 
-            let num_needs = self.rng.gen_range(2..=5);
+            let num_needs = self.rng.gen_range(2..=5); // This is one of the gen_range uses
             let own_skill_id = &entity.person_data.own_skill.id;
 
-            // Create a list of potential skills to need (all skills except own)
             let mut potential_needs: Vec<SkillId> = self.all_skill_ids.iter()
                 .filter(|&id| id != own_skill_id)
                 .cloned()
                 .collect();
 
-            potential_needs.shuffle(&mut self.rng); // Shuffle to pick random ones
+            potential_needs.shuffle(&mut self.rng);
 
             for _ in 0..num_needs {
                 if let Some(needed_skill_id) = potential_needs.pop() {
-                    // Check if this skill_id is already in needed_skills to avoid duplicates from this round of demand gen
                     if !entity.person_data.needed_skills.iter().any(|item| item.id == needed_skill_id) {
-                        let urgency = self.rng.gen_range(1..=3); // Assign random urgency: 1 (low), 2 (medium), 3 (high)
+                        let urgency = self.rng.gen_range(1..=3); // Another gen_range use
                         entity.person_data.needed_skills.push(crate::person::NeededSkillItem {
                             id: needed_skill_id.clone(),
                             urgency,
@@ -194,17 +186,13 @@ impl SimulationEngine {
                         self.market.increment_demand(&needed_skill_id);
                     }
                 } else {
-                    break; // No more unique skills to need
+                    break;
                 }
             }
         }
 
-        // 3. Market: Update skill prices based on new demand/supply
         self.market.update_prices(&mut self.rng);
 
-        // 4. Trading: Persons attempt to buy needed skills
-        // Create a mapping from SkillId to provider EntityId for quick lookups.
-        // This assumes each skill is unique to one person.
         let mut skill_providers: HashMap<SkillId, usize> = HashMap::new();
         for entity_idx in 0..self.entities.len() {
             if self.entities[entity_idx].active {
@@ -213,14 +201,6 @@ impl SimulationEngine {
             }
         }
 
-        // Iterate through persons (buyers) by index to allow mutable borrowing of buyer and seller.
-        // We need to be careful with borrowing rules if we modify entities directly.
-        // One way is to collect changes and apply them, or iterate by index.
-        // Let's iterate by index for buyers, and then look up sellers.
-        // We might need to clone some data or be careful with mutable access.
-
-        // A temporary list of (buyer_idx, seller_idx, skill_id, price) to execute trades
-        // This avoids issues with borrowing self.entities multiple times mutably.
         let mut trades_to_execute: Vec<(usize, usize, SkillId, f64)> = Vec::new();
 
         for buyer_idx in 0..self.entities.len() {
@@ -228,15 +208,11 @@ impl SimulationEngine {
                 continue;
             }
 
-            // Clone needed_skills to iterate while potentially modifying person_data
             let mut current_needs = self.entities[buyer_idx].person_data.needed_skills.clone();
-
-            // Sort needs by urgency, descending (higher urgency first)
             current_needs.sort_by(|a, b| b.urgency.cmp(&a.urgency));
 
             for needed_item in current_needs {
                 let needed_skill_id = &needed_item.id;
-                // Check saturation: if already satisfied this step (or bought this step), skip
                 if self.entities[buyer_idx].person_data.satisfied_needs_current_step.contains(needed_skill_id) {
                     continue;
                 }
@@ -244,7 +220,7 @@ impl SimulationEngine {
                 if let Some(skill_price) = self.market.get_price(needed_skill_id) {
                     if self.entities[buyer_idx].person_data.can_afford(skill_price) {
                         if let Some(&seller_id) = skill_providers.get(needed_skill_id) {
-                            let seller_idx = seller_id; // Assuming id is the index
+                            let seller_idx = seller_id;
 
                             if buyer_idx == seller_idx { continue; }
                             if !self.entities[seller_idx].active { continue; }
@@ -257,30 +233,28 @@ impl SimulationEngine {
             }
         }
 
-        // Execute trades
         for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
-            // Buyer pays
+            let seller_entity_id = self.entities[seller_idx].id;
+            let buyer_entity_id = self.entities[buyer_idx].id;
+
             self.entities[buyer_idx].person_data.money -= price;
             self.entities[buyer_idx].person_data.record_transaction(
                 self.current_step,
                 skill_id.clone(),
                 crate::person::TransactionType::Buy,
                 price,
-                Some(self.entities[seller_idx].id),
+                Some(seller_entity_id),
             );
 
-            // Seller receives money
             self.entities[seller_idx].person_data.money += price;
             self.entities[seller_idx].person_data.record_transaction(
                 self.current_step,
-                skill_id.clone(), // The skill they sold
+                skill_id.clone(),
                 crate::person::TransactionType::Sell,
                 price,
-                Some(self.entities[buyer_idx].id),
+                Some(buyer_entity_id),
             );
         }
-
-        // 5. Update transaction histories, money, etc. - Done as part of trade execution.
 
         self.current_step += 1;
     }

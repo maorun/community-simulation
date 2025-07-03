@@ -3,7 +3,7 @@
 // that expect an `Entity`, we are defining `Entity` here as our `Person`.
 
 use crate::person::{Person, PersonId as InnerPersonId}; // Import the Person struct
-use crate::skill::{Skill, SkillId}; // Required for Person initialization
+use crate::skill::Skill; // Required for Person initialization, SkillId removed
 use serde::{Deserialize, Serialize};
 
 pub type EntityId = usize; // Consistent with PersonId

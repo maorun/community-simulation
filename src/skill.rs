@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub type SkillId = String; // Using String for skill names as IDs
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)] // Removed Eq and Hash
 pub struct Skill {
     pub id: SkillId, // Name of the skill, also used as a unique identifier
     pub current_price: f64,
