@@ -1,94 +1,47 @@
+// This file now defines the main simulated agent for our economic simulation.
+// To maintain compatibility with parts of the existing framework (engine, results)
+// that expect an `Entity`, we are defining `Entity` here as our `Person`.
+
+use crate::person::{Person, PersonId as InnerPersonId}; // Import the Person struct
+use crate::skill::{Skill, SkillId}; // Required for Person initialization
 use serde::{Deserialize, Serialize};
 
-pub type EntityId = usize;
+pub type EntityId = usize; // Consistent with PersonId
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entity {
-    pub id: EntityId,
-        pub state: EntityState,
-            pub active: bool,
-            }
+    // These fields should mirror what SimulationEngine and SimulationResult expect
+    // from an "Entity", and also what's necessary for our economic sim.
+    pub id: EntityId, // This is the simulation-wide entity ID
+    pub person_data: Person, // Encapsulates Person data
+    pub active: bool, // Still useful to mark if a person is active in the simulation
+}
 
-            #[derive(Debug, Clone, Serialize, Deserialize)]
-            pub struct EntityState {
-                pub position: Vector3,
-                    pub velocity: Vector3,
-                        pub mass: f64,
-                            pub energy: f64,
-                            }
+impl Entity {
+    // Constructor that the engine will use.
+    // It now needs enough info to create a Person.
+    // The `initialize_entities` method in `SimulationEngine` will need to be updated
+    // to call this constructor with appropriate Person data.
+    pub fn new(id: EntityId, initial_money: f64, own_skill: Skill) -> Self {
+        let person = Person::new(id as InnerPersonId, initial_money, own_skill);
+        Self {
+            id,
+            person_data: person,
+            active: true,
+        }
+    }
 
-                            #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-                            pub struct Vector3 {
-                                pub x: f64,
-                                    pub y: f64,
-                                        pub z: f64,
-                                        }
+    // Example of how one might provide access to Person's properties or methods
+    // For instance, if external parts of the simulation needed to check money:
+    pub fn get_money(&self) -> f64 {
+        self.person_data.money
+    }
 
-                                        impl Vector3 {
-                                            pub fn new(x: f64, y: f64, z: f64) -> Self {
-                                                    Self { x, y, z }
-                                                        }
-                                                            
-                                                                pub fn zero() -> Self {
-                                                                        Self::new(0.0, 0.0, 0.0)
-                                                                            }
-                                                                                
-                                                                                    pub fn magnitude(&self) -> f64 {
-                                                                                            (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
-                                                                                                }
-                                                                                                    
-                                                                                                        pub fn normalize(&self) -> Self {
-                                                                                                                let mag = self.magnitude();
-                                                                                                                        if mag > 0.0 {
-                                                                                                                                    Self::new(self.x / mag, self.y / mag, self.z / mag)
-                                                                                                                                            } else {
-                                                                                                                                                        Self::zero()
-                                                                                                                                                                }
-                                                                                                                                                                    }
-                                                                                                                                                                    }
+    // The old `update` method which took physics `forces` is no longer relevant here.
+    // Entity state changes (money, skills) will be managed by the economic logic
+    // in the SimulationEngine's `step` method.
+}
 
-                                                                                                                                                                    impl std::ops::Add for Vector3 {
-                                                                                                                                                                        type Output = Self;
-                                                                                                                                                                            
-                                                                                                                                                                                fn add(self, other: Self) -> Self {
-                                                                                                                                                                                        Self::new(self.x + other.x, self.y + other.y, self.z + other.z)
-                                                                                                                                                                                            }
-                                                                                                                                                                                            }
-
-                                                                                                                                                                                            impl std::ops::Mul<f64> for Vector3 {
-                                                                                                                                                                                                type Output = Self;
-                                                                                                                                                                                                    
-                                                                                                                                                                                                        fn mul(self, scalar: f64) -> Self {
-                                                                                                                                                                                                                Self::new(self.x * scalar, self.y * scalar, self.z * scalar)
-                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                    }
-
-                                                                                                                                                                                                                    impl Entity {
-                                                                                                                                                                                                                        pub fn new(id: EntityId) -> Self {
-                                                                                                                                                                                                                                Self {
-                                                                                                                                                                                                                                            id,
-                                                                                                                                                                                                                                                        state: EntityState {
-                                                                                                                                                                                                                                                                        position: Vector3::zero(),
-                                                                                                                                                                                                                                                                                        velocity: Vector3::zero(),
-                                                                                                                                                                                                                                                                                                        mass: 1.0,
-                                                                                                                                                                                                                                                                                                                        energy: 100.0,
-                                                                                                                                                                                                                                                                                                                                    },
-                                                                                                                                                                                                                                                                                                                                                active: true,
-                                                                                                                                                                                                                                                                                                                                                        }
-                                                                                                                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                                                                                                                                
-                                                                                                                                                                                                                                                                                                                                                                    pub fn update(&mut self, dt: f64, forces: Vector3) {
-                                                                                                                                                                                                                                                                                                                                                                            if !self.active {
-                                                                                                                                                                                                                                                                                                                                                                                        return;
-                                                                                                                                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                                                                                                                                                        
-                                                                                                                                                                                                                                                                                                                                                                                                                let acceleration = forces * (1.0 / self.state.mass);
-                                                                                                                                                                                                                                                                                                                                                                                                                        self.state.velocity = self.state.velocity + acceleration * dt;
-                                                                                                                                                                                                                                                                                                                                                                                                                                self.state.position = self.state.position + self.state.velocity * dt;
-                                                                                                                                                                                                                                                                                                                                                                                                                                        
-                                                                                                                                                                                                                                                                                                                                                                                                                                                self.state.energy -= 0.01 * dt;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                        if self.state.energy <= 0.0 {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                    self.active = false;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+// The old Vector3 and EntityState are removed as they are physics-specific.
+// If any generic vector math or state representation is needed later,
+// it can be added back in a more generic form.
