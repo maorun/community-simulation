@@ -20,6 +20,7 @@ pub struct Market {
     pub skill_price_history: HashMap<SkillId, Vec<f64>>,
     #[serde(skip)]
     price_updater: PriceUpdater,
+    #[serde(skip)]
     pub sales_this_step: HashMap<SkillId, usize>,
 }
 
