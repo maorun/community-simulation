@@ -1,7 +1,8 @@
 use crate::{
-    scenario::{PriceUpdater, RngCore},
+    scenario::PriceUpdater,
     skill::{Skill, SkillId},
 };
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -18,12 +19,12 @@ pub struct Market {
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub skill_price_history: HashMap<SkillId, Vec<f64>>,
     #[serde(skip)]
-    price_updater: Box<dyn PriceUpdater>,
+    price_updater: PriceUpdater,
     pub sales_this_step: HashMap<SkillId, usize>,
 }
 
 impl Market {
-    pub fn new(base_skill_price: f64, price_updater: Box<dyn PriceUpdater>) -> Self {
+    pub fn new(base_skill_price: f64, price_updater: PriceUpdater) -> Self {
         Market {
             skills: HashMap::new(),
             demand_counts: HashMap::new(),
@@ -65,7 +66,7 @@ impl Market {
         self.skills.get(skill_id).map(|s| s.current_price)
     }
 
-    pub fn update_prices(&mut self, rng: &mut dyn RngCore) {
+    pub fn update_prices<R: Rng + ?Sized>(&mut self, rng: &mut R) {
         let updater = self.price_updater.clone();
         updater.update_prices(self, rng);
     }

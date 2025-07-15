@@ -1,5 +1,4 @@
 use crate::market::Market;
-use dyn_clone::DynClone;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
@@ -21,33 +20,48 @@ impl Display for Scenario {
     }
 }
 
-pub trait PriceUpdater: Send + Sync + Debug + DynClone {
-    fn update_prices(&self, market: &mut Market, rng: &mut dyn RngCore);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PriceUpdater {
+    Original(OriginalPriceUpdater),
+    Dynamic(DynamicPricingUpdater),
 }
 
-dyn_clone::clone_trait_object!(PriceUpdater);
-
-impl Default for Box<dyn PriceUpdater> {
+impl Default for PriceUpdater {
     fn default() -> Self {
-        Box::new(OriginalPriceUpdater)
+        PriceUpdater::Original(OriginalPriceUpdater::default())
     }
 }
 
-pub trait RngCore: rand::RngCore + Send + Sync {}
-impl<T: rand::RngCore + Send + Sync> RngCore for T {}
+impl PriceUpdater {
+    pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
+        match self {
+            PriceUpdater::Original(updater) => updater.update_prices(market, rng),
+            PriceUpdater::Dynamic(updater) => updater.update_prices(market, rng),
+        }
+    }
+}
 
-#[derive(Debug, Clone, Default)]
+impl From<Scenario> for PriceUpdater {
+    fn from(scenario: Scenario) -> Self {
+        match scenario {
+            Scenario::Original => PriceUpdater::Original(OriginalPriceUpdater::default()),
+            Scenario::DynamicPricing => PriceUpdater::Dynamic(DynamicPricingUpdater::default()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct OriginalPriceUpdater;
 
-impl PriceUpdater for OriginalPriceUpdater {
-    fn update_prices(&self, market: &mut Market, rng: &mut dyn RngCore) {
+impl OriginalPriceUpdater {
+    pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
         for (skill_id, skill) in market.skills.iter_mut() {
             let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
             let supply = (*market.supply_counts.get(skill_id).unwrap_or(&1)).max(1) as f64;
 
             let mut new_price = skill.current_price;
 
-            let demand_supply_ratio = if supply > 0.0 { demand / supply } else { demand };
+            let demand_supply_ratio = demand / supply;
 
             let price_adjustment_factor = 1.0 + (demand_supply_ratio - 1.0) * market.price_elasticity_factor;
             let demand_driven_price = new_price * price_adjustment_factor;
@@ -69,11 +83,11 @@ impl PriceUpdater for OriginalPriceUpdater {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DynamicPricingUpdater;
 
-impl PriceUpdater for DynamicPricingUpdater {
-    fn update_prices(&self, market: &mut Market, _rng: &mut dyn RngCore) {
+impl DynamicPricingUpdater {
+    pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, _rng: &mut R) {
         let price_change_rate = 0.05; // 5% price change per step
 
         for (skill_id, skill) in market.skills.iter_mut() {
