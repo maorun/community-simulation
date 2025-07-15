@@ -1,3 +1,4 @@
+use crate::scenario::Scenario;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +16,7 @@ pub struct SimulationConfig {
     // time_step might not be directly relevant for a turn-based economic sim,
     // but we can keep it or remove it later. For now, let's keep it.
     pub time_step: f64,
+    pub scenario: Scenario,
 }
 
 impl Default for SimulationConfig {
@@ -26,6 +28,7 @@ impl Default for SimulationConfig {
             initial_money_per_person: 100.0, // 100 Euros
             base_skill_price: 10.0, // 10 Euros base price for skills
             time_step: 1.0, // Represents one discrete step or turn
+            scenario: Scenario::Original,
         }
     }
 }

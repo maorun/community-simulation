@@ -6,6 +6,7 @@ pub mod person;
 // pub mod physics; // Removed
 pub mod result;
 pub mod skill;
+pub mod scenario;
 
 pub use config::SimulationConfig;
 pub use engine::SimulationEngine;
@@ -14,3 +15,4 @@ pub use person::{Person, PersonId, Transaction, TransactionType};
 pub use market::Market;
 pub use skill::{Skill, SkillId};
 pub use result::SimulationResult;
+pub use scenario::{Scenario, PriceUpdater};

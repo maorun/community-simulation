@@ -1,4 +1,7 @@
-use crate::{Entity, SimulationConfig, SimulationResult, Market, Skill, SkillId};
+use crate::{
+    scenario::{DynamicPricingUpdater, OriginalPriceUpdater, Scenario},
+    Entity, SimulationConfig, SimulationResult, Market, Skill, SkillId,
+};
 use rand::{Rng, SeedableRng, seq::SliceRandom};
 use rand::rngs::StdRng;
 use std::time::Instant;
@@ -16,7 +19,11 @@ pub struct SimulationEngine {
 impl SimulationEngine {
     pub fn new(config: SimulationConfig) -> Self {
         let mut rng = StdRng::seed_from_u64(config.seed);
-        let mut market = Market::new(config.base_skill_price);
+        let price_updater: Box<dyn crate::PriceUpdater> = match config.scenario {
+            Scenario::Original => Box::new(OriginalPriceUpdater),
+            Scenario::DynamicPricing => Box::new(DynamicPricingUpdater),
+        };
+        let mut market = Market::new(config.base_skill_price, price_updater);
 
         // This is the version from feat/economic-simulation-model
         let entities = Self::initialize_entities(&config, &mut rng, &mut market);
@@ -254,6 +261,7 @@ impl SimulationEngine {
                 price,
                 Some(buyer_entity_id),
             );
+            *self.market.sales_this_step.entry(skill_id.clone()).or_insert(0) += 1;
         }
 
         self.current_step += 1;

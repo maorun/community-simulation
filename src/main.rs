@@ -2,6 +2,8 @@ use clap::Parser;
 use simulation_framework::{SimulationConfig, SimulationEngine};
 use std::time::Instant;
 
+use simulation_framework::scenario::Scenario;
+
 #[derive(Parser)]
 #[command(name = "economic_simulation")]
 #[command(about = "Runs an economic simulation with persons, skills, and a market.")]
@@ -29,6 +31,9 @@ struct Args {
 
     #[arg(long, default_value_t = SimulationConfig::default().seed)]
     seed: u64,
+
+    #[arg(long, default_value_t = Scenario::default())]
+    scenario: Scenario,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -50,6 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         seed: args.seed,
         initial_money_per_person: args.initial_money,
         base_skill_price: args.base_price,
+        scenario: args.scenario,
     };
 
     println!(
