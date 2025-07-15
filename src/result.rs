@@ -108,6 +108,52 @@ impl SimulationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::NamedTempFile;
+    use std::io::Read;
+
+    fn get_test_result() -> SimulationResult {
+        SimulationResult {
+            total_steps: 10,
+            total_duration: 1.23,
+            step_times: vec![0.1, 0.12, 0.1, 0.13, 0.1, 0.11, 0.1, 0.14, 0.1, 0.13],
+            active_persons: 5,
+            final_money_distribution: vec![50.0, 80.0, 100.0, 120.0, 150.0],
+            money_statistics: MoneyStats {
+                average: 100.0,
+                median: 100.0,
+                std_dev: 31.62,
+                min_money: 50.0,
+                max_money: 150.0,
+            },
+            final_skill_prices: vec![],
+            most_valuable_skill: None,
+            least_valuable_skill: None,
+            skill_price_history: HashMap::new(),
+            final_persons_data: vec![],
+        }
+    }
+
+    #[test]
+    fn test_print_summary() {
+        let result = get_test_result();
+        // This test just checks that print_summary doesn't panic.
+        result.print_summary();
+    }
+
+    #[test]
+    fn test_save_to_file() {
+        let result = get_test_result();
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap();
+
+        result.save_to_file(path).unwrap();
+
+        let mut contents = String::new();
+        file.reopen().unwrap().read_to_string(&mut contents).unwrap();
+
+        assert!(contents.contains("\"total_steps\": 10"));
+        assert!(contents.contains("\"total_duration\": 1.23"));
+    }
 
     fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
         if money_values.is_empty() {

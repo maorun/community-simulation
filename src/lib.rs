@@ -16,3 +16,6 @@ pub use market::Market;
 pub use skill::{Skill, SkillId};
 pub use result::SimulationResult;
 pub use scenario::{Scenario, PriceUpdater};
+
+#[cfg(test)]
+mod tests;

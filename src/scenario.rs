@@ -26,10 +26,51 @@ impl Display for Scenario {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::skill::{Skill, SkillId};
+    use crate::skill::Skill;
     use crate::market::Market;
-    use std::collections::HashMap;
     use rand::rngs::mock::StepRng;
+
+    #[test]
+    fn test_original_price_updater_price_increase() {
+        let mut market = Market::new(10.0, PriceUpdater::from(Scenario::Original));
+        market.price_elasticity_factor = 0.1;
+        market.volatility_percentage = 0.0; // Disable volatility for predictable test
+
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        market.demand_counts.insert(skill_id.clone(), 10);
+        market.supply_counts.insert(skill_id.clone(), 5);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = OriginalPriceUpdater::default();
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        assert!(new_price > 50.0);
+    }
+
+    #[test]
+    fn test_original_price_updater_price_decrease() {
+        let mut market = Market::new(10.0, PriceUpdater::from(Scenario::Original));
+        market.price_elasticity_factor = 0.1;
+        market.volatility_percentage = 0.0; // Disable volatility for predictable test
+
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        market.demand_counts.insert(skill_id.clone(), 5);
+        market.supply_counts.insert(skill_id.clone(), 10);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = OriginalPriceUpdater::default();
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        assert!(new_price < 50.0);
+    }
 
     #[test]
     fn test_dynamic_pricing_updater_price_increase() {
