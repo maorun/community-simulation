@@ -11,7 +11,7 @@ pub struct SimulationEngine {
     config: SimulationConfig,
     entities: Vec<Entity>,
     market: Market,
-    current_step: usize,
+    pub current_step: usize,
     rng: StdRng,
     all_skill_ids: Vec<SkillId>,
 }
@@ -155,7 +155,7 @@ impl SimulationEngine {
         }
     }
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-    fn step(&mut self) {
+    pub fn step(&mut self) {
         self.market.reset_demand_counts();
         for entity in self.entities.iter_mut() {
             if entity.active {
@@ -169,7 +169,7 @@ impl SimulationEngine {
                 continue;
             }
 
-            let num_needs = self.rng.gen_range(2..=5); // This is one of the gen_range uses
+            let num_needs = self.rng.gen_range(2..=5);
             let own_skill_id = &entity.person_data.own_skill.id;
 
             let mut potential_needs: Vec<SkillId> = self.all_skill_ids.iter()
@@ -182,7 +182,7 @@ impl SimulationEngine {
             for _ in 0..num_needs {
                 if let Some(needed_skill_id) = potential_needs.pop() {
                     if !entity.person_data.needed_skills.iter().any(|item| item.id == needed_skill_id) {
-                        let urgency = self.rng.gen_range(1..=3); // Another gen_range use
+                        let urgency = self.rng.gen_range(1..=3);
                         entity.person_data.needed_skills.push(crate::person::NeededSkillItem {
                             id: needed_skill_id.clone(),
                             urgency,

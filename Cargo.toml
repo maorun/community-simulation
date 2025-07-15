@@ -12,6 +12,9 @@ strum_macros = "0.26.2"
 rand = "0.9"
 clap = { version = "4.0", features = ["derive"] }
 
+[dev-dependencies]
+tempfile = "3.10.1"
+
 [profile.release]
 opt-level = 3
 lto = true
