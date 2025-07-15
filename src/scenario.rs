@@ -4,10 +4,13 @@ use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 use std::fmt::{Debug, Display};
 
+/// Defines the different simulation scenarios that can be run.
 #[derive(Debug, Clone, Serialize, Deserialize, EnumString, PartialEq, Default)]
 pub enum Scenario {
+    /// The original simulation scenario, where prices are determined by supply and demand.
     #[default]
     Original,
+    /// A scenario where prices change based on sales history.
     DynamicPricing,
 }
 
@@ -20,10 +23,65 @@ impl Display for Scenario {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::skill::{Skill, SkillId};
+    use crate::market::Market;
+    use std::collections::HashMap;
+    use rand::rngs::mock::StepRng;
+
+    #[test]
+    fn test_dynamic_pricing_updater_price_increase() {
+        let mut market = Market::new(10.0, PriceUpdater::from(Scenario::DynamicPricing));
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+        market.sales_this_step.insert(skill_id.clone(), 1);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = DynamicPricingUpdater::default();
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        assert_eq!(new_price, 52.5);
+    }
+
+    #[test]
+    fn test_dynamic_pricing_updater_price_decrease() {
+        let mut market = Market::new(10.0, PriceUpdater::from(Scenario::DynamicPricing));
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = DynamicPricingUpdater::default();
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        assert_eq!(new_price, 47.5);
+    }
+
+    #[test]
+    fn test_dynamic_pricing_updater_price_clamp() {
+        let mut market = Market::new(10.0, PriceUpdater::from(Scenario::DynamicPricing));
+        let skill = Skill::new("Test Skill".to_string(), 1.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = DynamicPricingUpdater::default();
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        assert_eq!(new_price, 1.0);
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PriceUpdater {
     Original(OriginalPriceUpdater),
-    Dynamic(DynamicPricingUpdater),
+    DynamicPricing(DynamicPricingUpdater),
 }
 
 impl Default for PriceUpdater {
@@ -36,7 +94,7 @@ impl PriceUpdater {
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
         match self {
             PriceUpdater::Original(updater) => updater.update_prices(market, rng),
-            PriceUpdater::Dynamic(updater) => updater.update_prices(market, rng),
+            PriceUpdater::DynamicPricing(updater) => updater.update_prices(market, rng),
         }
     }
 }
@@ -45,7 +103,7 @@ impl From<Scenario> for PriceUpdater {
     fn from(scenario: Scenario) -> Self {
         match scenario {
             Scenario::Original => PriceUpdater::Original(OriginalPriceUpdater::default()),
-            Scenario::DynamicPricing => PriceUpdater::Dynamic(DynamicPricingUpdater::default()),
+            Scenario::DynamicPricing => PriceUpdater::DynamicPricing(DynamicPricingUpdater::default()),
         }
     }
 }
