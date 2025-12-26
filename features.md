@@ -411,4 +411,4 @@ Bei der Implementierung neuer Features sollte immer darauf geachtet werden:
 - Dokumentation zu aktualisieren
 - Performance-Implikationen zu bedenken
 
-Contributions sind willkommen! Siehe CONTRIBUTING.md (falls vorhanden) für Guidelines.
+Contributions sind willkommen! Bitte öffnen Sie ein Issue oder Pull Request, um Diskussionen zu starten oder Änderungen vorzuschlagen.
