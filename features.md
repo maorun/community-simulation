@@ -89,42 +89,37 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 5. Visualisierung und Analyse
 
-#### 5.1 Echtzeit-Dashboard
-- **Beschreibung**: Web-basiertes Dashboard zur Live-Überwachung
-- **Nutzen**: Bessere Einsicht in laufende Simulationen
-- **Technologie**: WebSocket + Frontend (React/Vue)
-
-#### 5.2 Interaktive Grafiken
+#### 5.1 Interaktive Grafiken
 - **Beschreibung**: Bessere Visualisierung der JSON-Ausgabe
 - **Nutzen**: Schnellere Analyse
 - **Technologie**: Python-Skripte mit matplotlib/plotly oder D3.js
 
-#### 5.3 Heatmaps und Netzwerkgraphen
+#### 5.2 Heatmaps und Netzwerkgraphen
 - **Beschreibung**: Visualisierung von Handelsbeziehungen
 - **Nutzen**: Strukturen im Handelsnetzwerk erkennen
 - **Technologie**: NetworkX oder Cytoscape
 
-#### 5.4 Export für Datenanalyse
+#### 5.3 Export für Datenanalyse
 - **Beschreibung**: Export in CSV, Parquet oder andere Formate
 - **Nutzen**: Analyse mit pandas, R oder anderen Tools
 - **Implementierung**: Zusätzliche Export-Funktionen in `result.rs`
 
-### 6. KI und Lernende Agenten
+### 6. Verschiedene Agentenstrategien
 
-#### 6.1 Reinforcement Learning Agenten
-- **Beschreibung**: Agenten lernen optimale Handelsstrategien
-- **Nutzen**: Untersuchung emergenter Strategien
-- **Technologie**: Integration mit Rust ML-Bibliotheken
-
-#### 6.2 Verschiedene Agentenstrategien
-- **Beschreibung**: Verschiedene Verhaltensweisen (risikofreudig, konservativ, etc.)
+#### 6.1 Verschiedene Verhaltensweisen
+- **Beschreibung**: Verschiedene regelbasierte Verhaltensweisen (risikofreudig, konservativ, gierig, altruistisch, etc.)
 - **Nutzen**: Heterogenität in der Population
 - **Implementierung**: `Strategy` Trait und verschiedene Implementierungen
 
-#### 6.3 Adaptive Preisstrategien
+#### 6.2 Adaptive Preisstrategien
 - **Beschreibung**: Verkäufer passen Preise basierend auf Verkaufshistorie an
 - **Nutzen**: Intelligenteres Marktverhalten
 - **Implementierung**: Erweiterung von `PriceUpdater`
+
+#### 6.3 Prioritätsbasierte Kaufentscheidungen
+- **Beschreibung**: Erweiterte regelbasierte Entscheidungsfindung für Käufe
+- **Nutzen**: Realistischeres Agenten-Verhalten
+- **Implementierung**: Erweiterte Logik in `Person` mit Prioritätsregeln
 
 ## 🔧 Code-Verbesserungen
 
@@ -356,11 +351,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Visualisierungs-Skripte
 - Analyse-Notebooks (Jupyter)
 
-### 3. Community-Features
-- Discord/Forum für Diskussionen
-- Showcase von Community-Projekten
-- Monatliche Challenges
-
 ## 🔐 Sicherheit und Stabilität
 
 ### 1. Input Validation
@@ -395,11 +385,11 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 5. REST API
 
 ### Niedrige Priorität (Langfristig)
-1. KI-Agenten
-2. Geografische Komponente
-3. Web-Dashboard
-4. Datenbank-Integration
-5. Plugin-System
+1. Geografische Komponente
+2. Datenbank-Integration
+3. Plugin-System
+4. Produktionssimulation mit Rezepten
+5. Politische Simulation
 
 ## 📝 Notizen
 
