@@ -1,11 +1,10 @@
 use crate::{
-    scenario::PriceUpdater,
-    Entity, SimulationConfig, SimulationResult, Market, Skill, SkillId,
+    scenario::PriceUpdater, Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
 };
-use rand::{Rng, SeedableRng, seq::SliceRandom};
 use rand::rngs::StdRng;
-use std::time::Instant;
+use rand::{seq::SliceRandom, Rng, SeedableRng};
 use std::collections::HashMap;
+use std::time::Instant;
 
 pub struct SimulationEngine {
     config: SimulationConfig,
@@ -53,22 +52,19 @@ impl SimulationEngine {
 
         let mut entities = Vec::with_capacity(config.entity_count);
         for i in 0..config.entity_count {
-            let person_skill = available_skills_for_market.get(i)
+            let person_skill = available_skills_for_market
+                .get(i)
                 .expect("Not enough unique skills generated for persons")
                 .clone();
 
             market.increment_skill_supply(&person_skill.id);
 
-            let entity = Entity::new(
-                i,
-                config.initial_money_per_person,
-                person_skill.clone(),
-            );
+            let entity = Entity::new(i, config.initial_money_per_person, person_skill.clone());
             entities.push(entity);
         }
         entities
     }
-                                                                                                                                                                                                                                                                                                                                                                                                                                            
+
     pub fn run(&mut self) -> SimulationResult {
         let start_time = Instant::now();
         let mut step_times = Vec::new();
@@ -80,8 +76,9 @@ impl SimulationEngine {
             self.step();
             let step_duration = step_start.elapsed();
             step_times.push(step_duration.as_secs_f64());
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-            if step % (self.config.max_steps / 10).max(1) == 0 || step == self.config.max_steps - 1 {
+
+            if step % (self.config.max_steps / 10).max(1) == 0 || step == self.config.max_steps - 1
+            {
                 let active_entities = self.entities.iter().filter(|e| e.active).count();
                 println!(
                     "Step {}/{}, Active persons: {}, Avg Money: {:.2}",
@@ -92,14 +89,17 @@ impl SimulationEngine {
                 );
             }
         }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+
         let total_duration = start_time.elapsed();
 
-        let mut final_money_distribution: Vec<f64> = self.entities.iter()
+        let mut final_money_distribution: Vec<f64> = self
+            .entities
+            .iter()
             .filter(|e| e.active)
             .map(|e| e.person_data.money)
             .collect();
-        final_money_distribution.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        final_money_distribution
+            .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         let money_stats = if !final_money_distribution.is_empty() {
             let sum: f64 = final_money_distribution.iter().sum();
@@ -109,13 +109,21 @@ impl SimulationEngine {
                 if count as usize % 2 == 1 {
                     final_money_distribution[count as usize / 2]
                 } else {
-                    (final_money_distribution[count as usize / 2 - 1] + final_money_distribution[count as usize / 2]) / 2.0
+                    (final_money_distribution[count as usize / 2 - 1]
+                        + final_money_distribution[count as usize / 2])
+                        / 2.0
                 }
-            } else { 0.0 };
-            let variance = final_money_distribution.iter().map(|value| {
-                let diff = average - value;
-                diff * diff
-            }).sum::<f64>() / count;
+            } else {
+                0.0
+            };
+            let variance = final_money_distribution
+                .iter()
+                .map(|value| {
+                    let diff = average - value;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / count;
             let std_dev = variance.sqrt();
 
             crate::result::MoneyStats {
@@ -126,7 +134,13 @@ impl SimulationEngine {
                 max_money: *final_money_distribution.last().unwrap_or(&0.0),
             }
         } else {
-            crate::result::MoneyStats { average: 0.0, median: 0.0, std_dev: 0.0, min_money: 0.0, max_money: 0.0 }
+            crate::result::MoneyStats {
+                average: 0.0,
+                median: 0.0,
+                std_dev: 0.0,
+                min_money: 0.0,
+                max_money: 0.0,
+            }
         };
 
         let final_skill_prices_map = self.market.get_all_skill_prices();
@@ -135,7 +149,11 @@ impl SimulationEngine {
             .map(|(id, price)| crate::result::SkillPriceInfo { id, price })
             .collect();
 
-        final_skill_prices_vec.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
+        final_skill_prices_vec.sort_by(|a, b| {
+            b.price
+                .partial_cmp(&a.price)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         let most_valuable_skill = final_skill_prices_vec.first().cloned();
         let least_valuable_skill = final_skill_prices_vec.last().cloned();
@@ -154,7 +172,7 @@ impl SimulationEngine {
             final_persons_data: self.entities.clone(),
         }
     }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+
     pub fn step(&mut self) {
         self.market.reset_demand_counts();
         for entity in self.entities.iter_mut() {
@@ -172,7 +190,9 @@ impl SimulationEngine {
             let num_needs = self.rng.gen_range(2..=5);
             let own_skill_id = &entity.person_data.own_skill.id;
 
-            let mut potential_needs: Vec<SkillId> = self.all_skill_ids.iter()
+            let mut potential_needs: Vec<SkillId> = self
+                .all_skill_ids
+                .iter()
                 .filter(|&id| id != own_skill_id)
                 .cloned()
                 .collect();
@@ -181,12 +201,20 @@ impl SimulationEngine {
 
             for _ in 0..num_needs {
                 if let Some(needed_skill_id) = potential_needs.pop() {
-                    if !entity.person_data.needed_skills.iter().any(|item| item.id == needed_skill_id) {
+                    if !entity
+                        .person_data
+                        .needed_skills
+                        .iter()
+                        .any(|item| item.id == needed_skill_id)
+                    {
                         let urgency = self.rng.gen_range(1..=3);
-                        entity.person_data.needed_skills.push(crate::person::NeededSkillItem {
-                            id: needed_skill_id.clone(),
-                            urgency,
-                        });
+                        entity
+                            .person_data
+                            .needed_skills
+                            .push(crate::person::NeededSkillItem {
+                                id: needed_skill_id.clone(),
+                                urgency,
+                            });
                         self.market.increment_demand(&needed_skill_id);
                     }
                 } else {
@@ -217,7 +245,11 @@ impl SimulationEngine {
 
             for needed_item in current_needs {
                 let needed_skill_id = &needed_item.id;
-                if self.entities[buyer_idx].person_data.satisfied_needs_current_step.contains(needed_skill_id) {
+                if self.entities[buyer_idx]
+                    .person_data
+                    .satisfied_needs_current_step
+                    .contains(needed_skill_id)
+                {
                     continue;
                 }
 
@@ -226,11 +258,23 @@ impl SimulationEngine {
                         if let Some(&seller_id) = skill_providers.get(needed_skill_id) {
                             let seller_idx = seller_id;
 
-                            if buyer_idx == seller_idx { continue; }
-                            if !self.entities[seller_idx].active { continue; }
+                            if buyer_idx == seller_idx {
+                                continue;
+                            }
+                            if !self.entities[seller_idx].active {
+                                continue;
+                            }
 
-                            trades_to_execute.push((buyer_idx, seller_idx, needed_skill_id.clone(), skill_price));
-                            self.entities[buyer_idx].person_data.satisfied_needs_current_step.push(needed_skill_id.clone());
+                            trades_to_execute.push((
+                                buyer_idx,
+                                seller_idx,
+                                needed_skill_id.clone(),
+                                skill_price,
+                            ));
+                            self.entities[buyer_idx]
+                                .person_data
+                                .satisfied_needs_current_step
+                                .push(needed_skill_id.clone());
                         }
                     }
                 }
@@ -258,7 +302,11 @@ impl SimulationEngine {
                 price,
                 Some(buyer_entity_id),
             );
-            *self.market.sales_this_step.entry(skill_id.clone()).or_insert(0) += 1;
+            *self
+                .market
+                .sales_this_step
+                .entry(skill_id.clone())
+                .or_insert(0) += 1;
         }
 
         self.current_step += 1;
@@ -268,12 +316,16 @@ impl SimulationEngine {
         if self.entities.is_empty() {
             return 0.0;
         }
-        let total_money: f64 = self.entities.iter()
+        let total_money: f64 = self
+            .entities
+            .iter()
             .filter(|e| e.active)
             .map(|e| e.person_data.money)
             .sum();
         let active_count = self.entities.iter().filter(|e| e.active).count();
-        if active_count == 0 { return 0.0; }
+        if active_count == 0 {
+            return 0.0;
+        }
         total_money / active_count as f64
     }
 

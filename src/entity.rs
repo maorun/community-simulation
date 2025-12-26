@@ -12,9 +12,9 @@ pub type EntityId = usize; // Consistent with PersonId
 pub struct Entity {
     // These fields should mirror what SimulationEngine and SimulationResult expect
     // from an "Entity", and also what's necessary for our economic sim.
-    pub id: EntityId, // This is the simulation-wide entity ID
+    pub id: EntityId,        // This is the simulation-wide entity ID
     pub person_data: Person, // Encapsulates Person data
-    pub active: bool, // Still useful to mark if a person is active in the simulation
+    pub active: bool,        // Still useful to mark if a person is active in the simulation
 }
 
 impl Entity {

@@ -24,7 +24,7 @@ pub struct SimulationResult {
     // Core simulation metrics
     pub total_steps: usize,
     pub total_duration: f64,
-    pub step_times: Vec<f64>, // Time taken for each step
+    pub step_times: Vec<f64>,  // Time taken for each step
     pub active_persons: usize, // Renamed from active_entities for clarity
 
     // Economic output
@@ -53,33 +53,45 @@ impl SimulationResult {
         file.write_all(json.as_bytes())?;
         Ok(())
     }
-                                                                
+
     pub fn print_summary(&self) {
         println!("\n=== Economic Simulation Summary ===");
         println!("Total steps: {}", self.total_steps);
         println!("Total duration: {:.2}s", self.total_duration);
         if !self.step_times.is_empty() {
-            let avg_step_time_ms = self.step_times.iter().sum::<f64>() / self.step_times.len() as f64 * 1000.0;
+            let avg_step_time_ms =
+                self.step_times.iter().sum::<f64>() / self.step_times.len() as f64 * 1000.0;
             println!("Average step time: {:.4}ms", avg_step_time_ms);
         }
         println!("Active persons remaining: {}", self.active_persons);
         let performance = if self.total_duration > 0.0 {
             self.total_steps as f64 / self.total_duration
-        } else { 0.0 };
+        } else {
+            0.0
+        };
         println!("Performance: {:.0} steps/second", performance);
 
         println!("\n--- Money Distribution ---");
         println!("Average Money: {:.2}", self.money_statistics.average);
         println!("Median Money: {:.2}", self.money_statistics.median);
         println!("Std Dev Money: {:.2}", self.money_statistics.std_dev);
-        println!("Min/Max Money: {:.2} / {:.2}", self.money_statistics.min_money, self.money_statistics.max_money);
+        println!(
+            "Min/Max Money: {:.2} / {:.2}",
+            self.money_statistics.min_money, self.money_statistics.max_money
+        );
 
         println!("\n--- Skill Valuations ---");
         if let Some(skill) = &self.most_valuable_skill {
-            println!("Most Valuable Skill: {} (Price: {:.2})", skill.id, skill.price);
+            println!(
+                "Most Valuable Skill: {} (Price: {:.2})",
+                skill.id, skill.price
+            );
         }
         if let Some(skill) = &self.least_valuable_skill {
-            println!("Least Valuable Skill: {} (Price: {:.2})", skill.id, skill.price);
+            println!(
+                "Least Valuable Skill: {} (Price: {:.2})",
+                skill.id, skill.price
+            );
         }
 
         println!("\nTop 5 Most Valuable Skills:");
@@ -90,7 +102,8 @@ impl SimulationResult {
         println!("\nTop 5 Least Valuable Skills (excluding those at min price if many):");
         // Iterate in reverse, but skip if all are min_price
         let mut count = 0;
-        for skill_info in self.final_skill_prices.iter().rev().take(10) { // Check more than 5 to find some not at min
+        for skill_info in self.final_skill_prices.iter().rev().take(10) {
+            // Check more than 5 to find some not at min
             if count < 5 {
                 // Basic heuristic: if it's significantly above absolute min, show it.
                 // This needs better logic if many skills bottom out at min_skill_price.
@@ -100,7 +113,10 @@ impl SimulationResult {
             }
         }
         if self.skill_price_history.keys().len() > 0 {
-            println!("\nSkill price history for {} skills available in JSON output.", self.skill_price_history.keys().len());
+            println!(
+                "\nSkill price history for {} skills available in JSON output.",
+                self.skill_price_history.keys().len()
+            );
         }
     }
 }
@@ -108,8 +124,8 @@ impl SimulationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     use std::io::Read;
+    use tempfile::NamedTempFile;
 
     fn get_test_result() -> SimulationResult {
         SimulationResult {
@@ -149,7 +165,10 @@ mod tests {
         result.save_to_file(path).unwrap();
 
         let mut contents = String::new();
-        file.reopen().unwrap().read_to_string(&mut contents).unwrap();
+        file.reopen()
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
 
         assert!(contents.contains("\"total_steps\": 10"));
         assert!(contents.contains("\"total_duration\": 1.23"));
@@ -157,7 +176,13 @@ mod tests {
 
     fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
         if money_values.is_empty() {
-            return MoneyStats { average: 0.0, median: 0.0, std_dev: 0.0, min_money: 0.0, max_money: 0.0 };
+            return MoneyStats {
+                average: 0.0,
+                median: 0.0,
+                std_dev: 0.0,
+                min_money: 0.0,
+                max_money: 0.0,
+            };
         }
 
         let mut sorted_money = money_values.to_vec();
@@ -173,12 +198,18 @@ mod tests {
             } else {
                 (sorted_money[count as usize / 2 - 1] + sorted_money[count as usize / 2]) / 2.0
             }
-        } else { 0.0 };
+        } else {
+            0.0
+        };
 
-        let variance = sorted_money.iter().map(|value| {
-            let diff = average - value;
-            diff * diff
-        }).sum::<f64>() / count;
+        let variance = sorted_money
+            .iter()
+            .map(|value| {
+                let diff = average - value;
+                diff * diff
+            })
+            .sum::<f64>()
+            / count;
         let std_dev = variance.sqrt();
 
         MoneyStats {

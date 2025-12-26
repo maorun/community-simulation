@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::skill::{Skill, SkillId};
+use serde::{Deserialize, Serialize};
 
 pub type PersonId = usize;
 pub type UrgencyLevel = u8; // Define UrgencyLevel (e.g., 1-3, higher is more urgent)
