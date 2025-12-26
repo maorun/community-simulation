@@ -44,7 +44,8 @@ impl Market {
     pub fn add_skill(&mut self, skill: Skill) {
         self.supply_counts.insert(skill.id.clone(), 0);
         self.demand_counts.insert(skill.id.clone(), 0);
-        self.skill_price_history.insert(skill.id.clone(), Vec::new());
+        self.skill_price_history
+            .insert(skill.id.clone(), Vec::new());
         self.skills.insert(skill.id.clone(), skill);
     }
 

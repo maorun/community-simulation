@@ -22,14 +22,13 @@ pub struct SimulationConfig {
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
-            max_steps: 500, // Default to 500 steps for market convergence
+            max_steps: 500,    // Default to 500 steps for market convergence
             entity_count: 100, // 100 persons
             seed: 42,
             initial_money_per_person: 100.0, // 100 Euros
-            base_skill_price: 10.0, // 10 Euros base price for skills
-            time_step: 1.0, // Represents one discrete step or turn
+            base_skill_price: 10.0,          // 10 Euros base price for skills
+            time_step: 1.0,                  // Represents one discrete step or turn
             scenario: Scenario::Original,
         }
     }
 }
-                

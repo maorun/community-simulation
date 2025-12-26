@@ -24,10 +24,26 @@ impl Skill {
 // This could be expanded or made more dynamic.
 pub fn generate_unique_skills(count: usize, base_price: f64) -> Vec<Skill> {
     let skill_names = [
-        "Programming", "Accounting", "Writing", "GraphicDesign", "DataAnalysis",
-        "Marketing", "Sales", "Engineering", "Consulting", "Teaching",
-        "Plumbing", "Electrician", "Carpentry", "Chef", "Gardening",
-        "Translation", "LegalAdvice", "Healthcare", "FitnessTraining", "MusicProduction",
+        "Programming",
+        "Accounting",
+        "Writing",
+        "GraphicDesign",
+        "DataAnalysis",
+        "Marketing",
+        "Sales",
+        "Engineering",
+        "Consulting",
+        "Teaching",
+        "Plumbing",
+        "Electrician",
+        "Carpentry",
+        "Chef",
+        "Gardening",
+        "Translation",
+        "LegalAdvice",
+        "Healthcare",
+        "FitnessTraining",
+        "MusicProduction",
         // Add more unique skill names to ensure we can cover `count`
         // For 100 persons, we need 100 unique skills.
         // This list is just an example, for a real scenario we might need a longer list or procedural generation.

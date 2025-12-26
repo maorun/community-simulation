@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{SimulationEngine, SimulationConfig, scenario::Scenario};
+    use crate::{scenario::Scenario, SimulationConfig, SimulationEngine};
 
     fn get_test_config() -> SimulationConfig {
         SimulationConfig {

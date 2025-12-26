@@ -1,8 +1,8 @@
 use crate::market::Market;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use strum_macros::EnumString;
 use std::fmt::{Debug, Display};
+use strum_macros::EnumString;
 
 /// Defines the different simulation scenarios that can be run.
 #[derive(Debug, Clone, Serialize, Deserialize, EnumString, PartialEq, Default)]
@@ -26,8 +26,8 @@ impl Display for Scenario {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::skill::Skill;
     use crate::market::Market;
+    use crate::skill::Skill;
     use rand::rngs::mock::StepRng;
 
     #[test]
@@ -144,7 +144,9 @@ impl From<Scenario> for PriceUpdater {
     fn from(scenario: Scenario) -> Self {
         match scenario {
             Scenario::Original => PriceUpdater::Original(OriginalPriceUpdater::default()),
-            Scenario::DynamicPricing => PriceUpdater::DynamicPricing(DynamicPricingUpdater::default()),
+            Scenario::DynamicPricing => {
+                PriceUpdater::DynamicPricing(DynamicPricingUpdater::default())
+            }
         }
     }
 }
@@ -162,16 +164,20 @@ impl OriginalPriceUpdater {
 
             let demand_supply_ratio = demand / supply;
 
-            let price_adjustment_factor = 1.0 + (demand_supply_ratio - 1.0) * market.price_elasticity_factor;
+            let price_adjustment_factor =
+                1.0 + (demand_supply_ratio - 1.0) * market.price_elasticity_factor;
             let demand_driven_price = new_price * price_adjustment_factor;
 
             new_price = demand_driven_price;
 
             let price_range_for_volatility = new_price * market.volatility_percentage;
-            let random_fluctuation = rng.gen_range(-price_range_for_volatility..=price_range_for_volatility);
+            let random_fluctuation =
+                rng.gen_range(-price_range_for_volatility..=price_range_for_volatility);
             new_price += random_fluctuation;
 
-            new_price = new_price.max(market.min_skill_price).min(market.max_skill_price);
+            new_price = new_price
+                .max(market.min_skill_price)
+                .min(market.max_skill_price);
 
             skill.current_price = new_price;
 
@@ -203,7 +209,9 @@ impl DynamicPricingUpdater {
             }
 
             // Clamp price to min/max boundaries
-            new_price = new_price.max(market.min_skill_price).min(market.max_skill_price);
+            new_price = new_price
+                .max(market.min_skill_price)
+                .min(market.max_skill_price);
 
             skill.current_price = new_price;
 
