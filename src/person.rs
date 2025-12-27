@@ -107,10 +107,10 @@ impl Person {
     /// Higher reputation = lower prices (discount for trusted sellers).
     /// Returns a multiplier in range [0.9, 1.1]
     pub fn reputation_price_multiplier(&self) -> f64 {
-        // Reputation ranges from ~0.5 to 2.0
+        // Reputation typically ranges from 0.0 to 2.0 (capped at both ends)
         // At reputation 1.0 (neutral): multiplier = 1.0 (no change)
         // At reputation 2.0 (excellent): multiplier = 0.9 (10% discount)
-        // At reputation 0.5 (poor): multiplier = 1.1 (10% premium)
+        // At reputation 0.0 (worst): multiplier = 1.1 (10% premium)
         // Formula: multiplier = 1.0 - (reputation - 1.0) * 0.1
         let multiplier = 1.0 - (self.reputation - 1.0) * 0.1;
         multiplier.clamp(0.9, 1.1)
@@ -236,6 +236,7 @@ mod tests {
 
         let multiplier = person.reputation_price_multiplier();
         // At reputation 0.5: multiplier = 1.0 - (0.5 - 1.0) * 0.1 = 1.0 + 0.05 = 1.05
+        // This represents a 5% price premium for moderate low reputation
         assert!(
             (multiplier - 1.05).abs() < 0.001,
             "Low reputation (0.5) should give 5% premium, got {}",
