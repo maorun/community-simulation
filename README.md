@@ -84,6 +84,79 @@ This runs the simulation for 1000 steps with 50 persons, each starting with 200 
 *   `src/entity.rs`: Defines the `Entity` struct which wraps a `Person` for compatibility with the engine structure.
 *   `src/result.rs`: Defines `SimulationResult` and helper structs (`MoneyStats`, `SkillPriceInfo`) for structuring and outputting simulation results. It also includes `print_summary` and `save_to_file` methods.
 *   `src/physics.rs`: (Removed) This module from the original framework is no longer used.
+*   `src/tests/mod.rs`: Contains integration tests for the simulation engine.
+
+## Testing
+
+The project includes a comprehensive test suite to ensure code quality and correctness.
+
+### Running Tests
+
+Run all tests with:
+```bash
+cargo test
+```
+
+For verbose output with detailed test information:
+```bash
+cargo test --verbose
+```
+
+Run tests for a specific module:
+```bash
+cargo test result
+cargo test scenario
+cargo test engine
+```
+
+### Test Structure
+
+The test suite includes:
+
+1. **Unit Tests** (`src/tests/mod.rs`): Core simulation engine tests
+   - `test_simulation_engine_new()`: Verifies engine initialization
+   - `test_simulation_engine_step()`: Tests single simulation step execution
+   - `test_simulation_engine_run()`: Tests complete simulation runs
+
+2. **Module Tests** (inline in source files):
+   - `src/result.rs`: Tests for result calculation, statistics, and JSON output
+   - `src/scenario.rs`: Tests for price update mechanisms in different scenarios
+
+### Writing New Tests
+
+Tests follow Rust's standard testing conventions. Here's an example:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_example() {
+        // Arrange
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 100,
+            // ... other config
+        };
+        
+        // Act
+        let engine = SimulationEngine::new(config);
+        
+        // Assert
+        assert_eq!(engine.get_active_entity_count(), 10);
+    }
+}
+```
+
+### Continuous Integration
+
+Tests are automatically run via GitHub Actions on every push and pull request to the `master` branch. The workflow configuration is located at `.github/workflows/rust.yml`.
+
+The CI pipeline:
+1. Checks out the code
+2. Builds the project with `cargo build --verbose`
+3. Runs all tests with `cargo test --verbose`
 
 ## Output Format (`results.json`)
 

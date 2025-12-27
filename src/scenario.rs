@@ -44,7 +44,7 @@ mod tests {
         market.supply_counts.insert(skill_id.clone(), 5);
 
         let mut rng = StepRng::new(2, 1);
-        let updater = OriginalPriceUpdater::default();
+        let updater = OriginalPriceUpdater;
         updater.update_prices(&mut market, &mut rng);
 
         let new_price = market.get_price(&skill_id).unwrap();
@@ -65,7 +65,7 @@ mod tests {
         market.supply_counts.insert(skill_id.clone(), 10);
 
         let mut rng = StepRng::new(2, 1);
-        let updater = OriginalPriceUpdater::default();
+        let updater = OriginalPriceUpdater;
         updater.update_prices(&mut market, &mut rng);
 
         let new_price = market.get_price(&skill_id).unwrap();
@@ -81,7 +81,7 @@ mod tests {
         market.sales_this_step.insert(skill_id.clone(), 1);
 
         let mut rng = StepRng::new(2, 1);
-        let updater = DynamicPricingUpdater::default();
+        let updater = DynamicPricingUpdater;
         updater.update_prices(&mut market, &mut rng);
 
         let new_price = market.get_price(&skill_id).unwrap();
@@ -96,7 +96,7 @@ mod tests {
         market.add_skill(skill);
 
         let mut rng = StepRng::new(2, 1);
-        let updater = DynamicPricingUpdater::default();
+        let updater = DynamicPricingUpdater;
         updater.update_prices(&mut market, &mut rng);
 
         let new_price = market.get_price(&skill_id).unwrap();
@@ -111,7 +111,7 @@ mod tests {
         market.add_skill(skill);
 
         let mut rng = StepRng::new(2, 1);
-        let updater = DynamicPricingUpdater::default();
+        let updater = DynamicPricingUpdater;
         updater.update_prices(&mut market, &mut rng);
 
         let new_price = market.get_price(&skill_id).unwrap();
@@ -127,7 +127,7 @@ pub enum PriceUpdater {
 
 impl Default for PriceUpdater {
     fn default() -> Self {
-        PriceUpdater::Original(OriginalPriceUpdater::default())
+        PriceUpdater::Original(OriginalPriceUpdater)
     }
 }
 
@@ -143,9 +143,9 @@ impl PriceUpdater {
 impl From<Scenario> for PriceUpdater {
     fn from(scenario: Scenario) -> Self {
         match scenario {
-            Scenario::Original => PriceUpdater::Original(OriginalPriceUpdater::default()),
+            Scenario::Original => PriceUpdater::Original(OriginalPriceUpdater),
             Scenario::DynamicPricing => {
-                PriceUpdater::DynamicPricing(DynamicPricingUpdater::default())
+                PriceUpdater::DynamicPricing(DynamicPricingUpdater)
             }
         }
     }
