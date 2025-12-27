@@ -127,6 +127,35 @@ impl SimulationResult {
     }
 }
 
+/// Calculate the Gini coefficient for a given distribution of values.
+///
+/// The Gini coefficient is a measure of inequality ranging from 0 (perfect equality)
+/// to 1 (perfect inequality). Values above 1 can occur when negative values exist.
+///
+/// # Arguments
+/// * `sorted_values` - A slice of values sorted in ascending order
+/// * `sum` - The sum of all values
+///
+/// # Formula
+/// G = (2 * sum(i * x_i)) / (n * sum(x_i)) - (n + 1) / n
+/// where x_i are sorted values and i is the rank (1-indexed)
+///
+/// # Returns
+/// The Gini coefficient as f64
+pub fn calculate_gini_coefficient(sorted_values: &[f64], sum: f64) -> f64 {
+    if sorted_values.is_empty() || sum == 0.0 {
+        return 0.0;
+    }
+
+    let n = sorted_values.len();
+    let weighted_sum: f64 = sorted_values
+        .iter()
+        .enumerate()
+        .map(|(i, &value)| (i + 1) as f64 * value)
+        .sum();
+    (2.0 * weighted_sum) / (n as f64 * sum) - (n as f64 + 1.0) / n as f64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,20 +249,8 @@ mod tests {
             / count;
         let std_dev = variance.sqrt();
 
-        // Calculate Gini coefficient
-        // Formula: G = (2 * sum(i * x_i)) / (n * sum(x_i)) - (n + 1) / n
-        // where x_i are sorted values and i is the rank (1-indexed)
-        let gini_coefficient = if sum > 0.0 {
-            let n = sorted_money.len();
-            let weighted_sum: f64 = sorted_money
-                .iter()
-                .enumerate()
-                .map(|(i, &value)| (i + 1) as f64 * value)
-                .sum();
-            (2.0 * weighted_sum) / (n as f64 * sum) - (n as f64 + 1.0) / n as f64
-        } else {
-            0.0
-        };
+        // Calculate Gini coefficient using the shared utility function
+        let gini_coefficient = calculate_gini_coefficient(&sorted_money, sum);
 
         MoneyStats {
             average,
