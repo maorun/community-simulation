@@ -289,12 +289,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Debugging und Exploration
 - **Technologie**: `rustyline` Crate
 
-#### 1.2 Fortschrittsanzeige
-- **Beschreibung**: Progress Bar für lange Simulationen
-- **Nutzen**: Besseres User-Feedback
-- **Technologie**: `indicatif` Crate
-
-#### 1.3 Colored Output
+#### 1.2 Colored Output
 - **Beschreibung**: Farbige Terminal-Ausgabe
 - **Nutzen**: Bessere Lesbarkeit
 - **Technologie**: `colored` oder `owo-colors` Crate
@@ -374,8 +369,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 1. Logging-System implementieren
 2. Erweiterte Tests schreiben
 3. Dokumentation vervollständigen
-4. CLI mit Progress Bar verbessern
-5. YAML/TOML Konfiguration
+4. YAML/TOML Konfiguration
 
 ### Mittlere Priorität (Mehrwert)
 1. Event-System einführen
