@@ -198,12 +198,17 @@ impl SimulationEngine {
                 / count;
             let std_dev = variance.sqrt();
 
+            // Calculate Gini coefficient using the shared utility function
+            let gini_coefficient =
+                crate::result::calculate_gini_coefficient(&final_money_distribution, sum);
+
             crate::result::MoneyStats {
                 average,
                 median,
                 std_dev,
                 min_money: *final_money_distribution.first().unwrap_or(&0.0),
                 max_money: *final_money_distribution.last().unwrap_or(&0.0),
+                gini_coefficient,
             }
         } else {
             crate::result::MoneyStats {
@@ -212,6 +217,7 @@ impl SimulationEngine {
                 std_dev: 0.0,
                 min_money: 0.0,
                 max_money: 0.0,
+                gini_coefficient: 0.0,
             }
         };
 

@@ -12,6 +12,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments (number of persons, steps, initial money, etc.).
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
+- **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Performance:** Leverages Rust and Rayon for potential parallelism in parts of the simulation (though current critical paths like trading are largely sequential for N=100).
 
@@ -196,7 +197,12 @@ The JSON output file contains a comprehensive summary of the simulation, includi
 
 *   `total_steps`, `total_duration`, `active_persons`: General simulation metrics.
 *   `final_money_distribution`: A list of final money amounts for each active person.
-*   `money_statistics`: An object with `average`, `median`, `std_dev`, `min_money`, `max_money`.
+*   `money_statistics`: An object with:
+    *   `average`: Average money across all persons
+    *   `median`: Median money value
+    *   `std_dev`: Standard deviation of money distribution
+    *   `min_money`, `max_money`: Minimum and maximum money values
+    *   `gini_coefficient`: Measure of wealth inequality (0 = perfect equality, 1 = perfect inequality). Values above 1 can occur when negative money (debt) exists.
 *   `final_skill_prices`: A list of all skills sorted by their final price (descending), including `id` and `price`.
 *   `most_valuable_skill`, `least_valuable_skill`: Information on the skills with the highest and lowest final prices.
 *   `skill_price_history`: A map where keys are `SkillId`s and values are lists of prices for that skill at each step of the simulation. This data can be used for plotting price trends.
