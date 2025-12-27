@@ -144,9 +144,7 @@ impl From<Scenario> for PriceUpdater {
     fn from(scenario: Scenario) -> Self {
         match scenario {
             Scenario::Original => PriceUpdater::Original(OriginalPriceUpdater),
-            Scenario::DynamicPricing => {
-                PriceUpdater::DynamicPricing(DynamicPricingUpdater)
-            }
+            Scenario::DynamicPricing => PriceUpdater::DynamicPricing(DynamicPricingUpdater),
         }
     }
 }

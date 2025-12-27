@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn test_skill_new() {
         let skill = Skill::new("Programming".to_string(), 50.0);
-        
+
         assert_eq!(skill.id, "Programming");
         assert_eq!(skill.current_price, 50.0);
     }
@@ -74,7 +74,7 @@ mod tests {
     fn test_skill_clone() {
         let skill = Skill::new("Writing".to_string(), 30.0);
         let cloned_skill = skill.clone();
-        
+
         assert_eq!(skill.id, cloned_skill.id);
         assert_eq!(skill.current_price, cloned_skill.current_price);
     }
@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn test_generate_unique_skills_count() {
         let skills = generate_unique_skills(5, 10.0);
-        
+
         assert_eq!(skills.len(), 5);
     }
 
@@ -90,7 +90,7 @@ mod tests {
     fn test_generate_unique_skills_base_price() {
         let base_price = 25.0;
         let skills = generate_unique_skills(3, base_price);
-        
+
         for skill in skills {
             assert_eq!(skill.current_price, base_price);
         }
@@ -100,11 +100,11 @@ mod tests {
     fn test_generate_unique_skills_unique_ids() {
         let skills = generate_unique_skills(10, 10.0);
         let mut ids = std::collections::HashSet::new();
-        
+
         for skill in &skills {
             ids.insert(&skill.id);
         }
-        
+
         // All IDs should be unique
         assert_eq!(ids.len(), skills.len());
     }
@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn test_generate_unique_skills_predefined_names() {
         let skills = generate_unique_skills(5, 10.0);
-        
+
         // First few should use predefined names
         assert_eq!(skills[0].id, "Programming");
         assert_eq!(skills[1].id, "Accounting");
@@ -123,10 +123,10 @@ mod tests {
     fn test_generate_unique_skills_fallback_names() {
         // Test with count exceeding predefined list
         let skills = generate_unique_skills(25, 10.0);
-        
+
         // Should have 25 skills even if predefined list is shorter
         assert_eq!(skills.len(), 25);
-        
+
         // Later skills should use Skill{N} format
         assert!(skills[24].id.starts_with("Skill") || skills[24].id == "MusicProduction");
     }
