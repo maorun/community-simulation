@@ -243,17 +243,12 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Wirtschaftliche Analysen
 
-#### 1.1 Gini-Koeffizient
-- **Beschreibung**: Automatische Berechnung der Vermögensungleichheit
-- **Nutzen**: Quantifizierung der Ungleichheit
-- **Implementierung**: Zusätzliche Metriken in `result.rs`
-
-#### 1.2 Marktkonzentration
+#### 1.1 Marktkonzentration
 - **Beschreibung**: Herfindahl-Index und ähnliche Metriken
 - **Nutzen**: Monopolbildung erkennen
 - **Implementierung**: Marktanteilsberechnung
 
-#### 1.3 Handelsvolumen-Analyse
+#### 1.2 Handelsvolumen-Analyse
 - **Beschreibung**: Tracking von Handelsaktivität über Zeit
 - **Nutzen**: Wirtschaftliche Vitalität messen
 - **Implementierung**: Aggregierte Transaktionsstatistiken
