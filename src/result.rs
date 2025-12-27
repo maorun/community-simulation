@@ -16,6 +16,15 @@ pub struct MoneyStats {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReputationStats {
+    pub average: f64,
+    pub median: f64,
+    pub std_dev: f64,
+    pub min_reputation: f64,
+    pub max_reputation: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SkillPriceInfo {
     pub id: SkillId,
     pub price: f64,
@@ -32,6 +41,10 @@ pub struct SimulationResult {
     // Economic output
     pub final_money_distribution: Vec<f64>, // List of money amounts per person
     pub money_statistics: MoneyStats,
+
+    // Reputation metrics
+    pub final_reputation_distribution: Vec<f64>, // List of reputation scores per person
+    pub reputation_statistics: ReputationStats,
 
     pub final_skill_prices: Vec<SkillPriceInfo>, // Sorted by price
     pub most_valuable_skill: Option<SkillPriceInfo>,
@@ -84,6 +97,24 @@ impl SimulationResult {
         println!(
             "Gini Coefficient: {:.4} (0 = perfect equality, 1 = perfect inequality)",
             self.money_statistics.gini_coefficient
+        );
+
+        println!("\n--- Reputation Distribution ---");
+        println!(
+            "Average Reputation: {:.4}",
+            self.reputation_statistics.average
+        );
+        println!(
+            "Median Reputation: {:.4}",
+            self.reputation_statistics.median
+        );
+        println!(
+            "Std Dev Reputation: {:.4}",
+            self.reputation_statistics.std_dev
+        );
+        println!(
+            "Min/Max Reputation: {:.4} / {:.4}",
+            self.reputation_statistics.min_reputation, self.reputation_statistics.max_reputation
         );
 
         println!("\n--- Skill Valuations ---");
@@ -177,6 +208,14 @@ mod tests {
                 max_money: 150.0,
                 gini_coefficient: 0.2,
             },
+            final_reputation_distribution: vec![0.95, 1.0, 1.0, 1.05, 1.1],
+            reputation_statistics: ReputationStats {
+                average: 1.02,
+                median: 1.0,
+                std_dev: 0.05,
+                min_reputation: 0.95,
+                max_reputation: 1.1,
+            },
             final_skill_prices: vec![],
             most_valuable_skill: None,
             least_valuable_skill: None,
@@ -259,6 +298,54 @@ mod tests {
             min_money: *sorted_money.first().unwrap_or(&0.0),
             max_money: *sorted_money.last().unwrap_or(&0.0),
             gini_coefficient,
+        }
+    }
+
+    fn calculate_reputation_stats(reputation_values: &[f64]) -> ReputationStats {
+        if reputation_values.is_empty() {
+            return ReputationStats {
+                average: 1.0,
+                median: 1.0,
+                std_dev: 0.0,
+                min_reputation: 1.0,
+                max_reputation: 1.0,
+            };
+        }
+
+        let mut sorted_reputation = reputation_values.to_vec();
+        sorted_reputation.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let sum: f64 = sorted_reputation.iter().sum();
+        let count = sorted_reputation.len() as f64;
+        let average = sum / count;
+
+        let median = if count > 0.0 {
+            if count as usize % 2 == 1 {
+                sorted_reputation[count as usize / 2]
+            } else {
+                (sorted_reputation[count as usize / 2 - 1] + sorted_reputation[count as usize / 2])
+                    / 2.0
+            }
+        } else {
+            1.0
+        };
+
+        let variance = sorted_reputation
+            .iter()
+            .map(|value| {
+                let diff = average - value;
+                diff * diff
+            })
+            .sum::<f64>()
+            / count;
+        let std_dev = variance.sqrt();
+
+        ReputationStats {
+            average,
+            median,
+            std_dev,
+            min_reputation: *sorted_reputation.first().unwrap_or(&1.0),
+            max_reputation: *sorted_reputation.last().unwrap_or(&1.0),
         }
     }
 
