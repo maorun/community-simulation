@@ -198,12 +198,28 @@ impl SimulationEngine {
                 / count;
             let std_dev = variance.sqrt();
 
+            // Calculate Gini coefficient
+            // Formula: G = (2 * sum(i * x_i)) / (n * sum(x_i)) - (n + 1) / n
+            // where x_i are sorted values and i is the rank (1-indexed)
+            let gini_coefficient = if sum > 0.0 {
+                let n = final_money_distribution.len();
+                let weighted_sum: f64 = final_money_distribution
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &value)| (i + 1) as f64 * value)
+                    .sum();
+                (2.0 * weighted_sum) / (n as f64 * sum) - (n as f64 + 1.0) / n as f64
+            } else {
+                0.0
+            };
+
             crate::result::MoneyStats {
                 average,
                 median,
                 std_dev,
                 min_money: *final_money_distribution.first().unwrap_or(&0.0),
                 max_money: *final_money_distribution.last().unwrap_or(&0.0),
+                gini_coefficient,
             }
         } else {
             crate::result::MoneyStats {
@@ -212,6 +228,7 @@ impl SimulationEngine {
                 std_dev: 0.0,
                 min_money: 0.0,
                 max_money: 0.0,
+                gini_coefficient: 0.0,
             }
         };
 

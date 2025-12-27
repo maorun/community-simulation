@@ -11,6 +11,8 @@ pub struct MoneyStats {
     pub std_dev: f64,
     pub min_money: f64,
     pub max_money: f64,
+    /// Gini coefficient: measure of wealth inequality (0 = perfect equality, 1 = perfect inequality)
+    pub gini_coefficient: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -79,6 +81,10 @@ impl SimulationResult {
             "Min/Max Money: {:.2} / {:.2}",
             self.money_statistics.min_money, self.money_statistics.max_money
         );
+        println!(
+            "Gini Coefficient: {:.4} (0 = perfect equality, 1 = perfect inequality)",
+            self.money_statistics.gini_coefficient
+        );
 
         println!("\n--- Skill Valuations ---");
         if let Some(skill) = &self.most_valuable_skill {
@@ -140,6 +146,7 @@ mod tests {
                 std_dev: 31.62,
                 min_money: 50.0,
                 max_money: 150.0,
+                gini_coefficient: 0.2,
             },
             final_skill_prices: vec![],
             most_valuable_skill: None,
@@ -182,6 +189,7 @@ mod tests {
                 std_dev: 0.0,
                 min_money: 0.0,
                 max_money: 0.0,
+                gini_coefficient: 0.0,
             };
         }
 
@@ -212,12 +220,28 @@ mod tests {
             / count;
         let std_dev = variance.sqrt();
 
+        // Calculate Gini coefficient
+        // Formula: G = (2 * sum(i * x_i)) / (n * sum(x_i)) - (n + 1) / n
+        // where x_i are sorted values and i is the rank (1-indexed)
+        let gini_coefficient = if sum > 0.0 {
+            let n = sorted_money.len();
+            let weighted_sum: f64 = sorted_money
+                .iter()
+                .enumerate()
+                .map(|(i, &value)| (i + 1) as f64 * value)
+                .sum();
+            (2.0 * weighted_sum) / (n as f64 * sum) - (n as f64 + 1.0) / n as f64
+        } else {
+            0.0
+        };
+
         MoneyStats {
             average,
             median,
             std_dev,
             min_money: *sorted_money.first().unwrap_or(&0.0),
             max_money: *sorted_money.last().unwrap_or(&0.0),
+            gini_coefficient,
         }
     }
 
@@ -229,6 +253,7 @@ mod tests {
         assert_eq!(stats.std_dev, 0.0);
         assert_eq!(stats.min_money, 0.0);
         assert_eq!(stats.max_money, 0.0);
+        assert_eq!(stats.gini_coefficient, 0.0);
     }
 
     #[test]
@@ -239,6 +264,7 @@ mod tests {
         assert_eq!(stats.std_dev, 0.0);
         assert_eq!(stats.min_money, 100.0);
         assert_eq!(stats.max_money, 100.0);
+        assert_eq!(stats.gini_coefficient, 0.0);
     }
 
     #[test]
@@ -263,5 +289,66 @@ mod tests {
         assert_eq!(stats.max_money, 60.0);
         // Std dev for [10,20,30,60] (avg 30) is sqrt(((20^2 + 10^2 + 0^2 + 30^2)/4)) = sqrt((400+100+0+900)/4) = sqrt(1400/4) = sqrt(350) = 18.7082869
         assert!((stats.std_dev - 18.7082869).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_gini_coefficient_perfect_equality() {
+        // All persons have equal money - should be 0 (perfect equality)
+        let money = [100.0, 100.0, 100.0, 100.0];
+        let stats = calculate_money_stats(&money);
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_gini_coefficient_perfect_inequality() {
+        // One person has all money, others have nothing - should be close to 1
+        let money = [0.0, 0.0, 0.0, 100.0];
+        let stats = calculate_money_stats(&money);
+        // For n=4, perfect inequality Gini = (n-1)/n = 3/4 = 0.75
+        assert!((stats.gini_coefficient - 0.75).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_gini_coefficient_moderate_inequality() {
+        // Some inequality but not extreme
+        let money = [10.0, 20.0, 30.0, 40.0, 50.0];
+        let stats = calculate_money_stats(&money);
+        // For linearly increasing values, Gini should be around 0.2667
+        // G = (2 * sum(i * x_i)) / (n * sum(x_i)) - (n + 1) / n
+        // sum(i * x_i) = 1*10 + 2*20 + 3*30 + 4*40 + 5*50 = 10 + 40 + 90 + 160 + 250 = 550
+        // sum(x_i) = 150, n = 5
+        // G = (2 * 550) / (5 * 150) - 6 / 5 = 1100 / 750 - 1.2 = 1.4667 - 1.2 = 0.2667
+        assert!((stats.gini_coefficient - 0.26666667).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_gini_coefficient_empty_distribution() {
+        let money: Vec<f64> = vec![];
+        let stats = calculate_money_stats(&money);
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_gini_coefficient_single_person() {
+        let money = [100.0];
+        let stats = calculate_money_stats(&money);
+        // Single person: Gini should be 0 (no inequality possible)
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_gini_coefficient_two_persons_equal() {
+        let money = [50.0, 50.0];
+        let stats = calculate_money_stats(&money);
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_gini_coefficient_two_persons_unequal() {
+        let money = [25.0, 75.0];
+        let stats = calculate_money_stats(&money);
+        // For n=2: G = (2 * (1*25 + 2*75)) / (2 * 100) - 3/2
+        // = (2 * (25 + 150)) / 200 - 1.5 = 350 / 200 - 1.5 = 1.75 - 1.5 = 0.25
+        assert!((stats.gini_coefficient - 0.25).abs() < 1e-10);
     }
 }
