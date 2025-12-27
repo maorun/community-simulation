@@ -1,250 +1,185 @@
 ---
-name: Copilot Feature Development
-about: Template for GitHub Copilot to develop features from features.md
-title: '[FEATURE] '
-labels: ['enhancement', 'copilot']
+name: Copilot Feature Development (Auto-Select)
+about: GitHub Copilot autonomously selects and implements a feature from features.md
+title: '[FEATURE] Auto-implement from features.md'
+labels: ['enhancement', 'copilot', 'auto-implementation']
 assignees: ''
 ---
 
-## Feature to Implement
+## Autonomous Feature Implementation
 
-<!-- Select a feature from features.md and describe it here -->
+**GitHub Copilot: This issue template is designed for autonomous feature implementation.**
 
-**Feature ID:** <!-- e.g., 1.1 Spar- und Investitionssystem -->
+### Instructions for Copilot
 
-**Feature Name:** <!-- e.g., Savings and Investment System -->
+You are tasked with autonomously selecting and implementing a feature from the features.md file. Follow these steps:
 
-**Category:** <!-- e.g., Erweiterte Wirtschaftsmechaniken / Advanced Economic Mechanics -->
+1. **Feature Selection:**
+   - Review `/home/runner/work/community-simulation/community-simulation/features.md`
+   - Select ONE feature to implement based on the following criteria (in priority order):
+     a) Features marked as "Hohe Priorität (Quick Wins)" - prioritize these
+     b) Features that are simpler and can be implemented with minimal changes
+     c) Features that don't require external dependencies or major architectural changes
+     d) Features from the "Neue Features" section before "Code-Verbesserungen"
+   - Document your selection clearly in the PR description
 
-**Priority:** <!-- High / Medium / Low (see Priorisierung section in features.md) -->
+2. **Before Implementation:**
+   - State which feature you selected (Feature ID and Name)
+   - Explain why you selected this feature
+   - Outline your implementation plan as a checklist
 
-## Feature Description
+3. **Implementation Requirements:**
+   - Follow all guidelines in `copilot-instructions.md`
+   - Make minimal, surgical changes
+   - Write tests for the new feature
+   - Ensure all existing tests still pass
+   - Add documentation (inline doc comments)
 
-<!-- Copy the description from features.md or provide your own detailed description -->
+4. **After Implementation:**
+   - **IMPORTANT:** Remove the implemented feature from `features.md`
+   - If the feature is user-facing, add a brief mention in `README.md` under a "Recent Features" or "Features" section
+   - Update the PR description with implementation details
+   - Include example usage in the PR description
 
-**Description (Beschreibung):**
-<!-- What should this feature do? -->
+### Success Criteria
 
-**Benefit (Nutzen):**
-<!-- Why is this feature valuable? -->
+The feature implementation is complete when:
 
-**Suggested Implementation (Implementierung):**
-<!-- Initial implementation approach from features.md -->
+- [ ] Feature selected and documented in PR
+- [ ] Code compiles without errors: `cargo build --verbose`
+- [ ] All tests pass: `cargo test --verbose`
+- [ ] Code formatted: `cargo fmt`
+- [ ] Code linted: `cargo clippy` (address warnings in new code)
+- [ ] Feature tested manually with example run
+- [ ] Documentation added (doc comments for public APIs)
+- [ ] Feature **removed** from `features.md`
+- [ ] If user-facing: Feature mentioned in `README.md`
+- [ ] No regressions in existing functionality
 
-## Implementation Requirements
+### Build and Test Commands
 
-### Files to Create/Modify
+```bash
+# Build
+cargo build --verbose
 
-<!-- List the files that need to be created or modified -->
-- [ ] 
+# Test
+cargo test --verbose
 
-### Core Components
+# Format
+cargo fmt
 
-<!-- Describe the main components to implement -->
-- [ ] 
+# Lint
+cargo clippy
 
-### Integration Points
-
-<!-- Describe how this feature integrates with existing code -->
-- [ ] 
-
-## Technical Specifications
-
-### Data Structures
-
-<!-- Describe new structs, enums, or types needed -->
-```rust
-// Example:
-// struct NewFeature {
-//     field1: Type1,
-//     field2: Type2,
-// }
+# Run simulation with feature
+./target/debug/simulation-framework -s 100 -p 10 -o /tmp/test.json
 ```
 
-### API Changes
+### Feature Selection Guidelines
 
-<!-- Describe new public APIs or changes to existing ones -->
-- [ ] New functions:
-- [ ] Modified functions:
-- [ ] New traits:
+**Prioritize features in this order:**
 
-### Configuration
+1. **High Priority (Quick Wins) from features.md:**
+   - Logging-System implementieren
+   - Erweiterte Tests schreiben
+   - Dokumentation vervollständigen
+   - CLI mit Progress Bar verbessern
+   - YAML/TOML Konfiguration
 
-<!-- Describe new configuration options needed -->
-- [ ] CLI arguments:
-- [ ] Config file parameters:
-- [ ] Default values:
+2. **Simple features that add value without complexity:**
+   - Single-field additions to existing structs
+   - New configuration options
+   - Analysis/statistics features
+   - Documentation improvements
 
-## Testing Requirements
+3. **Avoid initially:**
+   - Features requiring new external dependencies
+   - Major architectural changes (Plugin-System, Event-System)
+   - Features requiring complex algorithms
+   - Features with unclear specifications
 
-### Unit Tests
+### Implementation Workflow
 
-- [ ] Test new data structures
-- [ ] Test new functions
-- [ ] Test edge cases
-
-### Integration Tests
-
-- [ ] Test feature integration with existing code
-- [ ] Test with different scenarios
-- [ ] Test with various parameter combinations
-
-### Performance Tests
-
-- [ ] Benchmark performance impact
-- [ ] Test scalability with large simulations
-
-## Documentation Requirements
-
-- [ ] Update README.md if user-facing changes
-- [ ] Add inline documentation (doc comments)
-- [ ] Update features.md to mark feature as implemented
-- [ ] Add usage examples
-
-## Implementation Checklist
-
-### Phase 1: Core Implementation
-- [ ] Create new data structures
-- [ ] Implement core logic
-- [ ] Add to appropriate modules
-- [ ] Ensure code compiles
-
-### Phase 2: Integration
-- [ ] Integrate with SimulationEngine
-- [ ] Update configuration handling
-- [ ] Add CLI arguments if needed
-- [ ] Update serialization (JSON output)
-
-### Phase 3: Testing
-- [ ] Write unit tests
-- [ ] Write integration tests
-- [ ] Run all tests: `cargo test --verbose`
-- [ ] Verify no regressions
-
-### Phase 4: Code Quality
-- [ ] Format code: `cargo fmt`
-- [ ] Run linter: `cargo clippy`
-- [ ] Fix all warnings related to new code
-- [ ] Run security checks (CodeQL)
-
-### Phase 5: Documentation
-- [ ] Add doc comments to all public APIs
-- [ ] Update relevant documentation files
-- [ ] Add usage examples
-- [ ] Update features.md status
-
-### Phase 6: Validation
-- [ ] Build release version: `cargo build --release`
-- [ ] Test with sample scenarios
-- [ ] Verify JSON output includes new data
-- [ ] Test edge cases and error conditions
-
-## Copilot Instructions
-
-**For GitHub Copilot implementing this feature:**
-
-1. **Read the Context:**
-   - Review `/home/runner/work/community-simulation/community-simulation/features.md` for detailed feature description
-   - Review copilot-instructions.md for build/test commands and project structure
-   - Understand the existing codebase architecture before making changes
-
-2. **Follow Minimal Change Principle:**
-   - Make the smallest possible changes to achieve the feature
-   - Don't refactor unrelated code
-   - Maintain consistency with existing code style
-
-3. **Implementation Order:**
-   - Start with data structures (in appropriate files like `person.rs`, `market.rs`, etc.)
+1. **Explore & Plan** (use `report_progress` to share your plan)
+   - Read features.md and select ONE feature
+   - Review existing code architecture
+   - Create implementation checklist
+   
+2. **Core Implementation**
+   - Add data structures (if needed)
    - Implement core logic
-   - Add configuration support
-   - Update simulation engine integration
-   - Add serialization support for JSON output
-   - Write tests
-   - Update documentation
+   - Integrate with existing code
+   - Add configuration (if needed)
 
-4. **Build and Test Commands:**
-   ```bash
-   # Build
-   cargo build --verbose
-   
-   # Test
-   cargo test --verbose
-   
-   # Format
-   cargo fmt
-   
-   # Lint
-   cargo clippy
-   
-   # Run simulation
-   ./target/debug/simulation-framework -s 100 -p 10 -o /tmp/test.json
-   ```
+3. **Testing**
+   - Write unit tests
+   - Write integration tests  
+   - Run all tests
+   - Test manually
 
-5. **Code Style:**
-   - Follow existing Rust conventions
-   - Use descriptive variable names
-   - Add doc comments for public APIs
-   - Keep functions focused and small
-   - Use existing patterns from the codebase
+4. **Quality & Documentation**
+   - Run `cargo fmt`
+   - Run `cargo clippy`
+   - Add doc comments
+   - Update README.md (if user-facing)
+   - **Remove feature from features.md**
 
-6. **Testing Strategy:**
-   - Add tests in appropriate test modules
-   - Use `#[cfg(test)] mod tests { ... }` pattern
-   - Test both success and error cases
-   - Ensure tests are deterministic (use fixed seeds)
+5. **Validation & Review**
+   - Build release: `cargo build --release`
+   - Final manual test
+   - Request code review
+   - Run security checks
 
-7. **Configuration Integration:**
-   - Add new fields to `SimulationConfig` if needed
-   - Add CLI arguments to `Args` struct in `main.rs`
-   - Provide sensible defaults
-   - Document all new parameters
+### Copilot-Specific Instructions
 
-8. **JSON Output:**
-   - Add new fields to `SimulationResult` if the feature produces output
-   - Ensure fields are properly serialized with `serde`
-   - Test that JSON output is valid
+**Read these carefully before starting:**
 
-9. **Common Pitfalls to Avoid:**
-   - Don't break existing tests
-   - Don't remove or modify working code unnecessarily
-   - Don't introduce new dependencies without checking security
-   - Don't ignore compiler warnings in your new code
-   - Don't skip documentation
+1. **Minimal Changes:** Make the smallest possible changes to achieve the feature. Don't refactor unrelated code.
 
-10. **Report Progress:**
-    - Use the `report_progress` tool frequently
-    - Commit after each logical unit of work
-    - Keep the implementation checklist updated
+2. **Existing Patterns:** Study and follow existing code patterns:
+   - Price scenarios: `src/scenario.rs`
+   - Data structures: `src/person.rs`, `src/skill.rs`, `src/market.rs`
+   - Simulation logic: `src/engine.rs`
+   - Configuration: `src/config.rs`
+   - Results: `src/result.rs`
 
-## Reference Documentation
+3. **Testing:** Add tests using `#[cfg(test)] mod tests { ... }` pattern. Use fixed seeds for deterministic tests.
 
-- **Project Structure:** See `copilot-instructions.md` section "Project Layout and Architecture"
-- **Build Commands:** See `copilot-instructions.md` section "Build, Test, and Validation Commands"
-- **Features List:** See `features.md` for all available features
-- **Existing Code Examples:**
-  - Price scenarios: `src/scenario.rs`
-  - Data structures: `src/person.rs`, `src/skill.rs`, `src/market.rs`
-  - Simulation logic: `src/engine.rs`
-  - Configuration: `src/config.rs`
-  - Results: `src/result.rs`
+4. **Configuration:** If adding CLI args, update `Args` struct in `main.rs` and `SimulationConfig` in `config.rs`.
 
-## Success Criteria
+5. **JSON Output:** If feature produces output, add fields to `SimulationResult` with proper `serde` serialization.
 
-This feature is considered successfully implemented when:
+6. **Progress Reporting:** Use `report_progress` tool frequently to commit changes.
 
-- [ ] All code compiles without errors
-- [ ] All tests pass (including new tests for this feature)
-- [ ] Code is formatted (`cargo fmt`) and linted (`cargo clippy`)
-- [ ] Feature works as described in features.md
-- [ ] JSON output includes relevant data for the feature (if applicable)
-- [ ] Documentation is updated
-- [ ] No regressions in existing functionality
-- [ ] Feature can be demonstrated with a test run
+7. **Feature Removal:** After successful implementation, remove the feature section from `features.md` and mention removal in commit message.
 
-## Additional Notes
+8. **README Update:** If feature is user-facing (new CLI args, new output, changed behavior), add a brief note in README.md.
 
-<!-- Add any additional context, dependencies, or notes here -->
+### Reference Documentation
+
+- **Project Architecture:** See `.github/copilot-instructions.md`
+- **Build/Test Commands:** See `.github/copilot-instructions.md`
+- **Feature List:** See `features.md` (select ONE to implement)
+- **Example Implementation:** See `.github/ISSUE_TEMPLATE/EXAMPLE.md`
+
+### Example Feature Selection
+
+**Good Selection Example:**
+```markdown
+Selected Feature: 3.2 Reputation und Vertrauen
+- Feature ID: 3.2
+- Category: Soziale Netzwerke und Beziehungen
+- Why: Simple field addition to Person struct, minimal changes required
+- Implementation: Add `reputation: f64` field, update it based on successful trades
+```
+
+**Avoid This Type:**
+```markdown
+Selected Feature: 4.4 Geografische Komponente
+- Why NOT: Requires major changes (Location struct, distance calculations, trade cost modifications)
+- Better to start with simpler features first
+```
 
 ---
 
-**Note for developers:** This template is designed to provide comprehensive guidance for GitHub Copilot when implementing features. If you're manually implementing this feature, you can use this template as a checklist and guide.
+**Note:** This template enables autonomous feature implementation by Copilot. No manual feature specification is required - Copilot will select and implement a feature from features.md automatically.
