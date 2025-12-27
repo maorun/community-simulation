@@ -182,12 +182,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Bessere Fehlerdiagnose
 - **Implementierung**: Custom Error-Types, `thiserror` Crate
 
-#### 3.3 Logging-System
-- **Beschreibung**: Strukturiertes Logging statt println!
-- **Nutzen**: Besseres Debugging und Monitoring
-- **Technologie**: `tracing` oder `log` Crate
-
-#### 3.4 Dokumentation
+#### 3.3 Dokumentation
 - **Beschreibung**: Vollständige API-Dokumentation
 - **Bereiche**:
   - Alle public APIs dokumentieren
@@ -366,10 +361,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ## 🎯 Priorisierung
 
 ### Hohe Priorität (Quick Wins)
-1. Logging-System implementieren
-2. Erweiterte Tests schreiben
-3. Dokumentation vervollständigen
-4. YAML/TOML Konfiguration
+1. Erweiterte Tests schreiben
+2. Dokumentation vervollständigen
+3. YAML/TOML Konfiguration
 
 ### Mittlere Priorität (Mehrwert)
 1. Event-System einführen
