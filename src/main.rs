@@ -1,4 +1,5 @@
 use clap::Parser;
+use log::{debug, info};
 use simulation_framework::{SimulationConfig, SimulationEngine};
 use std::time::Instant;
 
@@ -38,10 +39,22 @@ struct Args {
     /// Disable the progress bar during simulation
     #[arg(long, default_value_t = false)]
     no_progress: bool,
+
+    /// Set the log level (error, warn, info, debug, trace)
+    /// Can also be set via RUST_LOG environment variable
+    #[arg(long, default_value = "info")]
+    log_level: String,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+
+    // Initialize logging
+    // If RUST_LOG is not set, use the CLI argument
+    if std::env::var("RUST_LOG").is_err() {
+        std::env::set_var("RUST_LOG", &args.log_level);
+    }
+    env_logger::init();
 
     if let Some(num_threads) = args.threads {
         rayon::ThreadPoolBuilder::new()
@@ -62,13 +75,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         scenario: args.scenario,
     };
 
-    println!(
-        "Initializing economic simulation with {} persons for {} steps.",
+    info!(
+        "Initializing economic simulation with {} persons for {} steps",
         config.entity_count, config.max_steps
     );
-    println!(
-        "Initial money: {}, Base skill price: {}.",
-        config.initial_money_per_person, config.base_skill_price
+    debug!(
+        "Configuration: initial_money={}, base_skill_price={}, seed={}, scenario={:?}",
+        config.initial_money_per_person, config.base_skill_price, config.seed, config.scenario
     );
 
     let start_time = Instant::now();
@@ -78,18 +91,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result = engine.run_with_progress(show_progress);
     let duration = start_time.elapsed();
 
-    println!("Simulation completed in {:.2}s", duration.as_secs_f64());
+    info!("Simulation completed in {:.2}s", duration.as_secs_f64());
     let steps_per_second = if duration.as_secs_f64() > 0.0 {
         args.steps as f64 / duration.as_secs_f64()
     } else {
         0.0
     };
-    println!("Performance: {:.0} steps/second", steps_per_second);
+    info!("Performance: {:.0} steps/second", steps_per_second);
 
     if let Some(output_path) = args.output {
         // result.save_to_file will need to be adapted for economic data
         result.save_to_file(&output_path)?;
-        println!("Results saved to {}", output_path);
+        info!("Results saved to {}", output_path);
     }
 
     // result.print_summary will need to be adapted for economic data
