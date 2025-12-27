@@ -2,6 +2,7 @@ use crate::{
     scenario::PriceUpdater, Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
 };
 use indicatif::{ProgressBar, ProgressStyle};
+use log::{debug, info};
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use std::collections::HashMap;
@@ -81,7 +82,14 @@ impl SimulationEngine {
         let start_time = Instant::now();
         let mut step_times = Vec::new();
 
-        println!("Starting economic simulation...");
+        info!(
+            "Starting economic simulation with {} persons",
+            self.entities.len()
+        );
+        debug!(
+            "Simulation configuration: max_steps={}, scenario={:?}",
+            self.config.max_steps, self.config.scenario
+        );
 
         // Constants for progress bar configuration
         const PROGRESS_BAR_WIDTH: usize = 40;
@@ -138,7 +146,7 @@ impl SimulationEngine {
                     || step == self.config.max_steps - 1
                 {
                     let active_entities = self.entities.iter().filter(|e| e.active).count();
-                    println!(
+                    debug!(
                         "Step {}/{}, Active persons: {}, Avg Money: {:.2}",
                         step + 1,
                         self.config.max_steps,

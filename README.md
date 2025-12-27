@@ -11,6 +11,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments (number of persons, steps, initial money, etc.).
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
+- **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Performance:** Leverages Rust and Rayon for potential parallelism in parts of the simulation (though current critical paths like trading are largely sequential for N=100).
 
@@ -64,6 +65,10 @@ The simulation accepts the following CLI arguments:
     *   Seed for the random number generator for reproducible simulations. Default: `42`.
 *   `--no-progress`:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
+*   `--log-level <LOG_LEVEL>`:
+    *   Set the logging level for the simulation. Valid values: `error`, `warn`, `info`, `debug`, `trace`. Default: `info`.
+    *   Can also be set via the `RUST_LOG` environment variable (e.g., `RUST_LOG=debug`).
+    *   Use `info` for high-level progress messages, `debug` for detailed step-by-step information, or `warn`/`error` for minimal output.
 
 **Example with Custom Parameters:**
 
@@ -71,6 +76,33 @@ The simulation accepts the following CLI arguments:
 ./target/release/economic_simulation --steps 1000 --persons 50 --initial-money 200 --base-price 15 --output custom_results.json --seed 123
 ```
 This runs the simulation for 1000 steps with 50 persons, each starting with 200 money, skills having a base price of 15, and saves results to `custom_results.json` using RNG seed 123.
+
+### Logging
+
+The simulation uses structured logging to provide insights into its operation. You can control the logging level to see more or less detail:
+
+**Via CLI flag:**
+```bash
+./target/release/economic_simulation -s 100 -p 10 --log-level debug -o results.json
+```
+
+**Via environment variable:**
+```bash
+RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
+```
+
+**Log Levels:**
+- `error` - Only critical errors that prevent operation
+- `warn` - Warnings about potential issues (minimal output)
+- `info` - High-level progress information (default) - initialization, completion, performance metrics
+- `debug` - Detailed step-by-step progress - useful for understanding simulation behavior
+- `trace` - Very detailed logging (not currently used, reserved for future detailed instrumentation)
+
+**Tips:**
+- Use `info` (default) for normal operations
+- Use `debug` when investigating simulation behavior or troubleshooting
+- Use `warn` or `error` for minimal output in production/batch scenarios
+- Combine with `--no-progress` flag to disable the progress bar when using debug logging
 
 ## Code Structure
 
