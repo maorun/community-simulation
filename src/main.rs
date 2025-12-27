@@ -34,6 +34,10 @@ struct Args {
 
     #[arg(long, default_value_t = Scenario::default())]
     scenario: Scenario,
+
+    /// Disable the progress bar during simulation
+    #[arg(long, default_value_t = false)]
+    no_progress: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -70,7 +74,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start_time = Instant::now();
     // SimulationEngine::new will need to be updated to handle the new config and setup persons/market
     let mut engine = SimulationEngine::new(config);
-    let result = engine.run();
+    let show_progress = !args.no_progress;
+    let result = engine.run_with_progress(show_progress);
     let duration = start_time.elapsed();
 
     println!("Simulation completed in {:.2}s", duration.as_secs_f64());

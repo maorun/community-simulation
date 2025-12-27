@@ -10,6 +10,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments (number of persons, steps, initial money, etc.).
+- **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Performance:** Leverages Rust and Rayon for potential parallelism in parts of the simulation (though current critical paths like trading are largely sequential for N=100).
 
@@ -61,6 +62,8 @@ The simulation accepts the following CLI arguments:
     *   (Optional) Number of threads for Rayon to use. Defaults to Rayon's choice (usually number of logical cores).
 *   `--seed <SEED>`:
     *   Seed for the random number generator for reproducible simulations. Default: `42`.
+*   `--no-progress`:
+    *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
 
 **Example with Custom Parameters:**
 

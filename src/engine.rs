@@ -1,6 +1,7 @@
 use crate::{
     scenario::PriceUpdater, Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
 };
+use indicatif::{ProgressBar, ProgressStyle};
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use std::collections::HashMap;
@@ -66,10 +67,48 @@ impl SimulationEngine {
     }
 
     pub fn run(&mut self) -> SimulationResult {
+        self.run_with_progress(false)
+    }
+
+    /// Run the simulation with optional progress bar display.
+    ///
+    /// # Arguments
+    /// * `show_progress` - If true, displays a progress bar during simulation
+    ///
+    /// # Returns
+    /// A `SimulationResult` containing all simulation metrics and data
+    pub fn run_with_progress(&mut self, show_progress: bool) -> SimulationResult {
         let start_time = Instant::now();
         let mut step_times = Vec::new();
 
         println!("Starting economic simulation...");
+
+        // Constants for progress bar configuration
+        const PROGRESS_BAR_WIDTH: usize = 40;
+        const PROGRESS_UPDATE_INTERVAL_STEPS: usize = 10;
+
+        // Create progress bar if requested
+        let progress_bar = if show_progress {
+            let pb = ProgressBar::new(self.config.max_steps as u64);
+            let template_str = format!(
+                "{{msg}} [{{elapsed_precise}}] [{{bar:{}.cyan/blue}}] {{pos}}/{{len}} ({{percent}}%) ETA: {{eta}}",
+                PROGRESS_BAR_WIDTH
+            );
+            pb.set_style(
+                ProgressStyle::default_bar()
+                    .template(&template_str)
+                    .expect("Invalid progress bar template")
+                    .progress_chars("=>-"),
+            );
+            pb.set_message("Simulating");
+            Some(pb)
+        } else {
+            None
+        };
+
+        // Calculate update frequency: update stats every 1% of steps or every 10 steps, whichever is less frequent
+        let stats_update_interval =
+            (self.config.max_steps / 100).max(PROGRESS_UPDATE_INTERVAL_STEPS);
 
         for step in 0..self.config.max_steps {
             let step_start = Instant::now();
@@ -77,17 +116,42 @@ impl SimulationEngine {
             let step_duration = step_start.elapsed();
             step_times.push(step_duration.as_secs_f64());
 
-            if step % (self.config.max_steps / 10).max(1) == 0 || step == self.config.max_steps - 1
-            {
-                let active_entities = self.entities.iter().filter(|e| e.active).count();
-                println!(
-                    "Step {}/{}, Active persons: {}, Avg Money: {:.2}",
-                    step + 1,
-                    self.config.max_steps,
-                    active_entities,
-                    self.calculate_average_money()
-                );
+            // Update progress bar if enabled
+            if let Some(ref pb) = progress_bar {
+                pb.inc(1);
+
+                // Update message with additional info at calculated intervals
+                if step % stats_update_interval == 0 || step == self.config.max_steps - 1 {
+                    let active_entities = self.entities.iter().filter(|e| e.active).count();
+                    let avg_money = self.calculate_average_money();
+                    pb.set_message(format!(
+                        "Step {}/{} | Active: {} | Avg Money: {:.2}",
+                        step + 1,
+                        self.config.max_steps,
+                        active_entities,
+                        avg_money
+                    ));
+                }
+            } else {
+                // Fallback to old-style progress logging if no progress bar
+                if step % (self.config.max_steps / 10).max(1) == 0
+                    || step == self.config.max_steps - 1
+                {
+                    let active_entities = self.entities.iter().filter(|e| e.active).count();
+                    println!(
+                        "Step {}/{}, Active persons: {}, Avg Money: {:.2}",
+                        step + 1,
+                        self.config.max_steps,
+                        active_entities,
+                        self.calculate_average_money()
+                    );
+                }
             }
+        }
+
+        // Finish progress bar
+        if let Some(pb) = progress_bar {
+            pb.finish_with_message("Simulation complete");
         }
 
         let total_duration = start_time.elapsed();
