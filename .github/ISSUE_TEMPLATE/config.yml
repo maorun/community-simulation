@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📋 Features Documentation
+    url: https://github.com/maorun/community-simulation/blob/master/features.md
+    about: View the complete list of proposed features and improvements
+  - name: 📖 Project Documentation
+    url: https://github.com/maorun/community-simulation/blob/master/README.md
+    about: Read the project documentation and user guide
+  - name: 🤖 Copilot Instructions
+    url: https://github.com/maorun/community-simulation/blob/master/.github/copilot-instructions.md
+    about: View instructions for GitHub Copilot and build/test commands
