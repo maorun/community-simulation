@@ -301,54 +301,6 @@ mod tests {
         }
     }
 
-    fn calculate_reputation_stats(reputation_values: &[f64]) -> ReputationStats {
-        if reputation_values.is_empty() {
-            return ReputationStats {
-                average: 1.0,
-                median: 1.0,
-                std_dev: 0.0,
-                min_reputation: 1.0,
-                max_reputation: 1.0,
-            };
-        }
-
-        let mut sorted_reputation = reputation_values.to_vec();
-        sorted_reputation.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-
-        let sum: f64 = sorted_reputation.iter().sum();
-        let count = sorted_reputation.len() as f64;
-        let average = sum / count;
-
-        let median = if count > 0.0 {
-            if count as usize % 2 == 1 {
-                sorted_reputation[count as usize / 2]
-            } else {
-                (sorted_reputation[count as usize / 2 - 1] + sorted_reputation[count as usize / 2])
-                    / 2.0
-            }
-        } else {
-            1.0
-        };
-
-        let variance = sorted_reputation
-            .iter()
-            .map(|value| {
-                let diff = average - value;
-                diff * diff
-            })
-            .sum::<f64>()
-            / count;
-        let std_dev = variance.sqrt();
-
-        ReputationStats {
-            average,
-            median,
-            std_dev,
-            min_reputation: *sorted_reputation.first().unwrap_or(&1.0),
-            max_reputation: *sorted_reputation.last().unwrap_or(&1.0),
-        }
-    }
-
     #[test]
     fn test_money_stats_empty() {
         let stats = calculate_money_stats(&[]);

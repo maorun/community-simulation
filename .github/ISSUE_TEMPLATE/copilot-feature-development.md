@@ -49,7 +49,7 @@ The feature implementation is complete when:
 - [ ] Code compiles without errors: `cargo build --verbose`
 - [ ] All tests pass: `cargo test --verbose`
 - [ ] Code formatted: `cargo fmt`
-- [ ] Code linted: `cargo clippy` (address warnings in new code)
+- [ ] Code linted: `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass without errors)
 - [ ] Feature tested manually with example run
 - [ ] Documentation added (doc comments for public APIs)
 - [ ] Feature **removed** from `features.md`
@@ -68,8 +68,8 @@ cargo test --verbose
 # Format
 cargo fmt
 
-# Lint
-cargo clippy
+# Lint (REQUIRED - must pass before completing development)
+cargo clippy --all-targets --all-features -- -D warnings -A deprecated
 
 # Run simulation with feature
 ./target/debug/simulation-framework -s 100 -p 10 -o /tmp/test.json
@@ -119,7 +119,7 @@ cargo clippy
 
 4. **Quality & Documentation**
    - Run `cargo fmt`
-   - Run `cargo clippy`
+   - Run `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass)
    - Add doc comments
    - Update README.md (if user-facing)
    - **Remove feature from features.md**
