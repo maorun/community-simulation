@@ -7,13 +7,14 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Agent-Based Simulation:** Simulates individual persons with money, unique skills, and randomly generated needs for other skills.
 - **Dynamic Market:** Features a market mechanism where skill prices are adjusted based on supply (fixed per provider) and demand (generated each step).
 - **Trading System:** Persons attempt to buy needed skills from providers if they can afford them, leading to money exchange and transaction logging.
+- **Reputation System:** Each person has a reputation score (starting at 1.0) that increases with successful trades. Higher reputation leads to better prices (up to 10% discount), while lower reputation results in price premiums. Reputation slowly decays toward neutral over time, encouraging ongoing positive behavior.
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments (number of persons, steps, initial money, etc.).
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
-- **JSON Output:** Outputs detailed simulation results, including final wealth distribution, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
+- **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Performance:** Leverages Rust and Rayon for potential parallelism in parts of the simulation (though current critical paths like trading are largely sequential for N=100).
 
 ## Getting Started
@@ -203,10 +204,16 @@ The JSON output file contains a comprehensive summary of the simulation, includi
     *   `std_dev`: Standard deviation of money distribution
     *   `min_money`, `max_money`: Minimum and maximum money values
     *   `gini_coefficient`: Measure of wealth inequality (0 = perfect equality, 1 = perfect inequality). Values above 1 can occur when negative money (debt) exists.
+*   `final_reputation_distribution`: A list of final reputation scores for each active person.
+*   `reputation_statistics`: An object with:
+    *   `average`: Average reputation across all persons
+    *   `median`: Median reputation value
+    *   `std_dev`: Standard deviation of reputation distribution
+    *   `min_reputation`, `max_reputation`: Minimum and maximum reputation values
 *   `final_skill_prices`: A list of all skills sorted by their final price (descending), including `id` and `price`.
 *   `most_valuable_skill`, `least_valuable_skill`: Information on the skills with the highest and lowest final prices.
 *   `skill_price_history`: A map where keys are `SkillId`s and values are lists of prices for that skill at each step of the simulation. This data can be used for plotting price trends.
-*   `final_persons_data`: A list of all person data at the end of the simulation, including their full transaction history.
+*   `final_persons_data`: A list of all person data at the end of the simulation, including their full transaction history and reputation scores.
 
 ## License
 

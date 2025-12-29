@@ -83,13 +83,13 @@ cargo fmt -- --check
 
 **Run Clippy (linter):**
 ```bash
-cargo clippy -- -D warnings
+cargo clippy --all-targets --all-features -- -D warnings -A deprecated
 ```
-- Treats all warnings as errors
-- Current known issues (as of latest code state):
+- **REQUIRED** step before completing development
+- Treats all warnings as errors, except deprecated warnings
+- Must pass without errors before submitting PR
+- Current known deprecation warnings (ignored with `-A deprecated`):
   - 3 deprecation warnings about `rand::Rng::gen_range`
-  - 3 warnings about `default_constructed_unit_structs` in scenario.rs
-- **Important:** These clippy issues will cause build failures if you run `cargo clippy -- -D warnings`
 - To run clippy without treating warnings as errors: `cargo clippy`
 
 ### Running the Application

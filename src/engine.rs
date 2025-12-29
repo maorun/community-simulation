@@ -173,6 +173,15 @@ impl SimulationEngine {
         final_money_distribution
             .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
+        let mut final_reputation_distribution: Vec<f64> = self
+            .entities
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| e.person_data.reputation)
+            .collect();
+        final_reputation_distribution
+            .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
         let money_stats = if !final_money_distribution.is_empty() {
             let sum: f64 = final_money_distribution.iter().sum();
             let count = final_money_distribution.len() as f64;
@@ -221,6 +230,48 @@ impl SimulationEngine {
             }
         };
 
+        let reputation_stats = if !final_reputation_distribution.is_empty() {
+            let sum: f64 = final_reputation_distribution.iter().sum();
+            let count = final_reputation_distribution.len() as f64;
+            let average = sum / count;
+            let median = if count > 0.0 {
+                if count as usize % 2 == 1 {
+                    final_reputation_distribution[count as usize / 2]
+                } else {
+                    (final_reputation_distribution[count as usize / 2 - 1]
+                        + final_reputation_distribution[count as usize / 2])
+                        / 2.0
+                }
+            } else {
+                1.0
+            };
+            let variance = final_reputation_distribution
+                .iter()
+                .map(|value| {
+                    let diff = average - value;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / count;
+            let std_dev = variance.sqrt();
+
+            crate::result::ReputationStats {
+                average,
+                median,
+                std_dev,
+                min_reputation: *final_reputation_distribution.first().unwrap_or(&1.0),
+                max_reputation: *final_reputation_distribution.last().unwrap_or(&1.0),
+            }
+        } else {
+            crate::result::ReputationStats {
+                average: 1.0,
+                median: 1.0,
+                std_dev: 0.0,
+                min_reputation: 1.0,
+                max_reputation: 1.0,
+            }
+        };
+
         let final_skill_prices_map = self.market.get_all_skill_prices();
         let mut final_skill_prices_vec: Vec<crate::result::SkillPriceInfo> = final_skill_prices_map
             .into_iter()
@@ -243,6 +294,8 @@ impl SimulationEngine {
             active_persons: self.entities.iter().filter(|e| e.active).count(),
             final_money_distribution,
             money_statistics: money_stats,
+            final_reputation_distribution,
+            reputation_statistics: reputation_stats,
             final_skill_prices: final_skill_prices_vec,
             most_valuable_skill,
             least_valuable_skill,
@@ -332,7 +385,18 @@ impl SimulationEngine {
                 }
 
                 if let Some(skill_price) = self.market.get_price(needed_skill_id) {
-                    if self.entities[buyer_idx].person_data.can_afford(skill_price) {
+                    // Apply reputation-based price multiplier for the seller
+                    let final_price = if let Some(&seller_id) = skill_providers.get(needed_skill_id)
+                    {
+                        let seller_reputation_multiplier = self.entities[seller_id]
+                            .person_data
+                            .reputation_price_multiplier();
+                        skill_price * seller_reputation_multiplier
+                    } else {
+                        skill_price
+                    };
+
+                    if self.entities[buyer_idx].person_data.can_afford(final_price) {
                         if let Some(&seller_id) = skill_providers.get(needed_skill_id) {
                             let seller_idx = seller_id;
 
@@ -347,7 +411,7 @@ impl SimulationEngine {
                                 buyer_idx,
                                 seller_idx,
                                 needed_skill_id.clone(),
-                                skill_price,
+                                final_price,
                             ));
                             self.entities[buyer_idx]
                                 .person_data
@@ -371,6 +435,10 @@ impl SimulationEngine {
                 price,
                 Some(seller_entity_id),
             );
+            // Increase buyer reputation for completing a purchase
+            self.entities[buyer_idx]
+                .person_data
+                .increase_reputation_as_buyer();
 
             self.entities[seller_idx].person_data.money += price;
             self.entities[seller_idx].person_data.record_transaction(
@@ -380,11 +448,23 @@ impl SimulationEngine {
                 price,
                 Some(buyer_entity_id),
             );
+            // Increase seller reputation for completing a sale
+            self.entities[seller_idx]
+                .person_data
+                .increase_reputation_as_seller();
+
             *self
                 .market
                 .sales_this_step
                 .entry(skill_id.clone())
                 .or_insert(0) += 1;
+        }
+
+        // Apply reputation decay for all active entities
+        for entity in &mut self.entities {
+            if entity.active {
+                entity.person_data.apply_reputation_decay();
+            }
         }
 
         self.current_step += 1;

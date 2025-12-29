@@ -55,12 +55,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Soziale Dynamiken in Wirtschaftssimulationen
 - **Implementierung**: `SocialNetwork` Modul mit Graph-Struktur
 
-#### 3.2 Reputation und Vertrauen
-- **Beschreibung**: Personen bauen Reputation auf, die Handelskonditionen beeinflusst
-- **Nutzen**: Langfristige Handelsbeziehungen fördern
-- **Implementierung**: `reputation: f64` Feld in `Person`
-
-#### 3.3 Kooperativen und Gilden
+#### 3.2 Kooperativen und Gilden
 - **Beschreibung**: Personen können Organisationen bilden
 - **Nutzen**: Kollektives Verhalten untersuchen
 - **Implementierung**: Neue `Organization` Struktur
