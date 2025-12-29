@@ -10,7 +10,8 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Reputation System:** Each person has a reputation score (starting at 1.0) that increases with successful trades. Higher reputation leads to better prices (up to 10% discount), while lower reputation results in price premiums. Reputation slowly decays toward neutral over time, encouraging ongoing positive behavior.
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
-- **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments (number of persons, steps, initial money, etc.).
+- **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
+- **Configuration Files:** Support for YAML and TOML configuration files to easily define complex simulation scenarios without lengthy command lines.
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
@@ -51,6 +52,9 @@ This runs the simulation with default settings (e.g., 100 persons, 500 steps, 10
 
 The simulation accepts the following CLI arguments:
 
+*   `--config <CONFIG>` or `-c <CONFIG>`:
+    *   Path to a configuration file (YAML or TOML format). When provided, configuration is loaded from the file first, then any CLI arguments override those values.
+    *   See `config.example.yaml` and `config.example.toml` for example configuration files.
 *   `--steps <STEPS>` or `-s <STEPS>`:
     *   Total number of simulation steps. Default: `500`.
 *   `--persons <PERSONS>` or `-p <PERSONS>`:
@@ -78,6 +82,45 @@ The simulation accepts the following CLI arguments:
 ./target/release/economic_simulation --steps 1000 --persons 50 --initial-money 200 --base-price 15 --output custom_results.json --seed 123
 ```
 This runs the simulation for 1000 steps with 50 persons, each starting with 200 money, skills having a base price of 15, and saves results to `custom_results.json` using RNG seed 123.
+
+**Using Configuration Files:**
+
+Configuration files provide an easier way to manage complex simulation scenarios without lengthy command lines. Both YAML and TOML formats are supported.
+
+Example YAML configuration (`my_config.yaml`):
+```yaml
+max_steps: 1000
+entity_count: 50
+seed: 123
+initial_money_per_person: 200.0
+base_skill_price: 15.0
+time_step: 1.0
+scenario: Original
+```
+
+Example TOML configuration (`my_config.toml`):
+```toml
+max_steps = 1000
+entity_count = 50
+seed = 123
+initial_money_per_person = 200.0
+base_skill_price = 15.0
+time_step = 1.0
+scenario = "Original"
+```
+
+Run with a configuration file:
+```bash
+./target/release/economic_simulation --config my_config.yaml -o results.json
+```
+
+CLI arguments override config file values:
+```bash
+# Use config file but override steps and persons
+./target/release/economic_simulation --config my_config.yaml --steps 2000 --persons 100 -o results.json
+```
+
+See `config.example.yaml` and `config.example.toml` in the repository for complete examples with all available options and comments.
 
 ### Logging
 

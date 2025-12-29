@@ -192,11 +192,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Konfiguration und Deployment
 
-#### 4.1 YAML/TOML Konfigurationsdateien
-- **Beschreibung**: Konfiguration aus Dateien statt nur CLI
-- **Nutzen**: Komplexe Szenarien einfacher definieren
-- **Implementierung**: `serde` mit YAML/TOML Support
-
 #### 4.2 Presets für typische Szenarien
 - **Beschreibung**: Vordefinierte Konfigurationen
 - **Nutzen**: Schneller Einstieg
@@ -353,7 +348,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ### Hohe Priorität (Quick Wins)
 1. Erweiterte Tests schreiben
 2. Dokumentation vervollständigen
-3. YAML/TOML Konfiguration
 
 ### Mittlere Priorität (Mehrwert)
 1. Event-System einführen
