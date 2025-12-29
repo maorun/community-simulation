@@ -9,6 +9,10 @@ use simulation_framework::scenario::Scenario;
 #[command(name = "economic_simulation")]
 #[command(about = "Runs an economic simulation with persons, skills, and a market.")]
 struct Args {
+    /// Path to configuration file (YAML or TOML). CLI arguments override config file values.
+    #[arg(short, long)]
+    config: Option<String>,
+
     #[arg(short, long, default_value_t = SimulationConfig::default().max_steps)]
     steps: usize,
 
@@ -65,14 +69,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         rayon::ThreadPoolBuilder::new().build_global()?;
     }
 
-    let config = SimulationConfig {
-        max_steps: args.steps,
-        entity_count: args.persons, // Use 'persons' from CLI for entity_count
-        time_step: SimulationConfig::default().time_step, // Using default, not exposed via CLI for now
-        seed: args.seed,
-        initial_money_per_person: args.initial_money,
-        base_skill_price: args.base_price,
-        scenario: args.scenario,
+    // Load configuration: start with file (if provided), then apply CLI overrides
+    let config = if let Some(config_path) = &args.config {
+        info!("Loading configuration from: {}", config_path);
+        SimulationConfig::from_file_with_overrides(config_path, |cfg| {
+            // CLI arguments always override config file values
+            cfg.max_steps = args.steps;
+            cfg.entity_count = args.persons;
+            cfg.seed = args.seed;
+            cfg.initial_money_per_person = args.initial_money;
+            cfg.base_skill_price = args.base_price;
+            cfg.scenario = args.scenario.clone();
+        })?
+    } else {
+        // No config file, use CLI arguments to create config
+        SimulationConfig {
+            max_steps: args.steps,
+            entity_count: args.persons, // Use 'persons' from CLI for entity_count
+            time_step: SimulationConfig::default().time_step, // Using default, not exposed via CLI for now
+            seed: args.seed,
+            initial_money_per_person: args.initial_money,
+            base_skill_price: args.base_price,
+            scenario: args.scenario,
+        }
     };
 
     info!(

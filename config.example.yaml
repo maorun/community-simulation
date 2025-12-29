@@ -1,0 +1,56 @@
+# Example YAML configuration file for the Economic Simulation Framework
+#
+# Usage: ./target/release/simulation-framework --config config.yaml
+#
+# Note: CLI arguments will override values specified in this file.
+# For example: ./target/release/simulation-framework --config config.yaml --steps 2000
+# will use 2000 steps instead of the value below.
+
+# Number of simulation steps to run
+max_steps: 500
+
+# Number of persons in the simulation (each will have one unique skill)
+entity_count: 100
+
+# Random seed for reproducibility
+# Use the same seed to get identical simulation results
+seed: 42
+
+# Initial amount of money each person starts with
+initial_money_per_person: 100.0
+
+# Base price for all skills at simulation start
+base_skill_price: 10.0
+
+# Time step (for discrete turn-based simulation)
+# This represents one discrete step or turn
+time_step: 1.0
+
+# Scenario type - determines price update mechanism
+# Options:
+#   - Original: Supply/demand-based pricing with volatility
+#   - DynamicPricing: Sales-based pricing (increase if sold, decrease if not)
+scenario: Original
+
+# Example configurations for different use cases:
+
+# Small economy for quick testing:
+# max_steps: 100
+# entity_count: 20
+# seed: 123
+
+# Large economy for detailed analysis:
+# max_steps: 2000
+# entity_count: 500
+# initial_money_per_person: 200.0
+
+# Crisis scenario (low initial money):
+# max_steps: 1000
+# entity_count: 100
+# initial_money_per_person: 50.0
+# base_skill_price: 20.0
+
+# Dynamic pricing experiment:
+# scenario: DynamicPricing
+# max_steps: 1000
+# base_skill_price: 15.0
