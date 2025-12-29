@@ -28,6 +28,10 @@ struct Args {
     #[arg(short, long)]
     output: Option<String>,
 
+    /// Path prefix for CSV output files (creates multiple .csv files with this prefix)
+    #[arg(long)]
+    csv_output: Option<String>,
+
     // Rayon will use a default number of threads based on CPU cores if not set.
     // We can remove this CLI arg to simplify, or keep it for advanced users.
     // For now, let's keep it but make it optional.
@@ -122,6 +126,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // result.save_to_file will need to be adapted for economic data
         result.save_to_file(&output_path)?;
         info!("Results saved to {}", output_path);
+    }
+
+    if let Some(csv_prefix) = args.csv_output {
+        result.save_to_csv(&csv_prefix)?;
+        info!("CSV results saved with prefix: {}", csv_prefix);
     }
 
     // result.print_summary will need to be adapted for economic data

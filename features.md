@@ -94,11 +94,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Strukturen im Handelsnetzwerk erkennen
 - **Technologie**: NetworkX oder Cytoscape
 
-#### 5.3 Export für Datenanalyse
-- **Beschreibung**: Export in CSV, Parquet oder andere Formate
-- **Nutzen**: Analyse mit pandas, R oder anderen Tools
-- **Implementierung**: Zusätzliche Export-Funktionen in `result.rs`
-
 ### 6. Verschiedene Agentenstrategien
 
 #### 6.1 Verschiedene Verhaltensweisen
