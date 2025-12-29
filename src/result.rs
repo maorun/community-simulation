@@ -213,10 +213,11 @@ impl SimulationResult {
         for step in 0..max_steps {
             write!(file, "{}", step)?;
             for skill_id in &skill_ids {
-                let price = self.skill_price_history
+                let price = self
+                    .skill_price_history
                     .get(*skill_id)
                     .and_then(|prices| prices.get(step));
-                
+
                 if let Some(&price) = price {
                     write!(file, ",{:.4}", price)?;
                 } else {
