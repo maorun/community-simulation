@@ -100,7 +100,7 @@ impl SimulationConfig {
 mod tests {
     use super::*;
     use std::io::Write;
-    use tempfile::NamedTempFile;
+    use tempfile::Builder;
 
     #[test]
     fn test_load_yaml_config() {
@@ -113,20 +113,17 @@ base_skill_price: 15.0
 time_step: 1.0
 scenario: Original
 "#;
-        let mut temp_file = NamedTempFile::new().unwrap();
+        let mut temp_file = Builder::new().suffix(".yaml").tempfile().unwrap();
         temp_file.write_all(yaml_content.as_bytes()).unwrap();
-        let path = temp_file.path().with_extension("yaml");
-        fs::copy(temp_file.path(), &path).unwrap();
+        temp_file.flush().unwrap();
 
-        let config = SimulationConfig::from_file(&path).unwrap();
+        let config = SimulationConfig::from_file(temp_file.path()).unwrap();
 
         assert_eq!(config.max_steps, 1000);
         assert_eq!(config.entity_count, 50);
         assert_eq!(config.seed, 123);
         assert_eq!(config.initial_money_per_person, 200.0);
         assert_eq!(config.base_skill_price, 15.0);
-
-        fs::remove_file(&path).unwrap();
     }
 
     #[test]
@@ -140,33 +137,27 @@ base_skill_price = 20.0
 time_step = 1.0
 scenario = "DynamicPricing"
 "#;
-        let mut temp_file = NamedTempFile::new().unwrap();
+        let mut temp_file = Builder::new().suffix(".toml").tempfile().unwrap();
         temp_file.write_all(toml_content.as_bytes()).unwrap();
-        let path = temp_file.path().with_extension("toml");
-        fs::copy(temp_file.path(), &path).unwrap();
+        temp_file.flush().unwrap();
 
-        let config = SimulationConfig::from_file(&path).unwrap();
+        let config = SimulationConfig::from_file(temp_file.path()).unwrap();
 
         assert_eq!(config.max_steps, 2000);
         assert_eq!(config.entity_count, 75);
         assert_eq!(config.seed, 456);
         assert_eq!(config.initial_money_per_person, 300.0);
         assert_eq!(config.base_skill_price, 20.0);
-
-        fs::remove_file(&path).unwrap();
     }
 
     #[test]
     fn test_invalid_file_extension() {
-        let mut temp_file = NamedTempFile::new().unwrap();
+        let mut temp_file = Builder::new().suffix(".txt").tempfile().unwrap();
         temp_file.write_all(b"invalid content").unwrap();
-        let path = temp_file.path().with_extension("txt");
-        fs::copy(temp_file.path(), &path).unwrap();
+        temp_file.flush().unwrap();
 
-        let result = SimulationConfig::from_file(&path);
+        let result = SimulationConfig::from_file(temp_file.path());
         assert!(result.is_err());
-
-        fs::remove_file(&path).unwrap();
     }
 
     #[test]
@@ -186,12 +177,11 @@ base_skill_price: 15.0
 time_step: 1.0
 scenario: Original
 "#;
-        let mut temp_file = NamedTempFile::new().unwrap();
+        let mut temp_file = Builder::new().suffix(".yaml").tempfile().unwrap();
         temp_file.write_all(yaml_content.as_bytes()).unwrap();
-        let path = temp_file.path().with_extension("yaml");
-        fs::copy(temp_file.path(), &path).unwrap();
+        temp_file.flush().unwrap();
 
-        let config = SimulationConfig::from_file_with_overrides(&path, |cfg| {
+        let config = SimulationConfig::from_file_with_overrides(temp_file.path(), |cfg| {
             cfg.max_steps = 5000; // CLI override
             cfg.seed = 999; // CLI override
         })
@@ -201,7 +191,5 @@ scenario: Original
         assert_eq!(config.entity_count, 50); // From file
         assert_eq!(config.seed, 999); // Overridden
         assert_eq!(config.initial_money_per_person, 200.0); // From file
-
-        fs::remove_file(&path).unwrap();
     }
 }
