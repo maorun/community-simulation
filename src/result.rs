@@ -111,7 +111,7 @@ impl SimulationResult {
         }
 
         writeln!(file)?;
-        writeln!(file, "Money Statistics,")?;
+        writeln!(file, "Money Statistics")?;
         writeln!(file, "Average Money,{:.4}", self.money_statistics.average)?;
         writeln!(file, "Median Money,{:.4}", self.money_statistics.median)?;
         writeln!(file, "Std Dev Money,{:.4}", self.money_statistics.std_dev)?;
@@ -124,7 +124,7 @@ impl SimulationResult {
         )?;
 
         writeln!(file)?;
-        writeln!(file, "Reputation Statistics,")?;
+        writeln!(file, "Reputation Statistics")?;
         writeln!(
             file,
             "Average Reputation,{:.6}",
@@ -213,12 +213,12 @@ impl SimulationResult {
         for step in 0..max_steps {
             write!(file, "{}", step)?;
             for skill_id in &skill_ids {
-                if let Some(prices) = self.skill_price_history.get(*skill_id) {
-                    if step < prices.len() {
-                        write!(file, ",{:.4}", prices[step])?;
-                    } else {
-                        write!(file, ",")?;
-                    }
+                let price = self.skill_price_history
+                    .get(*skill_id)
+                    .and_then(|prices| prices.get(step));
+                
+                if let Some(&price) = price {
+                    write!(file, ",{:.4}", price)?;
                 } else {
                     write!(file, ",")?;
                 }
