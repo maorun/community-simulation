@@ -15,6 +15,9 @@ pub struct SimulationEngine {
     pub current_step: usize,
     rng: StdRng,
     all_skill_ids: Vec<SkillId>,
+    // Trade volume tracking
+    trades_per_step: Vec<usize>,
+    volume_per_step: Vec<f64>,
 }
 
 impl SimulationEngine {
@@ -35,6 +38,8 @@ impl SimulationEngine {
             current_step: 0,
             rng,
             all_skill_ids,
+            trades_per_step: Vec::new(),
+            volume_per_step: Vec::new(),
         }
     }
 
@@ -287,6 +292,43 @@ impl SimulationEngine {
         let most_valuable_skill = final_skill_prices_vec.first().cloned();
         let least_valuable_skill = final_skill_prices_vec.last().cloned();
 
+        // Calculate trade volume statistics
+        let total_trades: usize = self.trades_per_step.iter().sum();
+        let total_volume: f64 = self.volume_per_step.iter().sum();
+        let steps_with_data = self.trades_per_step.len() as f64;
+
+        let trade_volume_statistics = if steps_with_data > 0.0 {
+            let avg_trades_per_step = total_trades as f64 / steps_with_data;
+            let avg_volume_per_step = total_volume / steps_with_data;
+            let avg_transaction_value = if total_trades > 0 {
+                total_volume / total_trades as f64
+            } else {
+                0.0
+            };
+            let min_trades_per_step = *self.trades_per_step.iter().min().unwrap_or(&0);
+            let max_trades_per_step = *self.trades_per_step.iter().max().unwrap_or(&0);
+
+            crate::result::TradeVolumeStats {
+                total_trades,
+                total_volume,
+                avg_trades_per_step,
+                avg_volume_per_step,
+                avg_transaction_value,
+                min_trades_per_step,
+                max_trades_per_step,
+            }
+        } else {
+            crate::result::TradeVolumeStats {
+                total_trades: 0,
+                total_volume: 0.0,
+                avg_trades_per_step: 0.0,
+                avg_volume_per_step: 0.0,
+                avg_transaction_value: 0.0,
+                min_trades_per_step: 0,
+                max_trades_per_step: 0,
+            }
+        };
+
         SimulationResult {
             total_steps: self.config.max_steps,
             total_duration: total_duration.as_secs_f64(),
@@ -300,6 +342,9 @@ impl SimulationEngine {
             most_valuable_skill,
             least_valuable_skill,
             skill_price_history: self.market.skill_price_history.clone(),
+            trade_volume_statistics,
+            trades_per_step: self.trades_per_step.clone(),
+            volume_per_step: self.volume_per_step.clone(),
             final_persons_data: self.entities.clone(),
         }
     }
@@ -423,6 +468,10 @@ impl SimulationEngine {
             }
         }
 
+        // Track trade volume for this step
+        let trades_count = trades_to_execute.len();
+        let total_volume: f64 = trades_to_execute.iter().map(|(_, _, _, price)| price).sum();
+
         for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
             let seller_entity_id = self.entities[seller_idx].id;
             let buyer_entity_id = self.entities[buyer_idx].id;
@@ -459,6 +508,10 @@ impl SimulationEngine {
                 .entry(skill_id.clone())
                 .or_insert(0) += 1;
         }
+
+        // Record trade volume statistics for this step
+        self.trades_per_step.push(trades_count);
+        self.volume_per_step.push(total_volume);
 
         // Apply reputation decay for all active entities
         for entity in &mut self.entities {
