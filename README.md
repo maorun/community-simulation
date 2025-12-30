@@ -212,9 +212,42 @@ The test suite includes:
    - `test_simulation_engine_step()`: Tests single simulation step execution
    - `test_simulation_engine_run()`: Tests complete simulation runs
 
-2. **Module Tests** (inline in source files):
-   - `src/result.rs`: Tests for result calculation, statistics, and JSON output
+2. **Property-Based Tests** (`src/tests/proptest_tests.rs`): Uses `proptest` to verify invariants across random inputs
+   - Person reputation bounds (always 0.0 to 2.0)
+   - Market price bounds enforcement
+   - Gini coefficient correctness
+   - Transaction recording integrity
+   - Skill price non-negativity
+
+3. **Integration Tests** (`src/tests/scenario_integration_tests.rs`): Complete simulation scenarios
+   - Different scenarios (Original, DynamicPricing)
+   - Various population sizes (5 to 100 persons)
+   - Extreme conditions testing
+   - Reputation and trade volume tracking
+   - Result statistics validation
+
+4. **Module Tests** (inline in source files):
+   - `src/result.rs`: Tests for result calculation, statistics, and JSON/CSV output
    - `src/scenario.rs`: Tests for price update mechanisms in different scenarios
+   - `src/config.rs`: Tests for configuration file loading (YAML/TOML)
+   - `src/person.rs`: Tests for person behavior and reputation system
+   - `src/skill.rs`: Tests for skill generation and management
+
+### Benchmarks
+
+The project includes performance benchmarks using `criterion`:
+
+```bash
+cargo bench
+```
+
+Benchmarks cover:
+- Engine initialization with different population sizes
+- Single step execution performance
+- Full simulation runs
+- Scenario comparison (Original vs DynamicPricing)
+
+Results are saved in `target/criterion/` with detailed HTML reports.
 
 ### Writing New Tests
 

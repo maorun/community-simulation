@@ -159,14 +159,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Code-Qualität
 
-#### 3.1 Erweiterte Tests
-- **Beschreibung**: Höhere Testabdeckung
-- **Bereiche**: 
-  - Unit-Tests für alle Module
-  - Integration Tests für Szenarien
-  - Property-based Testing mit `proptest`
-  - Benchmark-Tests mit `criterion`
-
 #### 3.2 Fehlerbehandlung
 - **Beschreibung**: Robustere Error-Handling-Strategie
 - **Nutzen**: Bessere Fehlerdiagnose
@@ -336,8 +328,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ## 🎯 Priorisierung
 
 ### Hohe Priorität (Quick Wins)
-1. Erweiterte Tests schreiben
-2. Dokumentation vervollständigen
+1. Dokumentation vervollständigen
 
 ### Mittlere Priorität (Mehrwert)
 1. Event-System einführen
