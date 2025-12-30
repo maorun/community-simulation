@@ -1,3 +1,6 @@
+mod proptest_tests;
+mod scenario_integration_tests;
+
 #[cfg(test)]
 mod engine_tests {
     use crate::{scenario::Scenario, SimulationConfig, SimulationEngine};
