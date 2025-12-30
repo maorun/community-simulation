@@ -69,6 +69,167 @@ impl SimulationResult {
         Ok(())
     }
 
+    /// Save simulation results to CSV files.
+    /// Creates multiple CSV files with the given path as prefix:
+    /// - {path}_summary.csv: Summary statistics
+    /// - {path}_money.csv: Money distribution per person
+    /// - {path}_reputation.csv: Reputation distribution per person
+    /// - {path}_skill_prices.csv: Final skill prices
+    /// - {path}_price_history.csv: Skill price history over time (if available)
+    pub fn save_to_csv(&self, path_prefix: &str) -> Result<(), Box<dyn std::error::Error>> {
+        // Save summary statistics
+        self.save_summary_csv(&format!("{}_summary.csv", path_prefix))?;
+
+        // Save money distribution
+        self.save_money_csv(&format!("{}_money.csv", path_prefix))?;
+
+        // Save reputation distribution
+        self.save_reputation_csv(&format!("{}_reputation.csv", path_prefix))?;
+
+        // Save skill prices
+        self.save_skill_prices_csv(&format!("{}_skill_prices.csv", path_prefix))?;
+
+        // Save price history if available
+        if !self.skill_price_history.is_empty() {
+            self.save_price_history_csv(&format!("{}_price_history.csv", path_prefix))?;
+        }
+
+        Ok(())
+    }
+
+    fn save_summary_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Metric,Value")?;
+        writeln!(file, "Total Steps,{}", self.total_steps)?;
+        writeln!(file, "Total Duration (s),{:.4}", self.total_duration)?;
+        writeln!(file, "Active Persons,{}", self.active_persons)?;
+
+        if !self.step_times.is_empty() {
+            let avg_step_time = self.step_times.iter().sum::<f64>() / self.step_times.len() as f64;
+            writeln!(file, "Average Step Time (s),{:.6}", avg_step_time)?;
+        }
+
+        writeln!(file)?;
+        writeln!(file, "Money Statistics")?;
+        writeln!(file, "Average Money,{:.4}", self.money_statistics.average)?;
+        writeln!(file, "Median Money,{:.4}", self.money_statistics.median)?;
+        writeln!(file, "Std Dev Money,{:.4}", self.money_statistics.std_dev)?;
+        writeln!(file, "Min Money,{:.4}", self.money_statistics.min_money)?;
+        writeln!(file, "Max Money,{:.4}", self.money_statistics.max_money)?;
+        writeln!(
+            file,
+            "Gini Coefficient,{:.6}",
+            self.money_statistics.gini_coefficient
+        )?;
+
+        writeln!(file)?;
+        writeln!(file, "Reputation Statistics")?;
+        writeln!(
+            file,
+            "Average Reputation,{:.6}",
+            self.reputation_statistics.average
+        )?;
+        writeln!(
+            file,
+            "Median Reputation,{:.6}",
+            self.reputation_statistics.median
+        )?;
+        writeln!(
+            file,
+            "Std Dev Reputation,{:.6}",
+            self.reputation_statistics.std_dev
+        )?;
+        writeln!(
+            file,
+            "Min Reputation,{:.6}",
+            self.reputation_statistics.min_reputation
+        )?;
+        writeln!(
+            file,
+            "Max Reputation,{:.6}",
+            self.reputation_statistics.max_reputation
+        )?;
+
+        Ok(())
+    }
+
+    fn save_money_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Person_ID,Money")?;
+        for (id, money) in self.final_money_distribution.iter().enumerate() {
+            writeln!(file, "{},{:.4}", id, money)?;
+        }
+
+        Ok(())
+    }
+
+    fn save_reputation_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Person_ID,Reputation")?;
+        for (id, reputation) in self.final_reputation_distribution.iter().enumerate() {
+            writeln!(file, "{},{:.6}", id, reputation)?;
+        }
+
+        Ok(())
+    }
+
+    fn save_skill_prices_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Skill_ID,Final_Price")?;
+        for skill_info in &self.final_skill_prices {
+            writeln!(file, "{},{:.4}", skill_info.id, skill_info.price)?;
+        }
+
+        Ok(())
+    }
+
+    fn save_price_history_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+
+        // Collect all skill IDs and sort them for consistent output
+        let mut skill_ids: Vec<_> = self.skill_price_history.keys().collect();
+        skill_ids.sort();
+
+        // Write header
+        write!(file, "Step")?;
+        for skill_id in &skill_ids {
+            write!(file, ",Skill_{}", skill_id)?;
+        }
+        writeln!(file)?;
+
+        // Determine max number of steps (should be the same for all skills)
+        let max_steps = self
+            .skill_price_history
+            .values()
+            .map(|prices| prices.len())
+            .max()
+            .unwrap_or(0);
+
+        // Write data rows
+        for step in 0..max_steps {
+            write!(file, "{}", step)?;
+            for skill_id in &skill_ids {
+                let price = self
+                    .skill_price_history
+                    .get(*skill_id)
+                    .and_then(|prices| prices.get(step));
+
+                if let Some(&price) = price {
+                    write!(file, ",{:.4}", price)?;
+                } else {
+                    write!(file, ",")?;
+                }
+            }
+            writeln!(file)?;
+        }
+
+        Ok(())
+    }
+
     pub fn print_summary(&self) {
         println!("\n=== Economic Simulation Summary ===");
         println!("Total steps: {}", self.total_steps);
@@ -406,5 +567,123 @@ mod tests {
         // For n=2: G = (2 * (1*25 + 2*75)) / (2 * 100) - 3/2
         // = (2 * (25 + 150)) / 200 - 1.5 = 350 / 200 - 1.5 = 1.75 - 1.5 = 0.25
         assert!((stats.gini_coefficient - 0.25).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_save_to_csv_summary() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check that summary file was created and contains expected content
+        let summary_path = format!("{}_summary.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&summary_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Metric,Value"));
+        assert!(contents.contains("Total Steps,10"));
+        assert!(contents.contains("Active Persons,5"));
+        assert!(contents.contains("Average Money,100"));
+        assert!(contents.contains("Gini Coefficient,0.2"));
+    }
+
+    #[test]
+    fn test_save_to_csv_money_distribution() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check money distribution file
+        let money_path = format!("{}_money.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&money_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Person_ID,Money"));
+        assert!(contents.contains("0,50."));
+        assert!(contents.contains("1,80."));
+        assert!(contents.contains("2,100."));
+        assert!(contents.contains("3,120."));
+        assert!(contents.contains("4,150."));
+    }
+
+    #[test]
+    fn test_save_to_csv_reputation_distribution() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check reputation distribution file
+        let reputation_path = format!("{}_reputation.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&reputation_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Person_ID,Reputation"));
+        assert!(contents.contains("0,0.95"));
+        assert!(contents.contains("2,1.0"));
+        assert!(contents.contains("4,1.1"));
+    }
+
+    #[test]
+    fn test_save_to_csv_price_history() {
+        let mut result = get_test_result();
+
+        // Add price history data (SkillId is String type)
+        let mut price_history = HashMap::new();
+        price_history.insert("Skill_0".to_string(), vec![10.0, 11.0, 12.0]);
+        price_history.insert("Skill_1".to_string(), vec![15.0, 14.5, 14.0]);
+        result.skill_price_history = price_history;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check price history file
+        let history_path = format!("{}_price_history.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&history_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Step,Skill_"));
+        assert!(contents.contains("0,10."));
+        assert!(contents.contains("1,11."));
+        assert!(contents.contains("2,12."));
     }
 }

@@ -16,6 +16,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
+- **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, and time-series price history.
 - **Performance:** Leverages Rust and Rayon for potential parallelism in parts of the simulation (though current critical paths like trading are largely sequential for N=100).
 
 ## Getting Started
@@ -65,6 +66,15 @@ The simulation accepts the following CLI arguments:
     *   Initial base price for all skills. Default: `10.0`.
 *   `--output <FILEPATH>` or `-o <FILEPATH>`:
     *   Specifies the path to save the simulation results in JSON format. If not provided, results are printed to console only (summary).
+*   `--csv-output <PATH_PREFIX>`:
+    *   Specifies the path prefix for CSV output files. Creates multiple CSV files with this prefix for easy analysis in Excel, pandas, R, etc.
+    *   Generated files:
+        *   `{prefix}_summary.csv` - Summary statistics and metrics
+        *   `{prefix}_money.csv` - Money distribution per person
+        *   `{prefix}_reputation.csv` - Reputation distribution per person
+        *   `{prefix}_skill_prices.csv` - Final skill prices
+        *   `{prefix}_price_history.csv` - Skill price history over time
+    *   Example: `--csv-output results` creates `results_summary.csv`, `results_money.csv`, etc.
 *   `--threads <NUM_THREADS>`:
     *   (Optional) Number of threads for Rayon to use. Defaults to Rayon's choice (usually number of logical cores).
 *   `--seed <SEED>`:
@@ -82,6 +92,13 @@ The simulation accepts the following CLI arguments:
 ./target/release/economic_simulation --steps 1000 --persons 50 --initial-money 200 --base-price 15 --output custom_results.json --seed 123
 ```
 This runs the simulation for 1000 steps with 50 persons, each starting with 200 money, skills having a base price of 15, and saves results to `custom_results.json` using RNG seed 123.
+
+**Example with CSV Export:**
+
+```bash
+./target/release/economic_simulation --steps 500 --persons 100 --csv-output ./output/analysis
+```
+This runs the simulation and creates CSV files (`analysis_summary.csv`, `analysis_money.csv`, etc.) in the `./output/` directory for easy data analysis.
 
 **Using Configuration Files:**
 

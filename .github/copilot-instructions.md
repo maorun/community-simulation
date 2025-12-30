@@ -69,17 +69,19 @@ cargo test --verbose
 
 **Format code (applies changes):**
 ```bash
-cargo fmt
+cargo fmt --all
 ```
 - ALWAYS run this before committing code changes
 - Uses default rustfmt configuration (no custom `.rustfmt.toml`)
+- `--all` ensures all workspace members are formatted
 
 **Check formatting (without applying changes):**
 ```bash
-cargo fmt -- --check
+cargo fmt --all -- --check
 ```
 - Returns exit code 1 if formatting is needed
 - Used in CI to enforce code style
+- Must pass before submitting PR
 
 **Run Clippy (linter):**
 ```bash
