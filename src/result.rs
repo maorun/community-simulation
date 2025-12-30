@@ -1,4 +1,6 @@
 use crate::{Entity, SkillId}; // Entity now wraps Person
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
@@ -88,10 +90,74 @@ pub struct SimulationResult {
 }
 
 impl SimulationResult {
-    pub fn save_to_file(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    /// Save simulation results to a JSON file.
+    ///
+    /// # Arguments
+    /// * `path` - Path to the output file
+    /// * `compress` - If true, compress the output using gzip and append .gz to the filename
+    ///
+    /// # Examples
+    /// ```no_run
+    /// # use simulation_framework::result::SimulationResult;
+    /// # let result = SimulationResult {
+    /// #     total_steps: 0,
+    /// #     total_duration: 0.0,
+    /// #     step_times: vec![],
+    /// #     active_persons: 0,
+    /// #     final_money_distribution: vec![],
+    /// #     money_statistics: simulation_framework::result::MoneyStats {
+    /// #         average: 0.0, median: 0.0, std_dev: 0.0,
+    /// #         min_money: 0.0, max_money: 0.0, gini_coefficient: 0.0,
+    /// #     },
+    /// #     final_reputation_distribution: vec![],
+    /// #     reputation_statistics: simulation_framework::result::ReputationStats {
+    /// #         average: 0.0, median: 0.0, std_dev: 0.0,
+    /// #         min_reputation: 0.0, max_reputation: 0.0,
+    /// #     },
+    /// #     final_skill_prices: vec![],
+    /// #     most_valuable_skill: None,
+    /// #     least_valuable_skill: None,
+    /// #     skill_price_history: std::collections::HashMap::new(),
+    /// #     trade_volume_statistics: simulation_framework::result::TradeVolumeStats {
+    /// #         total_trades: 0, total_volume: 0.0,
+    /// #         avg_trades_per_step: 0.0, avg_volume_per_step: 0.0,
+    /// #         avg_transaction_value: 0.0,
+    /// #         min_trades_per_step: 0, max_trades_per_step: 0,
+    /// #     },
+    /// #     trades_per_step: vec![],
+    /// #     volume_per_step: vec![],
+    /// #     final_persons_data: vec![],
+    /// # };
+    /// // Save uncompressed JSON
+    /// result.save_to_file("results.json", false).unwrap();
+    ///
+    /// // Save compressed JSON
+    /// result.save_to_file("results.json", true).unwrap(); // Creates results.json.gz
+    /// ```
+    pub fn save_to_file(
+        &self,
+        path: &str,
+        compress: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let json = serde_json::to_string_pretty(self)?;
-        let mut file = File::create(path)?;
-        file.write_all(json.as_bytes())?;
+
+        if compress {
+            // Add .gz extension if not already present
+            let output_path = if path.ends_with(".gz") {
+                path.to_string()
+            } else {
+                format!("{}.gz", path)
+            };
+
+            let file = File::create(&output_path)?;
+            let mut encoder = GzEncoder::new(file, Compression::default());
+            encoder.write_all(json.as_bytes())?;
+            encoder.finish()?;
+        } else {
+            let mut file = File::create(path)?;
+            file.write_all(json.as_bytes())?;
+        }
+
         Ok(())
     }
 
@@ -522,7 +588,7 @@ mod tests {
         let file = NamedTempFile::new().unwrap();
         let path = file.path().to_str().unwrap();
 
-        result.save_to_file(path).unwrap();
+        result.save_to_file(path, false).unwrap();
 
         let mut contents = String::new();
         file.reopen()
@@ -532,6 +598,91 @@ mod tests {
 
         assert!(contents.contains("\"total_steps\": 10"));
         assert!(contents.contains("\"total_duration\": 1.23"));
+    }
+
+    #[test]
+    fn test_save_to_file_compressed() {
+        use flate2::read::GzDecoder;
+
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("test_output.json");
+        let path_str = path.to_str().unwrap();
+
+        // Save compressed file
+        result.save_to_file(path_str, true).unwrap();
+
+        // Verify .gz file was created
+        let gz_path = format!("{}.gz", path_str);
+        assert!(std::path::Path::new(&gz_path).exists());
+
+        // Decompress and verify contents
+        let file = File::open(&gz_path).unwrap();
+        let mut decoder = GzDecoder::new(file);
+        let mut contents = String::new();
+        decoder.read_to_string(&mut contents).unwrap();
+
+        assert!(contents.contains("\"total_steps\": 10"));
+        assert!(contents.contains("\"total_duration\": 1.23"));
+        assert!(contents.contains("\"active_persons\": 5"));
+    }
+
+    #[test]
+    fn test_save_to_file_compressed_with_gz_extension() {
+        use flate2::read::GzDecoder;
+
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("test_output.json.gz");
+        let path_str = path.to_str().unwrap();
+
+        // Save compressed file with .gz already in the path
+        result.save_to_file(path_str, true).unwrap();
+
+        // Verify file was created without double .gz extension
+        assert!(std::path::Path::new(path_str).exists());
+        let double_gz_path = format!("{}.gz", path_str);
+        assert!(!std::path::Path::new(&double_gz_path).exists());
+
+        // Decompress and verify contents
+        let file = File::open(path_str).unwrap();
+        let mut decoder = GzDecoder::new(file);
+        let mut contents = String::new();
+        decoder.read_to_string(&mut contents).unwrap();
+
+        assert!(contents.contains("\"total_steps\": 10"));
+        assert!(contents.contains("\"total_duration\": 1.23"));
+    }
+
+    #[test]
+    fn test_compressed_file_is_smaller() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+
+        // Save uncompressed
+        let uncompressed_path = temp_dir.path().join("uncompressed.json");
+        result
+            .save_to_file(uncompressed_path.to_str().unwrap(), false)
+            .unwrap();
+
+        // Save compressed
+        let compressed_path = temp_dir.path().join("compressed.json");
+        result
+            .save_to_file(compressed_path.to_str().unwrap(), true)
+            .unwrap();
+        let compressed_gz_path = format!("{}.gz", compressed_path.to_str().unwrap());
+
+        // Compare file sizes
+        let uncompressed_size = std::fs::metadata(&uncompressed_path).unwrap().len();
+        let compressed_size = std::fs::metadata(&compressed_gz_path).unwrap().len();
+
+        // Compressed should be smaller (for this test data)
+        assert!(
+            compressed_size < uncompressed_size,
+            "Compressed size {} should be less than uncompressed size {}",
+            compressed_size,
+            uncompressed_size
+        );
     }
 
     fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
