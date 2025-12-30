@@ -211,11 +211,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Echtzeit-Monitoring und reduzierter Memory-Footprint
 - **Implementierung**: Append-only JSON oder JSONL
 
-#### 5.4 Komprimierte Ausgabe
-- **Beschreibung**: Optionale Kompression der JSON-Ausgabe
-- **Nutzen**: Weniger Speicherplatz
-- **Technologie**: `flate2` für gzip
-
 ## 📊 Analyse und Forschung
 
 ### 1. Wirtschaftliche Analysen
