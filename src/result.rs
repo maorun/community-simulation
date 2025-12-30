@@ -30,6 +30,25 @@ pub struct SkillPriceInfo {
     pub price: f64,
 }
 
+/// Statistics about trade volume and economic activity
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TradeVolumeStats {
+    /// Total number of successful trades across all steps
+    pub total_trades: usize,
+    /// Total money exchanged across all trades
+    pub total_volume: f64,
+    /// Average number of trades per step
+    pub avg_trades_per_step: f64,
+    /// Average money exchanged per step
+    pub avg_volume_per_step: f64,
+    /// Average transaction value (total volume / total trades)
+    pub avg_transaction_value: f64,
+    /// Minimum trades in a single step
+    pub min_trades_per_step: usize,
+    /// Maximum trades in a single step
+    pub max_trades_per_step: usize,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     // Core simulation metrics
@@ -55,6 +74,13 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub skill_price_history: HashMap<SkillId, Vec<f64>>,
 
+    // Trade volume analysis
+    pub trade_volume_statistics: TradeVolumeStats,
+    /// Number of trades executed at each step
+    pub trades_per_step: Vec<usize>,
+    /// Total money volume exchanged at each step
+    pub volume_per_step: Vec<f64>,
+
     // final_entities might be too verbose if Person struct grows large with transaction history.
     // Consider summarizing person data if needed, or providing it under a flag.
     // For now, let's keep it as it contains all person data including transaction history.
@@ -76,6 +102,7 @@ impl SimulationResult {
     /// - {path}_reputation.csv: Reputation distribution per person
     /// - {path}_skill_prices.csv: Final skill prices
     /// - {path}_price_history.csv: Skill price history over time (if available)
+    /// - {path}_trade_volume.csv: Trade volume history over time
     pub fn save_to_csv(&self, path_prefix: &str) -> Result<(), Box<dyn std::error::Error>> {
         // Save summary statistics
         self.save_summary_csv(&format!("{}_summary.csv", path_prefix))?;
@@ -93,6 +120,9 @@ impl SimulationResult {
         if !self.skill_price_history.is_empty() {
             self.save_price_history_csv(&format!("{}_price_history.csv", path_prefix))?;
         }
+
+        // Save trade volume history
+        self.save_trade_volume_csv(&format!("{}_trade_volume.csv", path_prefix))?;
 
         Ok(())
     }
@@ -149,6 +179,44 @@ impl SimulationResult {
             file,
             "Max Reputation,{:.6}",
             self.reputation_statistics.max_reputation
+        )?;
+
+        writeln!(file)?;
+        writeln!(file, "Trade Volume Statistics")?;
+        writeln!(
+            file,
+            "Total Trades,{}",
+            self.trade_volume_statistics.total_trades
+        )?;
+        writeln!(
+            file,
+            "Total Volume,{:.4}",
+            self.trade_volume_statistics.total_volume
+        )?;
+        writeln!(
+            file,
+            "Avg Trades Per Step,{:.4}",
+            self.trade_volume_statistics.avg_trades_per_step
+        )?;
+        writeln!(
+            file,
+            "Avg Volume Per Step,{:.4}",
+            self.trade_volume_statistics.avg_volume_per_step
+        )?;
+        writeln!(
+            file,
+            "Avg Transaction Value,{:.4}",
+            self.trade_volume_statistics.avg_transaction_value
+        )?;
+        writeln!(
+            file,
+            "Min Trades Per Step,{}",
+            self.trade_volume_statistics.min_trades_per_step
+        )?;
+        writeln!(
+            file,
+            "Max Trades Per Step,{}",
+            self.trade_volume_statistics.max_trades_per_step
         )?;
 
         Ok(())
@@ -230,6 +298,22 @@ impl SimulationResult {
         Ok(())
     }
 
+    fn save_trade_volume_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Step,Trades_Count,Volume_Exchanged")?;
+        for (step, (&trades, &volume)) in self
+            .trades_per_step
+            .iter()
+            .zip(self.volume_per_step.iter())
+            .enumerate()
+        {
+            writeln!(file, "{},{},{:.4}", step, trades, volume)?;
+        }
+
+        Ok(())
+    }
+
     pub fn print_summary(&self) {
         println!("\n=== Economic Simulation Summary ===");
         println!("Total steps: {}", self.total_steps);
@@ -291,6 +375,33 @@ impl SimulationResult {
                 skill.id, skill.price
             );
         }
+
+        println!("\n--- Trade Volume Statistics ---");
+        println!(
+            "Total Trades: {}",
+            self.trade_volume_statistics.total_trades
+        );
+        println!(
+            "Total Volume Exchanged: {:.2}",
+            self.trade_volume_statistics.total_volume
+        );
+        println!(
+            "Avg Trades Per Step: {:.2}",
+            self.trade_volume_statistics.avg_trades_per_step
+        );
+        println!(
+            "Avg Volume Per Step: {:.2}",
+            self.trade_volume_statistics.avg_volume_per_step
+        );
+        println!(
+            "Avg Transaction Value: {:.2}",
+            self.trade_volume_statistics.avg_transaction_value
+        );
+        println!(
+            "Min/Max Trades Per Step: {} / {}",
+            self.trade_volume_statistics.min_trades_per_step,
+            self.trade_volume_statistics.max_trades_per_step
+        );
 
         println!("\nTop 5 Most Valuable Skills:");
         for skill_info in self.final_skill_prices.iter().take(5) {
@@ -381,6 +492,19 @@ mod tests {
             most_valuable_skill: None,
             least_valuable_skill: None,
             skill_price_history: HashMap::new(),
+            trade_volume_statistics: TradeVolumeStats {
+                total_trades: 100,
+                total_volume: 1000.0,
+                avg_trades_per_step: 10.0,
+                avg_volume_per_step: 100.0,
+                avg_transaction_value: 10.0,
+                min_trades_per_step: 5,
+                max_trades_per_step: 15,
+            },
+            trades_per_step: vec![10, 12, 8, 10, 15, 9, 11, 10, 5, 10],
+            volume_per_step: vec![
+                100.0, 120.0, 80.0, 100.0, 150.0, 90.0, 110.0, 100.0, 50.0, 100.0,
+            ],
             final_persons_data: vec![],
         }
     }
@@ -685,5 +809,46 @@ mod tests {
         assert!(contents.contains("0,10."));
         assert!(contents.contains("1,11."));
         assert!(contents.contains("2,12."));
+    }
+
+    #[test]
+    fn test_trade_volume_statistics() {
+        let result = get_test_result();
+
+        // Verify trade volume statistics are calculated correctly
+        assert_eq!(result.trade_volume_statistics.total_trades, 100);
+        assert_eq!(result.trade_volume_statistics.total_volume, 1000.0);
+        assert_eq!(result.trade_volume_statistics.avg_trades_per_step, 10.0);
+        assert_eq!(result.trade_volume_statistics.avg_volume_per_step, 100.0);
+        assert_eq!(result.trade_volume_statistics.avg_transaction_value, 10.0);
+        assert_eq!(result.trade_volume_statistics.min_trades_per_step, 5);
+        assert_eq!(result.trade_volume_statistics.max_trades_per_step, 15);
+    }
+
+    #[test]
+    fn test_save_to_csv_trade_volume() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check trade volume file
+        let volume_path = format!("{}_trade_volume.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&volume_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Step,Trades_Count,Volume_Exchanged"));
+        assert!(contents.contains("0,10,100."));
+        assert!(contents.contains("4,15,150."));
+        assert!(contents.contains("8,5,50."));
     }
 }

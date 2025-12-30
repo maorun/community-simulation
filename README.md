@@ -270,10 +270,33 @@ The JSON output file contains a comprehensive summary of the simulation, includi
     *   `median`: Median reputation value
     *   `std_dev`: Standard deviation of reputation distribution
     *   `min_reputation`, `max_reputation`: Minimum and maximum reputation values
+*   `trade_volume_statistics`: An object with comprehensive trade activity metrics:
+    *   `total_trades`: Total number of successful trades across all steps
+    *   `total_volume`: Total money exchanged across all trades
+    *   `avg_trades_per_step`: Average number of trades per simulation step
+    *   `avg_volume_per_step`: Average money exchanged per simulation step
+    *   `avg_transaction_value`: Average transaction value (total volume / total trades)
+    *   `min_trades_per_step`: Minimum trades in a single step
+    *   `max_trades_per_step`: Maximum trades in a single step
+*   `trades_per_step`: An array tracking the number of trades at each simulation step
+*   `volume_per_step`: An array tracking the total money exchanged at each simulation step
 *   `final_skill_prices`: A list of all skills sorted by their final price (descending), including `id` and `price`.
 *   `most_valuable_skill`, `least_valuable_skill`: Information on the skills with the highest and lowest final prices.
 *   `skill_price_history`: A map where keys are `SkillId`s and values are lists of prices for that skill at each step of the simulation. This data can be used for plotting price trends.
 *   `final_persons_data`: A list of all person data at the end of the simulation, including their full transaction history and reputation scores.
+
+### CSV Export
+
+When using the `--csv-output` flag, the simulation generates multiple CSV files for easy analysis:
+
+*   `{prefix}_summary.csv`: Summary statistics including money distribution, reputation, skill prices, and **trade volume metrics**
+*   `{prefix}_money.csv`: Money distribution per person
+*   `{prefix}_reputation.csv`: Reputation distribution per person
+*   `{prefix}_skill_prices.csv`: Final skill prices
+*   `{prefix}_price_history.csv`: Skill price history over time (if available)
+*   `{prefix}_trade_volume.csv`: **Trade volume history showing trades count and money exchanged per step**
+
+The trade volume CSV provides time-series data perfect for analyzing market activity and economic vitality trends.
 
 ## License
 
