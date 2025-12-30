@@ -233,11 +233,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Monopolbildung erkennen
 - **Implementierung**: Marktanteilsberechnung
 
-#### 1.2 Handelsvolumen-Analyse
-- **Beschreibung**: Tracking von Handelsaktivität über Zeit
-- **Nutzen**: Wirtschaftliche Vitalität messen
-- **Implementierung**: Aggregierte Transaktionsstatistiken
-
 ### 2. Vergleichsstudien
 
 #### 2.1 Szenario-Vergleich
