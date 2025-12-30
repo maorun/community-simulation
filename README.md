@@ -112,7 +112,6 @@ This runs the simulation and creates CSV files (`analysis_summary.csv`, `analysi
 ./target/release/economic_simulation --steps 1000 --persons 100 --output results.json --compress
 ```
 This runs the simulation and saves compressed results to `results.json.gz`, achieving significant space savings (typically 10-20x smaller file size) while preserving all simulation data. The compressed file can be decompressed with `gunzip results.json.gz` or opened directly by many data analysis tools.
-This runs the simulation and creates CSV files (`analysis_summary.csv`, `analysis_money.csv`, etc.) in the `./output/` directory for easy data analysis.
 
 **Using Configuration Files:**
 
