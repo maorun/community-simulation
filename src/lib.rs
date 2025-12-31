@@ -79,7 +79,7 @@ pub mod result;
 pub mod scenario;
 pub mod skill;
 
-pub use config::SimulationConfig;
+pub use config::{PresetName, SimulationConfig};
 pub use engine::SimulationEngine;
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use market::Market;

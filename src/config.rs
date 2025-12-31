@@ -2,6 +2,78 @@ use crate::scenario::Scenario;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
+
+/// Preset configuration names for typical simulation scenarios
+#[derive(Debug, Clone, PartialEq)]
+pub enum PresetName {
+    Default,
+    SmallEconomy,
+    LargeEconomy,
+    CrisisScenario,
+    HighInflation,
+    TechGrowth,
+    QuickTest,
+}
+
+impl PresetName {
+    /// Get all available preset names
+    pub fn all() -> Vec<PresetName> {
+        vec![
+            PresetName::Default,
+            PresetName::SmallEconomy,
+            PresetName::LargeEconomy,
+            PresetName::CrisisScenario,
+            PresetName::HighInflation,
+            PresetName::TechGrowth,
+            PresetName::QuickTest,
+        ]
+    }
+
+    /// Get the string identifier for this preset
+    pub fn as_str(&self) -> &str {
+        match self {
+            PresetName::Default => "default",
+            PresetName::SmallEconomy => "small_economy",
+            PresetName::LargeEconomy => "large_economy",
+            PresetName::CrisisScenario => "crisis_scenario",
+            PresetName::HighInflation => "high_inflation",
+            PresetName::TechGrowth => "tech_growth",
+            PresetName::QuickTest => "quick_test",
+        }
+    }
+
+    /// Get a description of this preset
+    pub fn description(&self) -> &str {
+        match self {
+            PresetName::Default => "Standard economy with 100 persons, 500 steps",
+            PresetName::SmallEconomy => "Small economy with 20 persons for quick testing",
+            PresetName::LargeEconomy => "Large economy with 500 persons for detailed analysis",
+            PresetName::CrisisScenario => "Economic crisis with low initial money and high prices",
+            PresetName::HighInflation => "High inflation scenario with dynamic pricing",
+            PresetName::TechGrowth => "Technology growth scenario with high initial capital",
+            PresetName::QuickTest => "Very small economy for rapid testing (10 persons, 50 steps)",
+        }
+    }
+}
+
+/// Implement FromStr trait for parsing preset names from strings
+impl FromStr for PresetName {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "default" => Ok(PresetName::Default),
+            "small_economy" | "small" => Ok(PresetName::SmallEconomy),
+            "large_economy" | "large" => Ok(PresetName::LargeEconomy),
+            "crisis_scenario" | "crisis" => Ok(PresetName::CrisisScenario),
+            "high_inflation" | "inflation" => Ok(PresetName::HighInflation),
+            "tech_growth" | "tech" => Ok(PresetName::TechGrowth),
+            "quick_test" | "quick" => Ok(PresetName::QuickTest),
+            _ => Err(format!("Unknown preset: '{}'", s)),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationConfig {
@@ -36,6 +108,81 @@ impl Default for SimulationConfig {
 }
 
 impl SimulationConfig {
+    /// Create a configuration from a preset.
+    ///
+    /// # Arguments
+    /// * `preset` - The preset name to use
+    ///
+    /// # Returns
+    /// * `SimulationConfig` - A configuration with preset values
+    ///
+    /// # Examples
+    /// ```
+    /// use simulation_framework::{SimulationConfig, PresetName};
+    ///
+    /// let config = SimulationConfig::from_preset(PresetName::SmallEconomy);
+    /// assert_eq!(config.entity_count, 20);
+    /// ```
+    pub fn from_preset(preset: PresetName) -> Self {
+        match preset {
+            PresetName::Default => Self::default(),
+            PresetName::SmallEconomy => Self {
+                max_steps: 100,
+                entity_count: 20,
+                seed: 42,
+                initial_money_per_person: 100.0,
+                base_skill_price: 10.0,
+                time_step: 1.0,
+                scenario: Scenario::Original,
+            },
+            PresetName::LargeEconomy => Self {
+                max_steps: 2000,
+                entity_count: 500,
+                seed: 42,
+                initial_money_per_person: 200.0,
+                base_skill_price: 10.0,
+                time_step: 1.0,
+                scenario: Scenario::Original,
+            },
+            PresetName::CrisisScenario => Self {
+                max_steps: 1000,
+                entity_count: 100,
+                seed: 42,
+                initial_money_per_person: 50.0,
+                base_skill_price: 25.0,
+                time_step: 1.0,
+                scenario: Scenario::Original,
+            },
+            PresetName::HighInflation => Self {
+                max_steps: 1000,
+                entity_count: 100,
+                seed: 42,
+                initial_money_per_person: 100.0,
+                base_skill_price: 15.0,
+                time_step: 1.0,
+                scenario: Scenario::DynamicPricing,
+            },
+            PresetName::TechGrowth => Self {
+                max_steps: 1500,
+                entity_count: 150,
+                seed: 42,
+                initial_money_per_person: 250.0,
+                base_skill_price: 8.0,
+                time_step: 1.0,
+                scenario: Scenario::Original,
+            },
+            PresetName::QuickTest => Self {
+                max_steps: 50,
+                entity_count: 10,
+                seed: 42,
+                initial_money_per_person: 100.0,
+                base_skill_price: 10.0,
+                time_step: 1.0,
+                scenario: Scenario::Original,
+            },
+        }
+    }
+
     /// Load configuration from a YAML or TOML file.
     /// File format is auto-detected based on file extension.
     ///
@@ -191,5 +338,105 @@ scenario: Original
         assert_eq!(config.entity_count, 50); // From file
         assert_eq!(config.seed, 999); // Overridden
         assert_eq!(config.initial_money_per_person, 200.0); // From file
+    }
+
+    #[test]
+    fn test_preset_default() {
+        let config = SimulationConfig::from_preset(PresetName::Default);
+        let default_config = SimulationConfig::default();
+
+        assert_eq!(config.max_steps, default_config.max_steps);
+        assert_eq!(config.entity_count, default_config.entity_count);
+        assert_eq!(
+            config.initial_money_per_person,
+            default_config.initial_money_per_person
+        );
+    }
+
+    #[test]
+    fn test_preset_small_economy() {
+        let config = SimulationConfig::from_preset(PresetName::SmallEconomy);
+
+        assert_eq!(config.entity_count, 20);
+        assert_eq!(config.max_steps, 100);
+        assert_eq!(config.initial_money_per_person, 100.0);
+    }
+
+    #[test]
+    fn test_preset_large_economy() {
+        let config = SimulationConfig::from_preset(PresetName::LargeEconomy);
+
+        assert_eq!(config.entity_count, 500);
+        assert_eq!(config.max_steps, 2000);
+        assert_eq!(config.initial_money_per_person, 200.0);
+    }
+
+    #[test]
+    fn test_preset_crisis_scenario() {
+        let config = SimulationConfig::from_preset(PresetName::CrisisScenario);
+
+        assert_eq!(config.entity_count, 100);
+        assert_eq!(config.max_steps, 1000);
+        assert_eq!(config.initial_money_per_person, 50.0);
+        assert_eq!(config.base_skill_price, 25.0);
+    }
+
+    #[test]
+    fn test_preset_high_inflation() {
+        let config = SimulationConfig::from_preset(PresetName::HighInflation);
+
+        assert_eq!(config.scenario, Scenario::DynamicPricing);
+        assert_eq!(config.entity_count, 100);
+        assert_eq!(config.base_skill_price, 15.0);
+    }
+
+    #[test]
+    fn test_preset_quick_test() {
+        let config = SimulationConfig::from_preset(PresetName::QuickTest);
+
+        assert_eq!(config.entity_count, 10);
+        assert_eq!(config.max_steps, 50);
+    }
+
+    #[test]
+    fn test_preset_name_from_str() {
+        use std::str::FromStr;
+        
+        assert_eq!(
+            PresetName::from_str("default").unwrap(),
+            PresetName::Default
+        );
+        assert_eq!(
+            PresetName::from_str("small_economy").unwrap(),
+            PresetName::SmallEconomy
+        );
+        assert_eq!(
+            PresetName::from_str("small").unwrap(),
+            PresetName::SmallEconomy
+        );
+        assert_eq!(
+            PresetName::from_str("crisis").unwrap(),
+            PresetName::CrisisScenario
+        );
+        assert!(PresetName::from_str("nonexistent").is_err());
+    }
+
+    #[test]
+    fn test_preset_name_as_str() {
+        assert_eq!(PresetName::Default.as_str(), "default");
+        assert_eq!(PresetName::SmallEconomy.as_str(), "small_economy");
+        assert_eq!(PresetName::QuickTest.as_str(), "quick_test");
+    }
+
+    #[test]
+    fn test_all_presets_are_valid() {
+        // Ensure all presets can be created without panicking
+        for preset in PresetName::all() {
+            let config = SimulationConfig::from_preset(preset.clone());
+            assert!(config.entity_count > 0);
+            assert!(config.max_steps > 0);
+            assert!(config.initial_money_per_person > 0.0);
+            assert!(config.base_skill_price > 0.0);
+        }
     }
 }
