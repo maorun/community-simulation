@@ -119,6 +119,23 @@ mod tests {
     }
 }
 
+/// Enum representing different price update strategies.
+///
+/// Each variant wraps a specific updater implementation that defines how
+/// skill prices change in response to market conditions.
+///
+/// # Variants
+///
+/// * `Original` - Supply/demand-based pricing with random volatility
+/// * `DynamicPricing` - Sales-based pricing that increases/decreases based on purchases
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::scenario::{PriceUpdater, Scenario};
+///
+/// let updater = PriceUpdater::from(Scenario::Original);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PriceUpdater {
     Original(OriginalPriceUpdater),
@@ -132,6 +149,12 @@ impl Default for PriceUpdater {
 }
 
 impl PriceUpdater {
+    /// Updates skill prices in the market using the configured strategy.
+    ///
+    /// # Arguments
+    ///
+    /// * `market` - The market containing skills whose prices should be updated
+    /// * `rng` - Random number generator for adding volatility (if applicable)
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
         match self {
             PriceUpdater::Original(updater) => updater.update_prices(market, rng),
@@ -149,10 +172,33 @@ impl From<Scenario> for PriceUpdater {
     }
 }
 
+/// Price updater for the Original scenario.
+///
+/// This updater adjusts prices based on the ratio of demand to supply:
+/// - When demand > supply: prices increase
+/// - When demand < supply: prices decrease
+/// - Adds random volatility for market realism
+/// - Enforces min/max price boundaries
+///
+/// The adjustment magnitude is controlled by the market's `price_elasticity_factor`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct OriginalPriceUpdater;
 
 impl OriginalPriceUpdater {
+    /// Updates skill prices based on supply and demand dynamics.
+    ///
+    /// # Algorithm
+    ///
+    /// 1. Calculate demand/supply ratio for each skill
+    /// 2. Adjust price by `(ratio - 1.0) * elasticity_factor`
+    /// 3. Add random fluctuation based on `volatility_percentage`
+    /// 4. Clamp to min/max price boundaries
+    /// 5. Record price in history
+    ///
+    /// # Arguments
+    ///
+    /// * `market` - The market containing skills to update
+    /// * `rng` - Random number generator for volatility
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
         for (skill_id, skill) in market.skills.iter_mut() {
             let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
@@ -186,10 +232,33 @@ impl OriginalPriceUpdater {
     }
 }
 
+/// Price updater for the DynamicPricing scenario.
+///
+/// This updater adjusts prices based on sales activity:
+/// - If a skill was sold in the current step: price increases by 5%
+/// - If a skill was not sold: price decreases by 5%
+/// - Enforces min/max price boundaries
+///
+/// This creates a simpler, more direct feedback mechanism compared to
+/// the supply/demand approach.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DynamicPricingUpdater;
 
 impl DynamicPricingUpdater {
+    /// Updates skill prices based on sales activity.
+    ///
+    /// # Algorithm
+    ///
+    /// 1. Check if skill was sold in current step
+    /// 2. If sold: increase price by 5%
+    /// 3. If not sold: decrease price by 5%
+    /// 4. Clamp to min/max price boundaries
+    /// 5. Record price in history
+    ///
+    /// # Arguments
+    ///
+    /// * `market` - The market containing skills to update
+    /// * `_rng` - Random number generator (unused in this strategy)
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, _rng: &mut R) {
         let price_change_rate = 0.05; // 5% price change per step
 

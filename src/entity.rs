@@ -1,27 +1,70 @@
-// This file now defines the main simulated agent for our economic simulation.
-// To maintain compatibility with parts of the existing framework (engine, results)
-// that expect an `Entity`, we are defining `Entity` here as our `Person`.
+//! Entity wrapper for persons in the simulation framework.
+//!
+//! This module defines the [`Entity`] struct, which wraps a [`Person`] for compatibility
+//! with the simulation engine architecture. The entity abstraction allows the engine
+//! to manage persons uniformly while encapsulating person-specific economic behavior.
 
-use crate::person::{Person, PersonId as InnerPersonId}; // Import the Person struct
-use crate::skill::Skill; // Required for Person initialization, SkillId removed
+use crate::person::{Person, PersonId as InnerPersonId};
+use crate::skill::Skill;
 use serde::{Deserialize, Serialize};
 
-pub type EntityId = usize; // Consistent with PersonId
+/// Type alias for entity identifiers.
+///
+/// Each entity has a unique ID within the simulation, which corresponds to
+/// the person's ID for simplicity.
+pub type EntityId = usize;
 
+/// Represents a simulated agent in the economic system.
+///
+/// An entity wraps a [`Person`] and adds simulation-level state management,
+/// such as whether the entity is active in the current simulation.
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::{Entity, Skill};
+///
+/// let skill = Skill::new("Programming".to_string(), 50.0);
+/// let entity = Entity::new(0, 100.0, skill);
+///
+/// assert_eq!(entity.id, 0);
+/// assert_eq!(entity.get_money(), 100.0);
+/// assert!(entity.active);
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entity {
-    // These fields should mirror what SimulationEngine and SimulationResult expect
-    // from an "Entity", and also what's necessary for our economic sim.
-    pub id: EntityId,        // This is the simulation-wide entity ID
-    pub person_data: Person, // Encapsulates Person data
-    pub active: bool,        // Still useful to mark if a person is active in the simulation
+    /// Unique identifier for this entity in the simulation
+    pub id: EntityId,
+
+    /// The person data, including money, skills, transactions, and reputation
+    pub person_data: Person,
+
+    /// Whether this entity is currently active in the simulation
+    ///
+    /// Inactive entities are not processed during simulation steps.
+    pub active: bool,
 }
 
 impl Entity {
-    // Constructor that the engine will use.
-    // It now needs enough info to create a Person.
-    // The `initialize_entities` method in `SimulationEngine` will need to be updated
-    // to call this constructor with appropriate Person data.
+    /// Creates a new entity with the specified initial conditions.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - Unique identifier for the entity
+    /// * `initial_money` - Starting money amount for the person
+    /// * `own_skill` - The skill this person can provide to others
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use simulation_framework::{Entity, Skill};
+    ///
+    /// let skill = Skill::new("Accounting".to_string(), 45.0);
+    /// let entity = Entity::new(1, 200.0, skill);
+    ///
+    /// assert_eq!(entity.id, 1);
+    /// assert_eq!(entity.person_data.money, 200.0);
+    /// ```
     pub fn new(id: EntityId, initial_money: f64, own_skill: Skill) -> Self {
         let person = Person::new(id as InnerPersonId, initial_money, own_skill);
         Self {
@@ -31,17 +74,23 @@ impl Entity {
         }
     }
 
-    // Example of how one might provide access to Person's properties or methods
-    // For instance, if external parts of the simulation needed to check money:
+    /// Gets the current money amount for this entity's person.
+    ///
+    /// # Returns
+    ///
+    /// The amount of money the person currently has
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use simulation_framework::{Entity, Skill};
+    ///
+    /// let skill = Skill::new("Writing".to_string(), 30.0);
+    /// let entity = Entity::new(0, 150.0, skill);
+    ///
+    /// assert_eq!(entity.get_money(), 150.0);
+    /// ```
     pub fn get_money(&self) -> f64 {
         self.person_data.money
     }
-
-    // The old `update` method which took physics `forces` is no longer relevant here.
-    // Entity state changes (money, skills) will be managed by the economic logic
-    // in the SimulationEngine's `step` method.
 }
-
-// The old Vector3 and EntityState are removed as they are physics-specific.
-// If any generic vector math or state representation is needed later,
-// it can be added back in a more generic form.

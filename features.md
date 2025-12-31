@@ -164,14 +164,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Bessere Fehlerdiagnose
 - **Implementierung**: Custom Error-Types, `thiserror` Crate
 
-#### 3.3 Dokumentation
-- **Beschreibung**: Vollständige API-Dokumentation
-- **Bereiche**:
-  - Alle public APIs dokumentieren
-  - Beispiele in Docstrings
-  - Architecture Decision Records (ADRs)
-  - Tutorials und Guides
-
 #### 3.5 Code-Formatierung und Linting
 - **Beschreibung**: Einheitlicher Code-Stil
 - **Tools**: `rustfmt`, `clippy` in CI/CD
@@ -321,9 +313,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Technologie**: `cargo-fuzz`
 
 ## 🎯 Priorisierung
-
-### Hohe Priorität (Quick Wins)
-1. Dokumentation vervollständigen
 
 ### Mittlere Priorität (Mehrwert)
 1. Event-System einführen
