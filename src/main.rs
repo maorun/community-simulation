@@ -111,12 +111,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // CLI arguments only override preset/file values when explicitly provided
     let config = if let Some(preset_name) = &args.preset {
         // Load from preset
-        let preset = PresetName::from_str(preset_name).map_err(|e| {
-            format!(
-                "{}. Use --list-presets to see available presets.",
-                e
-            )
-        })?;
+        let preset = PresetName::from_str(preset_name)
+            .map_err(|e| format!("{}. Use --list-presets to see available presets.", e))?;
         info!("Loading preset configuration: {}", preset.as_str());
         let mut cfg = SimulationConfig::from_preset(preset);
         // Apply CLI overrides only if provided
@@ -194,7 +190,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let start_time = Instant::now();
     let max_steps = config.max_steps; // Store max_steps before moving config
-    // SimulationEngine::new will need to be updated to handle the new config and setup persons/market
+                                      // SimulationEngine::new will need to be updated to handle the new config and setup persons/market
     let mut engine = SimulationEngine::new(config);
     let show_progress = !args.no_progress;
     let result = engine.run_with_progress(show_progress);

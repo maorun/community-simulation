@@ -127,8 +127,33 @@ cargo clippy --all-targets --all-features -- -D warnings -A deprecated
 5. **Validation & Review**
    - Build release: `cargo build --release`
    - Final manual test
-   - Request code review
-   - Run security checks
+   - Request code review using `code_review` tool
+   - **After addressing code review feedback:**
+     - Re-run `cargo fmt --all`
+     - Re-run `cargo clippy --all-targets --all-features -- -D warnings -A deprecated`
+     - Re-run `cargo build --verbose`
+     - Re-run `cargo test --verbose`
+   - Run security checks using `codeql_checker` tool
+
+### Code Review Requirements
+
+**CRITICAL:** After addressing ANY code review feedback, you MUST re-run the complete validation suite:
+
+```bash
+# 1. Format code
+cargo fmt --all
+
+# 2. Lint code (must pass without errors)
+cargo clippy --all-targets --all-features -- -D warnings -A deprecated
+
+# 3. Build project
+cargo build --verbose
+
+# 4. Run all tests
+cargo test --verbose
+```
+
+Even minor changes require full validation to ensure no regressions are introduced.
 
 ### Copilot-Specific Instructions
 
