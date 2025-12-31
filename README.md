@@ -54,17 +54,30 @@ This runs the simulation with default settings (e.g., 100 persons, 500 steps, 10
 
 The simulation accepts the following CLI arguments:
 
+*   `--preset <PRESET_NAME>`:
+    *   Use a predefined configuration preset for quick setup. Available presets:
+        *   `default` - Standard economy (100 persons, 500 steps, $100 initial money)
+        *   `small_economy` (alias: `small`) - Quick testing (20 persons, 100 steps)
+        *   `large_economy` (alias: `large`) - Detailed analysis (500 persons, 2000 steps, $200 initial money)
+        *   `crisis_scenario` (alias: `crisis`) - Economic crisis (100 persons, 1000 steps, $50 initial money, $25 base price)
+        *   `high_inflation` (alias: `inflation`) - Dynamic pricing scenario (100 persons, 1000 steps, DynamicPricing scenario)
+        *   `tech_growth` (alias: `tech`) - Technology growth (150 persons, 1500 steps, $250 initial money, $8 base price)
+        *   `quick_test` (alias: `quick`) - Rapid testing (10 persons, 50 steps)
+    *   CLI arguments can override preset values when explicitly provided.
+    *   Example: `--preset small_economy --steps 200` uses the small economy preset but overrides steps to 200.
+*   `--list-presets`:
+    *   Display all available preset configurations with their parameters and exit.
 *   `--config <CONFIG>` or `-c <CONFIG>`:
     *   Path to a configuration file (YAML or TOML format). When provided, configuration is loaded from the file first, then any CLI arguments override those values.
     *   See `config.example.yaml` and `config.example.toml` for example configuration files.
 *   `--steps <STEPS>` or `-s <STEPS>`:
-    *   Total number of simulation steps. Default: `500`.
+    *   Total number of simulation steps. If not specified, uses default (500) or preset value.
 *   `--persons <PERSONS>` or `-p <PERSONS>`:
-    *   Number of persons to simulate. Each person will have one unique skill. Default: `100`.
+    *   Number of persons to simulate. Each person will have one unique skill. If not specified, uses default (100) or preset value.
 *   `--initial-money <AMOUNT>`:
-    *   Initial amount of money each person starts with. Default: `100.0`.
+    *   Initial amount of money each person starts with. If not specified, uses default (100.0) or preset value.
 *   `--base-price <PRICE>`:
-    *   Initial base price for all skills. Default: `10.0`.
+    *   Initial base price for all skills. If not specified, uses default (10.0) or preset value.
 *   `--output <FILEPATH>` or `-o <FILEPATH>`:
     *   Specifies the path to save the simulation results in JSON format. If not provided, results are printed to console only (summary).
 *   `--compress`:
@@ -84,13 +97,28 @@ The simulation accepts the following CLI arguments:
 *   `--threads <NUM_THREADS>`:
     *   (Optional) Number of threads for Rayon to use. Defaults to Rayon's choice (usually number of logical cores).
 *   `--seed <SEED>`:
-    *   Seed for the random number generator for reproducible simulations. Default: `42`.
+    *   Seed for the random number generator for reproducible simulations. If not specified, uses default (42) or preset value.
+*   `--scenario <SCENARIO>`:
+    *   Scenario type: `Original` (supply/demand pricing) or `DynamicPricing` (sales-based pricing). If not specified, uses default (Original) or preset value.
 *   `--no-progress`:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
 *   `--log-level <LOG_LEVEL>`:
     *   Set the logging level for the simulation. Valid values: `error`, `warn`, `info`, `debug`, `trace`. Default: `info`.
     *   Can also be set via the `RUST_LOG` environment variable (e.g., `RUST_LOG=debug`).
     *   Use `info` for high-level progress messages, `debug` for detailed step-by-step information, or `warn`/`error` for minimal output.
+
+**Example with Preset:**
+
+```bash
+# List all available presets
+./target/release/economic_simulation --list-presets
+
+# Use a preset for quick testing
+./target/release/economic_simulation --preset quick_test -o quick_results.json
+
+# Use a preset and override some parameters
+./target/release/economic_simulation --preset crisis_scenario --steps 2000 --seed 999 -o crisis_results.json
+```
 
 **Example with Custom Parameters:**
 

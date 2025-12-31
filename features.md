@@ -171,11 +171,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Konfiguration und Deployment
 
-#### 4.2 Presets für typische Szenarien
-- **Beschreibung**: Vordefinierte Konfigurationen
-- **Nutzen**: Schneller Einstieg
-- **Beispiele**: "small_economy", "crisis_scenario", "tech_growth"
-
 #### 4.3 Docker-Container
 - **Beschreibung**: Containerisierte Deployment-Option
 - **Nutzen**: Einfache Verteilung und Reproduzierbarkeit
