@@ -1,17 +1,61 @@
+//! Skill definitions and generation for the economic simulation.
+//!
+//! This module defines the [`Skill`] type, which represents a tradeable skill in the economy.
+//! Each skill has a unique identifier and a dynamically adjusting price based on market conditions.
+
 use serde::{Deserialize, Serialize};
 
-pub type SkillId = String; // Using String for skill names as IDs
+/// Type alias for skill identifiers.
+///
+/// Skills are identified by their name as a string, making them human-readable
+/// and easy to debug. For example: "Programming", "Accounting", "Writing".
+pub type SkillId = String;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)] // Removed Eq and Hash
+/// Represents a tradeable skill in the economy.
+///
+/// Each person in the simulation has one skill they can provide to others,
+/// and needs various skills from other people. Skills have dynamic prices
+/// that adjust based on supply, demand, and market conditions.
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::Skill;
+///
+/// let skill = Skill::new("Programming".to_string(), 50.0);
+/// assert_eq!(skill.id, "Programming");
+/// assert_eq!(skill.current_price, 50.0);
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Skill {
-    pub id: SkillId, // Name of the skill, also used as a unique identifier
+    /// Unique identifier for the skill, also serves as the skill's name.
+    pub id: SkillId,
+
+    /// Current market price for this skill.
+    ///
+    /// This price is dynamically adjusted by the market based on supply and demand.
+    /// The market ensures prices stay within configured min/max bounds.
     pub current_price: f64,
-    // Supply is implicitly 1 per person offering it. Demand is calculated each step.
-    // We can store a demand_count or supply_demand_ratio if needed for pricing.
-    // For now, price will be managed by the Market.
+    // Note: Supply is implicitly 1 per person offering it. Demand is calculated each step.
+    // Price management is handled by the Market.
 }
 
 impl Skill {
+    /// Creates a new skill with the given identifier and base price.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - Unique identifier for the skill (typically a descriptive name)
+    /// * `base_price` - Initial price for the skill
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use simulation_framework::Skill;
+    ///
+    /// let programming = Skill::new("Programming".to_string(), 50.0);
+    /// let accounting = Skill::new("Accounting".to_string(), 45.0);
+    /// ```
     pub fn new(id: SkillId, base_price: f64) -> Self {
         Self {
             id,
@@ -20,8 +64,33 @@ impl Skill {
     }
 }
 
-// Example function to generate a predefined list of unique skills
-// This could be expanded or made more dynamic.
+/// Generates a list of unique skills for the simulation.
+///
+/// This function creates the specified number of unique skills, each with the same base price.
+/// Skills are given predefined names (e.g., "Programming", "Accounting") when available,
+/// and fall back to generated names (e.g., "Skill0", "Skill1") when the predefined list
+/// is exhausted.
+///
+/// # Arguments
+///
+/// * `count` - Number of unique skills to generate
+/// * `base_price` - Initial price to assign to all skills
+///
+/// # Returns
+///
+/// A vector of `Skill` instances, each with a unique identifier
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::skill::generate_unique_skills;
+///
+/// // Generate 5 skills with base price of 10.0
+/// let skills = generate_unique_skills(5, 10.0);
+/// assert_eq!(skills.len(), 5);
+/// assert_eq!(skills[0].id, "Programming");
+/// assert_eq!(skills[0].current_price, 10.0);
+/// ```
 pub fn generate_unique_skills(count: usize, base_price: f64) -> Vec<Skill> {
     let skill_names = [
         "Programming",
