@@ -193,15 +193,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let start_time = Instant::now();
+    let max_steps = config.max_steps; // Store max_steps before moving config
     // SimulationEngine::new will need to be updated to handle the new config and setup persons/market
-    let mut engine = SimulationEngine::new(config.clone());
+    let mut engine = SimulationEngine::new(config);
     let show_progress = !args.no_progress;
     let result = engine.run_with_progress(show_progress);
     let duration = start_time.elapsed();
 
     info!("Simulation completed in {:.2}s", duration.as_secs_f64());
     let steps_per_second = if duration.as_secs_f64() > 0.0 {
-        config.max_steps as f64 / duration.as_secs_f64()
+        max_steps as f64 / duration.as_secs_f64()
     } else {
         0.0
     };

@@ -400,8 +400,6 @@ scenario: Original
 
     #[test]
     fn test_preset_name_from_str() {
-        use std::str::FromStr;
-        
         assert_eq!(
             PresetName::from_str("default").unwrap(),
             PresetName::Default
