@@ -32,6 +32,10 @@ struct Args {
     #[arg(long)]
     csv_output: Option<String>,
 
+    /// Compress JSON output using gzip (.gz extension will be added automatically)
+    #[arg(long, default_value_t = false)]
+    compress: bool,
+
     // Rayon will use a default number of threads based on CPU cores if not set.
     // We can remove this CLI arg to simplify, or keep it for advanced users.
     // For now, let's keep it but make it optional.
@@ -124,8 +128,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(output_path) = args.output {
         // result.save_to_file will need to be adapted for economic data
-        result.save_to_file(&output_path)?;
-        info!("Results saved to {}", output_path);
+        result.save_to_file(&output_path, args.compress)?;
+        if args.compress {
+            info!("Compressed results saved to {}.gz", output_path);
+        } else {
+            info!("Results saved to {}", output_path);
+        }
     }
 
     if let Some(csv_prefix) = args.csv_output {
