@@ -69,7 +69,7 @@ struct Args {
     seasonal_amplitude: Option<f64>,
 
     /// Seasonal cycle period in simulation steps (default: 100)
-    /// Number of steps for one complete seasonal cycle
+    /// Number of steps for one complete seasonal cycle (must be > 0)
     #[arg(long)]
     seasonal_period: Option<usize>,
 
@@ -124,6 +124,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Load configuration: priority order is preset -> file -> CLI arguments
     // CLI arguments only override preset/file values when explicitly provided
+
+    // Validate seasonal parameters if provided
+    if let Some(amplitude) = args.seasonal_amplitude {
+        if !(0.0..=1.0).contains(&amplitude) {
+            return Err(format!(
+                "seasonal-amplitude must be between 0.0 and 1.0, got: {}",
+                amplitude
+            )
+            .into());
+        }
+    }
+    if let Some(period) = args.seasonal_period {
+        if period == 0 {
+            return Err("seasonal-period must be greater than 0".into());
+        }
+    }
+
     let config = if let Some(preset_name) = &args.preset {
         // Load from preset
         let preset = PresetName::from_str(preset_name)

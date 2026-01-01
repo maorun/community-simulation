@@ -95,7 +95,10 @@ impl SimulationEngine {
         let skill_hash = skill_id
             .chars()
             .fold(0u32, |acc, c| acc.wrapping_mul(31).wrapping_add(c as u32));
-        let phase_offset = (skill_hash as f64) * 0.01; // Scale to reasonable phase range
+        // Scale hash to phase range: 0.01 scales the u32 hash to a reasonable phase offset
+        // that distributes skills across the full 2π cycle without clustering.
+        // This creates diverse seasonal patterns where different skills peak at different times.
+        let phase_offset = (skill_hash as f64) * 0.01;
 
         // Calculate current position in the seasonal cycle
         let cycle_position = (self.current_step as f64 / self.config.seasonal_period as f64)
