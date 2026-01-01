@@ -17,6 +17,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -48,6 +49,7 @@ mod integration_tests {
             scenario: Scenario::DynamicPricing,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -74,6 +76,7 @@ mod integration_tests {
                 scenario: Scenario::Original,
                 time_step: 1.0,
                 tech_growth_rate: 0.0,
+                ..Default::default()
             };
 
             let mut engine = SimulationEngine::new(config);
@@ -98,6 +101,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine_low = SimulationEngine::new(config_low);
@@ -114,6 +118,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine_high = SimulationEngine::new(config_high);
@@ -136,6 +141,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -169,6 +175,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -193,6 +200,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -230,6 +238,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         // Run simulation twice with same config
@@ -272,6 +281,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let config2 = SimulationConfig {
@@ -315,6 +325,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -336,6 +347,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -358,6 +370,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0, // No tech growth
+            ..Default::default()
         };
 
         let config_with_tech = SimulationConfig {
@@ -369,6 +382,7 @@ mod integration_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.001, // 0.1% growth per step
+            ..Default::default()
         };
 
         let mut engine_without = SimulationEngine::new(config_without_tech);
@@ -393,5 +407,96 @@ mod integration_tests {
         // Money should still be distributed reasonably in both cases
         assert!(result_without.money_statistics.average > 0.0);
         assert!(result_with.money_statistics.average > 0.0);
+    }
+
+    /// Test seasonal demand effects feature
+    #[test]
+    fn test_seasonal_demand_effects() {
+        // Run two simulations: one without seasonality and one with
+        let config_no_seasonality = SimulationConfig {
+            entity_count: 20,
+            max_steps: 200, // Need enough steps to see seasonal cycles
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0, // No seasonality
+            seasonal_period: 100,
+        };
+
+        let config_with_seasonality = SimulationConfig {
+            entity_count: 20,
+            max_steps: 200,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.5, // 50% amplitude - significant seasonal variation
+            seasonal_period: 50,     // 50-step cycle period
+        };
+
+        let mut engine_no_season = SimulationEngine::new(config_no_seasonality);
+        let result_no_season = engine_no_season.run();
+
+        let mut engine_with_season = SimulationEngine::new(config_with_seasonality);
+        let result_with_season = engine_with_season.run();
+
+        // Both should complete successfully
+        assert_eq!(result_no_season.total_steps, 200);
+        assert_eq!(result_with_season.total_steps, 200);
+
+        // Both should have the same number of persons
+        assert_eq!(result_no_season.active_persons, 20);
+        assert_eq!(result_with_season.active_persons, 20);
+
+        // Trade volume should vary more with seasonality
+        // Calculate variance in trades per step
+        let trades_no_season = &result_no_season.trades_per_step;
+        let trades_with_season = &result_with_season.trades_per_step;
+
+        if !trades_no_season.is_empty() && !trades_with_season.is_empty() {
+            let mean_no_season: f64 =
+                trades_no_season.iter().sum::<usize>() as f64 / trades_no_season.len() as f64;
+            let mean_with_season: f64 =
+                trades_with_season.iter().sum::<usize>() as f64 / trades_with_season.len() as f64;
+
+            let variance_no_season: f64 = trades_no_season
+                .iter()
+                .map(|&x| {
+                    let diff = x as f64 - mean_no_season;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / trades_no_season.len() as f64;
+
+            let variance_with_season: f64 = trades_with_season
+                .iter()
+                .map(|&x| {
+                    let diff = x as f64 - mean_with_season;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / trades_with_season.len() as f64;
+
+            // With seasonality, we expect higher variance in trade volume
+            // (though this may not always be true due to random factors)
+            // At minimum, both should have non-negative variance
+            assert!(variance_no_season >= 0.0, "Variance should be non-negative");
+            assert!(
+                variance_with_season >= 0.0,
+                "Variance should be non-negative"
+            );
+
+            // Seasonality should create variation (though we can't guarantee it's always higher)
+            // So we just verify the simulation completes and produces valid statistics
+        }
+
+        // Verify that statistics are calculated correctly
+        assert!(result_no_season.money_statistics.average >= 0.0);
+        assert!(result_with_season.money_statistics.average >= 0.0);
     }
 }

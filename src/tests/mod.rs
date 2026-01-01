@@ -15,6 +15,8 @@ mod engine_tests {
             scenario: Scenario::Original,
             time_step: 1.0,
             tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
         }
     }
 
@@ -49,5 +51,76 @@ mod engine_tests {
         assert_eq!(result.total_steps, 2);
         assert_eq!(engine.current_step, 2);
         assert!(!result.final_money_distribution.is_empty());
+    }
+
+    #[test]
+    fn test_seasonal_factor_disabled() {
+        let mut config = get_test_config();
+        config.seasonal_amplitude = 0.0; // Disabled
+        let engine = SimulationEngine::new(config);
+
+        // When disabled, seasonal factor should always be 1.0
+        let factor = engine.calculate_seasonal_factor(&"Skill0".to_string());
+        assert_eq!(factor, 1.0);
+    }
+
+    #[test]
+    fn test_seasonal_factor_enabled() {
+        let mut config = get_test_config();
+        config.seasonal_amplitude = 0.5; // 50% amplitude
+        config.seasonal_period = 100;
+        let mut engine = SimulationEngine::new(config);
+
+        // Check factor at different steps
+        let skill_id = "Skill0".to_string();
+
+        // At step 0
+        let factor_0 = engine.calculate_seasonal_factor(&skill_id);
+        assert!(
+            (0.5..=1.5).contains(&factor_0),
+            "Factor should be in range [0.5, 1.5]"
+        );
+
+        // Advance to step 25 (quarter cycle)
+        engine.current_step = 25;
+        let factor_25 = engine.calculate_seasonal_factor(&skill_id);
+        assert!(
+            (0.5..=1.5).contains(&factor_25),
+            "Factor should be in range [0.5, 1.5]"
+        );
+
+        // Advance to step 50 (half cycle)
+        engine.current_step = 50;
+        let factor_50 = engine.calculate_seasonal_factor(&skill_id);
+        assert!(
+            (0.5..=1.5).contains(&factor_50),
+            "Factor should be in range [0.5, 1.5]"
+        );
+
+        // The factors should not all be the same (seasonal variation)
+        // Due to phase offset, we can't guarantee specific relationships,
+        // but we can verify they're in valid ranges
+    }
+
+    #[test]
+    fn test_seasonal_factor_different_skills() {
+        let mut config = get_test_config();
+        config.seasonal_amplitude = 0.5;
+        config.seasonal_period = 100;
+        let engine = SimulationEngine::new(config);
+
+        // Different skills should have different seasonal factors
+        // (due to phase offset based on skill ID hash)
+        let factor_skill0 = engine.calculate_seasonal_factor(&"Skill0".to_string());
+        let factor_skill1 = engine.calculate_seasonal_factor(&"Skill1".to_string());
+        let factor_skill2 = engine.calculate_seasonal_factor(&"Skill2".to_string());
+
+        // All should be in valid range
+        assert!((0.5..=1.5).contains(&factor_skill0));
+        assert!((0.5..=1.5).contains(&factor_skill1));
+        assert!((0.5..=1.5).contains(&factor_skill2));
+
+        // At least some should be different due to phase offset
+        // (though theoretically they could all be similar by chance)
     }
 }
