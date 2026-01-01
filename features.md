@@ -67,10 +67,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Krisenresilienz testen
 - **Implementierung**: `CrisisEvent` Enum und Event-System
 
-#### 4.2 Technologischer Fortschritt
-- **Beschreibung**: Fähigkeiten werden im Laufe der Zeit effizienter
-- **Nutzen**: Produktivitätswachstum simulieren
-- **Implementierung**: `skill_efficiency_multiplier` in `Skill`
+<!-- 4.2 Technologischer Fortschritt - IMPLEMENTED: Skills now have efficiency_multiplier that increases over time based on tech_growth_rate configuration parameter -->
 
 #### 4.3 Saisonale Effekte
 - **Beschreibung**: Nachfrage nach bestimmten Fähigkeiten variiert zyklisch

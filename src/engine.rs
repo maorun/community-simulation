@@ -436,15 +436,24 @@ impl SimulationEngine {
                 }
 
                 if let Some(skill_price) = self.market.get_price(needed_skill_id) {
+                    // Apply efficiency multiplier - higher efficiency reduces effective price
+                    let efficiency = self
+                        .market
+                        .skills
+                        .get(needed_skill_id)
+                        .map(|s| s.efficiency_multiplier)
+                        .unwrap_or(1.0);
+                    let efficiency_adjusted_price = skill_price / efficiency;
+
                     // Apply reputation-based price multiplier for the seller
                     let final_price = if let Some(&seller_id) = skill_providers.get(needed_skill_id)
                     {
                         let seller_reputation_multiplier = self.entities[seller_id]
                             .person_data
                             .reputation_price_multiplier();
-                        skill_price * seller_reputation_multiplier
+                        efficiency_adjusted_price * seller_reputation_multiplier
                     } else {
-                        skill_price
+                        efficiency_adjusted_price
                     };
 
                     if self.entities[buyer_idx].person_data.can_afford(final_price) {
@@ -523,6 +532,13 @@ impl SimulationEngine {
         for entity in &mut self.entities {
             if entity.active {
                 entity.person_data.apply_reputation_decay();
+            }
+        }
+
+        // Apply technological progress - increase skill efficiency
+        if self.config.tech_growth_rate > 0.0 {
+            for skill in self.market.skills.values_mut() {
+                skill.efficiency_multiplier *= 1.0 + self.config.tech_growth_rate;
             }
         }
 

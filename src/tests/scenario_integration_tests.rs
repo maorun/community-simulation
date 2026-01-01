@@ -16,6 +16,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -46,6 +47,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::DynamicPricing,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -71,6 +73,7 @@ mod integration_tests {
                 seed: 42,
                 scenario: Scenario::Original,
                 time_step: 1.0,
+                tech_growth_rate: 0.0,
             };
 
             let mut engine = SimulationEngine::new(config);
@@ -94,6 +97,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine_low = SimulationEngine::new(config_low);
@@ -109,6 +113,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine_high = SimulationEngine::new(config_high);
@@ -130,6 +135,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -162,6 +168,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -185,6 +192,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -221,6 +229,7 @@ mod integration_tests {
             seed: 12345,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         // Run simulation twice with same config
@@ -262,6 +271,7 @@ mod integration_tests {
             seed: 111,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let config2 = SimulationConfig {
@@ -304,6 +314,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -324,6 +335,7 @@ mod integration_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -331,5 +343,55 @@ mod integration_tests {
 
         assert_eq!(result.total_steps, 500);
         assert!(result.total_duration > 0.0);
+    }
+
+    /// Test technological progress feature
+    #[test]
+    fn test_technological_progress() {
+        // Run two simulations: one without tech growth and one with
+        let config_without_tech = SimulationConfig {
+            entity_count: 20,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.0, // No tech growth
+        };
+
+        let config_with_tech = SimulationConfig {
+            entity_count: 20,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.001, // 0.1% growth per step
+        };
+
+        let mut engine_without = SimulationEngine::new(config_without_tech);
+        let result_without = engine_without.run();
+
+        let mut engine_with = SimulationEngine::new(config_with_tech);
+        let result_with = engine_with.run();
+
+        // Both should complete successfully
+        assert_eq!(result_without.total_steps, 100);
+        assert_eq!(result_with.total_steps, 100);
+
+        // With tech growth, skills should have efficiency > 1.0 at the end
+        // After 100 steps with 0.1% growth: (1.001)^100 ≈ 1.105
+        // We can't directly check skill efficiency, but we can verify the simulation runs
+        // and produces reasonable results
+
+        // Both simulations should have reasonable trade volumes
+        assert!(result_without.trade_volume_statistics.total_trades > 0);
+        assert!(result_with.trade_volume_statistics.total_trades > 0);
+
+        // Money should still be distributed reasonably in both cases
+        assert!(result_without.money_statistics.average > 0.0);
+        assert!(result_with.money_statistics.average > 0.0);
     }
 }

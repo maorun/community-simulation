@@ -32,6 +32,12 @@ time_step: 1.0
 #   - DynamicPricing: Sales-based pricing (increase if sold, decrease if not)
 scenario: Original
 
+# Technology growth rate per simulation step
+# This simulates productivity improvements over time
+# A rate of 0.001 means skills improve by 0.1% per step
+# Set to 0.0 to disable technological progress (default)
+tech_growth_rate: 0.0
+
 # Example configurations for different use cases:
 
 # Small economy for quick testing:

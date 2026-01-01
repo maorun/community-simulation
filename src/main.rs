@@ -58,6 +58,11 @@ struct Args {
     #[arg(long)]
     scenario: Option<Scenario>,
 
+    /// Technology growth rate per step (e.g., 0.001 = 0.1% per step)
+    /// Simulates productivity improvements over time
+    #[arg(long)]
+    tech_growth_rate: Option<f64>,
+
     /// Disable the progress bar during simulation
     #[arg(long, default_value_t = false)]
     no_progress: bool,
@@ -134,6 +139,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(scenario) = args.scenario.clone() {
             cfg.scenario = scenario;
         }
+        if let Some(tech_growth_rate) = args.tech_growth_rate {
+            cfg.tech_growth_rate = tech_growth_rate;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -157,6 +165,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(scenario) = args.scenario.clone() {
                 cfg.scenario = scenario;
             }
+            if let Some(tech_growth_rate) = args.tech_growth_rate {
+                cfg.tech_growth_rate = tech_growth_rate;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -176,6 +187,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             scenario: args
                 .scenario
                 .unwrap_or(SimulationConfig::default().scenario),
+            tech_growth_rate: args
+                .tech_growth_rate
+                .unwrap_or(SimulationConfig::default().tech_growth_rate),
         }
     };
 

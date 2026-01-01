@@ -14,6 +14,7 @@ mod engine_tests {
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
+            tech_growth_rate: 0.0,
         }
     }
 
