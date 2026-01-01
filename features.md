@@ -202,10 +202,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Wirtschaftliche Analysen
 
-#### 1.1 Marktkonzentration
-- **Beschreibung**: Herfindahl-Index und ähnliche Metriken
-- **Nutzen**: Monopolbildung erkennen
-- **Implementierung**: Marktanteilsberechnung
+<!-- 1.1 Marktkonzentration - IMPLEMENTED: Herfindahl-Index is now calculated for wealth distribution -->
 
 ### 2. Vergleichsstudien
 

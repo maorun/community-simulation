@@ -15,6 +15,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
+- **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
 - **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, and time-series price history.
@@ -338,6 +339,7 @@ The JSON output file contains a comprehensive summary of the simulation, includi
     *   `std_dev`: Standard deviation of money distribution
     *   `min_money`, `max_money`: Minimum and maximum money values
     *   `gini_coefficient`: Measure of wealth inequality (0 = perfect equality, 1 = perfect inequality). Values above 1 can occur when negative money (debt) exists.
+    *   `herfindahl_index`: Herfindahl-Hirschman Index measuring wealth concentration (0 = perfect competition, 10,000 = monopoly). Values < 1,500 indicate competitive distribution, 1,500-2,500 moderate concentration, > 2,500 high concentration.
 *   `final_reputation_distribution`: A list of final reputation scores for each active person.
 *   `reputation_statistics`: An object with:
     *   `average`: Average reputation across all persons
