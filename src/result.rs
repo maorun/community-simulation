@@ -15,6 +15,9 @@ pub struct MoneyStats {
     pub max_money: f64,
     /// Gini coefficient: measure of wealth inequality (0 = perfect equality, 1 = perfect inequality)
     pub gini_coefficient: f64,
+    /// Herfindahl-Hirschman Index: measure of market concentration for wealth (0 = perfect competition, 10000 = monopoly)
+    /// Values < 1500 indicate competitive distribution, 1500-2500 moderate concentration, > 2500 high concentration
+    pub herfindahl_index: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -107,7 +110,7 @@ impl SimulationResult {
     /// #     final_money_distribution: vec![],
     /// #     money_statistics: simulation_framework::result::MoneyStats {
     /// #         average: 0.0, median: 0.0, std_dev: 0.0,
-    /// #         min_money: 0.0, max_money: 0.0, gini_coefficient: 0.0,
+    /// #         min_money: 0.0, max_money: 0.0, gini_coefficient: 0.0, herfindahl_index: 0.0,
     /// #     },
     /// #     final_reputation_distribution: vec![],
     /// #     reputation_statistics: simulation_framework::result::ReputationStats {
@@ -217,6 +220,11 @@ impl SimulationResult {
             file,
             "Gini Coefficient,{:.6}",
             self.money_statistics.gini_coefficient
+        )?;
+        writeln!(
+            file,
+            "Herfindahl Index,{:.2}",
+            self.money_statistics.herfindahl_index
         )?;
 
         writeln!(file)?;
@@ -409,6 +417,10 @@ impl SimulationResult {
             "Gini Coefficient: {:.4} (0 = perfect equality, 1 = perfect inequality)",
             self.money_statistics.gini_coefficient
         );
+        println!(
+            "Herfindahl Index: {:.2} (< 1500 = competitive, 1500-2500 = moderate, > 2500 = high concentration)",
+            self.money_statistics.herfindahl_index
+        );
 
         println!("\n--- Reputation Distribution ---");
         println!(
@@ -525,6 +537,60 @@ pub fn calculate_gini_coefficient(sorted_values: &[f64], sum: f64) -> f64 {
     (2.0 * weighted_sum) / (n as f64 * sum) - (n as f64 + 1.0) / n as f64
 }
 
+/// Calculate the Herfindahl-Hirschman Index (HHI) for a given distribution of values.
+///
+/// The HHI measures market concentration by summing the squared market shares.
+/// It ranges from near 0 (perfect competition with many equal participants) to 10,000 (monopoly).
+///
+/// # Interpretation
+/// * HHI < 1,500: Competitive market (low concentration)
+/// * HHI 1,500-2,500: Moderate concentration
+/// * HHI > 2,500: High concentration (potential oligopoly/monopoly concerns)
+///
+/// # Arguments
+/// * `values` - A slice of values representing shares (e.g., money, market share)
+///
+/// # Formula
+/// HHI = sum((share_i * 100)^2) for all i
+/// where share_i = value_i / total_value
+///
+/// # Returns
+/// The HHI as f64, scaled to 0-10,000 range
+///
+/// # Examples
+/// ```
+/// use simulation_framework::result::calculate_herfindahl_index;
+///
+/// // Perfect equality (4 participants with 25% each): HHI = 2,500
+/// let equal_shares = vec![25.0, 25.0, 25.0, 25.0];
+/// let hhi = calculate_herfindahl_index(&equal_shares);
+/// assert!((hhi - 2500.0).abs() < 0.1);
+///
+/// // Monopoly (1 participant with 100%): HHI = 10,000
+/// let monopoly = vec![100.0];
+/// let hhi = calculate_herfindahl_index(&monopoly);
+/// assert!((hhi - 10000.0).abs() < 0.1);
+/// ```
+pub fn calculate_herfindahl_index(values: &[f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+
+    let total: f64 = values.iter().sum();
+    if total == 0.0 {
+        return 0.0;
+    }
+
+    // Calculate HHI: sum of squared market shares (as percentages)
+    values
+        .iter()
+        .map(|&value| {
+            let share_percentage = (value / total) * 100.0;
+            share_percentage * share_percentage
+        })
+        .sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -545,6 +611,7 @@ mod tests {
                 min_money: 50.0,
                 max_money: 150.0,
                 gini_coefficient: 0.2,
+                herfindahl_index: 2200.0,
             },
             final_reputation_distribution: vec![0.95, 1.0, 1.0, 1.05, 1.1],
             reputation_statistics: ReputationStats {
@@ -694,6 +761,7 @@ mod tests {
                 min_money: 0.0,
                 max_money: 0.0,
                 gini_coefficient: 0.0,
+                herfindahl_index: 0.0,
             };
         }
 
@@ -727,6 +795,9 @@ mod tests {
         // Calculate Gini coefficient using the shared utility function
         let gini_coefficient = calculate_gini_coefficient(&sorted_money, sum);
 
+        // Calculate Herfindahl Index using the shared utility function
+        let herfindahl_index = calculate_herfindahl_index(&sorted_money);
+
         MoneyStats {
             average,
             median,
@@ -734,6 +805,7 @@ mod tests {
             min_money: *sorted_money.first().unwrap_or(&0.0),
             max_money: *sorted_money.last().unwrap_or(&0.0),
             gini_coefficient,
+            herfindahl_index,
         }
     }
 
@@ -746,6 +818,7 @@ mod tests {
         assert_eq!(stats.min_money, 0.0);
         assert_eq!(stats.max_money, 0.0);
         assert_eq!(stats.gini_coefficient, 0.0);
+        assert_eq!(stats.herfindahl_index, 0.0);
     }
 
     #[test]
@@ -757,6 +830,8 @@ mod tests {
         assert_eq!(stats.min_money, 100.0);
         assert_eq!(stats.max_money, 100.0);
         assert_eq!(stats.gini_coefficient, 0.0);
+        // Single person = monopoly = HHI of 10,000
+        assert!((stats.herfindahl_index - 10000.0).abs() < 0.1);
     }
 
     #[test]
@@ -1001,5 +1076,89 @@ mod tests {
         assert!(contents.contains("0,10,100."));
         assert!(contents.contains("4,15,150."));
         assert!(contents.contains("8,5,50."));
+    }
+
+    #[test]
+    fn test_herfindahl_index_empty() {
+        let values: Vec<f64> = vec![];
+        let hhi = calculate_herfindahl_index(&values);
+        assert_eq!(hhi, 0.0);
+    }
+
+    #[test]
+    fn test_herfindahl_index_monopoly() {
+        // One participant with everything = HHI of 10,000
+        let values = vec![100.0];
+        let hhi = calculate_herfindahl_index(&values);
+        assert!((hhi - 10000.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_perfect_equality() {
+        // 4 participants with 25% each = HHI of 2,500
+        let values = vec![25.0, 25.0, 25.0, 25.0];
+        let hhi = calculate_herfindahl_index(&values);
+        assert!((hhi - 2500.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_ten_equal() {
+        // 10 participants with 10% each = HHI of 1,000
+        let values = vec![10.0; 10];
+        let hhi = calculate_herfindahl_index(&values);
+        assert!((hhi - 1000.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_high_concentration() {
+        // One large player (60%) and 4 small players (10% each) = HHI of 4,000
+        let values = vec![60.0, 10.0, 10.0, 10.0, 10.0];
+        let hhi = calculate_herfindahl_index(&values);
+        // HHI = 60^2 + 10^2 + 10^2 + 10^2 + 10^2 = 3600 + 100 + 100 + 100 + 100 = 4000
+        assert!((hhi - 4000.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_moderate_concentration() {
+        // Moderate concentration
+        let values = vec![30.0, 25.0, 20.0, 15.0, 10.0];
+        let hhi = calculate_herfindahl_index(&values);
+        // HHI = 30^2 + 25^2 + 20^2 + 15^2 + 10^2 = 900 + 625 + 400 + 225 + 100 = 2250
+        assert!((hhi - 2250.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_low_concentration() {
+        // Many small players = low HHI
+        let values = vec![5.0; 20];
+        let hhi = calculate_herfindahl_index(&values);
+        // 20 participants with 5% each = HHI of 500
+        assert!((hhi - 500.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_zero_sum() {
+        // Zero total should return 0
+        let values = vec![0.0, 0.0, 0.0];
+        let hhi = calculate_herfindahl_index(&values);
+        assert_eq!(hhi, 0.0);
+    }
+
+    #[test]
+    fn test_money_stats_includes_hhi() {
+        // Test that calculate_money_stats includes HHI
+        let money = vec![25.0, 25.0, 25.0, 25.0];
+        let stats = calculate_money_stats(&money);
+        // Perfect equality: HHI should be 2500
+        assert!((stats.herfindahl_index - 2500.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_money_stats_hhi_monopoly() {
+        // One person has all money
+        let money = vec![0.0, 0.0, 0.0, 100.0];
+        let stats = calculate_money_stats(&money);
+        // Monopoly: HHI should be 10000
+        assert!((stats.herfindahl_index - 10000.0).abs() < 0.1);
     }
 }

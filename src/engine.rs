@@ -216,6 +216,10 @@ impl SimulationEngine {
             let gini_coefficient =
                 crate::result::calculate_gini_coefficient(&final_money_distribution, sum);
 
+            // Calculate Herfindahl-Hirschman Index for wealth concentration
+            let herfindahl_index =
+                crate::result::calculate_herfindahl_index(&final_money_distribution);
+
             crate::result::MoneyStats {
                 average,
                 median,
@@ -223,6 +227,7 @@ impl SimulationEngine {
                 min_money: *final_money_distribution.first().unwrap_or(&0.0),
                 max_money: *final_money_distribution.last().unwrap_or(&0.0),
                 gini_coefficient,
+                herfindahl_index,
             }
         } else {
             crate::result::MoneyStats {
@@ -232,6 +237,7 @@ impl SimulationEngine {
                 min_money: 0.0,
                 max_money: 0.0,
                 gini_coefficient: 0.0,
+                herfindahl_index: 0.0,
             }
         };
 
