@@ -91,6 +91,15 @@ pub struct SimulationConfig {
     // but we can keep it or remove it later. For now, let's keep it.
     pub time_step: f64,
     pub scenario: Scenario,
+
+    /// Technology growth rate per simulation step.
+    ///
+    /// This rate determines how quickly skills become more efficient over time,
+    /// simulating technological progress and productivity improvements.
+    /// A rate of 0.001 means skills improve by 0.1% per step.
+    /// Set to 0.0 to disable technological progress (default).
+    #[serde(default)]
+    pub tech_growth_rate: f64,
 }
 
 impl Default for SimulationConfig {
@@ -103,6 +112,7 @@ impl Default for SimulationConfig {
             base_skill_price: 10.0,          // 10 Euros base price for skills
             time_step: 1.0,                  // Represents one discrete step or turn
             scenario: Scenario::Original,
+            tech_growth_rate: 0.0, // Disabled by default
         }
     }
 }
@@ -134,6 +144,7 @@ impl SimulationConfig {
                 base_skill_price: 10.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                tech_growth_rate: 0.0,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -143,6 +154,7 @@ impl SimulationConfig {
                 base_skill_price: 10.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                tech_growth_rate: 0.0,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -152,6 +164,7 @@ impl SimulationConfig {
                 base_skill_price: 25.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                tech_growth_rate: 0.0,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -161,6 +174,7 @@ impl SimulationConfig {
                 base_skill_price: 15.0,
                 time_step: 1.0,
                 scenario: Scenario::DynamicPricing,
+                tech_growth_rate: 0.0,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -170,6 +184,7 @@ impl SimulationConfig {
                 base_skill_price: 8.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                tech_growth_rate: 0.001, // 0.1% growth per step - significant over 1500 steps
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -179,6 +194,7 @@ impl SimulationConfig {
                 base_skill_price: 10.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                tech_growth_rate: 0.0,
             },
         }
     }

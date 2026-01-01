@@ -36,6 +36,15 @@ pub struct Skill {
     /// This price is dynamically adjusted by the market based on supply and demand.
     /// The market ensures prices stay within configured min/max bounds.
     pub current_price: f64,
+
+    /// Efficiency multiplier representing technological progress.
+    ///
+    /// This multiplier starts at 1.0 and increases over time based on the configured
+    /// technology growth rate. Higher efficiency makes skills effectively cheaper
+    /// by reducing their effective cost. For example, an efficiency of 2.0 means
+    /// the skill provides twice as much value, effectively halving the price paid
+    /// by buyers (from 10.0 to 5.0).
+    pub efficiency_multiplier: f64,
     // Note: Supply is implicitly 1 per person offering it. Demand is calculated each step.
     // Price management is handled by the Market.
 }
@@ -60,6 +69,7 @@ impl Skill {
         Self {
             id,
             current_price: base_price,
+            efficiency_multiplier: 1.0,
         }
     }
 }
