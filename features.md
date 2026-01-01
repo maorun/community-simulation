@@ -69,10 +69,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 <!-- 4.2 Technologischer Fortschritt - IMPLEMENTED: Skills now have efficiency_multiplier that increases over time based on tech_growth_rate configuration parameter -->
 
-#### 4.3 Saisonale Effekte
-- **Beschreibung**: Nachfrage nach bestimmten Fähigkeiten variiert zyklisch
-- **Nutzen**: Realistische Wirtschaftszyklen
-- **Implementierung**: Sinusfunktionen für Nachfragemodulation
+<!-- 4.3 Saisonale Effekte - IMPLEMENTED: Configurable seasonal demand fluctuations using --seasonal-amplitude and --seasonal-period CLI parameters. Different skills peak at different times through phase-offset sine waves -->
 
 #### 4.4 Geografische Komponente
 - **Beschreibung**: Personen haben Standorte, Handel kostet je nach Entfernung
