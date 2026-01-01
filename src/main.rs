@@ -1,6 +1,7 @@
 use clap::Parser;
 use log::{debug, info};
-use simulation_framework::{SimulationConfig, SimulationEngine};
+use simulation_framework::{PresetName, SimulationConfig, SimulationEngine};
+use std::str::FromStr;
 use std::time::Instant;
 
 use simulation_framework::scenario::Scenario;
@@ -13,17 +14,26 @@ struct Args {
     #[arg(short, long)]
     config: Option<String>,
 
-    #[arg(short, long, default_value_t = SimulationConfig::default().max_steps)]
-    steps: usize,
+    /// Use a preset configuration (e.g., 'small_economy', 'crisis_scenario', 'quick_test')
+    /// Use --list-presets to see all available presets
+    #[arg(long)]
+    preset: Option<String>,
 
-    #[arg(short, long, default_value_t = SimulationConfig::default().entity_count)]
-    persons: usize, // Changed from entities to persons for clarity
+    /// List all available preset configurations and exit
+    #[arg(long, default_value_t = false)]
+    list_presets: bool,
 
-    #[arg(long, default_value_t = SimulationConfig::default().initial_money_per_person)]
-    initial_money: f64,
+    #[arg(short, long)]
+    steps: Option<usize>,
 
-    #[arg(long, default_value_t = SimulationConfig::default().base_skill_price)]
-    base_price: f64,
+    #[arg(short, long)]
+    persons: Option<usize>, // Changed from entities to persons for clarity
+
+    #[arg(long)]
+    initial_money: Option<f64>,
+
+    #[arg(long)]
+    base_price: Option<f64>,
 
     #[arg(short, long)]
     output: Option<String>,
@@ -42,11 +52,11 @@ struct Args {
     #[arg(long)]
     threads: Option<usize>,
 
-    #[arg(long, default_value_t = SimulationConfig::default().seed)]
-    seed: u64,
+    #[arg(long)]
+    seed: Option<u64>,
 
-    #[arg(long, default_value_t = Scenario::default())]
-    scenario: Scenario,
+    #[arg(long)]
+    scenario: Option<Scenario>,
 
     /// Disable the progress bar during simulation
     #[arg(long, default_value_t = false)]
@@ -68,6 +78,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     env_logger::init();
 
+    // Handle --list-presets flag
+    if args.list_presets {
+        println!("Available preset configurations:\n");
+        for preset in PresetName::all() {
+            let config = SimulationConfig::from_preset(preset.clone());
+            println!("  {}", preset.as_str());
+            println!("    Description: {}", preset.description());
+            println!(
+                "    Parameters: {} persons, {} steps, ${:.0} initial money, ${:.0} base price, scenario: {:?}",
+                config.entity_count,
+                config.max_steps,
+                config.initial_money_per_person,
+                config.base_skill_price,
+                config.scenario
+            );
+            println!();
+        }
+        return Ok(());
+    }
+
     if let Some(num_threads) = args.threads {
         rayon::ThreadPoolBuilder::new()
             .num_threads(num_threads)
@@ -77,28 +107,75 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         rayon::ThreadPoolBuilder::new().build_global()?;
     }
 
-    // Load configuration: start with file (if provided), then apply CLI overrides
-    let config = if let Some(config_path) = &args.config {
+    // Load configuration: priority order is preset -> file -> CLI arguments
+    // CLI arguments only override preset/file values when explicitly provided
+    let config = if let Some(preset_name) = &args.preset {
+        // Load from preset
+        let preset = PresetName::from_str(preset_name)
+            .map_err(|e| format!("{}. Use --list-presets to see available presets.", e))?;
+        info!("Loading preset configuration: {}", preset.as_str());
+        let mut cfg = SimulationConfig::from_preset(preset);
+        // Apply CLI overrides only if provided
+        if let Some(steps) = args.steps {
+            cfg.max_steps = steps;
+        }
+        if let Some(persons) = args.persons {
+            cfg.entity_count = persons;
+        }
+        if let Some(seed) = args.seed {
+            cfg.seed = seed;
+        }
+        if let Some(initial_money) = args.initial_money {
+            cfg.initial_money_per_person = initial_money;
+        }
+        if let Some(base_price) = args.base_price {
+            cfg.base_skill_price = base_price;
+        }
+        if let Some(scenario) = args.scenario.clone() {
+            cfg.scenario = scenario;
+        }
+        cfg
+    } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
         SimulationConfig::from_file_with_overrides(config_path, |cfg| {
-            // CLI arguments always override config file values
-            cfg.max_steps = args.steps;
-            cfg.entity_count = args.persons;
-            cfg.seed = args.seed;
-            cfg.initial_money_per_person = args.initial_money;
-            cfg.base_skill_price = args.base_price;
-            cfg.scenario = args.scenario.clone();
+            // CLI arguments only override config file values when provided
+            if let Some(steps) = args.steps {
+                cfg.max_steps = steps;
+            }
+            if let Some(persons) = args.persons {
+                cfg.entity_count = persons;
+            }
+            if let Some(seed) = args.seed {
+                cfg.seed = seed;
+            }
+            if let Some(initial_money) = args.initial_money {
+                cfg.initial_money_per_person = initial_money;
+            }
+            if let Some(base_price) = args.base_price {
+                cfg.base_skill_price = base_price;
+            }
+            if let Some(scenario) = args.scenario.clone() {
+                cfg.scenario = scenario;
+            }
         })?
     } else {
-        // No config file, use CLI arguments to create config
+        // No config file or preset, use CLI arguments or defaults
         SimulationConfig {
-            max_steps: args.steps,
-            entity_count: args.persons, // Use 'persons' from CLI for entity_count
-            time_step: SimulationConfig::default().time_step, // Using default, not exposed via CLI for now
-            seed: args.seed,
-            initial_money_per_person: args.initial_money,
-            base_skill_price: args.base_price,
-            scenario: args.scenario,
+            max_steps: args.steps.unwrap_or(SimulationConfig::default().max_steps),
+            entity_count: args
+                .persons
+                .unwrap_or(SimulationConfig::default().entity_count),
+            time_step: SimulationConfig::default().time_step,
+            seed: args.seed.unwrap_or(SimulationConfig::default().seed),
+            initial_money_per_person: args
+                .initial_money
+                .unwrap_or(SimulationConfig::default().initial_money_per_person),
+            base_skill_price: args
+                .base_price
+                .unwrap_or(SimulationConfig::default().base_skill_price),
+            scenario: args
+                .scenario
+                .unwrap_or(SimulationConfig::default().scenario),
         }
     };
 
@@ -112,7 +189,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let start_time = Instant::now();
-    // SimulationEngine::new will need to be updated to handle the new config and setup persons/market
+    let max_steps = config.max_steps; // Store max_steps before moving config
+                                      // SimulationEngine::new will need to be updated to handle the new config and setup persons/market
     let mut engine = SimulationEngine::new(config);
     let show_progress = !args.no_progress;
     let result = engine.run_with_progress(show_progress);
@@ -120,7 +198,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Simulation completed in {:.2}s", duration.as_secs_f64());
     let steps_per_second = if duration.as_secs_f64() > 0.0 {
-        args.steps as f64 / duration.as_secs_f64()
+        max_steps as f64 / duration.as_secs_f64()
     } else {
         0.0
     };

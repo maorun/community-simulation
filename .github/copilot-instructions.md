@@ -282,16 +282,73 @@ cat /tmp/output.json | jq '.active_persons'  # Should output: 5
 3. Add implementation to `PriceUpdater::update_prices()` match statement
 4. Update `PriceUpdater::from(Scenario)` implementation
 
+## Code Review and Quality Assurance
+
+### Code Review Process
+
+**After addressing code review feedback, ALWAYS re-run the full validation suite:**
+
+```bash
+# 1. Format code
+cargo fmt --all
+
+# 2. Run linting
+cargo clippy --all-targets --all-features -- -D warnings -A deprecated
+
+# 3. Build the project
+cargo build --verbose
+
+# 4. Run all tests
+cargo test --verbose
+```
+
+**Important:** Even minor changes made in response to code review comments require running all validation steps. This ensures:
+- No new issues are introduced
+- All tests still pass
+- Code formatting is consistent
+- Linting rules are satisfied
+
+### Using the code_review Tool
+
+Before finalizing your session and completing the task, use the code_review tool to request a review of your changes:
+
+```bash
+# Request code review
+code_review --title "Feature: <feature name>" --description "<description of changes>"
+```
+
+- Look over the comments returned by the code_review tool
+- Decide which comments are correct and address the relevant ones
+- **NOTE:** The code_review tool is imperfect and may make incorrect comments
+- If you make significant changes after a code review, get another review by calling code_review again
+- **CRITICAL:** After addressing code review feedback, re-run the full validation suite (format, lint, build, test)
+
+### Security Checks
+
+Use the codeql_checker tool before finalizing:
+
+```bash
+# Run security checks
+codeql_checker
+```
+
+- Investigate all alerts it discovers
+- Fix any alert that requires only localized changes
+- After fixing, re-run codeql_checker to verify the alert is fixed
+- If an alert is a false positive, document it
+- Include a Security Summary with any discovered vulnerabilities
+
 ## Important Notes for Coding Agents
 
 1. **ALWAYS run `cargo fmt` before committing** - The codebase uses standard Rust formatting
-2. **The binary name is `simulation-framework`, not `community-simulation`** - Don't get confused by the repo name
-3. **Tests must pass** - Run `cargo test` to verify changes don't break existing functionality
-4. **Deprecation warnings are acceptable** - The rand 0.9 warnings don't need to be fixed unless specifically requested
-5. **Release builds are slow** - Use debug builds for development unless performance testing
-6. **CI only runs build + test** - No automatic linting enforcement, but should still follow Rust style guidelines
-7. **JSON output structure is part of the API** - Changes to `SimulationResult` affect downstream consumers
-8. **The simulation is deterministic with fixed seed** - Use `--seed` parameter for reproducible results
+2. **After code review adjustments, ALWAYS re-run all validation steps** - Format, lint, build, and test must all pass
+3. **The binary name is `simulation-framework`, not `community-simulation`** - Don't get confused by the repo name
+4. **Tests must pass** - Run `cargo test` to verify changes don't break existing functionality
+5. **Deprecation warnings are acceptable** - The rand 0.9 warnings don't need to be fixed unless specifically requested
+6. **Release builds are slow** - Use debug builds for development unless performance testing
+7. **CI only runs build + test** - No automatic linting enforcement, but should still follow Rust style guidelines
+8. **JSON output structure is part of the API** - Changes to `SimulationResult` affect downstream consumers
+9. **The simulation is deterministic with fixed seed** - Use `--seed` parameter for reproducible results
 
 ## Trust These Instructions
 
