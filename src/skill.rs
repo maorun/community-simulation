@@ -41,8 +41,9 @@ pub struct Skill {
     ///
     /// This multiplier starts at 1.0 and increases over time based on the configured
     /// technology growth rate. Higher efficiency makes skills effectively cheaper
-    /// by reducing their effective cost. For example, an efficiency of 1.1 means
-    /// the skill provides 10% more value, effectively reducing the price by ~9%.
+    /// by reducing their effective cost. For example, an efficiency of 2.0 means
+    /// the skill provides twice as much value, effectively halving the price paid
+    /// by buyers (from 10.0 to 5.0).
     pub efficiency_multiplier: f64,
     // Note: Supply is implicitly 1 per person offering it. Demand is calculated each step.
     // Price management is handled by the Market.

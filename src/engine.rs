@@ -437,12 +437,7 @@ impl SimulationEngine {
 
                 if let Some(skill_price) = self.market.get_price(needed_skill_id) {
                     // Apply efficiency multiplier - higher efficiency reduces effective price
-                    let efficiency = self
-                        .market
-                        .skills
-                        .get(needed_skill_id)
-                        .map(|s| s.efficiency_multiplier)
-                        .unwrap_or(1.0);
+                    let efficiency = self.market.get_skill_efficiency(needed_skill_id);
                     let efficiency_adjusted_price = skill_price / efficiency;
 
                     // Apply reputation-based price multiplier for the seller

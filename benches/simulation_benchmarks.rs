@@ -17,7 +17,7 @@ fn bench_engine_initialization(c: &mut Criterion) {
                     seed: 42,
                     scenario: Scenario::Original,
                     time_step: 1.0,
-            tech_growth_rate: 0.0,
+                    tech_growth_rate: 0.0,
                 };
                 black_box(SimulationEngine::new(config));
             });
@@ -41,7 +41,7 @@ fn bench_single_step(c: &mut Criterion) {
                 seed: 42,
                 scenario: Scenario::Original,
                 time_step: 1.0,
-            tech_growth_rate: 0.0,
+                tech_growth_rate: 0.0,
             };
 
             b.iter_batched(
@@ -78,7 +78,7 @@ fn bench_full_simulation(c: &mut Criterion) {
                         seed: 42,
                         scenario: Scenario::Original,
                         time_step: 1.0,
-            tech_growth_rate: 0.0,
+                        tech_growth_rate: 0.0,
                     };
 
                     let mut engine = SimulationEngine::new(config);
@@ -112,7 +112,7 @@ fn bench_scenarios(c: &mut Criterion) {
                         seed: 42,
                         scenario: scenario_copy.clone(),
                         time_step: 1.0,
-            tech_growth_rate: 0.0,
+                        tech_growth_rate: 0.0,
                     };
 
                     let mut engine = SimulationEngine::new(config);

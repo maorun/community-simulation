@@ -182,6 +182,25 @@ impl Market {
         self.skills.get(skill_id).map(|s| s.current_price)
     }
 
+    /// Gets the efficiency multiplier of a skill.
+    ///
+    /// The efficiency multiplier represents technological progress and productivity improvements.
+    /// Higher efficiency means the skill provides more value per unit cost.
+    ///
+    /// # Arguments
+    ///
+    /// * `skill_id` - Identifier of the skill
+    ///
+    /// # Returns
+    ///
+    /// * `f64` - The efficiency multiplier (defaults to 1.0 if skill not found)
+    pub fn get_skill_efficiency(&self, skill_id: &SkillId) -> f64 {
+        self.skills
+            .get(skill_id)
+            .map(|s| s.efficiency_multiplier)
+            .unwrap_or(1.0)
+    }
+
     /// Updates all skill prices based on current supply, demand, and the configured pricing strategy.
     ///
     /// This method delegates to the configured [`PriceUpdater`] to perform the actual
