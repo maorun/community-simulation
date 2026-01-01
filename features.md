@@ -130,11 +130,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Bereits teilweise mit `PriceUpdater` implementiert, kann erweitert werden
 - **Implementierung**: Weitere Traits für verschiedene Marktaspekte
 
-#### 1.4 Builder Pattern für Konfiguration
-- **Beschreibung**: Fluent API für Simulationskonfiguration
-- **Nutzen**: Bessere Lesbarkeit und einfachere Konfiguration
-- **Implementierung**: `SimulationConfigBuilder` Struktur
-
 ### 2. Performance-Optimierungen
 
 #### 2.1 Bessere Parallelisierung
@@ -169,24 +164,12 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Tools**: `rustfmt`, `clippy` in CI/CD
 - **Nutzen**: Konsistenter, wartbarer Code
 
-### 4. Konfiguration und Deployment
-
-#### 4.3 Docker-Container
-- **Beschreibung**: Containerisierte Deployment-Option
-- **Nutzen**: Einfache Verteilung und Reproduzierbarkeit
-- **Implementierung**: Dockerfile und Docker Compose
-
-#### 4.4 REST API
-- **Beschreibung**: HTTP API für Fernsteuerung
-- **Nutzen**: Integration mit anderen Tools
-- **Technologie**: `actix-web` oder `axum`
-
 ### 5. Datenmanagement
 
 #### 5.1 Datenbank-Integration
 - **Beschreibung**: Persistierung von Simulationsergebnissen
 - **Nutzen**: Langfristige Speicherung und Abfragen
-- **Technologie**: SQLite für lokale, PostgreSQL für Server
+- **Technologie**: SQLite für lokale Speicherung 
 
 #### 5.2 Checkpoint-System
 - **Beschreibung**: Simulationszustand speichern und wiederherstellen
@@ -247,11 +230,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Bug-Reproduktion
 - **Implementierung**: Action-Log und Replay-Engine
 
-#### 2.3 Assertion Framework
-- **Beschreibung**: Invarianten während der Simulation prüfen
-- **Nutzen**: Frühzeitige Fehlererkennung
-- **Implementierung**: Optional aktivierbare Checks
-
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
 ### 1. Bildungssimulation
@@ -273,19 +251,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Beschreibung**: Abstimmungen und kollektive Entscheidungsfindung
 - **Nutzen**: Governance-Mechanismen testen
 - **Implementierung**: `VotingSystem` Modul
-
-## 📚 Dokumentation und Community
-
-### 1. Erweiterte Dokumentation
-- Tutorials für Anfänger
-- Best Practices Guide
-- Contribution Guidelines
-- Research Paper Template
-
-### 2. Beispiel-Projekte
-- Vordefinierte interessante Szenarien
-- Visualisierungs-Skripte
-- Analyse-Notebooks (Jupyter)
 
 ## 🔐 Sicherheit und Stabilität
 
@@ -311,7 +276,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 2. Mehrere Fähigkeiten pro Person
 3. Reputation-System
 4. Checkpoint-System
-5. REST API
 
 ### Niedrige Priorität (Langfristig)
 1. Geografische Komponente
