@@ -175,7 +175,7 @@ impl SimulationConfig {
             return Err("entity_count (number of persons) must be greater than 0".to_string());
         }
 
-        if self.initial_money_per_person < 0.0 {
+        if self.initial_money_per_person.is_sign_negative() {
             return Err(format!(
                 "initial_money_per_person must be non-negative, got: {}",
                 self.initial_money_per_person
@@ -196,7 +196,7 @@ impl SimulationConfig {
             ));
         }
 
-        if self.tech_growth_rate < 0.0 {
+        if self.tech_growth_rate.is_sign_negative() {
             return Err(format!(
                 "tech_growth_rate must be non-negative, got: {}",
                 self.tech_growth_rate
