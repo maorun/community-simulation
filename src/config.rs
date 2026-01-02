@@ -1,3 +1,4 @@
+use crate::error::{Result, SimulationError};
 use crate::scenario::Scenario;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -61,7 +62,7 @@ impl PresetName {
 impl FromStr for PresetName {
     type Err = String;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "default" => Ok(PresetName::Default),
             "small_economy" | "small" => Ok(PresetName::SmallEconomy),
@@ -155,7 +156,7 @@ impl SimulationConfig {
     ///
     /// # Returns
     /// * `Ok(())` if all parameters are valid
-    /// * `Err(String)` with a descriptive error message if validation fails
+    /// * `Err(SimulationError::ValidationError)` with a descriptive error message if validation fails
     ///
     /// # Validation Rules
     /// - `max_steps` must be greater than 0
@@ -177,81 +178,87 @@ impl SimulationConfig {
     /// config.max_steps = 0;
     /// assert!(config.validate().is_err());
     /// ```
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<()> {
         if self.max_steps == 0 {
-            return Err("max_steps must be greater than 0".to_string());
+            return Err(SimulationError::ValidationError(
+                "max_steps must be greater than 0".to_string(),
+            ));
         }
 
         if self.entity_count == 0 {
-            return Err("entity_count (number of persons) must be greater than 0".to_string());
+            return Err(SimulationError::ValidationError(
+                "entity_count (number of persons) must be greater than 0".to_string(),
+            ));
         }
 
         if self.initial_money_per_person.is_sign_negative() {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "initial_money_per_person must be non-negative, got: {}",
                 self.initial_money_per_person
-            ));
+            )));
         }
 
         if self.base_skill_price <= 0.0 {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "base_skill_price must be greater than 0, got: {}",
                 self.base_skill_price
-            ));
+            )));
         }
 
         if self.time_step <= 0.0 {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "time_step must be greater than 0, got: {}",
                 self.time_step
-            ));
+            )));
         }
 
         if self.tech_growth_rate.is_sign_negative() {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "tech_growth_rate must be non-negative, got: {}",
                 self.tech_growth_rate
-            ));
+            )));
         }
 
         if !(0.0..=1.0).contains(&self.seasonal_amplitude) {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "seasonal_amplitude must be between 0.0 and 1.0, got: {}",
                 self.seasonal_amplitude
-            ));
+            )));
         }
 
         if self.seasonal_period == 0 {
-            return Err("seasonal_period must be greater than 0".to_string());
+            return Err(SimulationError::ValidationError(
+                "seasonal_period must be greater than 0".to_string(),
+            ));
         }
 
         if !(0.0..=1.0).contains(&self.transaction_fee) {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "transaction_fee must be between 0.0 and 1.0 (0% to 100%), got: {}",
                 self.transaction_fee
-            ));
+            )));
         }
 
         // Additional sanity checks for extreme values
         if self.max_steps > 1_000_000 {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "max_steps is too large ({}), maximum recommended value is 1,000,000",
                 self.max_steps
-            ));
+            )));
         }
 
         if self.entity_count > 100_000 {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "entity_count is too large ({}), maximum recommended value is 100,000",
                 self.entity_count
-            ));
+            )));
         }
 
         if self.tech_growth_rate > 1.0 {
-            return Err(format!(
+            return Err(SimulationError::ValidationError(format!(
                 "tech_growth_rate is too large ({}), values above 1.0 (100% per step) are unrealistic",
                 self.tech_growth_rate
-            ));
+            )));
         }
 
         Ok(())
@@ -363,7 +370,7 @@ impl SimulationConfig {
     /// * `path` - Path to the configuration file (.yaml, .yml, or .toml)
     ///
     /// # Returns
-    /// * `Result<SimulationConfig, Box<dyn std::error::Error>>` - The loaded config or an error
+    /// * `Result<SimulationConfig>` - The loaded config or a SimulationError
     ///
     /// # Examples
     /// ```no_run
@@ -371,26 +378,31 @@ impl SimulationConfig {
     ///
     /// let config = SimulationConfig::from_file("config.yaml").unwrap();
     /// ```
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
-        let contents = fs::read_to_string(path)?;
+        let contents = fs::read_to_string(path)
+            .map_err(|e| SimulationError::ConfigFileRead(e))?;
 
         // Detect format based on file extension
         let extension = path
             .extension()
             .and_then(|s| s.to_str())
-            .ok_or("Unable to determine file extension")?;
+            .ok_or_else(|| {
+                SimulationError::UnsupportedConfigFormat("(no extension)".to_string())
+            })?;
 
         match extension.to_lowercase().as_str() {
             "yaml" | "yml" => {
-                let config: SimulationConfig = serde_yaml::from_str(&contents)?;
+                let config: SimulationConfig = serde_yaml::from_str(&contents)
+                    .map_err(|e| SimulationError::YamlParse(e.to_string()))?;
                 Ok(config)
             }
             "toml" => {
-                let config: SimulationConfig = toml::from_str(&contents)?;
+                let config: SimulationConfig = toml::from_str(&contents)
+                    .map_err(|e| SimulationError::TomlParse(e.to_string()))?;
                 Ok(config)
             }
-            _ => Err(format!("Unsupported config file format: .{}", extension).into()),
+            _ => Err(SimulationError::UnsupportedConfigFormat(extension.to_string())),
         }
     }
 
@@ -402,11 +414,11 @@ impl SimulationConfig {
     /// * `cli_overrides` - Function that applies CLI overrides to the config
     ///
     /// # Returns
-    /// * `Result<SimulationConfig, Box<dyn std::error::Error>>` - The merged config or an error
+    /// * `Result<SimulationConfig>` - The merged config or a SimulationError
     pub fn from_file_with_overrides<P: AsRef<Path>, F>(
         path: P,
         cli_overrides: F,
-    ) -> Result<Self, Box<dyn std::error::Error>>
+    ) -> Result<Self>
     where
         F: FnOnce(&mut SimulationConfig),
     {

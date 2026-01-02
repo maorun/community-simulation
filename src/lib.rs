@@ -72,6 +72,7 @@
 pub mod config;
 pub mod engine;
 pub mod entity; // Represents a Person in the simulation
+pub mod error;
 pub mod market;
 pub mod person;
 // pub mod physics; // Removed
@@ -82,6 +83,7 @@ pub mod skill;
 pub use config::{PresetName, SimulationConfig};
 pub use engine::SimulationEngine;
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
+pub use error::{Result, SimulationError};
 pub use market::Market;
 pub use person::{Person, PersonId, Transaction, TransactionType};
 pub use result::SimulationResult;
