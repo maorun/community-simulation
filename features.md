@@ -38,12 +38,12 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Stabilere Preise und planbare Einnahmen
 - **Implementierung**: `Contract` Struktur mit Laufzeit und Konditionen
 
-<!-- 2.3 Marktplätze mit Handelsgebühren - IMPLEMENTED: Transaction fees are now configurable via --transaction-fee parameter. Fees are deducted from seller's proceeds and tracked in simulation results. -->
-
-#### 2.4 Schwarzmarkt
+#### 2.3 Schwarzmarkt
 - **Beschreibung**: Paralleler Markt mit anderen Preisen und Regeln
 - **Nutzen**: Untersuchung informeller Wirtschaft
 - **Implementierung**: Zweiter `Market` mit angepassten Parametern
+
+**Note:** Feature 2.3 "Marktplätze mit Handelsgebühren" has been implemented and removed from this list. See README.md for usage details.
 
 ### 3. Soziale Netzwerke und Beziehungen
 

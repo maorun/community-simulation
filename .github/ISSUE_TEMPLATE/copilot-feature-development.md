@@ -36,7 +36,11 @@ You are tasked with autonomously selecting and implementing a feature from the f
    - Add documentation (inline doc comments)
 
 4. **After Implementation:**
-   - **IMPORTANT:** Remove the implemented feature from `features.md`
+   - **CRITICAL: COMPLETELY REMOVE the implemented feature from `features.md`**
+     - Do NOT comment it out with `<!-- -->` tags
+     - Do NOT mark it as "IMPLEMENTED" 
+     - DELETE the entire feature section (title, description, benefits, implementation notes)
+     - Renumber subsequent features if needed to maintain sequential numbering
    - If the feature is user-facing, add a brief mention in `README.md` under a "Recent Features" or "Features" section
    - Update the PR description with implementation details
    - Include example usage in the PR description
@@ -52,7 +56,7 @@ The feature implementation is complete when:
 - [ ] Code linted: `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass without errors)
 - [ ] Feature tested manually with example run
 - [ ] Documentation added (doc comments for public APIs)
-- [ ] Feature **removed** from `features.md`
+- [ ] Feature **completely removed** from `features.md` (not commented out, not marked as implemented - DELETED)
 - [ ] If user-facing: Feature mentioned in `README.md`
 - [ ] No regressions in existing functionality
 
@@ -122,7 +126,7 @@ cargo clippy --all-targets --all-features -- -D warnings -A deprecated
    - Run `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass)
    - Add doc comments
    - Update README.md (if user-facing)
-   - **Remove feature from features.md**
+   - **COMPLETELY REMOVE feature from features.md** (delete the entire section, do NOT comment out or mark as "IMPLEMENTED")
 
 5. **Validation & Review**
    - Build release: `cargo build --release`
@@ -176,7 +180,7 @@ Even minor changes require full validation to ensure no regressions are introduc
 
 6. **Progress Reporting:** Use `report_progress` tool frequently to commit changes.
 
-7. **Feature Removal:** After successful implementation, remove the feature section from `features.md` and mention removal in commit message.
+7. **Feature Removal:** After successful implementation, **COMPLETELY DELETE** the feature section from `features.md`. Do NOT comment it out with `<!-- -->` tags or mark it as "IMPLEMENTED". Remove all lines of the feature including the heading, description, benefits, and implementation notes. Mention the removal in your commit message.
 
 8. **README Update:** If feature is user-facing (new CLI args, new output, changed behavior), add a brief note in README.md.
 

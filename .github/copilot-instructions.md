@@ -338,6 +338,51 @@ codeql_checker
 - If an alert is a false positive, document it
 - Include a Security Summary with any discovered vulnerabilities
 
+## Implementing Features from features.md
+
+When implementing a feature from the `features.md` file as part of autonomous feature development:
+
+1. **Feature Selection:**
+   - Select ONE feature from `features.md` based on simplicity and minimal changes required
+   - Document your selection clearly in the PR description with Feature ID and rationale
+
+2. **During Implementation:**
+   - Follow all guidelines in this document
+   - Make minimal, surgical changes
+   - Write tests for the new feature
+   - Ensure all existing tests still pass
+
+3. **After Implementation (CRITICAL):**
+   - **COMPLETELY DELETE the implemented feature from `features.md`**
+   - **DO NOT comment it out** with `<!-- -->` HTML comment tags
+   - **DO NOT mark it as "IMPLEMENTED"** in a comment
+   - **DELETE all lines** of the feature including:
+     - The feature heading (e.g., `#### 2.3 Marktplätze mit Handelsgebühren`)
+     - The description (`**Beschreibung:**` line)
+     - The benefits (`**Nutzen:**` line)
+     - The implementation notes (`**Implementierung:**` line)
+   - Renumber subsequent features if needed to maintain sequential numbering
+   - If the feature is user-facing, add documentation to `README.md`
+   - Mention the feature removal in your commit message
+
+**Why Complete Removal?**
+- The `features.md` file is a TODO list, not a changelog
+- Implemented features should be documented in `README.md` and commit history
+- Keeping old features (even as comments) clutters the file and creates confusion
+- Future copilot agents should only see unimplemented features
+
+**Example of Correct Removal:**
+
+❌ **WRONG** (do not do this):
+```markdown
+<!-- 2.3 Marktplätze mit Handelsgebühren - IMPLEMENTED -->
+```
+
+✅ **CORRECT** (do this):
+```markdown
+[Feature section completely deleted, subsequent features renumbered]
+```
+
 ## Important Notes for Coding Agents
 
 1. **ALWAYS run `cargo fmt` before committing** - The codebase uses standard Rust formatting
