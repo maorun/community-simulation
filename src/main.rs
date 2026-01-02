@@ -1,4 +1,5 @@
 use clap::Parser;
+use colored::Colorize;
 use log::{debug, info};
 use simulation_framework::{PresetName, SimulationConfig, SimulationEngine};
 use std::str::FromStr;
@@ -86,10 +87,19 @@ struct Args {
     /// Can also be set via RUST_LOG environment variable
     #[arg(long, default_value = "info")]
     log_level: String,
+
+    /// Disable colored terminal output
+    #[arg(long, default_value_t = false)]
+    no_color: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+
+    // Handle --no-color flag to disable colored output globally
+    if args.no_color {
+        colored::control::set_override(false);
+    }
 
     // Initialize logging
     // If RUST_LOG is not set, use the CLI argument
@@ -240,8 +250,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     config.validate()?;
 
     info!(
-        "Initializing economic simulation with {} persons for {} steps",
-        config.entity_count, config.max_steps
+        "{}",
+        format!(
+            "Initializing economic simulation with {} persons for {} steps",
+            config.entity_count, config.max_steps
+        )
+        .bright_cyan()
     );
     debug!(
         "Configuration: initial_money={}, base_skill_price={}, seed={}, scenario={:?}",
@@ -256,27 +270,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result = engine.run_with_progress(show_progress);
     let duration = start_time.elapsed();
 
-    info!("Simulation completed in {:.2}s", duration.as_secs_f64());
+    info!(
+        "{}",
+        format!("Simulation completed in {:.2}s", duration.as_secs_f64()).bright_green()
+    );
     let steps_per_second = if duration.as_secs_f64() > 0.0 {
         max_steps as f64 / duration.as_secs_f64()
     } else {
         0.0
     };
-    info!("Performance: {:.0} steps/second", steps_per_second);
+    info!(
+        "{}",
+        format!("Performance: {:.0} steps/second", steps_per_second).bright_yellow()
+    );
 
     if let Some(output_path) = args.output {
         // result.save_to_file will need to be adapted for economic data
         result.save_to_file(&output_path, args.compress)?;
         if args.compress {
-            info!("Compressed results saved to {}.gz", output_path);
+            info!(
+                "{}",
+                format!("Compressed results saved to {}.gz", output_path).bright_blue()
+            );
         } else {
-            info!("Results saved to {}", output_path);
+            info!(
+                "{}",
+                format!("Results saved to {}", output_path).bright_blue()
+            );
         }
     }
 
     if let Some(csv_prefix) = args.csv_output {
         result.save_to_csv(&csv_prefix)?;
-        info!("CSV results saved with prefix: {}", csv_prefix);
+        info!(
+            "{}",
+            format!("CSV results saved with prefix: {}", csv_prefix).bright_blue()
+        );
     }
 
     // result.print_summary will need to be adapted for economic data
