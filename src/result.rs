@@ -597,11 +597,7 @@ impl SimulationResult {
             println!(
                 "\n{} {} {}",
                 "Skill price history for".dimmed(),
-                self.skill_price_history
-                    .keys()
-                    .len()
-                    .to_string()
-                    .bright_white(),
+                format!("{}", self.skill_price_history.keys().len()).bright_white(),
                 "skills available in JSON output.".dimmed()
             );
         }
