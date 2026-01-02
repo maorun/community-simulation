@@ -18,6 +18,8 @@ pub struct SimulationEngine {
     // Trade volume tracking
     trades_per_step: Vec<usize>,
     volume_per_step: Vec<f64>,
+    // Transaction fees tracking
+    total_fees_collected: f64,
 }
 
 impl SimulationEngine {
@@ -40,6 +42,7 @@ impl SimulationEngine {
             all_skill_ids,
             trades_per_step: Vec::new(),
             volume_per_step: Vec::new(),
+            total_fees_collected: 0.0,
         }
     }
 
@@ -391,6 +394,7 @@ impl SimulationEngine {
             trade_volume_statistics,
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
+            total_fees_collected: self.total_fees_collected,
             final_persons_data: self.entities.clone(),
         }
     }
@@ -551,6 +555,11 @@ impl SimulationEngine {
             let seller_entity_id = self.entities[seller_idx].id;
             let buyer_entity_id = self.entities[buyer_idx].id;
 
+            // Calculate transaction fee (deducted from seller's proceeds)
+            let fee = price * self.config.transaction_fee;
+            let seller_proceeds = price - fee;
+
+            // Buyer pays full price
             self.entities[buyer_idx].person_data.money -= price;
             self.entities[buyer_idx].person_data.record_transaction(
                 self.current_step,
@@ -564,7 +573,8 @@ impl SimulationEngine {
                 .person_data
                 .increase_reputation_as_buyer();
 
-            self.entities[seller_idx].person_data.money += price;
+            // Seller receives price minus fee
+            self.entities[seller_idx].person_data.money += seller_proceeds;
             self.entities[seller_idx].person_data.record_transaction(
                 self.current_step,
                 skill_id.clone(),
@@ -576,6 +586,9 @@ impl SimulationEngine {
             self.entities[seller_idx]
                 .person_data
                 .increase_reputation_as_seller();
+
+            // Track total fees collected
+            self.total_fees_collected += fee;
 
             *self
                 .market

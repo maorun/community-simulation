@@ -38,6 +38,13 @@ scenario: Original
 # Set to 0.0 to disable technological progress (default)
 tech_growth_rate: 0.0
 
+# Transaction fee rate as a percentage of transaction value
+# Fee is deducted from seller's proceeds on each transaction
+# A value of 0.05 means a 5% fee is charged on each transaction
+# Set to 0.0 to disable transaction fees (default)
+# Valid range: 0.0 to 1.0 (0% to 100%)
+transaction_fee: 0.0
+
 # Example configurations for different use cases:
 
 # Small economy for quick testing:

@@ -73,6 +73,11 @@ struct Args {
     #[arg(long)]
     seasonal_period: Option<usize>,
 
+    /// Transaction fee rate as a percentage (0.0-1.0, e.g., 0.05 = 5% fee)
+    /// Fee is deducted from seller's proceeds on each transaction
+    #[arg(long)]
+    transaction_fee: Option<f64>,
+
     /// Disable the progress bar during simulation
     #[arg(long, default_value_t = false)]
     no_progress: bool,
@@ -159,6 +164,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(seasonal_period) = args.seasonal_period {
             cfg.seasonal_period = seasonal_period;
         }
+        if let Some(transaction_fee) = args.transaction_fee {
+            cfg.transaction_fee = transaction_fee;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -191,6 +199,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(seasonal_period) = args.seasonal_period {
                 cfg.seasonal_period = seasonal_period;
             }
+            if let Some(transaction_fee) = args.transaction_fee {
+                cfg.transaction_fee = transaction_fee;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -219,6 +230,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             seasonal_period: args
                 .seasonal_period
                 .unwrap_or(SimulationConfig::default().seasonal_period),
+            transaction_fee: args
+                .transaction_fee
+                .unwrap_or(SimulationConfig::default().transaction_fee),
         }
     };
 

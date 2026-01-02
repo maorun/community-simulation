@@ -116,6 +116,16 @@ pub struct SimulationConfig {
     /// Only used when seasonal_amplitude > 0.0.
     #[serde(default = "default_seasonal_period")]
     pub seasonal_period: usize,
+
+    /// Transaction fee rate as a percentage of the transaction value.
+    ///
+    /// This represents the cost of conducting trade in the market.
+    /// The fee is deducted from the seller's proceeds.
+    /// A value of 0.05 means a 5% fee is charged on each transaction.
+    /// Set to 0.0 to disable transaction fees (default).
+    /// Valid range: 0.0 to 1.0 (0% to 100%)
+    #[serde(default)]
+    pub transaction_fee: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -135,6 +145,7 @@ impl Default for SimulationConfig {
             tech_growth_rate: 0.0,   // Disabled by default
             seasonal_amplitude: 0.0, // Disabled by default
             seasonal_period: 100,    // Default cycle length
+            transaction_fee: 0.0,    // Disabled by default
         }
     }
 }
@@ -214,6 +225,13 @@ impl SimulationConfig {
             return Err("seasonal_period must be greater than 0".to_string());
         }
 
+        if !(0.0..=1.0).contains(&self.transaction_fee) {
+            return Err(format!(
+                "transaction_fee must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                self.transaction_fee
+            ));
+        }
+
         // Additional sanity checks for extreme values
         if self.max_steps > 1_000_000 {
             return Err(format!(
@@ -268,6 +286,7 @@ impl SimulationConfig {
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
+                transaction_fee: 0.0,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -280,6 +299,7 @@ impl SimulationConfig {
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
+                transaction_fee: 0.0,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -292,6 +312,7 @@ impl SimulationConfig {
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
+                transaction_fee: 0.0,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -304,6 +325,7 @@ impl SimulationConfig {
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
+                transaction_fee: 0.0,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -316,6 +338,7 @@ impl SimulationConfig {
                 tech_growth_rate: 0.001, // 0.1% growth per step - significant over 1500 steps
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
+                transaction_fee: 0.0,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -328,6 +351,7 @@ impl SimulationConfig {
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
+                transaction_fee: 0.0,
             },
         }
     }

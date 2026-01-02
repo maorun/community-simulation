@@ -10,6 +10,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Reputation System:** Each person has a reputation score (starting at 1.0) that increases with successful trades. Higher reputation leads to better prices (up to 10% discount), while lower reputation results in price premiums. Reputation slowly decays toward neutral over time, encouraging ongoing positive behavior.
 - **Technological Progress:** Skills become more efficient over time through a configurable technology growth rate, simulating productivity improvements. More efficient skills effectively cost less, enabling increased trade and economic growth over the simulation period.
 - **Seasonal Demand Effects:** Configurable seasonal fluctuations in skill demand using cyclical patterns. Different skills experience peak demand at different times, creating realistic market dynamics and economic cycles. Controlled via `--seasonal-amplitude` and `--seasonal-period` parameters.
+- **Transaction Fees:** Configurable marketplace transaction fees that are deducted from seller proceeds on each trade. Simulates realistic trading costs (e.g., platform fees, payment processing) and allows studying the impact of fees on market liquidity, wealth distribution, and economic activity. Total fees collected are tracked and reported. Controlled via `--transaction-fee` parameter (0.0-1.0 range representing 0-100% fee rate).
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
@@ -110,6 +111,13 @@ The simulation accepts the following CLI arguments:
     *   Seasonal demand amplitude controlling the strength of seasonal fluctuations in skill demand (0.0 = no seasonality, 0.0-1.0 = variation strength). A value of 0.5 means demand can vary ±50% from the base level. Set to 0.0 to disable seasonal effects (default). If not specified, uses default (0.0) or preset value.
 *   `--seasonal-period <STEPS>`:
     *   Seasonal cycle period in simulation steps (default: 100). Determines how many steps it takes for demand to complete one seasonal cycle. For example, a value of 100 means demand patterns repeat every 100 steps. Only used when seasonal-amplitude > 0.0. If not specified, uses default (100) or preset value.
+*   `--transaction-fee <RATE>`:
+    *   Transaction fee rate as a percentage of the transaction value (0.0-1.0, e.g., 0.05 = 5% fee). The fee is deducted from the seller's proceeds on each transaction, simulating realistic market costs. For example, if a skill sells for $100 with a 5% fee, the buyer pays $100 but the seller receives only $95, with $5 collected as fees. Set to 0.0 to disable transaction fees (default). If not specified, uses default (0.0) or preset value.
+    *   **Use cases:** 
+        *   Simulate marketplace transaction costs (e.g., platform fees, payment processing)
+        *   Study the impact of trading costs on market efficiency and liquidity
+        *   Model wealth extraction by intermediaries or governments
+    *   The total fees collected across all transactions are reported in the simulation results.
 *   `--no-progress`:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
 *   `--log-level <LOG_LEVEL>`:
@@ -143,6 +151,13 @@ This runs the simulation for 1000 steps with 50 persons, each starting with 200 
 ./target/release/economic_simulation --steps 500 --persons 100 --seasonal-amplitude 0.3 --seasonal-period 50 --output seasonal_results.json
 ```
 This runs the simulation with seasonal demand fluctuations. The `--seasonal-amplitude 0.3` parameter creates ±30% variation in demand, and `--seasonal-period 50` means the seasonal cycle repeats every 50 steps. Different skills will have their peak demand at different times due to phase offsets, creating realistic market dynamics.
+
+**Example with Transaction Fees:**
+
+```bash
+./target/release/economic_simulation --steps 500 --persons 100 --transaction-fee 0.05 --output fees_results.json
+```
+This runs the simulation with a 5% transaction fee on all trades. The fee is deducted from the seller's proceeds (e.g., if a skill sells for $100, the buyer pays $100 but the seller receives $95, with $5 collected as fees). This simulates realistic marketplace costs and allows studying the impact of trading fees on market liquidity, wealth distribution, and economic activity. The total fees collected are reported in the JSON output.
 
 **Example with CSV Export:**
 
@@ -372,6 +387,7 @@ The JSON output file contains a comprehensive summary of the simulation, includi
     *   `max_trades_per_step`: Maximum trades in a single step
 *   `trades_per_step`: An array tracking the number of trades at each simulation step
 *   `volume_per_step`: An array tracking the total money exchanged at each simulation step
+*   `total_fees_collected`: Total transaction fees collected across all trades when a non-zero transaction fee is configured. This represents the cumulative cost of trading in the market.
 *   `final_skill_prices`: A list of all skills sorted by their final price (descending), including `id` and `price`.
 *   `most_valuable_skill`, `least_valuable_skill`: Information on the skills with the highest and lowest final prices.
 *   `skill_price_history`: A map where keys are `SkillId`s and values are lists of prices for that skill at each step of the simulation. This data can be used for plotting price trends.

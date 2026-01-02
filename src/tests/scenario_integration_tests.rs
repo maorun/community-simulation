@@ -424,6 +424,7 @@ mod integration_tests {
             tech_growth_rate: 0.0,
             seasonal_amplitude: 0.0, // No seasonality
             seasonal_period: 100,
+            transaction_fee: 0.0,
         };
 
         let config_with_seasonality = SimulationConfig {
@@ -437,6 +438,7 @@ mod integration_tests {
             tech_growth_rate: 0.0,
             seasonal_amplitude: 0.5, // 50% amplitude - significant seasonal variation
             seasonal_period: 50,     // 50-step cycle period
+            transaction_fee: 0.0,
         };
 
         let mut engine_no_season = SimulationEngine::new(config_no_seasonality);
