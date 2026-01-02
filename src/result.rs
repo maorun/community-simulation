@@ -144,11 +144,7 @@ impl SimulationResult {
     /// // Save compressed JSON
     /// result.save_to_file("results.json", true).unwrap(); // Creates results.json.gz
     /// ```
-    pub fn save_to_file(
-        &self,
-        path: &str,
-        compress: bool,
-    ) -> Result<()> {
+    pub fn save_to_file(&self, path: &str, compress: bool) -> Result<()> {
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
 

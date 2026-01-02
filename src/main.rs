@@ -1,6 +1,6 @@
 use clap::Parser;
 use log::{debug, info};
-use simulation_framework::{PresetName, SimulationConfig, SimulationEngine, SimulationError};
+use simulation_framework::{PresetName, SimulationConfig, SimulationEngine};
 use std::str::FromStr;
 use std::time::Instant;
 

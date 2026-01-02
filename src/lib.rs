@@ -63,6 +63,7 @@
 //! - [`config`] - Simulation configuration parameters
 //! - [`engine`] - Main simulation engine and execution loop
 //! - [`entity`] - Entity wrapper around Person for simulation framework
+//! - [`error`] - Custom error types for robust error handling
 //! - [`market`] - Market mechanisms and price dynamics
 //! - [`person`] - Person agents, transactions, and behavior
 //! - [`result`] - Simulation results, statistics, and output formatting

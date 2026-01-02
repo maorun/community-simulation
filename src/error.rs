@@ -1,3 +1,25 @@
+//! Error types for the simulation framework.
+//!
+//! This module provides custom error types that improve error handling throughout
+//! the simulation. All errors implement the standard `Error` trait and provide
+//! clear, descriptive error messages.
+//!
+//! # Examples
+//!
+//! ```
+//! use simulation_framework::{SimulationConfig, SimulationError};
+//!
+//! // Attempting to load a non-existent config file returns a descriptive error
+//! let result = SimulationConfig::from_file("nonexistent.yaml");
+//! match result {
+//!     Ok(_) => println!("Config loaded"),
+//!     Err(SimulationError::ConfigFileRead(e)) => {
+//!         println!("Failed to read config file: {}", e);
+//!     }
+//!     Err(e) => println!("Other error: {}", e),
+//! }
+//! ```
+
 use std::error::Error as StdError;
 use std::fmt;
 use std::io;
@@ -10,22 +32,22 @@ use std::io;
 pub enum SimulationError {
     /// Error occurred while reading or parsing a configuration file
     ConfigFileRead(io::Error),
-    
+
     /// Error occurred while parsing YAML configuration
     YamlParse(String),
-    
+
     /// Error occurred while parsing TOML configuration
     TomlParse(String),
-    
+
     /// Configuration file has an unsupported extension
     UnsupportedConfigFormat(String),
-    
+
     /// Configuration validation failed
     ValidationError(String),
-    
+
     /// Error occurred while writing output files
     IoError(io::Error),
-    
+
     /// Error occurred while serializing JSON output
     JsonSerialize(String),
 }

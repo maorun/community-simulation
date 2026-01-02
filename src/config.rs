@@ -380,16 +380,12 @@ impl SimulationConfig {
     /// ```
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref();
-        let contents = fs::read_to_string(path)
-            .map_err(|e| SimulationError::ConfigFileRead(e))?;
+        let contents = fs::read_to_string(path).map_err(SimulationError::ConfigFileRead)?;
 
         // Detect format based on file extension
-        let extension = path
-            .extension()
-            .and_then(|s| s.to_str())
-            .ok_or_else(|| {
-                SimulationError::UnsupportedConfigFormat("(no extension)".to_string())
-            })?;
+        let extension = path.extension().and_then(|s| s.to_str()).ok_or_else(|| {
+            SimulationError::UnsupportedConfigFormat("(no extension)".to_string())
+        })?;
 
         match extension.to_lowercase().as_str() {
             "yaml" | "yml" => {
@@ -402,7 +398,9 @@ impl SimulationConfig {
                     .map_err(|e| SimulationError::TomlParse(e.to_string()))?;
                 Ok(config)
             }
-            _ => Err(SimulationError::UnsupportedConfigFormat(extension.to_string())),
+            _ => Err(SimulationError::UnsupportedConfigFormat(
+                extension.to_string(),
+            )),
         }
     }
 
@@ -415,10 +413,7 @@ impl SimulationConfig {
     ///
     /// # Returns
     /// * `Result<SimulationConfig>` - The merged config or a SimulationError
-    pub fn from_file_with_overrides<P: AsRef<Path>, F>(
-        path: P,
-        cli_overrides: F,
-    ) -> Result<Self>
+    pub fn from_file_with_overrides<P: AsRef<Path>, F>(path: P, cli_overrides: F) -> Result<Self>
     where
         F: FnOnce(&mut SimulationConfig),
     {
@@ -490,12 +485,16 @@ scenario = "DynamicPricing"
 
         let result = SimulationConfig::from_file(temp_file.path());
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Unsupported configuration file format"));
     }
 
     #[test]
     fn test_missing_file() {
         let result = SimulationConfig::from_file("/nonexistent/config.yaml");
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to read configuration file"));
     }
 
     #[test]
@@ -649,10 +648,8 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
-            .contains("max_steps must be greater than 0"));
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("max_steps must be greater than 0"));
     }
 
     #[test]
@@ -662,9 +659,9 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
             .contains("entity_count (number of persons) must be greater than 0"));
     }
 
@@ -675,9 +672,9 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
             .contains("initial_money_per_person must be non-negative"));
     }
 
@@ -688,9 +685,9 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
             .contains("base_skill_price must be greater than 0"));
     }
 
@@ -701,9 +698,9 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
             .contains("base_skill_price must be greater than 0"));
     }
 
@@ -714,10 +711,8 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
-            .contains("time_step must be greater than 0"));
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("time_step must be greater than 0"));
     }
 
     #[test]
@@ -727,9 +722,9 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
             .contains("tech_growth_rate must be non-negative"));
     }
 
@@ -740,10 +735,8 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
-            .contains("tech_growth_rate is too large"));
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("tech_growth_rate is too large"));
     }
 
     #[test]
@@ -753,9 +746,9 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
             .contains("seasonal_amplitude must be between 0.0 and 1.0"));
 
         let config2 = SimulationConfig {
@@ -772,9 +765,9 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
             .contains("seasonal_period must be greater than 0"));
     }
 
@@ -785,10 +778,8 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
-            .contains("max_steps is too large"));
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("max_steps is too large"));
     }
 
     #[test]
@@ -798,10 +789,8 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_err());
-        assert!(config
-            .validate()
-            .unwrap_err()
-            .contains("entity_count is too large"));
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("entity_count is too large"));
     }
 
     #[test]
