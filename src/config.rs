@@ -100,6 +100,26 @@ pub struct SimulationConfig {
     /// Set to 0.0 to disable technological progress (default).
     #[serde(default)]
     pub tech_growth_rate: f64,
+
+    /// Seasonal demand amplitude (0.0 = no seasonality, 0.0-1.0 = variation strength).
+    ///
+    /// Controls the strength of seasonal fluctuations in skill demand.
+    /// A value of 0.5 means demand can vary ±50% from the base level.
+    /// Set to 0.0 to disable seasonal effects (default).
+    #[serde(default)]
+    pub seasonal_amplitude: f64,
+
+    /// Seasonal cycle period in simulation steps.
+    ///
+    /// Determines how many steps it takes for demand to complete one seasonal cycle.
+    /// For example, a value of 100 means demand patterns repeat every 100 steps.
+    /// Only used when seasonal_amplitude > 0.0.
+    #[serde(default = "default_seasonal_period")]
+    pub seasonal_period: usize,
+}
+
+fn default_seasonal_period() -> usize {
+    100
 }
 
 impl Default for SimulationConfig {
@@ -112,7 +132,9 @@ impl Default for SimulationConfig {
             base_skill_price: 10.0,          // 10 Euros base price for skills
             time_step: 1.0,                  // Represents one discrete step or turn
             scenario: Scenario::Original,
-            tech_growth_rate: 0.0, // Disabled by default
+            tech_growth_rate: 0.0,   // Disabled by default
+            seasonal_amplitude: 0.0, // Disabled by default
+            seasonal_period: 100,    // Default cycle length
         }
     }
 }
@@ -145,6 +167,8 @@ impl SimulationConfig {
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.0,
+                seasonal_amplitude: 0.0,
+                seasonal_period: 100,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -155,6 +179,8 @@ impl SimulationConfig {
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.0,
+                seasonal_amplitude: 0.0,
+                seasonal_period: 100,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -165,6 +191,8 @@ impl SimulationConfig {
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.0,
+                seasonal_amplitude: 0.0,
+                seasonal_period: 100,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -175,6 +203,8 @@ impl SimulationConfig {
                 time_step: 1.0,
                 scenario: Scenario::DynamicPricing,
                 tech_growth_rate: 0.0,
+                seasonal_amplitude: 0.0,
+                seasonal_period: 100,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -185,6 +215,8 @@ impl SimulationConfig {
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.001, // 0.1% growth per step - significant over 1500 steps
+                seasonal_amplitude: 0.0,
+                seasonal_period: 100,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -195,6 +227,8 @@ impl SimulationConfig {
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.0,
+                seasonal_amplitude: 0.0,
+                seasonal_period: 100,
             },
         }
     }

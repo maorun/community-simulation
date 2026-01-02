@@ -72,6 +72,46 @@ impl SimulationEngine {
         entities
     }
 
+    /// Calculate seasonal demand factor for a specific skill at the current step.
+    ///
+    /// This function creates cyclical demand variations using sine waves,
+    /// with different phase offsets for each skill to create diverse market dynamics.
+    ///
+    /// # Arguments
+    /// * `skill_id` - The skill ID to calculate the seasonal factor for
+    ///
+    /// # Returns
+    /// A multiplier in the range [1.0 - amplitude, 1.0 + amplitude]
+    ///
+    /// # Visibility
+    /// Public for testing purposes
+    pub fn calculate_seasonal_factor(&self, skill_id: &SkillId) -> f64 {
+        if self.config.seasonal_amplitude == 0.0 || self.config.seasonal_period == 0 {
+            return 1.0;
+        }
+
+        // Use skill ID hash to create a unique phase offset for each skill
+        // This ensures different skills peak at different times
+        let skill_hash = skill_id
+            .chars()
+            .fold(0u32, |acc, c| acc.wrapping_mul(31).wrapping_add(c as u32));
+        // Scale hash to phase range: 0.01 scales the u32 hash to a reasonable phase offset
+        // that distributes skills across the full 2π cycle without clustering.
+        // This creates diverse seasonal patterns where different skills peak at different times.
+        let phase_offset = (skill_hash as f64) * 0.01;
+
+        // Calculate current position in the seasonal cycle
+        let cycle_position = (self.current_step as f64 / self.config.seasonal_period as f64)
+            * 2.0
+            * std::f64::consts::PI;
+
+        // Calculate sine wave with phase offset
+        let sine_value = (cycle_position + phase_offset).sin();
+
+        // Scale sine wave (-1 to 1) by amplitude and center around 1.0
+        1.0 + sine_value * self.config.seasonal_amplitude
+    }
+
     pub fn run(&mut self) -> SimulationResult {
         self.run_with_progress(false)
     }
@@ -364,12 +404,37 @@ impl SimulationEngine {
             }
         }
 
+        // Pre-calculate seasonal factors for all skills to avoid borrowing issues
+        let seasonal_enabled = self.config.seasonal_amplitude > 0.0;
+        let seasonal_factors: HashMap<SkillId, f64> = if seasonal_enabled {
+            self.all_skill_ids
+                .iter()
+                .map(|skill_id| (skill_id.clone(), self.calculate_seasonal_factor(skill_id)))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+
         for entity in self.entities.iter_mut() {
             if !entity.active {
                 continue;
             }
 
-            let num_needs = self.rng.gen_range(2..=5);
+            // Calculate base number of needs (2-5)
+            let base_num_needs = self.rng.gen_range(2..=5);
+
+            // Apply seasonal modulation to the number of needs
+            let num_needs = if seasonal_enabled {
+                let seasonal_factor = seasonal_factors
+                    .get(&entity.person_data.own_skill.id)
+                    .copied()
+                    .unwrap_or(1.0);
+                // Modulate the number of needs, clamping between 1 and 5
+                ((base_num_needs as f64 * seasonal_factor).round() as usize).clamp(1, 5)
+            } else {
+                base_num_needs
+            };
+
             let own_skill_id = &entity.person_data.own_skill.id;
 
             let mut potential_needs: Vec<SkillId> = self

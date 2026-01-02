@@ -63,6 +63,16 @@ struct Args {
     #[arg(long)]
     tech_growth_rate: Option<f64>,
 
+    /// Seasonal demand amplitude (0.0 = no seasonality, 0.0-1.0 = variation strength)
+    /// Controls strength of seasonal fluctuations in skill demand
+    #[arg(long)]
+    seasonal_amplitude: Option<f64>,
+
+    /// Seasonal cycle period in simulation steps (default: 100)
+    /// Number of steps for one complete seasonal cycle (must be > 0)
+    #[arg(long)]
+    seasonal_period: Option<usize>,
+
     /// Disable the progress bar during simulation
     #[arg(long, default_value_t = false)]
     no_progress: bool,
@@ -114,6 +124,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Load configuration: priority order is preset -> file -> CLI arguments
     // CLI arguments only override preset/file values when explicitly provided
+
+    // Validate seasonal parameters if provided
+    if let Some(amplitude) = args.seasonal_amplitude {
+        if !(0.0..=1.0).contains(&amplitude) {
+            return Err(format!(
+                "seasonal-amplitude must be between 0.0 and 1.0, got: {}",
+                amplitude
+            )
+            .into());
+        }
+    }
+    if let Some(period) = args.seasonal_period {
+        if period == 0 {
+            return Err("seasonal-period must be greater than 0".into());
+        }
+    }
+
     let config = if let Some(preset_name) = &args.preset {
         // Load from preset
         let preset = PresetName::from_str(preset_name)
@@ -142,6 +169,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(tech_growth_rate) = args.tech_growth_rate {
             cfg.tech_growth_rate = tech_growth_rate;
         }
+        if let Some(seasonal_amplitude) = args.seasonal_amplitude {
+            cfg.seasonal_amplitude = seasonal_amplitude;
+        }
+        if let Some(seasonal_period) = args.seasonal_period {
+            cfg.seasonal_period = seasonal_period;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -168,6 +201,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(tech_growth_rate) = args.tech_growth_rate {
                 cfg.tech_growth_rate = tech_growth_rate;
             }
+            if let Some(seasonal_amplitude) = args.seasonal_amplitude {
+                cfg.seasonal_amplitude = seasonal_amplitude;
+            }
+            if let Some(seasonal_period) = args.seasonal_period {
+                cfg.seasonal_period = seasonal_period;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -190,6 +229,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             tech_growth_rate: args
                 .tech_growth_rate
                 .unwrap_or(SimulationConfig::default().tech_growth_rate),
+            seasonal_amplitude: args
+                .seasonal_amplitude
+                .unwrap_or(SimulationConfig::default().seasonal_amplitude),
+            seasonal_period: args
+                .seasonal_period
+                .unwrap_or(SimulationConfig::default().seasonal_period),
         }
     };
 

@@ -9,6 +9,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Trading System:** Persons attempt to buy needed skills from providers if they can afford them, leading to money exchange and transaction logging.
 - **Reputation System:** Each person has a reputation score (starting at 1.0) that increases with successful trades. Higher reputation leads to better prices (up to 10% discount), while lower reputation results in price premiums. Reputation slowly decays toward neutral over time, encouraging ongoing positive behavior.
 - **Technological Progress:** Skills become more efficient over time through a configurable technology growth rate, simulating productivity improvements. More efficient skills effectively cost less, enabling increased trade and economic growth over the simulation period.
+- **Seasonal Demand Effects:** Configurable seasonal fluctuations in skill demand using cyclical patterns. Different skills experience peak demand at different times, creating realistic market dynamics and economic cycles. Controlled via `--seasonal-amplitude` and `--seasonal-period` parameters.
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
@@ -104,6 +105,10 @@ The simulation accepts the following CLI arguments:
     *   Scenario type: `Original` (supply/demand pricing) or `DynamicPricing` (sales-based pricing). If not specified, uses default (Original) or preset value.
 *   `--tech-growth-rate <RATE>`:
     *   Technology growth rate per simulation step (e.g., 0.001 = 0.1% growth per step). Simulates productivity improvements over time where skills become more efficient, effectively reducing their cost. Higher efficiency enables more trade and economic growth. Set to 0.0 to disable (default). If not specified, uses default (0.0) or preset value.
+*   `--seasonal-amplitude <AMPLITUDE>`:
+    *   Seasonal demand amplitude controlling the strength of seasonal fluctuations in skill demand (0.0 = no seasonality, 0.0-1.0 = variation strength). A value of 0.5 means demand can vary ±50% from the base level. Set to 0.0 to disable seasonal effects (default). If not specified, uses default (0.0) or preset value.
+*   `--seasonal-period <STEPS>`:
+    *   Seasonal cycle period in simulation steps (default: 100). Determines how many steps it takes for demand to complete one seasonal cycle. For example, a value of 100 means demand patterns repeat every 100 steps. Only used when seasonal-amplitude > 0.0. If not specified, uses default (100) or preset value.
 *   `--no-progress`:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
 *   `--log-level <LOG_LEVEL>`:
@@ -130,6 +135,13 @@ The simulation accepts the following CLI arguments:
 ./target/release/economic_simulation --steps 1000 --persons 50 --initial-money 200 --base-price 15 --output custom_results.json --seed 123
 ```
 This runs the simulation for 1000 steps with 50 persons, each starting with 200 money, skills having a base price of 15, and saves results to `custom_results.json` using RNG seed 123.
+
+**Example with Seasonal Effects:**
+
+```bash
+./target/release/economic_simulation --steps 500 --persons 100 --seasonal-amplitude 0.3 --seasonal-period 50 --output seasonal_results.json
+```
+This runs the simulation with seasonal demand fluctuations. The `--seasonal-amplitude 0.3` parameter creates ±30% variation in demand, and `--seasonal-period 50` means the seasonal cycle repeats every 50 steps. Different skills will have their peak demand at different times due to phase offsets, creating realistic market dynamics.
 
 **Example with CSV Export:**
 
