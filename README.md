@@ -13,6 +13,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
+- **Input Validation:** Comprehensive validation of all configuration parameters with clear error messages. Ensures parameters are within acceptable ranges (e.g., positive values for steps/persons, valid ranges for rates/amplitudes) to prevent crashes and provide immediate feedback on configuration errors.
 - **Configuration Files:** Support for YAML and TOML configuration files to easily define complex simulation scenarios without lengthy command lines.
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
