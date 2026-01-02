@@ -140,6 +140,105 @@ impl Default for SimulationConfig {
 }
 
 impl SimulationConfig {
+    /// Validates the configuration parameters to ensure they are within acceptable ranges.
+    ///
+    /// # Returns
+    /// * `Ok(())` if all parameters are valid
+    /// * `Err(String)` with a descriptive error message if validation fails
+    ///
+    /// # Validation Rules
+    /// - `max_steps` must be greater than 0
+    /// - `entity_count` must be greater than 0
+    /// - `initial_money_per_person` must be non-negative
+    /// - `base_skill_price` must be greater than 0
+    /// - `time_step` must be greater than 0
+    /// - `tech_growth_rate` must be non-negative
+    /// - `seasonal_amplitude` must be between 0.0 and 1.0 (inclusive)
+    /// - `seasonal_period` must be greater than 0
+    ///
+    /// # Examples
+    /// ```
+    /// use simulation_framework::SimulationConfig;
+    ///
+    /// let mut config = SimulationConfig::default();
+    /// assert!(config.validate().is_ok());
+    ///
+    /// config.max_steps = 0;
+    /// assert!(config.validate().is_err());
+    /// ```
+    pub fn validate(&self) -> Result<(), String> {
+        if self.max_steps == 0 {
+            return Err("max_steps must be greater than 0".to_string());
+        }
+
+        if self.entity_count == 0 {
+            return Err("entity_count (number of persons) must be greater than 0".to_string());
+        }
+
+        if self.initial_money_per_person < 0.0 {
+            return Err(format!(
+                "initial_money_per_person must be non-negative, got: {}",
+                self.initial_money_per_person
+            ));
+        }
+
+        if self.base_skill_price <= 0.0 {
+            return Err(format!(
+                "base_skill_price must be greater than 0, got: {}",
+                self.base_skill_price
+            ));
+        }
+
+        if self.time_step <= 0.0 {
+            return Err(format!(
+                "time_step must be greater than 0, got: {}",
+                self.time_step
+            ));
+        }
+
+        if self.tech_growth_rate < 0.0 {
+            return Err(format!(
+                "tech_growth_rate must be non-negative, got: {}",
+                self.tech_growth_rate
+            ));
+        }
+
+        if !(0.0..=1.0).contains(&self.seasonal_amplitude) {
+            return Err(format!(
+                "seasonal_amplitude must be between 0.0 and 1.0, got: {}",
+                self.seasonal_amplitude
+            ));
+        }
+
+        if self.seasonal_period == 0 {
+            return Err("seasonal_period must be greater than 0".to_string());
+        }
+
+        // Additional sanity checks for extreme values
+        if self.max_steps > 1_000_000 {
+            return Err(format!(
+                "max_steps is too large ({}), maximum recommended value is 1,000,000",
+                self.max_steps
+            ));
+        }
+
+        if self.entity_count > 100_000 {
+            return Err(format!(
+                "entity_count is too large ({}), maximum recommended value is 100,000",
+                self.entity_count
+            ));
+        }
+
+        if self.tech_growth_rate > 1.0 {
+            return Err(format!(
+                "tech_growth_rate is too large ({}), values above 1.0 (100% per step) are unrealistic",
+                self.tech_growth_rate
+            ));
+        }
+
+        Ok(())
+    }
+
     /// Create a configuration from a preset.
     ///
     /// # Arguments
@@ -486,5 +585,233 @@ scenario: Original
             assert!(config.initial_money_per_person > 0.0);
             assert!(config.base_skill_price > 0.0);
         }
+    }
+
+    #[test]
+    fn test_validate_default_config() {
+        let config = SimulationConfig::default();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_all_presets() {
+        // Ensure all preset configurations pass validation
+        for preset in PresetName::all() {
+            let config = SimulationConfig::from_preset(preset.clone());
+            assert!(
+                config.validate().is_ok(),
+                "Preset {:?} should pass validation",
+                preset
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_zero_max_steps() {
+        let config = SimulationConfig {
+            max_steps: 0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("max_steps must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_zero_entity_count() {
+        let config = SimulationConfig {
+            entity_count: 0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("entity_count (number of persons) must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_negative_initial_money() {
+        let config = SimulationConfig {
+            initial_money_per_person: -10.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("initial_money_per_person must be non-negative"));
+    }
+
+    #[test]
+    fn test_validate_zero_base_skill_price() {
+        let config = SimulationConfig {
+            base_skill_price: 0.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("base_skill_price must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_negative_base_skill_price() {
+        let config = SimulationConfig {
+            base_skill_price: -5.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("base_skill_price must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_zero_time_step() {
+        let config = SimulationConfig {
+            time_step: 0.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("time_step must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_negative_tech_growth_rate() {
+        let config = SimulationConfig {
+            tech_growth_rate: -0.1,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("tech_growth_rate must be non-negative"));
+    }
+
+    #[test]
+    fn test_validate_excessive_tech_growth_rate() {
+        let config = SimulationConfig {
+            tech_growth_rate: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("tech_growth_rate is too large"));
+    }
+
+    #[test]
+    fn test_validate_seasonal_amplitude_out_of_range() {
+        let config = SimulationConfig {
+            seasonal_amplitude: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("seasonal_amplitude must be between 0.0 and 1.0"));
+
+        let config2 = SimulationConfig {
+            seasonal_amplitude: -0.1,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_zero_seasonal_period() {
+        let config = SimulationConfig {
+            seasonal_period: 0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("seasonal_period must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_extreme_max_steps() {
+        let config = SimulationConfig {
+            max_steps: 2_000_000,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("max_steps is too large"));
+    }
+
+    #[test]
+    fn test_validate_extreme_entity_count() {
+        let config = SimulationConfig {
+            entity_count: 200_000,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        assert!(config
+            .validate()
+            .unwrap_err()
+            .contains("entity_count is too large"));
+    }
+
+    #[test]
+    fn test_validate_valid_edge_cases() {
+        // Test that boundary values are accepted
+
+        // Max valid tech growth rate
+        let config1 = SimulationConfig {
+            tech_growth_rate: 1.0,
+            ..Default::default()
+        };
+        assert!(config1.validate().is_ok());
+
+        // Max valid seasonal amplitude
+        let config2 = SimulationConfig {
+            seasonal_amplitude: 1.0,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_ok());
+
+        // Min valid seasonal amplitude
+        let config3 = SimulationConfig {
+            seasonal_amplitude: 0.0,
+            ..Default::default()
+        };
+        assert!(config3.validate().is_ok());
+
+        // Zero initial money (allowed - represents starting with no money)
+        let config4 = SimulationConfig {
+            initial_money_per_person: 0.0,
+            ..Default::default()
+        };
+        assert!(config4.validate().is_ok());
+
+        // Single person
+        let config5 = SimulationConfig {
+            entity_count: 1,
+            ..Default::default()
+        };
+        assert!(config5.validate().is_ok());
+
+        // Single step
+        let config6 = SimulationConfig {
+            max_steps: 1,
+            ..Default::default()
+        };
+        assert!(config6.validate().is_ok());
     }
 }
