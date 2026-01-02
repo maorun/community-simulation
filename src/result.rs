@@ -1,3 +1,4 @@
+use crate::error::{Result, SimulationError};
 use crate::{Entity, SkillId}; // Entity now wraps Person
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -101,6 +102,9 @@ impl SimulationResult {
     /// * `path` - Path to the output file
     /// * `compress` - If true, compress the output using gzip and append .gz to the filename
     ///
+    /// # Returns
+    /// * `Result<()>` - Success or a SimulationError
+    ///
     /// # Examples
     /// ```no_run
     /// # use simulation_framework::result::SimulationResult;
@@ -140,12 +144,9 @@ impl SimulationResult {
     /// // Save compressed JSON
     /// result.save_to_file("results.json", true).unwrap(); // Creates results.json.gz
     /// ```
-    pub fn save_to_file(
-        &self,
-        path: &str,
-        compress: bool,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let json = serde_json::to_string_pretty(self)?;
+    pub fn save_to_file(&self, path: &str, compress: bool) -> Result<()> {
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
 
         if compress {
             // Add .gz extension if not already present
@@ -175,7 +176,10 @@ impl SimulationResult {
     /// - {path}_skill_prices.csv: Final skill prices
     /// - {path}_price_history.csv: Skill price history over time (if available)
     /// - {path}_trade_volume.csv: Trade volume history over time
-    pub fn save_to_csv(&self, path_prefix: &str) -> Result<(), Box<dyn std::error::Error>> {
+    ///
+    /// # Returns
+    /// * `Result<()>` - Success or a SimulationError
+    pub fn save_to_csv(&self, path_prefix: &str) -> Result<()> {
         // Save summary statistics
         self.save_summary_csv(&format!("{}_summary.csv", path_prefix))?;
 
@@ -199,7 +203,7 @@ impl SimulationResult {
         Ok(())
     }
 
-    fn save_summary_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_summary_csv(&self, path: &str) -> Result<()> {
         let mut file = File::create(path)?;
 
         writeln!(file, "Metric,Value")?;
@@ -299,7 +303,7 @@ impl SimulationResult {
         Ok(())
     }
 
-    fn save_money_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_money_csv(&self, path: &str) -> Result<()> {
         let mut file = File::create(path)?;
 
         writeln!(file, "Person_ID,Money")?;
@@ -310,7 +314,7 @@ impl SimulationResult {
         Ok(())
     }
 
-    fn save_reputation_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_reputation_csv(&self, path: &str) -> Result<()> {
         let mut file = File::create(path)?;
 
         writeln!(file, "Person_ID,Reputation")?;
@@ -321,7 +325,7 @@ impl SimulationResult {
         Ok(())
     }
 
-    fn save_skill_prices_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_skill_prices_csv(&self, path: &str) -> Result<()> {
         let mut file = File::create(path)?;
 
         writeln!(file, "Skill_ID,Final_Price")?;
@@ -332,7 +336,7 @@ impl SimulationResult {
         Ok(())
     }
 
-    fn save_price_history_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_price_history_csv(&self, path: &str) -> Result<()> {
         let mut file = File::create(path)?;
 
         // Collect all skill IDs and sort them for consistent output
@@ -375,7 +379,7 @@ impl SimulationResult {
         Ok(())
     }
 
-    fn save_trade_volume_csv(&self, path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_trade_volume_csv(&self, path: &str) -> Result<()> {
         let mut file = File::create(path)?;
 
         writeln!(file, "Step,Trades_Count,Volume_Exchanged")?;
