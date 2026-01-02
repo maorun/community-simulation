@@ -85,6 +85,8 @@ pub struct SimulationResult {
     pub trades_per_step: Vec<usize>,
     /// Total money volume exchanged at each step
     pub volume_per_step: Vec<f64>,
+    /// Total transaction fees collected across all trades
+    pub total_fees_collected: f64,
 
     // final_entities might be too verbose if Person struct grows large with transaction history.
     // Consider summarizing person data if needed, or providing it under a flag.
@@ -129,6 +131,7 @@ impl SimulationResult {
     /// #     },
     /// #     trades_per_step: vec![],
     /// #     volume_per_step: vec![],
+    /// #     total_fees_collected: 0.0,
     /// #     final_persons_data: vec![],
     /// # };
     /// // Save uncompressed JSON
@@ -638,6 +641,7 @@ mod tests {
             volume_per_step: vec![
                 100.0, 120.0, 80.0, 100.0, 150.0, 90.0, 110.0, 100.0, 50.0, 100.0,
             ],
+            total_fees_collected: 0.0,
             final_persons_data: vec![],
         }
     }

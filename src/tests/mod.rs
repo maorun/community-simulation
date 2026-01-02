@@ -17,6 +17,7 @@ mod engine_tests {
             tech_growth_rate: 0.0,
             seasonal_amplitude: 0.0,
             seasonal_period: 100,
+            transaction_fee: 0.0,
         }
     }
 
@@ -122,5 +123,57 @@ mod engine_tests {
 
         // At least some should be different due to phase offset
         // (though theoretically they could all be similar by chance)
+    }
+
+    #[test]
+    fn test_transaction_fee_collection() {
+        let mut config = get_test_config();
+        config.max_steps = 10;
+        config.transaction_fee = 0.1; // 10% fee
+        config.entity_count = 5;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify that fees were collected
+        assert!(
+            result.total_fees_collected >= 0.0,
+            "Total fees should be non-negative"
+        );
+
+        // If there were trades, fees should be positive (10% of total volume)
+        if result.trade_volume_statistics.total_trades > 0 {
+            assert!(
+                result.total_fees_collected > 0.0,
+                "Fees should be collected when trades occur with non-zero fee rate"
+            );
+
+            // Verify that fees are approximately 10% of total volume
+            let expected_fees = result.trade_volume_statistics.total_volume * 0.1;
+            let fee_difference = (result.total_fees_collected - expected_fees).abs();
+            assert!(
+                fee_difference < 0.01, // Allow small floating point differences
+                "Collected fees ({}) should match expected fees ({})",
+                result.total_fees_collected,
+                expected_fees
+            );
+        }
+    }
+
+    #[test]
+    fn test_zero_transaction_fee() {
+        let mut config = get_test_config();
+        config.max_steps = 10;
+        config.transaction_fee = 0.0; // No fee
+        config.entity_count = 5;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // With zero fee, no fees should be collected
+        assert_eq!(
+            result.total_fees_collected, 0.0,
+            "No fees should be collected with 0% transaction fee"
+        );
     }
 }
