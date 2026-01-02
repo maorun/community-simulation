@@ -486,7 +486,9 @@ scenario = "DynamicPricing"
         let result = SimulationConfig::from_file(temp_file.path());
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().contains("Unsupported configuration file format"));
+        assert!(err
+            .to_string()
+            .contains("Unsupported configuration file format"));
     }
 
     #[test]
@@ -494,7 +496,9 @@ scenario = "DynamicPricing"
         let result = SimulationConfig::from_file("/nonexistent/config.yaml");
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.to_string().contains("Failed to read configuration file"));
+        assert!(err
+            .to_string()
+            .contains("Failed to read configuration file"));
     }
 
     #[test]

@@ -145,7 +145,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Code-Qualität
 
-#### 3.5 Code-Formatierung und Linting
+#### 3.2 Code-Formatierung und Linting
 - **Beschreibung**: Einheitlicher Code-Stil
 - **Tools**: `rustfmt`, `clippy` in CI/CD
 - **Nutzen**: Konsistenter, wartbarer Code
