@@ -12,6 +12,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Technological Progress:** Skills become more efficient over time through a configurable technology growth rate, simulating productivity improvements. More efficient skills effectively cost less, enabling increased trade and economic growth over the simulation period.
 - **Seasonal Demand Effects:** Configurable seasonal fluctuations in skill demand using cyclical patterns. Different skills experience peak demand at different times, creating realistic market dynamics and economic cycles. Controlled via `--seasonal-amplitude` and `--seasonal-period` parameters.
 - **Transaction Fees:** Configurable marketplace transaction fees that are deducted from seller proceeds on each trade. Simulates realistic trading costs (e.g., platform fees, payment processing) and allows studying the impact of fees on market liquidity, wealth distribution, and economic activity. Total fees collected are tracked and reported. Controlled via `--transaction-fee` parameter (0.0-1.0 range representing 0-100% fee rate).
+- **Savings System:** Persons can save a configurable percentage of their money each simulation step. Saved money is moved from available cash to a separate savings account, affecting spending capacity while enabling wealth accumulation studies. Configurable via `--savings-rate` parameter (0.0-1.0 range representing 0-100% savings rate). Savings statistics (total, average, median, min, max) are tracked and reported in results.
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
@@ -120,6 +121,13 @@ The simulation accepts the following CLI arguments:
         *   Study the impact of trading costs on market efficiency and liquidity
         *   Model wealth extraction by intermediaries or governments
     *   The total fees collected across all transactions are reported in the simulation results.
+*   `--savings-rate <RATE>`:
+    *   Savings rate as a percentage of current money to save each simulation step (0.0-1.0, e.g., 0.05 = 5% savings rate). Each step, persons save this percentage of their current available money, which is moved from cash to a separate savings account. This affects spending capacity while enabling wealth accumulation. For example, if a person has $100 and savings-rate is 0.05, they will save $5 and have $95 available for trading. Set to 0.0 to disable savings (default). If not specified, uses default (0.0) or preset value.
+    *   **Use cases:** 
+        *   Model realistic wealth accumulation behavior
+        *   Study the impact of savings rates on market liquidity and economic activity
+        *   Explore wealth distribution with different savings patterns
+    *   Savings statistics (total, average, median, min, max) are tracked and reported in the simulation results.
 *   `--no-progress`:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
 *   `--no-color`:
