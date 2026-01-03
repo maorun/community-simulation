@@ -2,10 +2,11 @@ use crate::{
     scenario::PriceUpdater, Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use log::{debug, info};
+use log::{debug, info, warn};
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use std::collections::HashMap;
+use std::panic;
 use std::time::Instant;
 
 pub struct SimulationEngine {
@@ -20,6 +21,8 @@ pub struct SimulationEngine {
     volume_per_step: Vec<f64>,
     // Transaction fees tracking
     total_fees_collected: f64,
+    // Panic recovery tracking
+    failed_steps: usize,
 }
 
 impl SimulationEngine {
@@ -43,6 +46,7 @@ impl SimulationEngine {
             trades_per_step: Vec::new(),
             volume_per_step: Vec::new(),
             total_fees_collected: 0.0,
+            failed_steps: 0,
         }
     }
 
@@ -168,7 +172,39 @@ impl SimulationEngine {
 
         for step in 0..self.config.max_steps {
             let step_start = Instant::now();
-            self.step();
+
+            // Catch panics during step execution for graceful degradation
+            let step_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+                self.step();
+            }));
+
+            // Handle panic if it occurred
+            if let Err(panic_info) = step_result {
+                self.failed_steps += 1;
+
+                // Extract panic message for logging
+                let panic_msg = if let Some(s) = panic_info.downcast_ref::<&str>() {
+                    s.to_string()
+                } else if let Some(s) = panic_info.downcast_ref::<String>() {
+                    s.clone()
+                } else {
+                    "Unknown panic message".to_string()
+                };
+
+                warn!(
+                    "Panic caught during step {}: {}. Simulation continues with graceful degradation.",
+                    step + 1,
+                    panic_msg
+                );
+
+                // Record this as a step with zero trades for statistics
+                self.trades_per_step.push(0);
+                self.volume_per_step.push(0.0);
+
+                // Still increment the step counter for proper sequencing
+                self.current_step += 1;
+            }
+
             let step_duration = step_start.elapsed();
             step_times.push(step_duration.as_secs_f64());
 
@@ -383,6 +419,7 @@ impl SimulationEngine {
             total_duration: total_duration.as_secs_f64(),
             step_times,
             active_persons: self.entities.iter().filter(|e| e.active).count(),
+            failed_steps: self.failed_steps,
             final_money_distribution,
             money_statistics: money_stats,
             final_reputation_distribution,

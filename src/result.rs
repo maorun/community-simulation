@@ -63,6 +63,8 @@ pub struct SimulationResult {
     pub total_duration: f64,
     pub step_times: Vec<f64>,  // Time taken for each step
     pub active_persons: usize, // Renamed from active_entities for clarity
+    /// Number of steps that failed due to panics but were recovered gracefully
+    pub failed_steps: usize,
 
     // Economic output
     pub final_money_distribution: Vec<f64>, // List of money amounts per person
@@ -114,6 +116,7 @@ impl SimulationResult {
     /// #     total_duration: 0.0,
     /// #     step_times: vec![],
     /// #     active_persons: 0,
+    /// #     failed_steps: 0,
     /// #     final_money_distribution: vec![],
     /// #     money_statistics: simulation_framework::result::MoneyStats {
     /// #         average: 0.0, median: 0.0, std_dev: 0.0,
@@ -211,6 +214,7 @@ impl SimulationResult {
         writeln!(file, "Total Steps,{}", self.total_steps)?;
         writeln!(file, "Total Duration (s),{:.4}", self.total_duration)?;
         writeln!(file, "Active Persons,{}", self.active_persons)?;
+        writeln!(file, "Failed Steps,{}", self.failed_steps)?;
 
         if !self.step_times.is_empty() {
             let avg_step_time = self.step_times.iter().sum::<f64>() / self.step_times.len() as f64;
@@ -413,6 +417,21 @@ impl SimulationResult {
             "Active persons remaining:".bold(),
             self.active_persons
         );
+
+        // Display failed steps if any occurred
+        if self.failed_steps > 0 {
+            println!(
+                "{} {} {}",
+                "Failed steps (recovered):".bold(),
+                format!("{}", self.failed_steps).bright_red(),
+                format!(
+                    "({:.1}% of total)",
+                    self.failed_steps as f64 / self.total_steps as f64 * 100.0
+                )
+                .dimmed()
+            );
+        }
+
         let performance = if self.total_duration > 0.0 {
             self.total_steps as f64 / self.total_duration
         } else {
@@ -699,6 +718,7 @@ mod tests {
             total_duration: 1.23,
             step_times: vec![0.1, 0.12, 0.1, 0.13, 0.1, 0.11, 0.1, 0.14, 0.1, 0.13],
             active_persons: 5,
+            failed_steps: 0,
             final_money_distribution: vec![50.0, 80.0, 100.0, 120.0, 150.0],
             money_statistics: MoneyStats {
                 average: 100.0,
