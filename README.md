@@ -7,6 +7,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Agent-Based Simulation:** Simulates individual persons with money, unique skills, and randomly generated needs for other skills.
 - **Dynamic Market:** Features a market mechanism where skill prices are adjusted based on supply (fixed per provider) and demand (generated each step).
 - **Trading System:** Persons attempt to buy needed skills from providers if they can afford them, leading to money exchange and transaction logging.
+- **Panic Recovery:** Robust error handling with graceful degradation - if a panic occurs during simulation step execution, it is caught and logged, allowing the simulation to continue. Failed steps are tracked and reported in the results.
 - **Reputation System:** Each person has a reputation score (starting at 1.0) that increases with successful trades. Higher reputation leads to better prices (up to 10% discount), while lower reputation results in price premiums. Reputation slowly decays toward neutral over time, encouraging ongoing positive behavior.
 - **Technological Progress:** Skills become more efficient over time through a configurable technology growth rate, simulating productivity improvements. More efficient skills effectively cost less, enabling increased trade and economic growth over the simulation period.
 - **Seasonal Demand Effects:** Configurable seasonal fluctuations in skill demand using cyclical patterns. Different skills experience peak demand at different times, creating realistic market dynamics and economic cycles. Controlled via `--seasonal-amplitude` and `--seasonal-period` parameters.
@@ -366,6 +367,7 @@ The CI pipeline:
 The JSON output file contains a comprehensive summary of the simulation, including:
 
 *   `total_steps`, `total_duration`, `active_persons`: General simulation metrics.
+*   `failed_steps`: Number of steps that failed due to panics but were recovered gracefully. The simulation uses panic recovery to continue execution even if an individual step encounters an unexpected error. Failed steps are logged and counted, but do not halt the simulation. In normal operation, this value should be 0.
 *   `final_money_distribution`: A list of final money amounts for each active person.
 *   `money_statistics`: An object with:
     *   `average`: Average money across all persons
