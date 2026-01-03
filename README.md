@@ -18,6 +18,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Configuration Files:** Support for YAML and TOML configuration files to easily define complex simulation scenarios without lengthy command lines.
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
+- **Colored Terminal Output:** Enhanced terminal output with color-coded statistics and messages for improved readability. Automatically detects terminal capabilities and can be disabled with `--no-color` flag.
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
@@ -120,6 +121,8 @@ The simulation accepts the following CLI arguments:
     *   The total fees collected across all transactions are reported in the simulation results.
 *   `--no-progress`:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
+*   `--no-color`:
+    *   Disable colored terminal output. By default, the simulation uses colors to improve readability of terminal output (e.g., green for success messages, yellow for warnings, color-coded statistics). Use this flag in non-interactive environments, when redirecting output to files, or if your terminal doesn't support colors.
 *   `--log-level <LOG_LEVEL>`:
     *   Set the logging level for the simulation. Valid values: `error`, `warn`, `info`, `debug`, `trace`. Default: `info`.
     *   Can also be set via the `RUST_LOG` environment variable (e.g., `RUST_LOG=debug`).

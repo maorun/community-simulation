@@ -1,5 +1,6 @@
 use crate::error::{Result, SimulationError};
 use crate::{Entity, SkillId}; // Entity now wraps Person
+use colored::Colorize;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use serde::{Deserialize, Serialize};
@@ -396,104 +397,185 @@ impl SimulationResult {
     }
 
     pub fn print_summary(&self) {
-        println!("\n=== Economic Simulation Summary ===");
-        println!("Total steps: {}", self.total_steps);
-        println!("Total duration: {:.2}s", self.total_duration);
+        println!(
+            "\n{}",
+            "=== Economic Simulation Summary ===".bright_cyan().bold()
+        );
+        println!("{} {}", "Total steps:".bold(), self.total_steps);
+        println!("{} {:.2}s", "Total duration:".bold(), self.total_duration);
         if !self.step_times.is_empty() {
             let avg_step_time_ms =
                 self.step_times.iter().sum::<f64>() / self.step_times.len() as f64 * 1000.0;
-            println!("Average step time: {:.4}ms", avg_step_time_ms);
+            println!("{} {:.4}ms", "Average step time:".bold(), avg_step_time_ms);
         }
-        println!("Active persons remaining: {}", self.active_persons);
+        println!(
+            "{} {}",
+            "Active persons remaining:".bold(),
+            self.active_persons
+        );
         let performance = if self.total_duration > 0.0 {
             self.total_steps as f64 / self.total_duration
         } else {
             0.0
         };
-        println!("Performance: {:.0} steps/second", performance);
-
-        println!("\n--- Money Distribution ---");
-        println!("Average Money: {:.2}", self.money_statistics.average);
-        println!("Median Money: {:.2}", self.money_statistics.median);
-        println!("Std Dev Money: {:.2}", self.money_statistics.std_dev);
         println!(
-            "Min/Max Money: {:.2} / {:.2}",
-            self.money_statistics.min_money, self.money_statistics.max_money
-        );
-        println!(
-            "Gini Coefficient: {:.4} (0 = perfect equality, 1 = perfect inequality)",
-            self.money_statistics.gini_coefficient
-        );
-        println!(
-            "Herfindahl Index: {:.2} (< 1500 = competitive, 1500-2500 = moderate, > 2500 = high concentration)",
-            self.money_statistics.herfindahl_index
+            "{} {}",
+            "Performance:".bold(),
+            format!("{:.0} steps/second", performance).bright_yellow()
         );
 
-        println!("\n--- Reputation Distribution ---");
+        println!("\n{}", "--- Money Distribution ---".bright_green().bold());
         println!(
-            "Average Reputation: {:.4}",
+            "{} {:.2}",
+            "Average Money:".bold(),
+            self.money_statistics.average
+        );
+        println!(
+            "{} {:.2}",
+            "Median Money:".bold(),
+            self.money_statistics.median
+        );
+        println!(
+            "{} {:.2}",
+            "Std Dev Money:".bold(),
+            self.money_statistics.std_dev
+        );
+        println!(
+            "{} {:.2} / {:.2}",
+            "Min/Max Money:".bold(),
+            self.money_statistics.min_money,
+            self.money_statistics.max_money
+        );
+
+        // Color code Gini coefficient based on inequality level
+        let gini_str = format!("{:.4}", self.money_statistics.gini_coefficient);
+        let gini_colored = if self.money_statistics.gini_coefficient < 0.3 {
+            gini_str.bright_green()
+        } else if self.money_statistics.gini_coefficient < 0.5 {
+            gini_str.bright_yellow()
+        } else {
+            gini_str.bright_red()
+        };
+        println!(
+            "{} {} {}",
+            "Gini Coefficient:".bold(),
+            gini_colored,
+            "(0 = perfect equality, 1 = perfect inequality)".dimmed()
+        );
+
+        // Color code HHI based on concentration level
+        let hhi = self.money_statistics.herfindahl_index;
+        let hhi_str = format!("{:.2}", hhi);
+        let hhi_colored = if hhi < 1500.0 {
+            hhi_str.bright_green()
+        } else if hhi < 2500.0 {
+            hhi_str.bright_yellow()
+        } else {
+            hhi_str.bright_red()
+        };
+        println!(
+            "{} {} {}",
+            "Herfindahl Index:".bold(),
+            hhi_colored,
+            "(< 1500 = competitive, 1500-2500 = moderate, > 2500 = high concentration)".dimmed()
+        );
+
+        println!(
+            "\n{}",
+            "--- Reputation Distribution ---".bright_magenta().bold()
+        );
+        println!(
+            "{} {:.4}",
+            "Average Reputation:".bold(),
             self.reputation_statistics.average
         );
         println!(
-            "Median Reputation: {:.4}",
+            "{} {:.4}",
+            "Median Reputation:".bold(),
             self.reputation_statistics.median
         );
         println!(
-            "Std Dev Reputation: {:.4}",
+            "{} {:.4}",
+            "Std Dev Reputation:".bold(),
             self.reputation_statistics.std_dev
         );
         println!(
-            "Min/Max Reputation: {:.4} / {:.4}",
-            self.reputation_statistics.min_reputation, self.reputation_statistics.max_reputation
+            "{} {:.4} / {:.4}",
+            "Min/Max Reputation:".bold(),
+            self.reputation_statistics.min_reputation,
+            self.reputation_statistics.max_reputation
         );
 
-        println!("\n--- Skill Valuations ---");
+        println!("\n{}", "--- Skill Valuations ---".bright_blue().bold());
         if let Some(skill) = &self.most_valuable_skill {
             println!(
-                "Most Valuable Skill: {} (Price: {:.2})",
-                skill.id, skill.price
+                "{} {} {}",
+                "Most Valuable Skill:".bold(),
+                skill.id.to_string().bright_cyan(),
+                format!("(Price: {:.2})", skill.price).bright_green()
             );
         }
         if let Some(skill) = &self.least_valuable_skill {
             println!(
-                "Least Valuable Skill: {} (Price: {:.2})",
-                skill.id, skill.price
+                "{} {} {}",
+                "Least Valuable Skill:".bold(),
+                skill.id.to_string().bright_cyan(),
+                format!("(Price: {:.2})", skill.price).bright_red()
             );
         }
 
-        println!("\n--- Trade Volume Statistics ---");
         println!(
-            "Total Trades: {}",
+            "\n{}",
+            "--- Trade Volume Statistics ---".bright_yellow().bold()
+        );
+        println!(
+            "{} {}",
+            "Total Trades:".bold(),
             self.trade_volume_statistics.total_trades
         );
         println!(
-            "Total Volume Exchanged: {:.2}",
+            "{} {:.2}",
+            "Total Volume Exchanged:".bold(),
             self.trade_volume_statistics.total_volume
         );
         println!(
-            "Avg Trades Per Step: {:.2}",
+            "{} {:.2}",
+            "Avg Trades Per Step:".bold(),
             self.trade_volume_statistics.avg_trades_per_step
         );
         println!(
-            "Avg Volume Per Step: {:.2}",
+            "{} {:.2}",
+            "Avg Volume Per Step:".bold(),
             self.trade_volume_statistics.avg_volume_per_step
         );
         println!(
-            "Avg Transaction Value: {:.2}",
+            "{} {:.2}",
+            "Avg Transaction Value:".bold(),
             self.trade_volume_statistics.avg_transaction_value
         );
         println!(
-            "Min/Max Trades Per Step: {} / {}",
+            "{} {} / {}",
+            "Min/Max Trades Per Step:".bold(),
             self.trade_volume_statistics.min_trades_per_step,
             self.trade_volume_statistics.max_trades_per_step
         );
 
-        println!("\nTop 5 Most Valuable Skills:");
+        println!("\n{}", "Top 5 Most Valuable Skills:".bright_cyan().bold());
         for skill_info in self.final_skill_prices.iter().take(5) {
-            println!("  - {}: {:.2}", skill_info.id, skill_info.price);
+            println!(
+                "  {} {} {:.2}",
+                "-".dimmed(),
+                format!("{}:", skill_info.id).bright_white(),
+                skill_info.price
+            );
         }
 
-        println!("\nTop 5 Least Valuable Skills (excluding those at min price if many):");
+        println!(
+            "\n{}",
+            "Top 5 Least Valuable Skills (excluding those at min price if many):"
+                .bright_cyan()
+                .bold()
+        );
         // Iterate in reverse, but skip if all are min_price
         let mut count = 0;
         for skill_info in self.final_skill_prices.iter().rev().take(10) {
@@ -502,14 +584,21 @@ impl SimulationResult {
                 // Basic heuristic: if it's significantly above absolute min, show it.
                 // This needs better logic if many skills bottom out at min_skill_price.
                 // For now, just show them.
-                println!("  - {}: {:.2}", skill_info.id, skill_info.price);
+                println!(
+                    "  {} {} {:.2}",
+                    "-".dimmed(),
+                    format!("{}:", skill_info.id).bright_white(),
+                    skill_info.price
+                );
                 count += 1;
             }
         }
         if self.skill_price_history.keys().len() > 0 {
             println!(
-                "\nSkill price history for {} skills available in JSON output.",
-                self.skill_price_history.keys().len()
+                "\n{} {} {}",
+                "Skill price history for".dimmed(),
+                format!("{}", self.skill_price_history.keys().len()).bright_white(),
+                "skills available in JSON output.".dimmed()
             );
         }
     }

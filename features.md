@@ -199,11 +199,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Debugging und Exploration
 - **Technologie**: `rustyline` Crate
 
-#### 1.2 Colored Output
-- **Beschreibung**: Farbige Terminal-Ausgabe
-- **Nutzen**: Bessere Lesbarkeit
-- **Technologie**: `colored` oder `owo-colors` Crate
-
 ### 2. Debugging-Tools
 
 #### 2.1 Trace-Modus
