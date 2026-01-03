@@ -176,4 +176,47 @@ mod engine_tests {
             "No fees should be collected with 0% transaction fee"
         );
     }
+
+    #[test]
+    fn test_panic_recovery_field_exists() {
+        // Test that the panic recovery field exists and is initialized correctly
+        let config = get_test_config();
+        let mut engine = SimulationEngine::new(config);
+
+        let result = engine.run();
+
+        // The failed_steps field should exist and be initialized to 0 for normal execution
+        assert_eq!(
+            result.failed_steps, 0,
+            "Failed steps should be 0 for normal simulation execution"
+        );
+    }
+
+    #[test]
+    fn test_panic_recovery_in_result() {
+        // Test that SimulationResult properly serializes failed_steps
+        let mut config = get_test_config();
+        config.max_steps = 10;
+        let mut engine = SimulationEngine::new(config);
+
+        let result = engine.run();
+
+        // Verify the result includes all expected fields
+        assert_eq!(result.total_steps, 10);
+        assert_eq!(result.failed_steps, 0);
+
+        // Verify it can be serialized to JSON (would fail if field is missing)
+        let json_result = serde_json::to_string(&result);
+        assert!(
+            json_result.is_ok(),
+            "SimulationResult should be serializable to JSON"
+        );
+
+        // Verify failed_steps is in the JSON output
+        let json_str = json_result.unwrap();
+        assert!(
+            json_str.contains("failed_steps"),
+            "JSON output should contain failed_steps field"
+        );
+    }
 }
