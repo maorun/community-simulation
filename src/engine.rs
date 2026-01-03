@@ -274,6 +274,15 @@ impl SimulationEngine {
         final_reputation_distribution
             .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
+        let mut final_savings_distribution: Vec<f64> = self
+            .entities
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| e.person_data.savings)
+            .collect();
+        final_savings_distribution
+            .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
         let money_stats = if !final_money_distribution.is_empty() {
             let sum: f64 = final_money_distribution.iter().sum();
             let count = final_money_distribution.len() as f64;
@@ -370,6 +379,39 @@ impl SimulationEngine {
             }
         };
 
+        let savings_stats = if !final_savings_distribution.is_empty() {
+            let sum: f64 = final_savings_distribution.iter().sum();
+            let count = final_savings_distribution.len() as f64;
+            let average = sum / count;
+            let median = if count > 0.0 {
+                if count as usize % 2 == 1 {
+                    final_savings_distribution[count as usize / 2]
+                } else {
+                    (final_savings_distribution[count as usize / 2 - 1]
+                        + final_savings_distribution[count as usize / 2])
+                        / 2.0
+                }
+            } else {
+                0.0
+            };
+
+            crate::result::SavingsStats {
+                total_savings: sum,
+                average_savings: average,
+                median_savings: median,
+                min_savings: *final_savings_distribution.first().unwrap_or(&0.0),
+                max_savings: *final_savings_distribution.last().unwrap_or(&0.0),
+            }
+        } else {
+            crate::result::SavingsStats {
+                total_savings: 0.0,
+                average_savings: 0.0,
+                median_savings: 0.0,
+                min_savings: 0.0,
+                max_savings: 0.0,
+            }
+        };
+
         let final_skill_prices_map = self.market.get_all_skill_prices();
         let mut final_skill_prices_vec: Vec<crate::result::SkillPriceInfo> = final_skill_prices_map
             .into_iter()
@@ -432,6 +474,8 @@ impl SimulationEngine {
             money_statistics: money_stats,
             final_reputation_distribution,
             reputation_statistics: reputation_stats,
+            final_savings_distribution,
+            savings_statistics: savings_stats,
             final_skill_prices: final_skill_prices_vec,
             most_valuable_skill,
             least_valuable_skill,
@@ -650,6 +694,15 @@ impl SimulationEngine {
         for entity in &mut self.entities {
             if entity.active {
                 entity.person_data.apply_reputation_decay();
+            }
+        }
+
+        // Apply savings - persons save a portion of their money
+        if self.config.savings_rate > 0.0 {
+            for entity in &mut self.entities {
+                if entity.active {
+                    entity.person_data.apply_savings(self.config.savings_rate);
+                }
             }
         }
 

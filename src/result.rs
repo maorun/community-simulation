@@ -32,6 +32,15 @@ pub struct ReputationStats {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SavingsStats {
+    pub total_savings: f64,
+    pub average_savings: f64,
+    pub median_savings: f64,
+    pub min_savings: f64,
+    pub max_savings: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SkillPriceInfo {
     pub id: SkillId,
     pub price: f64,
@@ -73,6 +82,10 @@ pub struct SimulationResult {
     // Reputation metrics
     pub final_reputation_distribution: Vec<f64>, // List of reputation scores per person
     pub reputation_statistics: ReputationStats,
+
+    // Savings metrics
+    pub final_savings_distribution: Vec<f64>, // List of savings amounts per person
+    pub savings_statistics: SavingsStats,
 
     pub final_skill_prices: Vec<SkillPriceInfo>, // Sorted by price
     pub most_valuable_skill: Option<SkillPriceInfo>,
@@ -126,6 +139,11 @@ impl SimulationResult {
     /// #     reputation_statistics: simulation_framework::result::ReputationStats {
     /// #         average: 0.0, median: 0.0, std_dev: 0.0,
     /// #         min_reputation: 0.0, max_reputation: 0.0,
+    /// #     },
+    /// #     final_savings_distribution: vec![],
+    /// #     savings_statistics: simulation_framework::result::SavingsStats {
+    /// #         total_savings: 0.0, average_savings: 0.0, median_savings: 0.0,
+    /// #         min_savings: 0.0, max_savings: 0.0,
     /// #     },
     /// #     final_skill_prices: vec![],
     /// #     most_valuable_skill: None,
@@ -736,6 +754,14 @@ mod tests {
                 std_dev: 0.05,
                 min_reputation: 0.95,
                 max_reputation: 1.1,
+            },
+            final_savings_distribution: vec![0.0, 5.0, 10.0, 15.0, 20.0],
+            savings_statistics: SavingsStats {
+                total_savings: 50.0,
+                average_savings: 10.0,
+                median_savings: 10.0,
+                min_savings: 0.0,
+                max_savings: 20.0,
             },
             final_skill_prices: vec![],
             most_valuable_skill: None,

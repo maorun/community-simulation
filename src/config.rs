@@ -127,6 +127,16 @@ pub struct SimulationConfig {
     /// Valid range: 0.0 to 1.0 (0% to 100%)
     #[serde(default)]
     pub transaction_fee: f64,
+
+    /// Savings rate as a percentage of current money to save each step.
+    ///
+    /// Each simulation step, persons will save this percentage of their current money.
+    /// The saved money is moved from available cash to savings, affecting spending capacity.
+    /// A value of 0.05 means 5% of current money is saved each step.
+    /// Set to 0.0 to disable savings (default).
+    /// Valid range: 0.0 to 1.0 (0% to 100%)
+    #[serde(default)]
+    pub savings_rate: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -147,6 +157,7 @@ impl Default for SimulationConfig {
             seasonal_amplitude: 0.0, // Disabled by default
             seasonal_period: 100,    // Default cycle length
             transaction_fee: 0.0,    // Disabled by default
+            savings_rate: 0.0,       // Disabled by default
         }
     }
 }
@@ -239,6 +250,13 @@ impl SimulationConfig {
             )));
         }
 
+        if !(0.0..=1.0).contains(&self.savings_rate) {
+            return Err(SimulationError::ValidationError(format!(
+                "savings_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                self.savings_rate
+            )));
+        }
+
         // Additional sanity checks for extreme values
         if self.max_steps > 1_000_000 {
             return Err(SimulationError::ValidationError(format!(
@@ -294,6 +312,7 @@ impl SimulationConfig {
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
                 transaction_fee: 0.0,
+                savings_rate: 0.0,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -307,6 +326,7 @@ impl SimulationConfig {
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
                 transaction_fee: 0.0,
+                savings_rate: 0.0,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -320,6 +340,7 @@ impl SimulationConfig {
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
                 transaction_fee: 0.0,
+                savings_rate: 0.0,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -333,6 +354,7 @@ impl SimulationConfig {
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
                 transaction_fee: 0.0,
+                savings_rate: 0.0,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -346,6 +368,7 @@ impl SimulationConfig {
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
                 transaction_fee: 0.0,
+                savings_rate: 0.0,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -359,6 +382,7 @@ impl SimulationConfig {
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
                 transaction_fee: 0.0,
+                savings_rate: 0.0,
             },
         }
     }
