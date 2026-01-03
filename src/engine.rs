@@ -174,6 +174,13 @@ impl SimulationEngine {
             let step_start = Instant::now();
 
             // Catch panics during step execution for graceful degradation
+            // Safety: We use AssertUnwindSafe here because:
+            // 1. The simulation state is designed to be incrementally updated
+            // 2. Failed steps are isolated - they don't affect other steps
+            // 3. We explicitly handle the incomplete state by recording zero trades
+            // 4. All collections (entities, market) use safe Rust with no raw pointers
+            // Note: If a panic occurs, some mid-step state changes may be incomplete,
+            // but the simulation can safely continue from the next step.
             let step_result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
                 self.step();
             }));
@@ -197,11 +204,12 @@ impl SimulationEngine {
                     panic_msg
                 );
 
-                // Record this as a step with zero trades for statistics
+                // Record this as a step with zero trades for statistics consistency
                 self.trades_per_step.push(0);
                 self.volume_per_step.push(0.0);
 
-                // Still increment the step counter for proper sequencing
+                // Increment current_step since step() panicked before reaching its increment
+                // (step() normally increments at the end of its execution - see line 655)
                 self.current_step += 1;
             }
 
