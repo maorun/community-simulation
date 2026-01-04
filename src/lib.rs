@@ -90,7 +90,7 @@ pub use error::{Result, SimulationError};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
 pub use person::{Person, PersonId, Transaction, TransactionType};
-pub use result::SimulationResult;
+pub use result::{MonteCarloResult, MonteCarloStats, SimulationResult};
 pub use scenario::{PriceUpdater, Scenario};
 pub use skill::{Skill, SkillId};
 

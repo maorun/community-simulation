@@ -1,6 +1,6 @@
 use clap::Parser;
 use colored::Colorize;
-use log::{debug, info};
+use log::{debug, info, warn};
 use simulation_framework::{PresetName, SimulationConfig, SimulationEngine};
 use std::str::FromStr;
 use std::time::Instant;
@@ -96,6 +96,11 @@ struct Args {
     /// Disable colored terminal output
     #[arg(long, default_value_t = false)]
     no_color: bool,
+
+    /// Number of Monte Carlo simulation runs with different random seeds
+    /// Each run uses seed, seed+1, seed+2, etc. Results are aggregated with statistics
+    #[arg(long)]
+    monte_carlo_runs: Option<usize>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -267,67 +272,179 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Validate configuration before proceeding
     config.validate()?;
 
+    // Check if Monte Carlo mode is enabled
+    if let Some(num_runs) = args.monte_carlo_runs {
+        if num_runs < 2 {
+            return Err("Monte Carlo runs must be at least 2".into());
+        }
+
+        info!(
+            "{}",
+            format!(
+                "Running Monte Carlo simulation: {} runs with {} persons for {} steps each",
+                num_runs, config.entity_count, config.max_steps
+            )
+            .bright_cyan()
+        );
+
+        run_monte_carlo(
+            config,
+            num_runs,
+            args.output,
+            args.csv_output,
+            args.compress,
+            !args.no_progress,
+        )?;
+    } else {
+        // Single simulation run (original behavior)
+        info!(
+            "{}",
+            format!(
+                "Initializing economic simulation with {} persons for {} steps",
+                config.entity_count, config.max_steps
+            )
+            .bright_cyan()
+        );
+        debug!(
+            "Configuration: initial_money={}, base_skill_price={}, seed={}, scenario={:?}",
+            config.initial_money_per_person, config.base_skill_price, config.seed, config.scenario
+        );
+
+        let start_time = Instant::now();
+        let max_steps = config.max_steps; // Store max_steps before moving config
+        let mut engine = SimulationEngine::new(config);
+        let show_progress = !args.no_progress;
+        let result = engine.run_with_progress(show_progress);
+        let duration = start_time.elapsed();
+
+        info!(
+            "{}",
+            format!("Simulation completed in {:.2}s", duration.as_secs_f64()).bright_green()
+        );
+        let steps_per_second = if duration.as_secs_f64() > 0.0 {
+            max_steps as f64 / duration.as_secs_f64()
+        } else {
+            0.0
+        };
+        info!(
+            "{}",
+            format!("Performance: {:.0} steps/second", steps_per_second).bright_yellow()
+        );
+
+        if let Some(output_path) = args.output {
+            result.save_to_file(&output_path, args.compress)?;
+            if args.compress {
+                info!(
+                    "{}",
+                    format!("Compressed results saved to {}.gz", output_path).bright_blue()
+                );
+            } else {
+                info!(
+                    "{}",
+                    format!("Results saved to {}", output_path).bright_blue()
+                );
+            }
+        }
+
+        if let Some(csv_prefix) = args.csv_output {
+            result.save_to_csv(&csv_prefix)?;
+            info!(
+                "{}",
+                format!("CSV results saved with prefix: {}", csv_prefix).bright_blue()
+            );
+        }
+
+        result.print_summary();
+    }
+
+    Ok(())
+}
+
+/// Run multiple simulations in parallel with different seeds (Monte Carlo method)
+fn run_monte_carlo(
+    base_config: SimulationConfig,
+    num_runs: usize,
+    output: Option<String>,
+    csv_output: Option<String>,
+    compress: bool,
+    _show_progress: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use rayon::prelude::*;
+    use simulation_framework::MonteCarloResult;
+
+    let start_time = Instant::now();
+    let base_seed = base_config.seed;
+
+    info!("Starting {} parallel simulation runs...", num_runs);
+
+    // Run simulations in parallel using Rayon
+    let results: Vec<_> = (0..num_runs)
+        .into_par_iter()
+        .map(|run_idx| {
+            let mut config = base_config.clone();
+            config.seed = base_seed + run_idx as u64;
+
+            info!(
+                "Starting run {}/{} (seed: {})",
+                run_idx + 1,
+                num_runs,
+                config.seed
+            );
+
+            let mut engine = SimulationEngine::new(config);
+            // Disable progress bar for individual runs in Monte Carlo mode
+            let result = engine.run_with_progress(false);
+
+            info!("Completed run {}/{}", run_idx + 1, num_runs);
+            result
+        })
+        .collect();
+
+    let total_duration = start_time.elapsed();
+
     info!(
         "{}",
         format!(
-            "Initializing economic simulation with {} persons for {} steps",
-            config.entity_count, config.max_steps
+            "All Monte Carlo runs completed in {:.2}s",
+            total_duration.as_secs_f64()
         )
-        .bright_cyan()
+        .bright_green()
     );
-    debug!(
-        "Configuration: initial_money={}, base_skill_price={}, seed={}, scenario={:?}",
-        config.initial_money_per_person, config.base_skill_price, config.seed, config.scenario
-    );
-
-    let start_time = Instant::now();
-    let max_steps = config.max_steps; // Store max_steps before moving config
-                                      // SimulationEngine::new will need to be updated to handle the new config and setup persons/market
-    let mut engine = SimulationEngine::new(config);
-    let show_progress = !args.no_progress;
-    let result = engine.run_with_progress(show_progress);
-    let duration = start_time.elapsed();
-
     info!(
         "{}",
-        format!("Simulation completed in {:.2}s", duration.as_secs_f64()).bright_green()
-    );
-    let steps_per_second = if duration.as_secs_f64() > 0.0 {
-        max_steps as f64 / duration.as_secs_f64()
-    } else {
-        0.0
-    };
-    info!(
-        "{}",
-        format!("Performance: {:.0} steps/second", steps_per_second).bright_yellow()
+        format!(
+            "Average time per run: {:.2}s",
+            total_duration.as_secs_f64() / num_runs as f64
+        )
+        .bright_yellow()
     );
 
-    if let Some(output_path) = args.output {
-        // result.save_to_file will need to be adapted for economic data
-        result.save_to_file(&output_path, args.compress)?;
-        if args.compress {
+    // Create aggregated results
+    let mc_result = MonteCarloResult::from_runs(results, base_seed);
+
+    // Save results if output path specified
+    if let Some(output_path) = output {
+        mc_result.save_to_file(&output_path, compress)?;
+        if compress {
             info!(
                 "{}",
-                format!("Compressed results saved to {}.gz", output_path).bright_blue()
+                format!("Compressed Monte Carlo results saved to {}.gz", output_path).bright_blue()
             );
         } else {
             info!(
                 "{}",
-                format!("Results saved to {}", output_path).bright_blue()
+                format!("Monte Carlo results saved to {}", output_path).bright_blue()
             );
         }
     }
 
-    if let Some(csv_prefix) = args.csv_output {
-        result.save_to_csv(&csv_prefix)?;
-        info!(
-            "{}",
-            format!("CSV results saved with prefix: {}", csv_prefix).bright_blue()
-        );
+    // CSV export not yet supported for Monte Carlo results
+    if csv_output.is_some() {
+        warn!("CSV export is not yet supported for Monte Carlo results");
     }
 
-    // result.print_summary will need to be adapted for economic data
-    result.print_summary();
+    // Print summary
+    mc_result.print_summary();
 
     Ok(())
 }

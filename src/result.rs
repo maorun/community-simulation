@@ -76,6 +76,40 @@ pub struct LoanStats {
     pub active_loans: usize,
 }
 
+/// Aggregated statistics across multiple Monte Carlo runs
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MonteCarloStats {
+    /// Average value across all runs
+    pub mean: f64,
+    /// Standard deviation across all runs
+    pub std_dev: f64,
+    /// Minimum value across all runs
+    pub min: f64,
+    /// Maximum value across all runs
+    pub max: f64,
+    /// Median value across all runs
+    pub median: f64,
+}
+
+/// Result from multiple Monte Carlo simulation runs
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MonteCarloResult {
+    /// Number of simulation runs performed
+    pub num_runs: usize,
+    /// Base seed used (each run uses seed + run_index)
+    pub base_seed: u64,
+    /// Individual results from each run
+    pub runs: Vec<SimulationResult>,
+    /// Aggregated statistics for final average money
+    pub avg_money_stats: MonteCarloStats,
+    /// Aggregated statistics for Gini coefficient
+    pub gini_coefficient_stats: MonteCarloStats,
+    /// Aggregated statistics for total trades
+    pub total_trades_stats: MonteCarloStats,
+    /// Aggregated statistics for average reputation
+    pub avg_reputation_stats: MonteCarloStats,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     // Core simulation metrics
@@ -738,6 +772,125 @@ pub fn calculate_herfindahl_index(values: &[f64]) -> f64 {
             share_percentage * share_percentage
         })
         .sum()
+}
+
+impl MonteCarloResult {
+    /// Create a new MonteCarloResult from a collection of simulation results
+    pub fn from_runs(runs: Vec<SimulationResult>, base_seed: u64) -> Self {
+        let num_runs = runs.len();
+
+        // Collect metrics from each run
+        let avg_moneys: Vec<f64> = runs.iter().map(|r| r.money_statistics.average).collect();
+        let gini_coefficients: Vec<f64> = runs
+            .iter()
+            .map(|r| r.money_statistics.gini_coefficient)
+            .collect();
+        let total_trades: Vec<f64> = runs
+            .iter()
+            .map(|r| r.trade_volume_statistics.total_trades as f64)
+            .collect();
+        let avg_reputations: Vec<f64> = runs
+            .iter()
+            .map(|r| r.reputation_statistics.average)
+            .collect();
+
+        Self {
+            num_runs,
+            base_seed,
+            runs,
+            avg_money_stats: Self::calculate_stats(&avg_moneys),
+            gini_coefficient_stats: Self::calculate_stats(&gini_coefficients),
+            total_trades_stats: Self::calculate_stats(&total_trades),
+            avg_reputation_stats: Self::calculate_stats(&avg_reputations),
+        }
+    }
+
+    /// Calculate statistics for a set of values
+    fn calculate_stats(values: &[f64]) -> MonteCarloStats {
+        if values.is_empty() {
+            return MonteCarloStats {
+                mean: 0.0,
+                std_dev: 0.0,
+                min: 0.0,
+                max: 0.0,
+                median: 0.0,
+            };
+        }
+
+        let mean = values.iter().sum::<f64>() / values.len() as f64;
+        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
+        let std_dev = variance.sqrt();
+
+        let mut sorted = values.to_vec();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let median = if sorted.len() % 2 == 1 {
+            sorted[sorted.len() / 2]
+        } else {
+            (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) / 2.0
+        };
+
+        let min = sorted.first().copied().unwrap_or(0.0);
+        let max = sorted.last().copied().unwrap_or(0.0);
+
+        MonteCarloStats {
+            mean,
+            std_dev,
+            min,
+            max,
+            median,
+        }
+    }
+
+    /// Save Monte Carlo results to a JSON file
+    pub fn save_to_file(&self, path: &str, compress: bool) -> Result<()> {
+        let json_str = serde_json::to_string_pretty(self)
+            .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
+
+        if compress {
+            let file = File::create(format!("{}.gz", path))?;
+            let mut encoder = GzEncoder::new(file, Compression::default());
+            encoder.write_all(json_str.as_bytes())?;
+            encoder.finish()?;
+        } else {
+            let mut file = File::create(path)?;
+            file.write_all(json_str.as_bytes())?;
+        }
+
+        Ok(())
+    }
+
+    /// Print a summary of the Monte Carlo results to the console
+    pub fn print_summary(&self) {
+        println!(
+            "\n{}",
+            "=== Monte Carlo Simulation Results ==="
+                .bright_cyan()
+                .bold()
+        );
+        println!("Number of runs: {}", self.num_runs);
+        println!("Base seed: {}\n", self.base_seed);
+
+        println!("{}", "Average Money Across Runs:".bright_yellow());
+        Self::print_stat_summary(&self.avg_money_stats);
+
+        println!("\n{}", "Gini Coefficient Across Runs:".bright_yellow());
+        Self::print_stat_summary(&self.gini_coefficient_stats);
+
+        println!("\n{}", "Total Trades Across Runs:".bright_yellow());
+        Self::print_stat_summary(&self.total_trades_stats);
+
+        println!("\n{}", "Average Reputation Across Runs:".bright_yellow());
+        Self::print_stat_summary(&self.avg_reputation_stats);
+    }
+
+    fn print_stat_summary(stats: &MonteCarloStats) {
+        println!("  Mean:   {:.2}", stats.mean);
+        println!("  Median: {:.2}", stats.median);
+        println!("  StdDev: {:.2}", stats.std_dev);
+        println!("  Min:    {:.2}", stats.min);
+        println!("  Max:    {:.2}", stats.max);
+    }
 }
 
 #[cfg(test)]

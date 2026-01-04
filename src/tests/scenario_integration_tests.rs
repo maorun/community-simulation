@@ -511,4 +511,51 @@ mod integration_tests {
         assert!(result_no_season.money_statistics.average >= 0.0);
         assert!(result_with_season.money_statistics.average >= 0.0);
     }
+
+    /// Test Monte Carlo simulation with multiple runs
+    #[test]
+    fn test_monte_carlo_aggregation() {
+        use crate::result::MonteCarloResult;
+
+        // Run 3 simulations with different seeds
+        let base_config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.0,
+            ..Default::default()
+        };
+
+        let mut results = Vec::new();
+        for i in 0..3 {
+            let mut config = base_config.clone();
+            config.seed = 42 + i;
+            let mut engine = SimulationEngine::new(config);
+            results.push(engine.run());
+        }
+
+        // Create aggregated result
+        let mc_result = MonteCarloResult::from_runs(results, 42);
+
+        // Verify basic properties
+        assert_eq!(mc_result.num_runs, 3);
+        assert_eq!(mc_result.base_seed, 42);
+        assert_eq!(mc_result.runs.len(), 3);
+
+        // Verify statistics are reasonable
+        assert!(mc_result.avg_money_stats.mean > 0.0);
+        assert!(mc_result.avg_money_stats.std_dev >= 0.0);
+        assert!(mc_result.gini_coefficient_stats.mean >= 0.0);
+        // Gini can exceed 1.0 in edge cases with negative money/debt
+        assert!(mc_result.total_trades_stats.mean >= 0.0);
+        assert!(mc_result.avg_reputation_stats.mean > 0.0);
+
+        // Min should be <= mean <= max
+        assert!(mc_result.avg_money_stats.min <= mc_result.avg_money_stats.mean);
+        assert!(mc_result.avg_money_stats.mean <= mc_result.avg_money_stats.max);
+    }
 }
