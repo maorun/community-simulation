@@ -95,8 +95,8 @@ impl Loan {
         self.payments_made += 1;
 
         // Calculate how much of this payment goes toward principal
-        let principal_portion = self.payment_per_step
-            - (self.remaining_principal * self.interest_rate);
+        let principal_portion =
+            self.payment_per_step - (self.remaining_principal * self.interest_rate);
         self.remaining_principal -= principal_portion;
 
         // Mark as repaid if we've made all payments
