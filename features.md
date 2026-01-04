@@ -59,11 +59,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Krisenresilienz testen
 - **Implementierung**: `CrisisEvent` Enum und Event-System
 
-<!-- 4.2 Technologischer Fortschritt - IMPLEMENTED: Skills now have efficiency_multiplier that increases over time based on tech_growth_rate configuration parameter -->
-
-<!-- 4.3 Saisonale Effekte - IMPLEMENTED: Configurable seasonal demand fluctuations using --seasonal-amplitude and --seasonal-period CLI parameters. Different skills peak at different times through phase-offset sine waves -->
-
-#### 4.4 Geografische Komponente
+#### 4.2 Geografische Komponente
 - **Beschreibung**: Personen haben Standorte, Handel kostet je nach Entfernung
 - **Nutzen**: Räumliche Wirtschaftsdynamiken
 - **Implementierung**: `Location` Struktur und Distanzberechnung
@@ -166,8 +162,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Wirtschaftliche Analysen
 
-<!-- 1.1 Marktkonzentration - IMPLEMENTED: Herfindahl-Index is now calculated for wealth distribution -->
-
 ### 2. Vergleichsstudien
 
 #### 2.1 Szenario-Vergleich
@@ -230,9 +224,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🔐 Sicherheit und Stabilität
 
-<!-- 1. Input Validation - IMPLEMENTED: Comprehensive validation layer for SimulationConfig ensures all parameters are within acceptable ranges, preventing crashes and providing clear error messages -->
-
-### 3. Fuzz Testing
+### 1. Fuzz Testing
 - **Beschreibung**: Automatisches Testen mit zufälligen Inputs
 - **Nutzen**: Edge-Cases finden
 - **Technologie**: `cargo-fuzz`

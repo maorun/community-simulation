@@ -137,10 +137,55 @@ pub struct SimulationConfig {
     /// Valid range: 0.0 to 1.0 (0% to 100%)
     #[serde(default)]
     pub savings_rate: f64,
+
+    /// Enable loan system where persons can borrow and lend money.
+    ///
+    /// When enabled, persons can request loans from others when they lack money for purchases.
+    /// Loans have interest rates and repayment schedules.
+    /// Set to false to disable loans (default).
+    #[serde(default)]
+    pub enable_loans: bool,
+
+    /// Interest rate per step for loans (e.g., 0.01 = 1% per step).
+    ///
+    /// This is the interest charged on loan principal per simulation step.
+    /// Only used when enable_loans is true.
+    /// A value of 0.01 means the borrower pays 1% interest per step.
+    /// Valid range: 0.0 to 1.0 (0% to 100%)
+    #[serde(default = "default_loan_interest_rate")]
+    pub loan_interest_rate: f64,
+
+    /// Default repayment period for loans in simulation steps.
+    ///
+    /// Determines how many steps a borrower has to repay a loan.
+    /// Only used when enable_loans is true.
+    /// For example, a value of 20 means loans are repaid over 20 steps.
+    #[serde(default = "default_loan_repayment_period")]
+    pub loan_repayment_period: usize,
+
+    /// Minimum money threshold for a person to be eligible to lend.
+    ///
+    /// Persons must have at least this much money to provide loans to others.
+    /// Only used when enable_loans is true.
+    /// This prevents persons from becoming too poor by lending all their money.
+    #[serde(default = "default_min_money_to_lend")]
+    pub min_money_to_lend: f64,
 }
 
 fn default_seasonal_period() -> usize {
     100
+}
+
+fn default_loan_interest_rate() -> f64 {
+    0.01 // 1% per step
+}
+
+fn default_loan_repayment_period() -> usize {
+    20 // 20 steps to repay
+}
+
+fn default_min_money_to_lend() -> f64 {
+    50.0 // Must have at least 50 money to lend
 }
 
 impl Default for SimulationConfig {
@@ -158,6 +203,10 @@ impl Default for SimulationConfig {
             seasonal_period: 100,    // Default cycle length
             transaction_fee: 0.0,    // Disabled by default
             savings_rate: 0.0,       // Disabled by default
+            enable_loans: false,     // Disabled by default
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
         }
     }
 }
@@ -257,6 +306,26 @@ impl SimulationConfig {
             )));
         }
 
+        if !(0.0..=1.0).contains(&self.loan_interest_rate) {
+            return Err(SimulationError::ValidationError(format!(
+                "loan_interest_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                self.loan_interest_rate
+            )));
+        }
+
+        if self.loan_repayment_period == 0 {
+            return Err(SimulationError::ValidationError(
+                "loan_repayment_period must be greater than 0".to_string(),
+            ));
+        }
+
+        if self.min_money_to_lend.is_sign_negative() {
+            return Err(SimulationError::ValidationError(format!(
+                "min_money_to_lend must be non-negative, got: {}",
+                self.min_money_to_lend
+            )));
+        }
+
         // Additional sanity checks for extreme values
         if self.max_steps > 1_000_000 {
             return Err(SimulationError::ValidationError(format!(
@@ -313,6 +382,10 @@ impl SimulationConfig {
                 seasonal_period: 100,
                 transaction_fee: 0.0,
                 savings_rate: 0.0,
+                enable_loans: false,
+                loan_interest_rate: 0.01,
+                loan_repayment_period: 20,
+                min_money_to_lend: 50.0,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -327,6 +400,10 @@ impl SimulationConfig {
                 seasonal_period: 100,
                 transaction_fee: 0.0,
                 savings_rate: 0.0,
+                enable_loans: false,
+                loan_interest_rate: 0.01,
+                loan_repayment_period: 20,
+                min_money_to_lend: 50.0,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -341,6 +418,10 @@ impl SimulationConfig {
                 seasonal_period: 100,
                 transaction_fee: 0.0,
                 savings_rate: 0.0,
+                enable_loans: false,
+                loan_interest_rate: 0.01,
+                loan_repayment_period: 20,
+                min_money_to_lend: 50.0,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -355,6 +436,10 @@ impl SimulationConfig {
                 seasonal_period: 100,
                 transaction_fee: 0.0,
                 savings_rate: 0.0,
+                enable_loans: false,
+                loan_interest_rate: 0.01,
+                loan_repayment_period: 20,
+                min_money_to_lend: 50.0,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -369,6 +454,10 @@ impl SimulationConfig {
                 seasonal_period: 100,
                 transaction_fee: 0.0,
                 savings_rate: 0.0,
+                enable_loans: false,
+                loan_interest_rate: 0.01,
+                loan_repayment_period: 20,
+                min_money_to_lend: 50.0,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -383,6 +472,10 @@ impl SimulationConfig {
                 seasonal_period: 100,
                 transaction_fee: 0.0,
                 savings_rate: 0.0,
+                enable_loans: false,
+                loan_interest_rate: 0.01,
+                loan_repayment_period: 20,
+                min_money_to_lend: 50.0,
             },
         }
     }
