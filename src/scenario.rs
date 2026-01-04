@@ -12,6 +12,9 @@ pub enum Scenario {
     Original,
     /// A scenario where prices change based on sales history.
     DynamicPricing,
+    /// A scenario where prices adapt gradually based on sales with a learning rate.
+    /// Uses exponential moving average for smoother price adjustments.
+    AdaptivePricing,
 }
 
 impl Display for Scenario {
@@ -19,6 +22,7 @@ impl Display for Scenario {
         match self {
             Scenario::Original => write!(f, "Original"),
             Scenario::DynamicPricing => write!(f, "DynamicPricing"),
+            Scenario::AdaptivePricing => write!(f, "AdaptivePricing"),
         }
     }
 }
@@ -117,6 +121,79 @@ mod tests {
         let new_price = market.get_price(&skill_id).unwrap();
         assert_eq!(new_price, 1.0);
     }
+
+    #[test]
+    fn test_adaptive_pricing_updater_price_increase() {
+        let mut market = Market::new(10.0, PriceUpdater::from(Scenario::AdaptivePricing));
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+        market.sales_this_step.insert(skill_id.clone(), 1);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = AdaptivePricingUpdater;
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        // With learning rate 0.2, target is 55.0 (50 * 1.1)
+        // new_price = 50 + 0.2 * (55 - 50) = 50 + 1 = 51.0
+        assert_eq!(new_price, 51.0);
+    }
+
+    #[test]
+    fn test_adaptive_pricing_updater_price_decrease() {
+        let mut market = Market::new(10.0, PriceUpdater::from(Scenario::AdaptivePricing));
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = AdaptivePricingUpdater;
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        // With learning rate 0.2, target is 45.0 (50 * 0.9)
+        // new_price = 50 + 0.2 * (45 - 50) = 50 - 1 = 49.0
+        assert_eq!(new_price, 49.0);
+    }
+
+    #[test]
+    fn test_adaptive_pricing_updater_smooth_adjustment() {
+        let mut market = Market::new(10.0, PriceUpdater::from(Scenario::AdaptivePricing));
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = AdaptivePricingUpdater;
+
+        // First step without sale
+        updater.update_prices(&mut market, &mut rng);
+        let price_after_1 = market.get_price(&skill_id).unwrap();
+        assert_eq!(price_after_1, 49.0);
+
+        // Second step without sale - should continue decreasing smoothly
+        updater.update_prices(&mut market, &mut rng);
+        let price_after_2 = market.get_price(&skill_id).unwrap();
+        // target = 49 * 0.9 = 44.1, new = 49 + 0.2 * (44.1 - 49) = 49 - 0.98 = 48.02
+        assert!((price_after_2 - 48.02).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_adaptive_pricing_updater_price_clamp() {
+        let mut market = Market::new(1.0, PriceUpdater::from(Scenario::AdaptivePricing));
+        let skill = Skill::new("Test Skill".to_string(), 1.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = AdaptivePricingUpdater;
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        // Should be clamped to min_skill_price (1.0)
+        assert_eq!(new_price, 1.0);
+    }
 }
 
 /// Enum representing different price update strategies.
@@ -128,6 +205,7 @@ mod tests {
 ///
 /// * `Original` - Supply/demand-based pricing with random volatility
 /// * `DynamicPricing` - Sales-based pricing that increases/decreases based on purchases
+/// * `AdaptivePricing` - Gradual price adaptation using exponential moving average
 ///
 /// # Examples
 ///
@@ -140,6 +218,7 @@ mod tests {
 pub enum PriceUpdater {
     Original(OriginalPriceUpdater),
     DynamicPricing(DynamicPricingUpdater),
+    AdaptivePricing(AdaptivePricingUpdater),
 }
 
 impl Default for PriceUpdater {
@@ -159,6 +238,7 @@ impl PriceUpdater {
         match self {
             PriceUpdater::Original(updater) => updater.update_prices(market, rng),
             PriceUpdater::DynamicPricing(updater) => updater.update_prices(market, rng),
+            PriceUpdater::AdaptivePricing(updater) => updater.update_prices(market, rng),
         }
     }
 }
@@ -168,6 +248,7 @@ impl From<Scenario> for PriceUpdater {
         match scenario {
             Scenario::Original => PriceUpdater::Original(OriginalPriceUpdater),
             Scenario::DynamicPricing => PriceUpdater::DynamicPricing(DynamicPricingUpdater),
+            Scenario::AdaptivePricing => PriceUpdater::AdaptivePricing(AdaptivePricingUpdater),
         }
     }
 }
@@ -284,6 +365,73 @@ impl DynamicPricingUpdater {
 
             if let Some(history) = market.skill_price_history.get_mut(skill_id) {
                 history.push(new_price);
+            }
+        }
+    }
+}
+
+/// Price updater for the AdaptivePricing scenario.
+///
+/// This updater gradually adjusts prices based on sales activity using a learning rate:
+/// - Uses exponential moving average for smoother adjustments
+/// - If a skill was sold: gradually increases price toward target (current * 1.1)
+/// - If a skill was not sold: gradually decreases price toward target (current * 0.9)
+/// - Learning rate of 0.2 means 20% of the difference is applied each step
+/// - Enforces min/max price boundaries
+///
+/// This creates more stable price movements compared to DynamicPricing,
+/// allowing the market to find equilibrium more naturally.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AdaptivePricingUpdater;
+
+impl AdaptivePricingUpdater {
+    /// Updates skill prices using adaptive learning rate.
+    ///
+    /// # Algorithm
+    ///
+    /// 1. Check if skill was sold in current step
+    /// 2. If sold: target = current_price * 1.1 (increase target)
+    /// 3. If not sold: target = current_price * 0.9 (decrease target)
+    /// 4. new_price = current_price + learning_rate * (target - current_price)
+    /// 5. Clamp to min/max price boundaries
+    /// 6. Record price in history
+    ///
+    /// The learning rate of 0.2 smooths out price changes, preventing
+    /// rapid oscillations and allowing gradual convergence to market equilibrium.
+    ///
+    /// # Arguments
+    ///
+    /// * `market` - The market containing skills to update
+    /// * `_rng` - Random number generator (unused in this strategy)
+    pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, _rng: &mut R) {
+        let learning_rate = 0.2; // 20% adjustment per step
+        let target_increase = 1.1; // Target 10% increase if sold
+        let target_decrease = 0.9; // Target 10% decrease if not sold
+
+        for (skill_id, skill) in market.skills.iter_mut() {
+            let sales_count = *market.sales_this_step.get(skill_id).unwrap_or(&0);
+
+            let current_price = skill.current_price;
+
+            // Calculate target price based on sales
+            let target_price = if sales_count > 0 {
+                current_price * target_increase
+            } else {
+                current_price * target_decrease
+            };
+
+            // Apply exponential moving average for smooth adaptation
+            let new_price = current_price + learning_rate * (target_price - current_price);
+
+            // Clamp price to min/max boundaries
+            let clamped_price = new_price
+                .max(market.min_skill_price)
+                .min(market.max_skill_price);
+
+            skill.current_price = clamped_price;
+
+            if let Some(history) = market.skill_price_history.get_mut(skill_id) {
+                history.push(clamped_price);
             }
         }
     }
