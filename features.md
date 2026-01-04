@@ -33,8 +33,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Untersuchung informeller Wirtschaft
 - **Implementierung**: Zweiter `Market` mit angepassten Parametern
 
-**Note:** Feature 2.3 "Marktplätze mit Handelsgebühren" has been implemented and removed from this list. See README.md for usage details.
-
 ### 3. Soziale Netzwerke und Beziehungen
 
 #### 3.1 Freundschaftssystem
@@ -77,11 +75,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Beschreibung**: Verschiedene regelbasierte Verhaltensweisen (risikofreudig, konservativ, gierig, altruistisch, etc.)
 - **Nutzen**: Heterogenität in der Population
 - **Implementierung**: `Strategy` Trait und verschiedene Implementierungen
-
-#### 6.2 Adaptive Preisstrategien
-- **Beschreibung**: Verkäufer passen Preise basierend auf Verkaufshistorie an
-- **Nutzen**: Intelligenteres Marktverhalten
-- **Implementierung**: Erweiterung von `PriceUpdater`
 
 #### 6.3 Prioritätsbasierte Kaufentscheidungen
 - **Beschreibung**: Erweiterte regelbasierte Entscheidungsfindung für Käufe

@@ -108,6 +108,12 @@ The simulation accepts the following CLI arguments:
 *   `--seed <SEED>`:
     *   Seed for the random number generator for reproducible simulations. If not specified, uses default (42) or preset value.
 *   `--scenario <SCENARIO>`:
+    *   Specifies which simulation scenario to run. This determines the price adjustment mechanism used in the market.
+    *   Available scenarios:
+        *   `Original` (default) - Supply and demand based pricing with volatility. Prices adjust based on the ratio of demand to supply, with random fluctuations for market realism.
+        *   `DynamicPricing` - Sales-based pricing. If a skill is sold, its price increases by 5%; if not sold, it decreases by 5%. This creates rapid price adjustments based on immediate market feedback.
+        *   `AdaptivePricing` - Gradual adaptive pricing using exponential moving average. Prices smoothly converge toward targets based on sales activity (±10% targets with 20% learning rate). This creates more stable price movements than DynamicPricing while still responding to market conditions.
+    *   Example: `--scenario AdaptivePricing`
     *   Scenario type: `Original` (supply/demand pricing) or `DynamicPricing` (sales-based pricing). If not specified, uses default (Original) or preset value.
 *   `--tech-growth-rate <RATE>`:
     *   Technology growth rate per simulation step (e.g., 0.001 = 0.1% growth per step). Simulates productivity improvements over time where skills become more efficient, effectively reducing their cost. Higher efficiency enables more trade and economic growth. Set to 0.0 to disable (default). If not specified, uses default (0.0) or preset value.
