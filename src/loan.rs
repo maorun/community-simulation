@@ -84,6 +84,9 @@ impl Loan {
     /// Decreases the remaining principal and increments the payment counter.
     /// Marks the loan as repaid if all payments have been made.
     ///
+    /// Uses simple interest: the payment amount is fixed and calculated at loan creation.
+    /// Each payment includes a portion of principal plus interest.
+    ///
     /// # Returns
     ///
     /// The amount of the payment
@@ -94,13 +97,13 @@ impl Loan {
 
         self.payments_made += 1;
 
-        // Calculate how much of this payment goes toward principal
-        let principal_portion =
-            self.payment_per_step - (self.remaining_principal * self.interest_rate);
-        self.remaining_principal -= principal_portion;
+        // With simple interest, each payment is equal and reduces the remaining principal
+        // by a fixed amount: original_principal / repayment_period
+        let principal_per_payment = self.principal / self.repayment_period as f64;
+        self.remaining_principal = (self.remaining_principal - principal_per_payment).max(0.0);
 
-        // Mark as repaid if we've made all payments
-        if self.payments_made >= self.repayment_period {
+        // Mark as repaid if we've made all payments or remaining principal is effectively zero
+        if self.payments_made >= self.repayment_period || self.remaining_principal < 0.01 {
             self.is_repaid = true;
             self.remaining_principal = 0.0;
         }
