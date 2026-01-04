@@ -65,6 +65,17 @@ pub struct TradeVolumeStats {
     pub max_trades_per_step: usize,
 }
 
+/// Statistics about the loan system
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LoanStats {
+    /// Total number of loans issued during the simulation
+    pub total_loans_issued: usize,
+    /// Total number of loans fully repaid
+    pub total_loans_repaid: usize,
+    /// Number of active (not yet fully repaid) loans at simulation end
+    pub active_loans: usize,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     // Core simulation metrics
@@ -104,6 +115,10 @@ pub struct SimulationResult {
     pub volume_per_step: Vec<f64>,
     /// Total transaction fees collected across all trades
     pub total_fees_collected: f64,
+
+    /// Loan system statistics (only present if loans are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loan_statistics: Option<LoanStats>,
 
     // final_entities might be too verbose if Person struct grows large with transaction history.
     // Consider summarizing person data if needed, or providing it under a flag.
@@ -158,6 +173,7 @@ impl SimulationResult {
     /// #     trades_per_step: vec![],
     /// #     volume_per_step: vec![],
     /// #     total_fees_collected: 0.0,
+    /// #     loan_statistics: None,
     /// #     final_persons_data: vec![],
     /// # };
     /// // Save uncompressed JSON
@@ -781,6 +797,7 @@ mod tests {
                 100.0, 120.0, 80.0, 100.0, 150.0, 90.0, 110.0, 100.0, 50.0, 100.0,
             ],
             total_fees_collected: 0.0,
+            loan_statistics: None,
             final_persons_data: vec![],
         }
     }

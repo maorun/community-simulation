@@ -1,5 +1,7 @@
 use crate::{
-    scenario::PriceUpdater, Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
+    loan::{Loan, LoanId},
+    scenario::PriceUpdater,
+    Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info, warn};
@@ -23,6 +25,10 @@ pub struct SimulationEngine {
     total_fees_collected: f64,
     // Panic recovery tracking
     failed_steps: usize,
+    // Loan system tracking
+    loans: HashMap<LoanId, Loan>,
+    total_loans_issued: usize,
+    total_loans_repaid: usize,
 }
 
 impl SimulationEngine {
@@ -47,6 +53,9 @@ impl SimulationEngine {
             volume_per_step: Vec::new(),
             total_fees_collected: 0.0,
             failed_steps: 0,
+            loans: HashMap::new(),
+            total_loans_issued: 0,
+            total_loans_repaid: 0,
         }
     }
 
@@ -464,6 +473,17 @@ impl SimulationEngine {
             }
         };
 
+        // Calculate loan statistics if loans are enabled
+        let loan_statistics = if self.config.enable_loans {
+            Some(crate::result::LoanStats {
+                total_loans_issued: self.total_loans_issued,
+                total_loans_repaid: self.total_loans_repaid,
+                active_loans: self.loans.len(),
+            })
+        } else {
+            None
+        };
+
         SimulationResult {
             total_steps: self.config.max_steps,
             total_duration: total_duration.as_secs_f64(),
@@ -484,6 +504,7 @@ impl SimulationEngine {
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
+            loan_statistics,
             final_persons_data: self.entities.clone(),
         }
     }
@@ -706,6 +727,11 @@ impl SimulationEngine {
             }
         }
 
+        // Process loan payments - borrowers pay back loans
+        if self.config.enable_loans {
+            self.process_loan_payments();
+        }
+
         // Apply technological progress - increase skill efficiency
         if self.config.tech_growth_rate > 0.0 {
             for skill in self.market.skills.values_mut() {
@@ -714,6 +740,54 @@ impl SimulationEngine {
         }
 
         self.current_step += 1;
+    }
+
+    /// Processes loan payments for the current step.
+    /// Borrowers make scheduled payments to lenders.
+    fn process_loan_payments(&mut self) {
+        let mut completed_loans = Vec::new();
+
+        for (loan_id, loan) in self.loans.iter_mut() {
+            if loan.is_repaid {
+                continue;
+            }
+
+            let borrower_idx = loan.borrower_id;
+            let lender_idx = loan.lender_id;
+
+            // Check if borrower can afford the payment
+            if self.entities[borrower_idx].person_data.money >= loan.payment_per_step {
+                // Make the payment
+                let payment_amount = loan.make_payment();
+
+                // Transfer money
+                self.entities[borrower_idx].person_data.money -= payment_amount;
+                self.entities[lender_idx].person_data.money += payment_amount;
+
+                // Check if loan is now fully repaid
+                if loan.is_repaid {
+                    completed_loans.push(*loan_id);
+                }
+            }
+            // Note: If borrower can't afford payment, they skip it (could add penalties later)
+        }
+
+        // Remove completed loans and update statistics
+        for loan_id in completed_loans {
+            let loan = self.loans.remove(&loan_id).unwrap();
+
+            // Remove loan from person tracking
+            self.entities[loan.borrower_id]
+                .person_data
+                .borrowed_loans
+                .retain(|&id| id != loan_id);
+            self.entities[loan.lender_id]
+                .person_data
+                .lent_loans
+                .retain(|&id| id != loan_id);
+
+            self.total_loans_repaid += 1;
+        }
     }
 
     fn calculate_average_money(&self) -> f64 {

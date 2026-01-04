@@ -257,6 +257,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             savings_rate: args
                 .savings_rate
                 .unwrap_or(SimulationConfig::default().savings_rate),
+            enable_loans: SimulationConfig::default().enable_loans,
+            loan_interest_rate: SimulationConfig::default().loan_interest_rate,
+            loan_repayment_period: SimulationConfig::default().loan_repayment_period,
+            min_money_to_lend: SimulationConfig::default().min_money_to_lend,
         }
     };
 

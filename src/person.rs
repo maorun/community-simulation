@@ -1,3 +1,4 @@
+use crate::loan::LoanId;
 use crate::skill::{Skill, SkillId};
 use serde::{Deserialize, Serialize};
 
@@ -42,6 +43,10 @@ pub struct Person {
     /// Total amount saved from income.
     /// Accumulated over time based on the configured savings rate.
     pub savings: f64,
+    /// IDs of loans where this person is the borrower
+    pub borrowed_loans: Vec<LoanId>,
+    /// IDs of loans where this person is the lender
+    pub lent_loans: Vec<LoanId>,
 }
 
 impl Person {
@@ -55,6 +60,8 @@ impl Person {
             satisfied_needs_current_step: Vec::new(),
             reputation: 1.0, // Start with neutral reputation
             savings: 0.0,    // Start with no savings
+            borrowed_loans: Vec::new(),
+            lent_loans: Vec::new(),
         }
     }
 

@@ -19,6 +19,10 @@ mod engine_tests {
             seasonal_period: 100,
             transaction_fee: 0.0,
             savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
         }
     }
 
