@@ -6,22 +6,17 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Erweiterte Wirtschaftsmechaniken
 
-#### 1.1 Spar- und Investitionssystem
-- **Beschreibung**: Personen können Geld sparen und in Fähigkeiten oder den Markt investieren
-- **Nutzen**: Realistischere Vermögensbildung und wirtschaftliche Dynamiken
-- **Implementierung**: Neue `Investment` und `Savings` Strukturen in `person.rs`
-
-#### 1.2 Kreditsystem
+#### 1.1 Kreditsystem
 - **Beschreibung**: Personen können Kredite aufnehmen oder vergeben
 - **Nutzen**: Ermöglicht Handel auch bei temporärer Geldknappheit
 - **Implementierung**: `Loan` Struktur mit Zinsen und Rückzahlungsplänen
 
-#### 1.3 Steuersystem
+#### 1.2 Steuersystem
 - **Beschreibung**: Einführung einer zentralen Behörde, die Steuern erhebt und umverteilt
 - **Nutzen**: Untersuchung von Umverteilungseffekten
 - **Implementierung**: Neue `Government` Entität und `TaxPolicy` Enum
 
-#### 1.4 Mehrere Fähigkeiten pro Person
+#### 1.3 Mehrere Fähigkeiten pro Person
 - **Beschreibung**: Personen können mehrere Fähigkeiten erlernen und anbieten
 - **Nutzen**: Realistischere Arbeitsmärkte
 - **Implementierung**: `Person.own_skill` von `Skill` zu `Vec<Skill>` ändern

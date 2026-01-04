@@ -39,6 +39,9 @@ pub struct Person {
     /// Starts at 1.0 (neutral), increases with successful transactions,
     /// and can decay over time. Higher reputation may result in better prices.
     pub reputation: f64,
+    /// Total amount saved from income.
+    /// Accumulated over time based on the configured savings rate.
+    pub savings: f64,
 }
 
 impl Person {
@@ -51,6 +54,7 @@ impl Person {
             transaction_history: Vec::new(),
             satisfied_needs_current_step: Vec::new(),
             reputation: 1.0, // Start with neutral reputation
+            savings: 0.0,    // Start with no savings
         }
     }
 
@@ -114,6 +118,25 @@ impl Person {
         // Formula: multiplier = 1.0 - (reputation - 1.0) * 0.1
         let multiplier = 1.0 - (self.reputation - 1.0) * 0.1;
         multiplier.clamp(0.9, 1.1)
+    }
+
+    /// Saves a portion of current money based on the savings rate.
+    /// The money is transferred from available cash to savings.
+    ///
+    /// # Arguments
+    /// * `savings_rate` - Rate between 0.0 and 1.0 representing percentage to save
+    ///
+    /// # Returns
+    /// The amount that was saved in this operation
+    pub fn apply_savings(&mut self, savings_rate: f64) -> f64 {
+        if savings_rate <= 0.0 || self.money <= 0.0 {
+            return 0.0;
+        }
+
+        let amount_to_save = self.money * savings_rate;
+        self.money -= amount_to_save;
+        self.savings += amount_to_save;
+        amount_to_save
     }
 }
 
@@ -258,5 +281,62 @@ mod tests {
         person.reputation = 0.0;
         let multiplier = person.reputation_price_multiplier();
         assert_eq!(multiplier, 1.1, "Price multiplier should be clamped at 1.1");
+    }
+
+    #[test]
+    fn test_savings_basic() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, skill);
+
+        // Test 10% savings rate
+        let saved = person.apply_savings(0.1);
+        assert_eq!(saved, 10.0, "Should save 10% of 100");
+        assert_eq!(
+            person.money, 90.0,
+            "Money should be reduced by saved amount"
+        );
+        assert_eq!(person.savings, 10.0, "Savings should be 10");
+
+        // Apply savings again - now on 90.0
+        let saved = person.apply_savings(0.1);
+        assert_eq!(saved, 9.0, "Should save 10% of 90");
+        assert_eq!(
+            person.money, 81.0,
+            "Money should be 81 after second savings"
+        );
+        assert_eq!(person.savings, 19.0, "Savings should accumulate to 19");
+    }
+
+    #[test]
+    fn test_savings_zero_rate() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, skill);
+
+        let saved = person.apply_savings(0.0);
+        assert_eq!(saved, 0.0, "Should save nothing with 0% rate");
+        assert_eq!(person.money, 100.0, "Money should not change");
+        assert_eq!(person.savings, 0.0, "Savings should remain 0");
+    }
+
+    #[test]
+    fn test_savings_negative_money() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, -10.0, skill);
+
+        let saved = person.apply_savings(0.1);
+        assert_eq!(saved, 0.0, "Should not save with negative money");
+        assert_eq!(person.money, -10.0, "Money should not change");
+        assert_eq!(person.savings, 0.0, "Savings should remain 0");
+    }
+
+    #[test]
+    fn test_savings_full_amount() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, skill);
+
+        let saved = person.apply_savings(1.0);
+        assert_eq!(saved, 100.0, "Should save 100% (all money)");
+        assert_eq!(person.money, 0.0, "Money should be 0");
+        assert_eq!(person.savings, 100.0, "Savings should be 100");
     }
 }

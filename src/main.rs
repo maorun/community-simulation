@@ -79,6 +79,11 @@ struct Args {
     #[arg(long)]
     transaction_fee: Option<f64>,
 
+    /// Savings rate as a percentage (0.0-1.0, e.g., 0.05 = 5% savings rate)
+    /// Persons save this percentage of their money each step
+    #[arg(long)]
+    savings_rate: Option<f64>,
+
     /// Disable the progress bar during simulation
     #[arg(long, default_value_t = false)]
     no_progress: bool,
@@ -177,6 +182,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(transaction_fee) = args.transaction_fee {
             cfg.transaction_fee = transaction_fee;
         }
+        if let Some(savings_rate) = args.savings_rate {
+            cfg.savings_rate = savings_rate;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -212,6 +220,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(transaction_fee) = args.transaction_fee {
                 cfg.transaction_fee = transaction_fee;
             }
+            if let Some(savings_rate) = args.savings_rate {
+                cfg.savings_rate = savings_rate;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -243,6 +254,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             transaction_fee: args
                 .transaction_fee
                 .unwrap_or(SimulationConfig::default().transaction_fee),
+            savings_rate: args
+                .savings_rate
+                .unwrap_or(SimulationConfig::default().savings_rate),
         }
     };
 
