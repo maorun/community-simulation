@@ -293,7 +293,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             args.output,
             args.csv_output,
             args.compress,
-            !args.no_progress,
         )?;
     } else {
         // Single simulation run (original behavior)
@@ -367,7 +366,6 @@ fn run_monte_carlo(
     output: Option<String>,
     csv_output: Option<String>,
     compress: bool,
-    _show_progress: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use rayon::prelude::*;
     use simulation_framework::MonteCarloResult;

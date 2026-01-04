@@ -818,7 +818,12 @@ impl MonteCarloResult {
         }
 
         let mean = values.iter().sum::<f64>() / values.len() as f64;
-        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
+        // Use sample standard deviation (N-1) for finite samples in Monte Carlo analysis
+        let variance = if values.len() > 1 {
+            values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (values.len() - 1) as f64
+        } else {
+            0.0
+        };
         let std_dev = variance.sqrt();
 
         let mut sorted = values.to_vec();
@@ -848,7 +853,7 @@ impl MonteCarloResult {
             .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
 
         if compress {
-            let file = File::create(format!("{}.gz", path))?;
+            let file = File::create(format!("{path}.gz"))?;
             let mut encoder = GzEncoder::new(file, Compression::default());
             encoder.write_all(json_str.as_bytes())?;
             encoder.finish()?;
