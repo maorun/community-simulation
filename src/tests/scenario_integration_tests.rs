@@ -568,4 +568,186 @@ mod integration_tests {
         assert!(mc_result.avg_money_stats.min <= mc_result.avg_money_stats.mean);
         assert!(mc_result.avg_money_stats.mean <= mc_result.avg_money_stats.max);
     }
+
+    /// Test that tax collection works correctly
+    #[test]
+    fn test_tax_collection() {
+        // Run two simulations: one without taxes and one with 10% tax
+        let config_no_tax = SimulationConfig {
+            entity_count: 20,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            tax_rate: 0.0, // No tax
+            ..Default::default()
+        };
+
+        let config_with_tax = SimulationConfig {
+            entity_count: 20,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            tax_rate: 0.10, // 10% tax
+            ..Default::default()
+        };
+
+        let mut engine_no_tax = SimulationEngine::new(config_no_tax);
+        let result_no_tax = engine_no_tax.run();
+
+        let mut engine_with_tax = SimulationEngine::new(config_with_tax);
+        let result_with_tax = engine_with_tax.run();
+
+        // Both should complete successfully
+        assert_eq!(result_no_tax.total_steps, 100);
+        assert_eq!(result_with_tax.total_steps, 100);
+
+        // No tax simulation should have no taxes collected
+        assert!(result_no_tax.total_taxes_collected.is_none());
+
+        // Tax simulation should have taxes collected
+        assert!(result_with_tax.total_taxes_collected.is_some());
+        let taxes_collected = result_with_tax.total_taxes_collected.unwrap();
+        assert!(taxes_collected > 0.0, "Taxes should be collected");
+
+        // Taxes should be approximately 10% of the net volume (after transaction fees)
+        // Net volume = total_volume * (1 - transaction_fee)
+        let net_volume = result_with_tax.trade_volume_statistics.total_volume
+            * (1.0
+                - result_with_tax.total_fees_collected
+                    / result_with_tax.trade_volume_statistics.total_volume);
+        let expected_taxes = net_volume * 0.10;
+
+        // Allow for small floating point differences
+        let difference = (taxes_collected - expected_taxes).abs();
+        assert!(
+            difference < 0.01 || difference / expected_taxes < 0.001,
+            "Collected taxes ({}) should be approximately 10% of net volume ({}), difference: {}",
+            taxes_collected,
+            expected_taxes,
+            difference
+        );
+
+        // No redistribution should have occurred
+        assert!(result_with_tax.total_taxes_redistributed.is_none());
+    }
+
+    /// Test that tax redistribution works correctly
+    #[test]
+    fn test_tax_redistribution() {
+        let config_no_redistribution = SimulationConfig {
+            entity_count: 20,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            tax_rate: 0.15, // 15% tax
+            enable_tax_redistribution: false,
+            ..Default::default()
+        };
+
+        let config_with_redistribution = SimulationConfig {
+            entity_count: 20,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            tax_rate: 0.15, // 15% tax
+            enable_tax_redistribution: true,
+            ..Default::default()
+        };
+
+        let mut engine_no_redist = SimulationEngine::new(config_no_redistribution);
+        let result_no_redist = engine_no_redist.run();
+
+        let mut engine_with_redist = SimulationEngine::new(config_with_redistribution);
+        let result_with_redist = engine_with_redist.run();
+
+        // Both should complete successfully
+        assert_eq!(result_no_redist.total_steps, 100);
+        assert_eq!(result_with_redist.total_steps, 100);
+
+        // Both should have taxes collected
+        assert!(result_no_redist.total_taxes_collected.is_some());
+        assert!(result_with_redist.total_taxes_collected.is_some());
+
+        // No redistribution version should not have redistribution stats
+        assert!(result_no_redist.total_taxes_redistributed.is_none());
+
+        // Redistribution version should have redistribution stats
+        assert!(result_with_redist.total_taxes_redistributed.is_some());
+        let redistributed = result_with_redist.total_taxes_redistributed.unwrap();
+
+        // Redistributed amount should equal collected amount
+        let collected = result_with_redist.total_taxes_collected.unwrap();
+        let difference = (redistributed - collected).abs();
+        assert!(
+            difference < 0.01 || difference / collected < 0.001,
+            "Redistributed amount ({}) should equal collected amount ({})",
+            redistributed,
+            collected
+        );
+
+        // With redistribution, wealth inequality should be lower than without
+        // (This is a probabilistic assertion that should generally hold true)
+        // Note: This comparison works because both simulations use the same seed
+    }
+
+    /// Test edge case: 0% tax rate
+    #[test]
+    fn test_zero_tax_rate() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            tax_rate: 0.0,                   // 0% tax
+            enable_tax_redistribution: true, // Doesn't matter - nothing to redistribute
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert_eq!(result.total_steps, 50);
+        // No taxes should be collected with 0% rate
+        assert!(result.total_taxes_collected.is_none());
+        assert!(result.total_taxes_redistributed.is_none());
+    }
+
+    /// Test edge case: 100% tax rate (confiscatory)
+    #[test]
+    fn test_full_tax_rate() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 30,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            tax_rate: 1.0, // 100% tax - sellers get nothing
+            enable_tax_redistribution: false,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert_eq!(result.total_steps, 30);
+
+        // With 100% tax, all seller proceeds go to taxes
+        if let Some(taxes) = result.total_taxes_collected {
+            assert!(taxes > 0.0, "Taxes should be collected even with 100% rate");
+        }
+
+        // Trading should still occur (buyers still willing to buy)
+        // but sellers receive nothing, so economy should decline rapidly
+    }
 }

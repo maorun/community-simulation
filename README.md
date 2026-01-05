@@ -13,6 +13,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Seasonal Demand Effects:** Configurable seasonal fluctuations in skill demand using cyclical patterns. Different skills experience peak demand at different times, creating realistic market dynamics and economic cycles. Controlled via `--seasonal-amplitude` and `--seasonal-period` parameters.
 - **Transaction Fees:** Configurable marketplace transaction fees that are deducted from seller proceeds on each trade. Simulates realistic trading costs (e.g., platform fees, payment processing) and allows studying the impact of fees on market liquidity, wealth distribution, and economic activity. Total fees collected are tracked and reported. Controlled via `--transaction-fee` parameter (0.0-1.0 range representing 0-100% fee rate).
 - **Savings System:** Persons can save a configurable percentage of their money each simulation step. Saved money is moved from available cash to a separate savings account, affecting spending capacity while enabling wealth accumulation studies. Configurable via `--savings-rate` parameter (0.0-1.0 range representing 0-100% savings rate). Savings statistics (total, average, median, min, max) are tracked and reported in results.
+- **Tax System:** Configurable income tax on trade proceeds with optional redistribution. The system collects taxes from sellers' proceeds after transaction fees and can redistribute collected taxes equally among all persons at the end of each step. This simulates government taxation and wealth redistribution policies, allowing study of their effects on wealth inequality and economic activity. Controlled via `--tax-rate` parameter (0.0-1.0 range representing 0-100% tax rate) and `--enable-tax-redistribution` flag. Tax statistics (total collected, total redistributed) are tracked and reported in results.
 - **Loan System:** Persons can borrow and lend money with interest and repayment schedules. When enabled, the system tracks loans between persons, processes scheduled repayments each step, and provides statistics on loan activity. Loans have configurable interest rates and repayment periods. Enable via configuration file with `enable_loans: true`, then configure `loan_interest_rate`, `loan_repayment_period`, and `min_money_to_lend` parameters. Loan statistics (total issued, repaid, active) are included in simulation results.
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
@@ -137,6 +138,22 @@ The simulation accepts the following CLI arguments:
         *   Study the impact of savings rates on market liquidity and economic activity
         *   Explore wealth distribution with different savings patterns
     *   Savings statistics (total, average, median, min, max) are tracked and reported in the simulation results.
+*   `--tax-rate <RATE>`:
+    *   Tax rate as a percentage of seller trade income (0.0-1.0, e.g., 0.10 = 10% income tax). Each time a seller completes a trade, this percentage is deducted from their proceeds (after transaction fees) and collected as taxes. For example, if a seller receives $90 after fees and tax-rate is 0.10, they pay $9 in taxes and keep $81. Set to 0.0 to disable taxation (default). If not specified, uses default (0.0) or preset value.
+    *   **Use cases:** 
+        *   Simulate government taxation policies
+        *   Study the impact of income taxes on economic activity and wealth distribution
+        *   Model wealth extraction by central authorities
+        *   Test progressive vs flat tax systems (flat tax in current implementation)
+    *   Tax statistics (total collected, total redistributed) are tracked and reported in the simulation results.
+*   `--enable-tax-redistribution`:
+    *   Enable equal redistribution of collected taxes to all persons at the end of each simulation step. When enabled, taxes collected during a step are distributed equally among all active persons, simulating basic income or welfare programs. This flag only has effect when `--tax-rate` is greater than 0. Without this flag, collected taxes are removed from the economy (simulating government spending outside the simulation). Set to false to collect taxes without redistribution (default).
+    *   **Use cases:** 
+        *   Simulate basic income / universal basic income (UBI) policies
+        *   Study wealth redistribution and inequality reduction
+        *   Model social welfare programs
+        *   Compare taxation with and without redistribution effects
+    *   The total amount redistributed is tracked separately and reported in the simulation results.
 *   `--no-progress`:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
 *   `--no-color`:
@@ -242,6 +259,27 @@ This runs the simulation with seasonal demand fluctuations. The `--seasonal-ampl
 ./target/release/economic_simulation --steps 500 --persons 100 --transaction-fee 0.05 --output fees_results.json
 ```
 This runs the simulation with a 5% transaction fee on all trades. The fee is deducted from the seller's proceeds (e.g., if a skill sells for $100, the buyer pays $100 but the seller receives $95, with $5 collected as fees). This simulates realistic marketplace costs and allows studying the impact of trading fees on market liquidity, wealth distribution, and economic activity. The total fees collected are reported in the JSON output.
+
+**Example with Tax System:**
+
+```bash
+# Simulation with 10% income tax (no redistribution)
+./target/release/economic_simulation --steps 500 --persons 100 --tax-rate 0.10 --output tax_results.json
+
+# Simulation with 15% income tax and redistribution
+./target/release/economic_simulation --steps 500 --persons 100 --tax-rate 0.15 --enable-tax-redistribution --output tax_redistribution_results.json
+
+# Combined: transaction fees + taxes + redistribution
+./target/release/economic_simulation --steps 500 --persons 100 \
+  --transaction-fee 0.05 --tax-rate 0.20 --enable-tax-redistribution \
+  --output combined_policy.json
+```
+
+Tax system usage:
+- **Without redistribution:** Taxes are collected from seller proceeds and removed from the economy, simulating government spending on public goods outside the simulation. This reduces overall money supply and can affect economic activity.
+- **With redistribution:** Taxes collected each step are redistributed equally to all persons at the end of the step, simulating basic income or welfare programs. This can reduce wealth inequality while maintaining total money supply.
+- The total taxes collected and (if enabled) redistributed are reported in the JSON output for analysis.
+- Taxes are calculated on net seller proceeds (after transaction fees): `tax = (price - transaction_fee) * tax_rate`
 
 **Example with CSV Export:**
 

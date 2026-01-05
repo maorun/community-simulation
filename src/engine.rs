@@ -577,7 +577,9 @@ impl SimulationEngine {
             } else {
                 None
             },
-            total_taxes_redistributed: if self.config.enable_tax_redistribution {
+            total_taxes_redistributed: if self.config.enable_tax_redistribution
+                && self.config.tax_rate > 0.0
+            {
                 Some(self.total_taxes_redistributed)
             } else {
                 None
