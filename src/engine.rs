@@ -758,7 +758,9 @@ impl SimulationEngine {
         let trades_count = trades_to_execute.len();
         let total_volume: f64 = trades_to_execute.iter().map(|(_, _, _, price)| price).sum();
 
-        let mut total_taxable_amount = 0.0;
+        // Check once if government exists to avoid repeated checks
+        let government_enabled = self.government.is_some();
+        let mut total_taxes = 0.0;
 
         for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
             let seller_entity_id = self.entities[seller_idx].id;
@@ -769,15 +771,13 @@ impl SimulationEngine {
             let after_fee = price - fee;
 
             // Calculate tax on seller's proceeds after transaction fee
-            let tax = if self.government.is_some() {
-                after_fee * self.config.tax_rate
+            let tax = if government_enabled {
+                let tax_amount = after_fee * self.config.tax_rate;
+                total_taxes += tax_amount;
+                tax_amount
             } else {
                 0.0
             };
-
-            if self.government.is_some() {
-                total_taxable_amount += after_fee;
-            }
 
             let seller_proceeds = after_fee - tax;
 
@@ -819,10 +819,10 @@ impl SimulationEngine {
                 .or_insert(0) += 1;
         }
 
-        // Collect taxes into government treasury
+        // Add collected taxes to government treasury
         if let Some(ref mut gov) = self.government {
-            if total_taxable_amount > 0.0 {
-                gov.collect_tax(total_taxable_amount);
+            if total_taxes > 0.0 {
+                gov.add_tax(total_taxes);
             }
         }
 

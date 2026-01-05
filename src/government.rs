@@ -142,6 +142,31 @@ impl Government {
         per_person
     }
 
+    /// Adds already-calculated tax amount to the government treasury.
+    ///
+    /// Use this method when taxes have been calculated elsewhere and you want
+    /// to add them to the government's totals. Unlike `collect_tax`, this method
+    /// does not apply the tax rate.
+    ///
+    /// # Arguments
+    ///
+    /// * `tax_amount` - The pre-calculated tax amount to add
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use simulation_framework::government::Government;
+    ///
+    /// let mut gov = Government::new(0.1, true);
+    /// // Taxes were calculated elsewhere as 10.0
+    /// gov.add_tax(10.0);
+    /// assert_eq!(gov.get_cumulative_collected(), 10.0);
+    /// ```
+    pub fn add_tax(&mut self, tax_amount: f64) {
+        self.total_collected += tax_amount;
+        self.cumulative_collected += tax_amount;
+    }
+
     /// Resets the government's tax collection statistics.
     /// Useful for testing or starting a new simulation phase.
     pub fn reset(&mut self) {
