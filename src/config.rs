@@ -194,6 +194,42 @@ pub struct SimulationConfig {
     /// Set to false to start a new simulation (default).
     #[serde(default)]
     pub resume_from_checkpoint: bool,
+
+    /// Enable tax collection and redistribution system.
+    ///
+    /// When enabled, a government entity will collect taxes from persons
+    /// and optionally redistribute them. This simulates wealth redistribution
+    /// effects in the economy.
+    /// Set to false to disable taxes (default).
+    #[serde(default)]
+    pub enable_taxes: bool,
+
+    /// Tax rate as a percentage of income (0.0 to 1.0).
+    ///
+    /// Taxes are collected from persons based on their income from sales.
+    /// A value of 0.1 means 10% of income is taxed.
+    /// Only used when enable_taxes is true.
+    /// Valid range: 0.0 to 1.0 (0% to 100%)
+    #[serde(default = "default_tax_rate")]
+    pub tax_rate: f64,
+
+    /// Enable redistribution of collected taxes.
+    ///
+    /// When true, taxes collected by the government are redistributed equally
+    /// to all persons at the end of each simulation step.
+    /// When false, taxes are collected but not redistributed (simulating government spending
+    /// on services rather than direct transfers).
+    /// Only used when enable_taxes is true.
+    #[serde(default = "default_tax_redistribution")]
+    pub tax_redistribution: bool,
+}
+
+fn default_tax_rate() -> f64 {
+    0.1 // 10% default tax rate
+}
+
+fn default_tax_redistribution() -> bool {
+    true // Enable redistribution by default
 }
 
 fn default_seasonal_period() -> usize {
@@ -234,6 +270,9 @@ impl Default for SimulationConfig {
             checkpoint_interval: 0,        // Disabled by default
             checkpoint_file: None,         // No default checkpoint file
             resume_from_checkpoint: false, // Don't resume by default
+            enable_taxes: false,           // Disabled by default
+            tax_rate: 0.1,                 // 10% default tax rate
+            tax_redistribution: true,      // Enable redistribution by default
         }
     }
 }
@@ -353,6 +392,13 @@ impl SimulationConfig {
             )));
         }
 
+        if !(0.0..=1.0).contains(&self.tax_rate) {
+            return Err(SimulationError::ValidationError(format!(
+                "tax_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                self.tax_rate
+            )));
+        }
+
         // Additional sanity checks for extreme values
         if self.max_steps > 1_000_000 {
             return Err(SimulationError::ValidationError(format!(
@@ -416,6 +462,9 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                enable_taxes: false,
+                tax_rate: 0.1,
+                tax_redistribution: true,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -437,6 +486,9 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                enable_taxes: false,
+                tax_rate: 0.1,
+                tax_redistribution: true,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -458,6 +510,9 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                enable_taxes: false,
+                tax_rate: 0.1,
+                tax_redistribution: true,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -479,6 +534,9 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                enable_taxes: false,
+                tax_rate: 0.1,
+                tax_redistribution: true,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -500,6 +558,9 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                enable_taxes: false,
+                tax_rate: 0.1,
+                tax_redistribution: true,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -521,6 +582,9 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                enable_taxes: false,
+                tax_rate: 0.1,
+                tax_redistribution: true,
             },
         }
     }

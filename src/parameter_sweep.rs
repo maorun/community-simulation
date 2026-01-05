@@ -426,6 +426,9 @@ mod tests {
             checkpoint_interval: 0,
             checkpoint_file: None,
             resume_from_checkpoint: false,
+            enable_taxes: false,
+            tax_rate: 0.1,
+            tax_redistribution: true,
         };
 
         let parameter_range = ParameterRange::InitialMoney {

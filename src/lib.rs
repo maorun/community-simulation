@@ -64,6 +64,7 @@
 //! - [`engine`] - Main simulation engine and execution loop
 //! - [`entity`] - Entity wrapper around Person for simulation framework
 //! - [`error`] - Custom error types for robust error handling
+//! - [`government`] - Government entity for tax collection and redistribution
 //! - [`loan`] - Loan system for credit between persons
 //! - [`market`] - Market mechanisms and price dynamics
 //! - [`person`] - Person agents, transactions, and behavior
@@ -75,6 +76,7 @@ pub mod config;
 pub mod engine;
 pub mod entity; // Represents a Person in the simulation
 pub mod error;
+pub mod government;
 pub mod loan;
 pub mod market;
 pub mod parameter_sweep;
@@ -88,11 +90,12 @@ pub use config::{PresetName, SimulationConfig};
 pub use engine::{SimulationCheckpoint, SimulationEngine};
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use error::{Result, SimulationError};
+pub use government::Government;
 pub use loan::{Loan, LoanId};
 pub use market::Market;
 pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
 pub use person::{Person, PersonId, Transaction, TransactionType};
-pub use result::{calculate_statistics, MonteCarloResult, MonteCarloStats, SimulationResult};
+pub use result::{calculate_statistics, MonteCarloResult, MonteCarloStats, SimulationResult, TaxStats};
 pub use scenario::{PriceUpdater, Scenario};
 pub use skill::{Skill, SkillId};
 

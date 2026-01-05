@@ -564,6 +564,7 @@ impl SimulationEngine {
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
             loan_statistics,
+            tax_statistics: None, // Will be set when tax system is integrated
             final_persons_data: self.entities.clone(),
         }
     }

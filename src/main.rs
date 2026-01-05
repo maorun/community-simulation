@@ -315,6 +315,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or(SimulationConfig::default().checkpoint_interval),
             checkpoint_file: args.checkpoint_file.clone(),
             resume_from_checkpoint: args.resume,
+            enable_taxes: SimulationConfig::default().enable_taxes,
+            tax_rate: SimulationConfig::default().tax_rate,
+            tax_redistribution: SimulationConfig::default().tax_redistribution,
         }
     };
 
