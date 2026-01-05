@@ -150,6 +150,14 @@ pub struct SimulationResult {
     /// Total transaction fees collected across all trades
     pub total_fees_collected: f64,
 
+    /// Total taxes collected from seller proceeds (only present if tax_rate > 0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_taxes_collected: Option<f64>,
+
+    /// Total taxes redistributed to persons (only present if tax redistribution is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_taxes_redistributed: Option<f64>,
+
     /// Loan system statistics (only present if loans are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub loan_statistics: Option<LoanStats>,
@@ -207,6 +215,8 @@ impl SimulationResult {
     /// #     trades_per_step: vec![],
     /// #     volume_per_step: vec![],
     /// #     total_fees_collected: 0.0,
+    /// #     total_taxes_collected: None,
+    /// #     total_taxes_redistributed: None,
     /// #     loan_statistics: None,
     /// #     final_persons_data: vec![],
     /// # };
@@ -975,6 +985,8 @@ mod tests {
                 100.0, 120.0, 80.0, 100.0, 150.0, 90.0, 110.0, 100.0, 50.0, 100.0,
             ],
             total_fees_collected: 0.0,
+            total_taxes_collected: None,
+            total_taxes_redistributed: None,
             loan_statistics: None,
             final_persons_data: vec![],
         }

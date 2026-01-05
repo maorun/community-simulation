@@ -46,6 +46,10 @@ pub struct SimulationCheckpoint {
     pub total_loans_issued: usize,
     /// Total loans repaid counter
     pub total_loans_repaid: usize,
+    /// Total taxes collected during the simulation
+    pub total_taxes_collected: f64,
+    /// Total amount redistributed through tax system
+    pub total_taxes_redistributed: f64,
 }
 
 pub struct SimulationEngine {
@@ -66,6 +70,9 @@ pub struct SimulationEngine {
     loans: HashMap<LoanId, Loan>,
     total_loans_issued: usize,
     total_loans_repaid: usize,
+    // Tax system tracking
+    total_taxes_collected: f64,
+    total_taxes_redistributed: f64,
 }
 
 impl SimulationEngine {
@@ -93,6 +100,8 @@ impl SimulationEngine {
             loans: HashMap::new(),
             total_loans_issued: 0,
             total_loans_repaid: 0,
+            total_taxes_collected: 0.0,
+            total_taxes_redistributed: 0.0,
         }
     }
 
@@ -563,6 +572,16 @@ impl SimulationEngine {
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
+            total_taxes_collected: if self.config.tax_rate > 0.0 {
+                Some(self.total_taxes_collected)
+            } else {
+                None
+            },
+            total_taxes_redistributed: if self.config.enable_tax_redistribution {
+                Some(self.total_taxes_redistributed)
+            } else {
+                None
+            },
             loan_statistics,
             final_persons_data: self.entities.clone(),
         }
@@ -744,6 +763,12 @@ impl SimulationEngine {
 
             // Seller receives price minus fee
             self.entities[seller_idx].person_data.money += seller_proceeds;
+
+            // Calculate and collect tax on seller's proceeds (after transaction fee)
+            let tax = seller_proceeds * self.config.tax_rate;
+            self.entities[seller_idx].person_data.money -= tax;
+            self.total_taxes_collected += tax;
+
             self.entities[seller_idx].person_data.record_transaction(
                 self.current_step,
                 skill_id.clone(),
@@ -795,6 +820,26 @@ impl SimulationEngine {
         if self.config.tech_growth_rate > 0.0 {
             for skill in self.market.skills.values_mut() {
                 skill.efficiency_multiplier *= 1.0 + self.config.tech_growth_rate;
+            }
+        }
+
+        // Tax redistribution - distribute collected taxes equally among all persons
+        if self.config.enable_tax_redistribution && self.config.tax_rate > 0.0 {
+            let active_count = self.entities.iter().filter(|e| e.active).count();
+            if active_count > 0 {
+                // Calculate taxes collected this step from the traded volume
+                let step_net_volume = total_volume * (1.0 - self.config.transaction_fee);
+                let step_taxes = step_net_volume * self.config.tax_rate;
+
+                let redistribution_per_person = step_taxes / active_count as f64;
+
+                for entity in &mut self.entities {
+                    if entity.active {
+                        entity.person_data.money += redistribution_per_person;
+                    }
+                }
+
+                self.total_taxes_redistributed += step_taxes;
             }
         }
 
@@ -920,6 +965,8 @@ impl SimulationEngine {
             loans: self.loans.clone(),
             total_loans_issued: self.total_loans_issued,
             total_loans_repaid: self.total_loans_repaid,
+            total_taxes_collected: self.total_taxes_collected,
+            total_taxes_redistributed: self.total_taxes_redistributed,
         };
 
         let file = File::create(path)?;
@@ -993,6 +1040,8 @@ impl SimulationEngine {
             loans: checkpoint.loans,
             total_loans_issued: checkpoint.total_loans_issued,
             total_loans_repaid: checkpoint.total_loans_repaid,
+            total_taxes_collected: checkpoint.total_taxes_collected,
+            total_taxes_redistributed: checkpoint.total_taxes_redistributed,
         })
     }
 }
