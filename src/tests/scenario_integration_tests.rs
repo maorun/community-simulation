@@ -613,19 +613,20 @@ mod integration_tests {
         let taxes_collected = result_with_tax.total_taxes_collected.unwrap();
         assert!(taxes_collected > 0.0, "Taxes should be collected");
 
-        // Taxes should be approximately 10% of the net volume (after transaction fees)
-        // Net volume = total_volume * (1 - transaction_fee)
-        let net_volume = result_with_tax.trade_volume_statistics.total_volume
-            * (1.0
-                - result_with_tax.total_fees_collected
-                    / result_with_tax.trade_volume_statistics.total_volume);
-        let expected_taxes = net_volume * 0.10;
+        // Taxes should be approximately 10% of the seller proceeds (after transaction fees)
+        // seller_proceeds = total_volume * (1 - transaction_fee) for each trade
+        // Since transaction_fee is 0.0 in this config, seller_proceeds = total_volume
+        // expected_taxes = seller_proceeds * tax_rate
+        let total_volume = result_with_tax.trade_volume_statistics.total_volume;
+        let transaction_fee_rate = 0.0; // From config_with_tax
+        let seller_proceeds = total_volume * (1.0 - transaction_fee_rate);
+        let expected_taxes = seller_proceeds * 0.10;
 
         // Allow for small floating point differences
         let difference = (taxes_collected - expected_taxes).abs();
         assert!(
             difference < 0.01 || difference / expected_taxes < 0.001,
-            "Collected taxes ({}) should be approximately 10% of net volume ({}), difference: {}",
+            "Collected taxes ({}) should be approximately 10% of seller proceeds ({}), difference: {}",
             taxes_collected,
             expected_taxes,
             difference

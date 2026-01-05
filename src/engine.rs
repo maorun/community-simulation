@@ -740,6 +740,7 @@ impl SimulationEngine {
         // Track trade volume for this step
         let trades_count = trades_to_execute.len();
         let total_volume: f64 = trades_to_execute.iter().map(|(_, _, _, price)| price).sum();
+        let step_taxes_collected_start = self.total_taxes_collected;
 
         for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
             let seller_entity_id = self.entities[seller_idx].id;
@@ -829,19 +830,20 @@ impl SimulationEngine {
         if self.config.enable_tax_redistribution && self.config.tax_rate > 0.0 {
             let active_count = self.entities.iter().filter(|e| e.active).count();
             if active_count > 0 {
-                // Calculate taxes collected this step from the traded volume
-                let step_net_volume = total_volume * (1.0 - self.config.transaction_fee);
-                let step_taxes = step_net_volume * self.config.tax_rate;
+                // Calculate actual taxes collected this step
+                let step_taxes = self.total_taxes_collected - step_taxes_collected_start;
 
-                let redistribution_per_person = step_taxes / active_count as f64;
+                if step_taxes > 0.0 {
+                    let redistribution_per_person = step_taxes / active_count as f64;
 
-                for entity in &mut self.entities {
-                    if entity.active {
-                        entity.person_data.money += redistribution_per_person;
+                    for entity in &mut self.entities {
+                        if entity.active {
+                            entity.person_data.money += redistribution_per_person;
+                        }
                     }
-                }
 
-                self.total_taxes_redistributed += step_taxes;
+                    self.total_taxes_redistributed += step_taxes;
+                }
             }
         }
 
