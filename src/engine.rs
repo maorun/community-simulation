@@ -263,9 +263,10 @@ impl SimulationEngine {
             step_times.push(step_duration.as_secs_f64());
 
             // Auto-checkpoint if enabled and at checkpoint interval
+            #[allow(clippy::manual_is_multiple_of)] // is_multiple_of is not stable yet
             if self.config.checkpoint_interval > 0
                 && self.current_step > 0
-                && self.current_step.is_multiple_of(self.config.checkpoint_interval)
+                && self.current_step % self.config.checkpoint_interval == 0
             {
                 let checkpoint_path = self
                     .config
