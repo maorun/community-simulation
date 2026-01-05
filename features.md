@@ -152,11 +152,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: A/B-Testing von Politiken
 - **Implementierung**: Batch-Ausführung und Vergleichsberichte
 
-#### 2.2 Sensitivitätsanalyse
-- **Beschreibung**: Automatische Parameter-Sweeps
-- **Nutzen**: Robustheit verstehen
-- **Implementierung**: Grid Search über Parameter
-
 ## 🛠️ Entwickler-Tools
 
 ### 1. CLI-Verbesserungen
