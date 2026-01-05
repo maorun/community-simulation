@@ -23,6 +23,9 @@ mod engine_tests {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
         }
     }
 
@@ -222,6 +225,119 @@ mod engine_tests {
         assert!(
             json_str.contains("failed_steps"),
             "JSON output should contain failed_steps field"
+        );
+    }
+
+    #[test]
+    fn test_checkpoint_save_and_load() {
+        use tempfile::NamedTempFile;
+
+        // Create a temporary file for checkpoint
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let checkpoint_path = temp_file.path();
+
+        // Create and run simulation for a few steps
+        let mut config = get_test_config();
+        config.max_steps = 10;
+        let mut engine = SimulationEngine::new(config);
+
+        // Run 5 steps
+        for _ in 0..5 {
+            engine.step();
+        }
+
+        assert_eq!(engine.current_step, 5);
+        let original_entity_count = engine.get_active_entity_count();
+
+        // Save checkpoint
+        engine
+            .save_checkpoint(checkpoint_path)
+            .expect("Failed to save checkpoint");
+
+        // Load checkpoint
+        let loaded_engine =
+            SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
+
+        // Verify state was restored correctly
+        assert_eq!(loaded_engine.current_step, 5);
+        assert_eq!(
+            loaded_engine.get_active_entity_count(),
+            original_entity_count
+        );
+    }
+
+    #[test]
+    fn test_checkpoint_resume_simulation() {
+        use tempfile::NamedTempFile;
+
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let checkpoint_path = temp_file.path();
+
+        // Run first half of simulation
+        let mut config1 = get_test_config();
+        config1.max_steps = 10;
+        let mut engine1 = SimulationEngine::new(config1.clone());
+
+        for _ in 0..5 {
+            engine1.step();
+        }
+        engine1
+            .save_checkpoint(checkpoint_path)
+            .expect("Failed to save checkpoint");
+
+        // Load and continue simulation
+        let mut engine2 =
+            SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
+
+        // Continue for remaining 5 steps
+        for _ in 0..5 {
+            engine2.step();
+        }
+
+        assert_eq!(engine2.current_step, 10);
+
+        // Compare with a fresh run of full 10 steps
+        let mut engine_full = SimulationEngine::new(config1);
+        for _ in 0..10 {
+            engine_full.step();
+        }
+
+        // Both should reach step 10
+        assert_eq!(engine2.current_step, engine_full.current_step);
+    }
+
+    #[test]
+    fn test_checkpoint_auto_save() {
+        use tempfile::NamedTempFile;
+
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let checkpoint_path = temp_file.path().to_str().unwrap().to_string();
+
+        // Configure with auto-checkpoint every 3 steps
+        let mut config = get_test_config();
+        config.max_steps = 10;
+        config.checkpoint_interval = 3;
+        config.checkpoint_file = Some(checkpoint_path.clone());
+
+        let mut engine = SimulationEngine::new(config);
+
+        // Run the simulation
+        let _result = engine.run();
+
+        // Checkpoint should have been saved (last one at step 9)
+        // Verify the file exists and can be loaded
+        let loaded_engine =
+            SimulationEngine::load_checkpoint(&checkpoint_path).expect("Failed to load checkpoint");
+
+        // The checkpoint should have been saved at step 9 (last multiple of 3 before 10)
+        // or possibly at step 6 depending on when the save happened
+        assert!(
+            loaded_engine.current_step >= 3,
+            "Checkpoint should have been saved at step 3 or later"
+        );
+        assert!(
+            loaded_engine.current_step <= 10,
+            "Checkpoint step should not exceed max_steps"
         );
     }
 }

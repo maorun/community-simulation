@@ -7,9 +7,46 @@ use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info, warn};
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, Rng, SeedableRng};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
 use std::panic;
+use std::path::Path;
 use std::time::Instant;
+
+/// Checkpoint structure for saving and restoring simulation state.
+///
+/// This structure captures all the stateful information needed to resume
+/// a simulation from a specific point. The random number generator state
+/// is not included; instead, the RNG is reseeded based on the current step.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SimulationCheckpoint {
+    /// Configuration used for this simulation
+    pub config: SimulationConfig,
+    /// All entities in the simulation
+    pub entities: Vec<Entity>,
+    /// Market state including prices and history
+    pub market: Market,
+    /// Current simulation step
+    pub current_step: usize,
+    /// All skill IDs in the market
+    pub all_skill_ids: Vec<SkillId>,
+    /// Trade volume per step history
+    pub trades_per_step: Vec<usize>,
+    /// Money volume per step history
+    pub volume_per_step: Vec<f64>,
+    /// Total transaction fees collected
+    pub total_fees_collected: f64,
+    /// Number of failed steps (recovered from panics)
+    pub failed_steps: usize,
+    /// All loans in the system
+    pub loans: HashMap<LoanId, Loan>,
+    /// Total loans issued counter
+    pub total_loans_issued: usize,
+    /// Total loans repaid counter
+    pub total_loans_repaid: usize,
+}
 
 pub struct SimulationEngine {
     config: SimulationConfig,
@@ -224,6 +261,27 @@ impl SimulationEngine {
 
             let step_duration = step_start.elapsed();
             step_times.push(step_duration.as_secs_f64());
+
+            // Auto-checkpoint if enabled and at checkpoint interval
+            if self.config.checkpoint_interval > 0
+                && self.current_step > 0
+                && self.current_step.is_multiple_of(self.config.checkpoint_interval)
+            {
+                let checkpoint_path = self
+                    .config
+                    .checkpoint_file
+                    .clone()
+                    .unwrap_or_else(|| "checkpoint.json".to_string());
+
+                if let Err(e) = self.save_checkpoint(&checkpoint_path) {
+                    warn!(
+                        "Failed to save checkpoint at step {}: {}",
+                        self.current_step, e
+                    );
+                } else {
+                    debug!("Auto-checkpoint saved at step {}", self.current_step);
+                }
+            }
 
             // Update progress bar if enabled
             if let Some(ref pb) = progress_bar {
@@ -809,5 +867,131 @@ impl SimulationEngine {
 
     pub fn get_active_entity_count(&self) -> usize {
         self.entities.iter().filter(|e| e.active).count()
+    }
+
+    /// Saves the current simulation state to a checkpoint file.
+    ///
+    /// The checkpoint includes all stateful information needed to resume the simulation
+    /// at the current step. The RNG state is not saved; when resuming, the RNG will be
+    /// reseeded based on the current step for reproducibility.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the checkpoint file to create
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the checkpoint was saved successfully, or an error otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use simulation_framework::{SimulationConfig, SimulationEngine};
+    ///
+    /// let config = SimulationConfig::default();
+    /// let mut engine = SimulationEngine::new(config);
+    ///
+    /// // Run some steps
+    /// for _ in 0..100 {
+    ///     engine.step();
+    /// }
+    ///
+    /// // Save checkpoint
+    /// engine.save_checkpoint("checkpoint.json").expect("Failed to save checkpoint");
+    /// ```
+    pub fn save_checkpoint<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
+        info!(
+            "Saving checkpoint at step {} to {:?}",
+            self.current_step,
+            path.as_ref()
+        );
+
+        let checkpoint = SimulationCheckpoint {
+            config: self.config.clone(),
+            entities: self.entities.clone(),
+            market: self.market.clone(),
+            current_step: self.current_step,
+            all_skill_ids: self.all_skill_ids.clone(),
+            trades_per_step: self.trades_per_step.clone(),
+            volume_per_step: self.volume_per_step.clone(),
+            total_fees_collected: self.total_fees_collected,
+            failed_steps: self.failed_steps,
+            loans: self.loans.clone(),
+            total_loans_issued: self.total_loans_issued,
+            total_loans_repaid: self.total_loans_repaid,
+        };
+
+        let file = File::create(path)?;
+        let writer = BufWriter::new(file);
+        serde_json::to_writer_pretty(writer, &checkpoint)?;
+
+        debug!("Checkpoint saved successfully");
+        Ok(())
+    }
+
+    /// Loads a simulation state from a checkpoint file.
+    ///
+    /// This function creates a new SimulationEngine with the state restored from
+    /// the checkpoint. The RNG is reseeded based on the checkpoint's current step
+    /// to ensure reproducible behavior.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the checkpoint file to load
+    ///
+    /// # Returns
+    ///
+    /// Returns a new `SimulationEngine` with the restored state, or an error if
+    /// the checkpoint file cannot be read or parsed.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use simulation_framework::SimulationEngine;
+    ///
+    /// // Load from checkpoint
+    /// let mut engine = SimulationEngine::load_checkpoint("checkpoint.json")
+    ///     .expect("Failed to load checkpoint");
+    ///
+    /// // Continue simulation
+    /// let result = engine.run();
+    /// ```
+    pub fn load_checkpoint<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
+        info!("Loading checkpoint from {:?}", path.as_ref());
+
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        let checkpoint: SimulationCheckpoint = serde_json::from_reader(reader)?;
+
+        // Reseed RNG based on the checkpoint's current step to ensure reproducibility
+        // We combine the original seed with the current step to get a deterministic but
+        // step-dependent seed
+        let seed = checkpoint
+            .config
+            .seed
+            .wrapping_add(checkpoint.current_step as u64);
+        let rng = StdRng::seed_from_u64(seed);
+
+        info!(
+            "Checkpoint loaded: resuming from step {} with {} entities",
+            checkpoint.current_step,
+            checkpoint.entities.len()
+        );
+
+        Ok(Self {
+            config: checkpoint.config,
+            entities: checkpoint.entities,
+            market: checkpoint.market,
+            current_step: checkpoint.current_step,
+            rng,
+            all_skill_ids: checkpoint.all_skill_ids,
+            trades_per_step: checkpoint.trades_per_step,
+            volume_per_step: checkpoint.volume_per_step,
+            total_fees_collected: checkpoint.total_fees_collected,
+            failed_steps: checkpoint.failed_steps,
+            loans: checkpoint.loans,
+            total_loans_issued: checkpoint.total_loans_issued,
+            total_loans_repaid: checkpoint.total_loans_repaid,
+        })
     }
 }

@@ -101,6 +101,21 @@ struct Args {
     /// Each run uses seed, seed+1, seed+2, etc. Results are aggregated with statistics
     #[arg(long)]
     monte_carlo_runs: Option<usize>,
+
+    /// Interval (in steps) between automatic checkpoint saves
+    /// Set to 0 to disable auto-checkpointing (default)
+    #[arg(long)]
+    checkpoint_interval: Option<usize>,
+
+    /// Path to the checkpoint file for saving/loading simulation state
+    /// Defaults to "checkpoint.json" if not specified
+    #[arg(long)]
+    checkpoint_file: Option<String>,
+
+    /// Resume the simulation from a previously saved checkpoint
+    /// The checkpoint file must exist
+    #[arg(long, default_value_t = false)]
+    resume: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -190,6 +205,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(savings_rate) = args.savings_rate {
             cfg.savings_rate = savings_rate;
         }
+        if let Some(checkpoint_interval) = args.checkpoint_interval {
+            cfg.checkpoint_interval = checkpoint_interval;
+        }
+        if let Some(checkpoint_file) = &args.checkpoint_file {
+            cfg.checkpoint_file = Some(checkpoint_file.clone());
+        }
+        if args.resume {
+            cfg.resume_from_checkpoint = true;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -227,6 +251,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Some(savings_rate) = args.savings_rate {
                 cfg.savings_rate = savings_rate;
+            }
+            if let Some(checkpoint_interval) = args.checkpoint_interval {
+                cfg.checkpoint_interval = checkpoint_interval;
+            }
+            if let Some(checkpoint_file) = &args.checkpoint_file {
+                cfg.checkpoint_file = Some(checkpoint_file.clone());
+            }
+            if args.resume {
+                cfg.resume_from_checkpoint = true;
             }
         })?
     } else {
@@ -266,6 +299,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             loan_interest_rate: SimulationConfig::default().loan_interest_rate,
             loan_repayment_period: SimulationConfig::default().loan_repayment_period,
             min_money_to_lend: SimulationConfig::default().min_money_to_lend,
+            checkpoint_interval: args
+                .checkpoint_interval
+                .unwrap_or(SimulationConfig::default().checkpoint_interval),
+            checkpoint_file: args.checkpoint_file.clone(),
+            resume_from_checkpoint: args.resume,
         }
     };
 
@@ -311,7 +349,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let start_time = Instant::now();
         let max_steps = config.max_steps; // Store max_steps before moving config
-        let mut engine = SimulationEngine::new(config);
+
+        // Initialize engine - either from checkpoint or fresh start
+        let mut engine = if config.resume_from_checkpoint {
+            let checkpoint_path = config
+                .checkpoint_file
+                .clone()
+                .unwrap_or_else(|| "checkpoint.json".to_string());
+
+            info!(
+                "{}",
+                format!("Resuming simulation from checkpoint: {}", checkpoint_path).bright_cyan()
+            );
+
+            SimulationEngine::load_checkpoint(&checkpoint_path)
+                .map_err(|e| format!("Failed to load checkpoint from {}: {}", checkpoint_path, e))?
+        } else {
+            SimulationEngine::new(config)
+        };
+
         let show_progress = !args.no_progress;
         let result = engine.run_with_progress(show_progress);
         let duration = start_time.elapsed();

@@ -170,6 +170,30 @@ pub struct SimulationConfig {
     /// This prevents persons from becoming too poor by lending all their money.
     #[serde(default = "default_min_money_to_lend")]
     pub min_money_to_lend: f64,
+
+    /// Interval (in steps) between automatic checkpoint saves.
+    ///
+    /// When set to a value > 0, the simulation will automatically save its state
+    /// every N steps to the checkpoint file. Set to 0 to disable auto-checkpointing (default).
+    /// For example, a value of 100 means a checkpoint is saved every 100 steps.
+    #[serde(default)]
+    pub checkpoint_interval: usize,
+
+    /// Path to the checkpoint file for saving/loading simulation state.
+    ///
+    /// When resume_from_checkpoint is true, the simulation loads its initial state from this file.
+    /// When checkpoint_interval > 0, the simulation saves its state to this file.
+    /// If not specified, defaults to "checkpoint.json" when needed.
+    #[serde(default)]
+    pub checkpoint_file: Option<String>,
+
+    /// Resume the simulation from a previously saved checkpoint.
+    ///
+    /// When true, the simulation will load its state from the checkpoint file
+    /// instead of initializing from scratch. The checkpoint file must exist.
+    /// Set to false to start a new simulation (default).
+    #[serde(default)]
+    pub resume_from_checkpoint: bool,
 }
 
 fn default_seasonal_period() -> usize {
@@ -207,6 +231,9 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
+            checkpoint_interval: 0,        // Disabled by default
+            checkpoint_file: None,         // No default checkpoint file
+            resume_from_checkpoint: false, // Don't resume by default
         }
     }
 }
@@ -386,6 +413,9 @@ impl SimulationConfig {
                 loan_interest_rate: 0.01,
                 loan_repayment_period: 20,
                 min_money_to_lend: 50.0,
+                checkpoint_interval: 0,
+                checkpoint_file: None,
+                resume_from_checkpoint: false,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -404,6 +434,9 @@ impl SimulationConfig {
                 loan_interest_rate: 0.01,
                 loan_repayment_period: 20,
                 min_money_to_lend: 50.0,
+                checkpoint_interval: 0,
+                checkpoint_file: None,
+                resume_from_checkpoint: false,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -422,6 +455,9 @@ impl SimulationConfig {
                 loan_interest_rate: 0.01,
                 loan_repayment_period: 20,
                 min_money_to_lend: 50.0,
+                checkpoint_interval: 0,
+                checkpoint_file: None,
+                resume_from_checkpoint: false,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -440,6 +476,9 @@ impl SimulationConfig {
                 loan_interest_rate: 0.01,
                 loan_repayment_period: 20,
                 min_money_to_lend: 50.0,
+                checkpoint_interval: 0,
+                checkpoint_file: None,
+                resume_from_checkpoint: false,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -458,6 +497,9 @@ impl SimulationConfig {
                 loan_interest_rate: 0.01,
                 loan_repayment_period: 20,
                 min_money_to_lend: 50.0,
+                checkpoint_interval: 0,
+                checkpoint_file: None,
+                resume_from_checkpoint: false,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -476,6 +518,9 @@ impl SimulationConfig {
                 loan_interest_rate: 0.01,
                 loan_repayment_period: 20,
                 min_money_to_lend: 50.0,
+                checkpoint_interval: 0,
+                checkpoint_file: None,
+                resume_from_checkpoint: false,
             },
         }
     }

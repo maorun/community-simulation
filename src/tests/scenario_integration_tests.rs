@@ -430,6 +430,9 @@ mod integration_tests {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
         };
 
         let config_with_seasonality = SimulationConfig {
@@ -449,6 +452,9 @@ mod integration_tests {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
         };
 
         let mut engine_no_season = SimulationEngine::new(config_no_seasonality);
