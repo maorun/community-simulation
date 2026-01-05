@@ -774,6 +774,68 @@ pub fn calculate_herfindahl_index(values: &[f64]) -> f64 {
         .sum()
 }
 
+/// Calculate statistics for a set of values
+///
+/// This function computes mean, standard deviation, median, min, and max
+/// for a set of values. It is used for aggregating results across multiple
+/// simulation runs (Monte Carlo or parameter sweeps).
+///
+/// # Arguments
+/// * `values` - Slice of f64 values to analyze
+///
+/// # Returns
+/// * `MonteCarloStats` - Statistics including mean, std_dev, min, max, median
+///
+/// # Examples
+/// ```
+/// use simulation_framework::result::calculate_statistics;
+///
+/// let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+/// let stats = calculate_statistics(&values);
+/// assert_eq!(stats.mean, 3.0);
+/// assert_eq!(stats.median, 3.0);
+/// ```
+pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
+    if values.is_empty() {
+        return MonteCarloStats {
+            mean: 0.0,
+            std_dev: 0.0,
+            min: 0.0,
+            max: 0.0,
+            median: 0.0,
+        };
+    }
+
+    let mean = values.iter().sum::<f64>() / values.len() as f64;
+    // Use sample standard deviation (N-1) for finite samples in Monte Carlo analysis
+    let variance = if values.len() > 1 {
+        values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (values.len() - 1) as f64
+    } else {
+        0.0
+    };
+    let std_dev = variance.sqrt();
+
+    let mut sorted = values.to_vec();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    let median = if sorted.len() % 2 == 1 {
+        sorted[sorted.len() / 2]
+    } else {
+        (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) / 2.0
+    };
+
+    let min = sorted.first().copied().unwrap_or(0.0);
+    let max = sorted.last().copied().unwrap_or(0.0);
+
+    MonteCarloStats {
+        mean,
+        std_dev,
+        min,
+        max,
+        median,
+    }
+}
+
 impl MonteCarloResult {
     /// Create a new MonteCarloResult from a collection of simulation results
     pub fn from_runs(runs: Vec<SimulationResult>, base_seed: u64) -> Self {
@@ -798,52 +860,10 @@ impl MonteCarloResult {
             num_runs,
             base_seed,
             runs,
-            avg_money_stats: Self::calculate_stats(&avg_moneys),
-            gini_coefficient_stats: Self::calculate_stats(&gini_coefficients),
-            total_trades_stats: Self::calculate_stats(&total_trades),
-            avg_reputation_stats: Self::calculate_stats(&avg_reputations),
-        }
-    }
-
-    /// Calculate statistics for a set of values
-    fn calculate_stats(values: &[f64]) -> MonteCarloStats {
-        if values.is_empty() {
-            return MonteCarloStats {
-                mean: 0.0,
-                std_dev: 0.0,
-                min: 0.0,
-                max: 0.0,
-                median: 0.0,
-            };
-        }
-
-        let mean = values.iter().sum::<f64>() / values.len() as f64;
-        // Use sample standard deviation (N-1) for finite samples in Monte Carlo analysis
-        let variance = if values.len() > 1 {
-            values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (values.len() - 1) as f64
-        } else {
-            0.0
-        };
-        let std_dev = variance.sqrt();
-
-        let mut sorted = values.to_vec();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-
-        let median = if sorted.len() % 2 == 1 {
-            sorted[sorted.len() / 2]
-        } else {
-            (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) / 2.0
-        };
-
-        let min = sorted.first().copied().unwrap_or(0.0);
-        let max = sorted.last().copied().unwrap_or(0.0);
-
-        MonteCarloStats {
-            mean,
-            std_dev,
-            min,
-            max,
-            median,
+            avg_money_stats: calculate_statistics(&avg_moneys),
+            gini_coefficient_stats: calculate_statistics(&gini_coefficients),
+            total_trades_stats: calculate_statistics(&total_trades),
+            avg_reputation_stats: calculate_statistics(&avg_reputations),
         }
     }
 

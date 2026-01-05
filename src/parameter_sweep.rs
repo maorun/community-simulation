@@ -4,7 +4,7 @@
 /// how different parameter values affect simulation outcomes. It enables researchers
 /// to systematically explore the parameter space and identify robust configurations.
 use crate::error::{Result, SimulationError};
-use crate::result::{MonteCarloStats, SimulationResult};
+use crate::result::{calculate_statistics, MonteCarloStats, SimulationResult};
 use crate::{SimulationConfig, SimulationEngine};
 use colored::Colorize;
 use log::info;
@@ -172,10 +172,10 @@ impl ParameterSweepResult {
                     parameter_value: value,
                     parameter_name: parameter_name.clone(),
                     results,
-                    avg_money_stats: Self::calculate_stats(&avg_moneys),
-                    gini_coefficient_stats: Self::calculate_stats(&gini_coefficients),
-                    total_trades_stats: Self::calculate_stats(&total_trades),
-                    avg_reputation_stats: Self::calculate_stats(&avg_reputations),
+                    avg_money_stats: calculate_statistics(&avg_moneys),
+                    gini_coefficient_stats: calculate_statistics(&gini_coefficients),
+                    total_trades_stats: calculate_statistics(&total_trades),
+                    avg_reputation_stats: calculate_statistics(&avg_reputations),
                 }
             })
             .collect();
@@ -188,47 +188,6 @@ impl ParameterSweepResult {
             base_seed,
             sweep_points,
             total_simulations,
-        }
-    }
-
-    /// Calculate statistics for a set of values
-    fn calculate_stats(values: &[f64]) -> MonteCarloStats {
-        if values.is_empty() {
-            return MonteCarloStats {
-                mean: 0.0,
-                std_dev: 0.0,
-                min: 0.0,
-                max: 0.0,
-                median: 0.0,
-            };
-        }
-
-        let mean = values.iter().sum::<f64>() / values.len() as f64;
-        let variance = if values.len() > 1 {
-            values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (values.len() - 1) as f64
-        } else {
-            0.0
-        };
-        let std_dev = variance.sqrt();
-
-        let mut sorted = values.to_vec();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-
-        let median = if sorted.len() % 2 == 1 {
-            sorted[sorted.len() / 2]
-        } else {
-            (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) / 2.0
-        };
-
-        let min = sorted.first().copied().unwrap_or(0.0);
-        let max = sorted.last().copied().unwrap_or(0.0);
-
-        MonteCarloStats {
-            mean,
-            std_dev,
-            min,
-            max,
-            median,
         }
     }
 
@@ -418,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_calculate_stats_empty() {
-        let stats = ParameterSweepResult::calculate_stats(&[]);
+        let stats = calculate_statistics(&[]);
         assert_eq!(stats.mean, 0.0);
         assert_eq!(stats.median, 0.0);
         assert_eq!(stats.std_dev, 0.0);
@@ -426,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_calculate_stats_single_value() {
-        let stats = ParameterSweepResult::calculate_stats(&[42.0]);
+        let stats = calculate_statistics(&[42.0]);
         assert_eq!(stats.mean, 42.0);
         assert_eq!(stats.median, 42.0);
         assert_eq!(stats.std_dev, 0.0);
@@ -436,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_calculate_stats_multiple_values() {
-        let stats = ParameterSweepResult::calculate_stats(&[1.0, 2.0, 3.0, 4.0, 5.0]);
+        let stats = calculate_statistics(&[1.0, 2.0, 3.0, 4.0, 5.0]);
         assert_eq!(stats.mean, 3.0);
         assert_eq!(stats.median, 3.0);
         assert!((stats.std_dev - 1.5811).abs() < 0.01); // Sample std dev
