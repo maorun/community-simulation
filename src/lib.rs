@@ -77,6 +77,7 @@ pub mod entity; // Represents a Person in the simulation
 pub mod error;
 pub mod loan;
 pub mod market;
+pub mod parameter_sweep;
 pub mod person;
 // pub mod physics; // Removed
 pub mod result;
@@ -89,8 +90,9 @@ pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use error::{Result, SimulationError};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
+pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
 pub use person::{Person, PersonId, Transaction, TransactionType};
-pub use result::{MonteCarloResult, MonteCarloStats, SimulationResult};
+pub use result::{calculate_statistics, MonteCarloResult, MonteCarloStats, SimulationResult};
 pub use scenario::{PriceUpdater, Scenario};
 pub use skill::{Skill, SkillId};
 
