@@ -570,4 +570,135 @@ mod integration_tests {
         assert!(mc_result.avg_money_stats.min <= mc_result.avg_money_stats.mean);
         assert!(mc_result.avg_money_stats.mean <= mc_result.avg_money_stats.max);
     }
+
+    /// Test tax collection and redistribution system
+    #[test]
+    fn test_tax_system() {
+        // Test 1: Tax collection without redistribution
+        let config_no_redistribution = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_taxes: true,
+            tax_rate: 0.2,             // 20% tax rate
+            tax_redistribution: false, // No redistribution
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config_no_redistribution);
+        let result = engine.run();
+
+        // Tax statistics should be present when taxes are enabled
+        assert!(result.tax_statistics.is_some());
+        let tax_stats = result.tax_statistics.as_ref().unwrap();
+
+        // Taxes should have been collected
+        assert!(tax_stats.total_collected > 0.0, "Taxes should be collected");
+        // Without redistribution, redistributed should be 0
+        assert_eq!(
+            tax_stats.total_redistributed, 0.0,
+            "No redistribution without enable"
+        );
+
+        // Test 2: Tax collection with redistribution
+        let config_with_redistribution = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_taxes: true,
+            tax_rate: 0.2,            // 20% tax rate
+            tax_redistribution: true, // With redistribution
+            ..Default::default()
+        };
+
+        let mut engine_with_redist = SimulationEngine::new(config_with_redistribution);
+        let result_with_redist = engine_with_redist.run();
+
+        assert!(result_with_redist.tax_statistics.is_some());
+        let tax_stats_redist = result_with_redist.tax_statistics.as_ref().unwrap();
+
+        // Taxes should have been collected and redistributed
+        assert!(
+            tax_stats_redist.total_collected > 0.0,
+            "Taxes should be collected"
+        );
+        assert!(
+            tax_stats_redist.total_redistributed > 0.0,
+            "Taxes should be redistributed"
+        );
+        // With redistribution, collected and redistributed should be equal
+        assert_eq!(
+            tax_stats_redist.total_collected, tax_stats_redist.total_redistributed,
+            "All collected taxes should be redistributed"
+        );
+
+        // Test 3: No taxes when disabled
+        let config_no_tax = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_taxes: false, // Taxes disabled
+            ..Default::default()
+        };
+
+        let mut engine_no_tax = SimulationEngine::new(config_no_tax);
+        let result_no_tax = engine_no_tax.run();
+
+        // Tax statistics should be None when taxes are disabled
+        assert!(
+            result_no_tax.tax_statistics.is_none(),
+            "Tax statistics should be None when taxes disabled"
+        );
+
+        // Test 4: Different tax rates produce different results
+        let config_low_tax = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_taxes: true,
+            tax_rate: 0.05, // 5% tax rate
+            tax_redistribution: true,
+            ..Default::default()
+        };
+
+        let config_high_tax = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_taxes: true,
+            tax_rate: 0.50, // 50% tax rate
+            tax_redistribution: true,
+            ..Default::default()
+        };
+
+        let mut engine_low = SimulationEngine::new(config_low_tax);
+        let result_low = engine_low.run();
+
+        let mut engine_high = SimulationEngine::new(config_high_tax);
+        let result_high = engine_high.run();
+
+        let tax_low = result_low.tax_statistics.as_ref().unwrap();
+        let tax_high = result_high.tax_statistics.as_ref().unwrap();
+
+        // Higher tax rate should collect more taxes
+        assert!(
+            tax_high.total_collected > tax_low.total_collected,
+            "Higher tax rate should collect more taxes"
+        );
+    }
 }

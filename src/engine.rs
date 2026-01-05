@@ -86,10 +86,7 @@ impl SimulationEngine {
 
         // Initialize government if taxes are enabled
         let government = if config.enable_taxes {
-            Some(Government::new(
-                config.tax_rate,
-                config.tax_redistribution,
-            ))
+            Some(Government::new(config.tax_rate, config.tax_redistribution))
         } else {
             None
         };
@@ -549,7 +546,7 @@ impl SimulationEngine {
         };
 
         // Calculate loan statistics if loans are enabled
-        let loan_statistics = if self.config.enable_taxes {
+        let loan_statistics = if self.config.enable_loans {
             Some(crate::result::LoanStats {
                 total_loans_issued: self.total_loans_issued,
                 total_loans_repaid: self.total_loans_repaid,
@@ -562,9 +559,9 @@ impl SimulationEngine {
         // Calculate tax statistics if taxes are enabled
         let tax_statistics = if let Some(ref gov) = self.government {
             let active_persons = self.entities.iter().filter(|e| e.active).count();
-            let total_collected = gov.get_total_collected();
+            let total_collected = gov.get_cumulative_collected();
             let total_redistributed = gov.get_total_redistributed();
-            
+
             Some(crate::result::TaxStats {
                 total_collected,
                 total_redistributed,
@@ -761,6 +758,8 @@ impl SimulationEngine {
         let trades_count = trades_to_execute.len();
         let total_volume: f64 = trades_to_execute.iter().map(|(_, _, _, price)| price).sum();
 
+        let mut total_taxable_amount = 0.0;
+
         for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
             let seller_entity_id = self.entities[seller_idx].id;
             let buyer_entity_id = self.entities[buyer_idx].id;
@@ -769,12 +768,17 @@ impl SimulationEngine {
             let fee = price * self.config.transaction_fee;
             let after_fee = price - fee;
 
-            // Calculate tax (if enabled) on seller's proceeds after transaction fee
-            let tax = if let Some(ref mut gov) = self.government {
-                gov.collect_tax(after_fee)
+            // Calculate tax on seller's proceeds after transaction fee
+            let tax = if self.government.is_some() {
+                after_fee * self.config.tax_rate
             } else {
                 0.0
             };
+
+            if self.government.is_some() {
+                total_taxable_amount += after_fee;
+            }
+
             let seller_proceeds = after_fee - tax;
 
             // Buyer pays full price
@@ -815,6 +819,13 @@ impl SimulationEngine {
                 .or_insert(0) += 1;
         }
 
+        // Collect taxes into government treasury
+        if let Some(ref mut gov) = self.government {
+            if total_taxable_amount > 0.0 {
+                gov.collect_tax(total_taxable_amount);
+            }
+        }
+
         // Record trade volume statistics for this step
         self.trades_per_step.push(trades_count);
         self.volume_per_step.push(total_volume);
@@ -852,7 +863,7 @@ impl SimulationEngine {
             if gov.is_redistribution_enabled() {
                 let num_active_persons = self.entities.iter().filter(|e| e.active).count();
                 let redistribution_per_person = gov.redistribute(num_active_persons);
-                
+
                 if redistribution_per_person > 0.0 {
                     for entity in self.entities.iter_mut() {
                         if entity.active {

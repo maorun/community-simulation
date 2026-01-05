@@ -95,7 +95,9 @@ pub use loan::{Loan, LoanId};
 pub use market::Market;
 pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
 pub use person::{Person, PersonId, Transaction, TransactionType};
-pub use result::{calculate_statistics, MonteCarloResult, MonteCarloStats, SimulationResult, TaxStats};
+pub use result::{
+    calculate_statistics, MonteCarloResult, MonteCarloStats, SimulationResult, TaxStats,
+};
 pub use scenario::{PriceUpdater, Scenario};
 pub use skill::{Skill, SkillId};
 

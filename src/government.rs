@@ -21,8 +21,10 @@ pub struct Government {
     /// Tax rate as a fraction (0.0 to 1.0).
     /// For example, 0.1 represents a 10% tax rate.
     tax_rate: f64,
-    /// Total taxes collected during the simulation.
+    /// Current treasury balance (taxes collected but not yet redistributed).
     total_collected: f64,
+    /// Cumulative total of all taxes ever collected (for statistics).
+    cumulative_collected: f64,
     /// Total taxes redistributed during the simulation.
     total_redistributed: f64,
     /// Whether to redistribute collected taxes back to the population.
@@ -49,6 +51,7 @@ impl Government {
         Government {
             tax_rate,
             total_collected: 0.0,
+            cumulative_collected: 0.0,
             total_redistributed: 0.0,
             redistribution_enabled,
         }
@@ -62,6 +65,11 @@ impl Government {
     /// Gets the total amount of taxes collected.
     pub fn get_total_collected(&self) -> f64 {
         self.total_collected
+    }
+
+    /// Gets the cumulative total of all taxes ever collected.
+    pub fn get_cumulative_collected(&self) -> f64 {
+        self.cumulative_collected
     }
 
     /// Gets the total amount of taxes redistributed.
@@ -97,6 +105,7 @@ impl Government {
     pub fn collect_tax(&mut self, amount: f64) -> f64 {
         let tax = amount * self.tax_rate;
         self.total_collected += tax;
+        self.cumulative_collected += tax;
         tax
     }
 
@@ -137,6 +146,7 @@ impl Government {
     /// Useful for testing or starting a new simulation phase.
     pub fn reset(&mut self) {
         self.total_collected = 0.0;
+        self.cumulative_collected = 0.0;
         self.total_redistributed = 0.0;
     }
 }
