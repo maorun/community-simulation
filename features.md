@@ -162,11 +162,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Robustheit verstehen
 - **Implementierung**: Grid Search über Parameter
 
-#### 2.3 Monte-Carlo-Simulationen
-- **Beschreibung**: Mehrfache Läufe mit verschiedenen Seeds
-- **Nutzen**: Statistische Signifikanz
-- **Implementierung**: Parallelisierte Multi-Run-Logik
-
 ## 🛠️ Entwickler-Tools
 
 ### 1. CLI-Verbesserungen

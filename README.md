@@ -24,6 +24,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Colored Terminal Output:** Enhanced terminal output with color-coded statistics and messages for improved readability. Automatically detects terminal capabilities and can be disabled with `--no-color` flag.
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
+- **Monte Carlo Simulations:** Run multiple parallel simulations with different random seeds to achieve statistical significance. Automatically aggregates results across runs with mean, standard deviation, min, max, and median statistics for key metrics (average money, Gini coefficient, trade volume, reputation). Ideal for research, parameter sensitivity analysis, and understanding simulation variability.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
 - **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, and time-series price history.
@@ -142,6 +143,22 @@ The simulation accepts the following CLI arguments:
     *   Set the logging level for the simulation. Valid values: `error`, `warn`, `info`, `debug`, `trace`. Default: `info`.
     *   Can also be set via the `RUST_LOG` environment variable (e.g., `RUST_LOG=debug`).
     *   Use `info` for high-level progress messages, `debug` for detailed step-by-step information, or `warn`/`error` for minimal output.
+*   `--monte-carlo-runs <NUM_RUNS>`:
+    *   Run multiple simulations in parallel with different random seeds for statistical significance.
+    *   Each run uses a sequential seed: `seed`, `seed+1`, `seed+2`, etc.
+    *   Results are aggregated with statistics (mean, std dev, min, max, median) for key metrics:
+        *   Average money per person
+        *   Gini coefficient (wealth inequality)
+        *   Total trades (economic activity)
+        *   Average reputation
+    *   Both individual run results and aggregated statistics are saved to the JSON output.
+    *   Runs execute in parallel using Rayon for maximum performance.
+    *   **Use cases:**
+        *   Research: Establish statistical significance of results
+        *   Sensitivity analysis: Understand variability across random seeds
+        *   Parameter tuning: Identify stable configurations
+    *   Example: `--monte-carlo-runs 10` runs 10 parallel simulations
+    *   Minimum value: 2 runs
 
 **Example with Preset:**
 
@@ -190,6 +207,35 @@ This runs the simulation and creates CSV files (`analysis_summary.csv`, `analysi
 ./target/release/economic_simulation --steps 1000 --persons 100 --output results.json --compress
 ```
 This runs the simulation and saves compressed results to `results.json.gz`, achieving significant space savings (typically 10-20x smaller file size) while preserving all simulation data. The compressed file can be decompressed with `gunzip results.json.gz` or opened directly by many data analysis tools.
+
+**Example with Monte Carlo Simulations:**
+
+```bash
+# Run 10 parallel simulations for statistical significance
+./target/release/economic_simulation --monte-carlo-runs 10 -s 500 -p 100 -o mc_results.json
+
+# With custom seed for reproducibility
+./target/release/economic_simulation --monte-carlo-runs 5 -s 1000 -p 50 --seed 12345 -o mc_analysis.json
+
+# Combine with other features (compressed output, custom parameters)
+./target/release/economic_simulation --monte-carlo-runs 20 -s 500 -p 100 \
+  --seasonal-amplitude 0.3 --transaction-fee 0.05 \
+  -o mc_seasonal_fees.json --compress
+```
+
+Monte Carlo output includes:
+- Individual results from each run (all simulation data preserved)
+- Aggregated statistics across runs:
+  - **Average Money**: Mean, std dev, min, max, median across all runs
+  - **Gini Coefficient**: Distribution of wealth inequality across runs
+  - **Total Trades**: Economic activity variation across runs
+  - **Average Reputation**: Reputation dynamics across runs
+
+This is ideal for:
+- **Research**: Establishing statistical significance of economic phenomena
+- **Sensitivity Analysis**: Understanding how random variation affects outcomes
+- **Parameter Tuning**: Finding robust configurations that work across multiple seeds
+- **Publication**: Providing mean ± std dev statistics for academic papers
 
 **Using Configuration Files:**
 
