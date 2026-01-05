@@ -116,6 +116,17 @@ struct Args {
     /// The checkpoint file must exist
     #[arg(long, default_value_t = false)]
     resume: bool,
+
+    /// Run parameter sweep analysis over a parameter range
+    /// Format: "parameter:min:max:steps" (e.g., "initial_money:50:150:5")
+    /// Available parameters: initial_money, base_price, savings_rate, transaction_fee
+    #[arg(long)]
+    parameter_sweep: Option<String>,
+
+    /// Number of simulation runs per parameter value in parameter sweep (default: 3)
+    /// Each run uses a different random seed for statistical robustness
+    #[arg(long)]
+    sweep_runs: Option<usize>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -310,8 +321,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Validate configuration before proceeding
     config.validate()?;
 
-    // Check if Monte Carlo mode is enabled
-    if let Some(num_runs) = args.monte_carlo_runs {
+    // Check if parameter sweep mode is enabled
+    if let Some(sweep_spec) = args.parameter_sweep {
+        let sweep_runs = args.sweep_runs.unwrap_or(3);
+        if sweep_runs < 1 {
+            return Err("Parameter sweep runs must be at least 1".into());
+        }
+
+        run_parameter_sweep(config, &sweep_spec, sweep_runs, args.output)?;
+    } else if let Some(num_runs) = args.monte_carlo_runs {
         if num_runs < 2 {
             return Err("Monte Carlo runs must be at least 2".into());
         }
@@ -499,6 +517,103 @@ fn run_monte_carlo(
 
     // Print summary
     mc_result.print_summary();
+
+    Ok(())
+}
+
+/// Parse and run a parameter sweep analysis
+fn run_parameter_sweep(
+    base_config: SimulationConfig,
+    sweep_spec: &str,
+    runs_per_point: usize,
+    output: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use simulation_framework::ParameterRange;
+    use simulation_framework::ParameterSweepResult;
+
+    // Parse sweep specification: "parameter:min:max:steps"
+    let parts: Vec<&str> = sweep_spec.split(':').collect();
+    if parts.len() != 4 {
+        return Err(format!(
+            "Invalid parameter sweep format: '{}'. Expected format: 'parameter:min:max:steps'",
+            sweep_spec
+        )
+        .into());
+    }
+
+    let parameter_name = parts[0];
+    let min: f64 = parts[1]
+        .parse()
+        .map_err(|_| format!("Invalid min value: '{}'", parts[1]))?;
+    let max: f64 = parts[2]
+        .parse()
+        .map_err(|_| format!("Invalid max value: '{}'", parts[2]))?;
+    let steps: usize = parts[3]
+        .parse()
+        .map_err(|_| format!("Invalid steps value: '{}'", parts[3]))?;
+
+    if steps < 1 {
+        return Err("Number of steps must be at least 1".into());
+    }
+
+    if min > max {
+        return Err(format!("Min value ({}) must be <= max value ({})", min, max).into());
+    }
+
+    // Create parameter range based on parameter name
+    let parameter_range = match parameter_name {
+        "initial_money" => ParameterRange::InitialMoney { min, max, steps },
+        "base_price" => ParameterRange::BasePrice { min, max, steps },
+        "savings_rate" => ParameterRange::SavingsRate { min, max, steps },
+        "transaction_fee" => ParameterRange::TransactionFee { min, max, steps },
+        _ => {
+            return Err(format!(
+                "Unknown parameter: '{}'. Available: initial_money, base_price, savings_rate, transaction_fee",
+                parameter_name
+            )
+            .into());
+        }
+    };
+
+    info!(
+        "{}",
+        format!(
+            "Starting parameter sweep: {} from {:.2} to {:.2} with {} steps, {} runs per value",
+            parameter_name, min, max, steps, runs_per_point
+        )
+        .bright_cyan()
+    );
+    info!("Total simulations to run: {}", steps * runs_per_point);
+
+    let start_time = Instant::now();
+
+    // Run the parameter sweep
+    let result =
+        ParameterSweepResult::run_sweep(base_config, parameter_range, runs_per_point, false);
+
+    let duration = start_time.elapsed();
+
+    info!(
+        "{}",
+        format!(
+            "Parameter sweep completed in {:.2}s ({:.1}s per parameter value)",
+            duration.as_secs_f64(),
+            duration.as_secs_f64() / steps as f64
+        )
+        .bright_green()
+    );
+
+    // Save results if output path specified
+    if let Some(output_path) = output {
+        result.save_to_file(&output_path)?;
+        info!(
+            "{}",
+            format!("Parameter sweep results saved to {}", output_path).bright_blue()
+        );
+    }
+
+    // Print summary
+    result.print_summary();
 
     Ok(())
 }
