@@ -1,4 +1,5 @@
 use crate::{
+    government::Government,
     loan::{Loan, LoanId},
     scenario::PriceUpdater,
     Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
@@ -46,6 +47,8 @@ pub struct SimulationCheckpoint {
     pub total_loans_issued: usize,
     /// Total loans repaid counter
     pub total_loans_repaid: usize,
+    /// Government entity for tax collection and redistribution (if enabled)
+    pub government: Option<Government>,
 }
 
 pub struct SimulationEngine {
@@ -66,6 +69,8 @@ pub struct SimulationEngine {
     loans: HashMap<LoanId, Loan>,
     total_loans_issued: usize,
     total_loans_repaid: usize,
+    // Government for tax system (if enabled)
+    government: Option<Government>,
 }
 
 impl SimulationEngine {
@@ -78,6 +83,16 @@ impl SimulationEngine {
         let entities = Self::initialize_entities(&config, &mut rng, &mut market);
 
         let all_skill_ids = market.skills.keys().cloned().collect::<Vec<SkillId>>();
+
+        // Initialize government if taxes are enabled
+        let government = if config.enable_taxes {
+            Some(Government::new(
+                config.tax_rate,
+                config.tax_redistribution,
+            ))
+        } else {
+            None
+        };
 
         Self {
             config,
@@ -93,6 +108,7 @@ impl SimulationEngine {
             loans: HashMap::new(),
             total_loans_issued: 0,
             total_loans_repaid: 0,
+            government,
         }
     }
 
@@ -533,11 +549,35 @@ impl SimulationEngine {
         };
 
         // Calculate loan statistics if loans are enabled
-        let loan_statistics = if self.config.enable_loans {
+        let loan_statistics = if self.config.enable_taxes {
             Some(crate::result::LoanStats {
                 total_loans_issued: self.total_loans_issued,
                 total_loans_repaid: self.total_loans_repaid,
                 active_loans: self.loans.len(),
+            })
+        } else {
+            None
+        };
+
+        // Calculate tax statistics if taxes are enabled
+        let tax_statistics = if let Some(ref gov) = self.government {
+            let active_persons = self.entities.iter().filter(|e| e.active).count();
+            let total_collected = gov.get_total_collected();
+            let total_redistributed = gov.get_total_redistributed();
+            
+            Some(crate::result::TaxStats {
+                total_collected,
+                total_redistributed,
+                avg_per_person: if active_persons > 0 {
+                    total_collected / active_persons as f64
+                } else {
+                    0.0
+                },
+                avg_per_step: if self.config.max_steps > 0 {
+                    total_collected / self.config.max_steps as f64
+                } else {
+                    0.0
+                },
             })
         } else {
             None
@@ -564,7 +604,7 @@ impl SimulationEngine {
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
             loan_statistics,
-            tax_statistics: None, // Will be set when tax system is integrated
+            tax_statistics,
             final_persons_data: self.entities.clone(),
         }
     }
@@ -727,7 +767,15 @@ impl SimulationEngine {
 
             // Calculate transaction fee (deducted from seller's proceeds)
             let fee = price * self.config.transaction_fee;
-            let seller_proceeds = price - fee;
+            let after_fee = price - fee;
+
+            // Calculate tax (if enabled) on seller's proceeds after transaction fee
+            let tax = if let Some(ref mut gov) = self.government {
+                gov.collect_tax(after_fee)
+            } else {
+                0.0
+            };
+            let seller_proceeds = after_fee - tax;
 
             // Buyer pays full price
             self.entities[buyer_idx].person_data.money -= price;
@@ -796,6 +844,22 @@ impl SimulationEngine {
         if self.config.tech_growth_rate > 0.0 {
             for skill in self.market.skills.values_mut() {
                 skill.efficiency_multiplier *= 1.0 + self.config.tech_growth_rate;
+            }
+        }
+
+        // Tax redistribution - government redistributes collected taxes equally
+        if let Some(ref mut gov) = self.government {
+            if gov.is_redistribution_enabled() {
+                let num_active_persons = self.entities.iter().filter(|e| e.active).count();
+                let redistribution_per_person = gov.redistribute(num_active_persons);
+                
+                if redistribution_per_person > 0.0 {
+                    for entity in self.entities.iter_mut() {
+                        if entity.active {
+                            entity.person_data.money += redistribution_per_person;
+                        }
+                    }
+                }
             }
         }
 
@@ -921,6 +985,7 @@ impl SimulationEngine {
             loans: self.loans.clone(),
             total_loans_issued: self.total_loans_issued,
             total_loans_repaid: self.total_loans_repaid,
+            government: self.government.clone(),
         };
 
         let file = File::create(path)?;
@@ -994,6 +1059,7 @@ impl SimulationEngine {
             loans: checkpoint.loans,
             total_loans_issued: checkpoint.total_loans_issued,
             total_loans_repaid: checkpoint.total_loans_repaid,
+            government: checkpoint.government,
         })
     }
 }

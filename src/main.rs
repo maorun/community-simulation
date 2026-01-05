@@ -84,6 +84,20 @@ struct Args {
     #[arg(long)]
     savings_rate: Option<f64>,
 
+    /// Enable tax collection and redistribution system
+    #[arg(long, default_value_t = false)]
+    enable_taxes: bool,
+
+    /// Tax rate as a percentage (0.0-1.0, e.g., 0.1 = 10% tax rate)
+    /// Taxes are collected from persons' income on each sale
+    #[arg(long)]
+    tax_rate: Option<f64>,
+
+    /// Disable tax redistribution (taxes are collected but not redistributed)
+    /// By default, collected taxes are redistributed equally to all persons
+    #[arg(long, default_value_t = false)]
+    no_tax_redistribution: bool,
+
     /// Disable the progress bar during simulation
     #[arg(long, default_value_t = false)]
     no_progress: bool,
@@ -263,6 +277,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(savings_rate) = args.savings_rate {
                 cfg.savings_rate = savings_rate;
             }
+            if args.enable_taxes {
+                cfg.enable_taxes = true;
+            }
+            if let Some(tax_rate) = args.tax_rate {
+                cfg.tax_rate = tax_rate;
+            }
+            if args.no_tax_redistribution {
+                cfg.tax_redistribution = false;
+            }
             if let Some(checkpoint_interval) = args.checkpoint_interval {
                 cfg.checkpoint_interval = checkpoint_interval;
             }
@@ -315,9 +338,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or(SimulationConfig::default().checkpoint_interval),
             checkpoint_file: args.checkpoint_file.clone(),
             resume_from_checkpoint: args.resume,
-            enable_taxes: SimulationConfig::default().enable_taxes,
-            tax_rate: SimulationConfig::default().tax_rate,
-            tax_redistribution: SimulationConfig::default().tax_redistribution,
+            enable_taxes: args.enable_taxes,
+            tax_rate: args
+                .tax_rate
+                .unwrap_or(SimulationConfig::default().tax_rate),
+            tax_redistribution: !args.no_tax_redistribution,
         }
     };
 
