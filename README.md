@@ -25,6 +25,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **Monte Carlo Simulations:** Run multiple parallel simulations with different random seeds to achieve statistical significance. Automatically aggregates results across runs with mean, standard deviation, min, max, and median statistics for key metrics (average money, Gini coefficient, trade volume, reputation). Ideal for research, parameter sensitivity analysis, and understanding simulation variability.
+- **Parameter Sweep Analysis:** Automated sensitivity analysis through systematic parameter sweeps (grid search). Test a parameter across a range of values with multiple runs per value to understand how parameter choices affect simulation outcomes. Supports sweeping initial_money, base_price, savings_rate, and transaction_fee. Results include aggregated statistics and identification of optimal parameter values for different objectives. Perfect for research, parameter tuning, and understanding system robustness.
 - **Checkpoint System:** Save and resume simulation state at any point. Automatically save checkpoints at regular intervals during long simulations. Resume from saved checkpoints to continue interrupted simulations without starting from scratch. Useful for multi-hour simulations, distributed computing, incremental analysis, and crash recovery. Checkpoints are stored in JSON format with complete simulation state including entities, market data, loans, and statistics.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
@@ -187,6 +188,26 @@ The simulation accepts the following CLI arguments:
     *   After resuming, the simulation continues from where it left off and runs for the configured number of steps.
     *   **Note:** The RNG is reseeded based on the checkpoint's step number for reproducible behavior.
     *   Example: `--resume --checkpoint-file ./checkpoints/simulation_1.json`
+*   `--parameter-sweep <SPEC>`:
+    *   Run parameter sweep analysis over a parameter range (sensitivity analysis).
+    *   Format: `"parameter:min:max:steps"` where:
+        *   `parameter`: Name of the parameter to sweep (see below for available parameters)
+        *   `min`: Minimum value to test
+        *   `max`: Maximum value to test
+        *   `steps`: Number of evenly-spaced values to test between min and max
+    *   Available parameters:
+        *   `initial_money` - Initial money per person (e.g., `"initial_money:50:150:5"`)
+        *   `base_price` - Base skill price (e.g., `"base_price:5:25:5"`)
+        *   `savings_rate` - Savings rate percentage (e.g., `"savings_rate:0:0.2:5"`)
+        *   `transaction_fee` - Transaction fee percentage (e.g., `"transaction_fee:0:0.1:6"`)
+    *   Runs multiple simulations at each parameter value (controlled by `--sweep-runs`)
+    *   Results include aggregated statistics and optimal parameter identification
+    *   Example: `--parameter-sweep "initial_money:80:120:5" --sweep-runs 3`
+*   `--sweep-runs <NUM>`:
+    *   Number of simulation runs per parameter value in parameter sweep (default: 3).
+    *   Each run uses a different random seed (seed, seed+1, seed+2, etc.) for statistical robustness.
+    *   Higher values provide more reliable statistics but increase computation time.
+    *   Example: `--sweep-runs 5` (run 5 simulations at each parameter value)
 
 **Example with Preset:**
 
@@ -264,6 +285,54 @@ This is ideal for:
 - **Sensitivity Analysis**: Understanding how random variation affects outcomes
 - **Parameter Tuning**: Finding robust configurations that work across multiple seeds
 - **Publication**: Providing mean ± std dev statistics for academic papers
+
+**Example with Parameter Sweep Analysis:**
+
+```bash
+# Sweep initial money from 50 to 200 with 7 test points, 5 runs each
+./target/release/economic_simulation -s 500 -p 100 \
+  --parameter-sweep "initial_money:50:200:7" \
+  --sweep-runs 5 \
+  -o sweep_initial_money.json
+
+# Test the impact of transaction fees on market activity
+./target/release/economic_simulation -s 500 -p 100 \
+  --parameter-sweep "transaction_fee:0.0:0.15:6" \
+  --sweep-runs 3 \
+  -o sweep_transaction_fee.json
+
+# Analyze savings rate effects on wealth distribution
+./target/release/economic_simulation -s 500 -p 100 \
+  --parameter-sweep "savings_rate:0.0:0.2:5" \
+  --sweep-runs 4 \
+  -o sweep_savings_rate.json
+
+# Test base price sensitivity
+./target/release/economic_simulation -s 500 -p 100 \
+  --parameter-sweep "base_price:5:25:5" \
+  --sweep-runs 3 \
+  -o sweep_base_price.json
+```
+
+Parameter sweep output includes:
+- Results for each parameter value tested
+- Multiple runs per value for statistical robustness
+- Aggregated statistics (mean, std dev, min, max, median) for:
+  - **Average Money**: How parameter affects wealth levels
+  - **Gini Coefficient**: Impact on wealth inequality
+  - **Total Trades**: Effects on economic activity
+  - **Average Reputation**: Influence on reputation dynamics
+- Optimal parameter values identified for different objectives:
+  - Highest average money
+  - Lowest inequality (best Gini coefficient)
+  - Highest trade volume (most economic activity)
+
+This is ideal for:
+- **Sensitivity Analysis**: Systematically understand how parameters affect outcomes
+- **Parameter Optimization**: Find parameter values that maximize desired objectives
+- **Robustness Testing**: Identify parameter ranges where the system behaves stably
+- **Research**: Generate publication-quality parameter sensitivity plots
+- **Policy Analysis**: Compare economic policies (fees, taxes, regulations) quantitatively
 
 **Example with Checkpoint System:**
 
