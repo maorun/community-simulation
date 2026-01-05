@@ -84,7 +84,7 @@ pub mod scenario;
 pub mod skill;
 
 pub use config::{PresetName, SimulationConfig};
-pub use engine::SimulationEngine;
+pub use engine::{SimulationCheckpoint, SimulationEngine};
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use error::{Result, SimulationError};
 pub use loan::{Loan, LoanId};

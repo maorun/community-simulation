@@ -25,6 +25,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **Monte Carlo Simulations:** Run multiple parallel simulations with different random seeds to achieve statistical significance. Automatically aggregates results across runs with mean, standard deviation, min, max, and median statistics for key metrics (average money, Gini coefficient, trade volume, reputation). Ideal for research, parameter sensitivity analysis, and understanding simulation variability.
+- **Checkpoint System:** Save and resume simulation state at any point. Automatically save checkpoints at regular intervals during long simulations. Resume from saved checkpoints to continue interrupted simulations without starting from scratch. Useful for multi-hour simulations, distributed computing, incremental analysis, and crash recovery. Checkpoints are stored in JSON format with complete simulation state including entities, market data, loans, and statistics.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
 - **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, and time-series price history.
@@ -159,6 +160,33 @@ The simulation accepts the following CLI arguments:
         *   Parameter tuning: Identify stable configurations
     *   Example: `--monte-carlo-runs 10` runs 10 parallel simulations
     *   Minimum value: 2 runs
+*   `--checkpoint-interval <STEPS>`:
+    *   Interval (in steps) between automatic checkpoint saves. Set to 0 to disable auto-checkpointing (default).
+    *   When enabled, the simulation automatically saves its complete state every N steps to the checkpoint file.
+    *   Useful for long-running simulations that may be interrupted or for incremental progress tracking.
+    *   Example: `--checkpoint-interval 100` saves a checkpoint every 100 steps.
+    *   **Use cases:**
+        *   Resume interrupted simulations without starting from scratch
+        *   Save progress during very long simulations (e.g., 10,000+ steps)
+        *   Create snapshots for analysis at specific intervals
+        *   Recover from system crashes or errors
+*   `--checkpoint-file <PATH>`:
+    *   Path to the checkpoint file for saving/loading simulation state.
+    *   Defaults to `checkpoint.json` if not specified.
+    *   The checkpoint file stores the complete simulation state in JSON format, including:
+        *   Current step number
+        *   All entities (persons) with their money, skills, transactions, and reputation
+        *   Market state with prices and history
+        *   Loan system state (if enabled)
+        *   Trade volume statistics
+    *   Example: `--checkpoint-file ./checkpoints/simulation_1.json`
+*   `--resume`:
+    *   Resume the simulation from a previously saved checkpoint.
+    *   When enabled, the simulation loads its state from the checkpoint file instead of initializing from scratch.
+    *   The checkpoint file must exist (use --checkpoint-file to specify the path).
+    *   After resuming, the simulation continues from where it left off and runs for the configured number of steps.
+    *   **Note:** The RNG is reseeded based on the checkpoint's step number for reproducible behavior.
+    *   Example: `--resume --checkpoint-file ./checkpoints/simulation_1.json`
 
 **Example with Preset:**
 
@@ -236,6 +264,46 @@ This is ideal for:
 - **Sensitivity Analysis**: Understanding how random variation affects outcomes
 - **Parameter Tuning**: Finding robust configurations that work across multiple seeds
 - **Publication**: Providing mean ± std dev statistics for academic papers
+
+**Example with Checkpoint System:**
+
+```bash
+# Run a long simulation with automatic checkpoints every 500 steps
+./target/release/economic_simulation --steps 5000 --persons 100 \
+  --checkpoint-interval 500 \
+  --checkpoint-file ./checkpoints/long_run.json \
+  --output results.json
+
+# If the simulation is interrupted, resume from the last checkpoint
+./target/release/economic_simulation --resume \
+  --checkpoint-file ./checkpoints/long_run.json \
+  --output continued_results.json
+
+# You can also manually save checkpoints at specific intervals
+# Run first 1000 steps with checkpoint every 250 steps
+./target/release/economic_simulation --steps 1000 --persons 50 \
+  --checkpoint-interval 250 \
+  --checkpoint-file ./step1.json
+
+# Resume and run another 1000 steps
+./target/release/economic_simulation --resume \
+  --checkpoint-file ./step1.json \
+  --steps 1000 \
+  --checkpoint-interval 250 \
+  --checkpoint-file ./step2.json
+```
+
+Checkpoint system benefits:
+- **Resume Long Simulations**: Save progress and resume after interruptions or crashes
+- **Incremental Analysis**: Save simulation state at different stages for comparison
+- **Distributed Computing**: Run simulations in stages across different machines
+- **Debugging**: Examine specific simulation states by loading checkpoints
+
+The checkpoint file stores:
+- Complete simulation state (entities, market, loans, statistics)
+- Current step number and configuration
+- All transaction history and price data up to that point
+- JSON format for easy inspection and debugging
 
 **Using Configuration Files:**
 
