@@ -29,6 +29,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Configuration Files:** Support for YAML and TOML configuration files to easily define complex simulation scenarios without lengthy command lines.
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
+- **Trace Mode:** Comprehensive debug logging for problem diagnosis. Enable detailed logging of all simulation actions including trade attempts, price updates, reputation changes, loan payments, and tax redistribution. Use environment variable `RUST_LOG=debug` for detailed logs or `RUST_LOG=trace` for extremely detailed output. Ideal for debugging simulation behavior, understanding agent decision-making, and diagnosing unexpected results.
 - **Colored Terminal Output:** Enhanced terminal output with color-coded statistics and messages for improved readability. Automatically detects terminal capabilities and can be disabled with `--no-color` flag.
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
@@ -515,32 +516,77 @@ CLI arguments override config file values:
 
 See `config.example.yaml` and `config.example.toml` in the repository for complete examples with all available options and comments.
 
-### Logging
+### Logging and Trace Mode
 
-The simulation uses structured logging to provide insights into its operation. You can control the logging level to see more or less detail:
+The simulation uses structured logging to provide insights into its operation. The **Trace Mode** feature enables comprehensive debug logging for detailed problem diagnosis.
 
-**Via CLI flag:**
+**Basic Logging via Environment Variable:**
 ```bash
-./target/release/economic_simulation -s 100 -p 10 --log-level debug -o results.json
+# Default (info level) - High-level progress
+./target/release/economic_simulation -s 100 -p 10 -o results.json
+
+# Debug level - Detailed execution information
+RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
+
+# Trace level - Extremely detailed output
+RUST_LOG=trace ./target/release/economic_simulation -s 100 -p 10 -o results.json
 ```
 
-**Via environment variable:**
+**Module-Specific Logging:**
 ```bash
-RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
+# Only debug engine operations
+RUST_LOG=simulation_framework::engine=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
+
+# Only debug scenario/pricing
+RUST_LOG=simulation_framework::scenario=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
+
+# Multiple modules
+RUST_LOG=simulation_framework::engine=debug,simulation_framework::scenario=trace ./target/release/economic_simulation -s 100 -p 10 -o results.json
 ```
 
 **Log Levels:**
 - `error` - Only critical errors that prevent operation
-- `warn` - Warnings about potential issues (minimal output)
+- `warn` - Warnings about potential issues (file I/O errors, invalid configurations)
 - `info` - High-level progress information (default) - initialization, completion, performance metrics
-- `debug` - Detailed step-by-step progress - useful for understanding simulation behavior
-- `trace` - Very detailed logging (not currently used, reserved for future detailed instrumentation)
+- `debug` - **Detailed step-by-step execution:**
+  - Trade scheduling and execution with amounts and participants
+  - Reputation changes for buyers and sellers
+  - Price updates with demand/supply ratios
+  - Tax collection and redistribution
+  - Loan payments and completion
+- `trace` - **Extremely detailed logging:**
+  - Individual affordability checks
+  - Need satisfaction tracking
+  - Savings calculations per person
+  - Detailed balance changes
+
+**Trace Mode Examples:**
+
+Debug a specific simulation issue:
+```bash
+# See all trades and price updates
+RUST_LOG=debug ./target/release/economic_simulation -s 50 -p 5 -o debug.json --no-progress
+
+# Trace all affordability decisions
+RUST_LOG=trace ./target/release/economic_simulation -s 10 -p 5 -o trace.json --no-progress 2>&1 | grep "cannot afford"
+```
+
+Analyze economic behavior:
+```bash
+# Watch reputation changes
+RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json 2>&1 | grep "reputation"
+
+# Track tax redistribution
+RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 --tax-rate 0.15 --enable-tax-redistribution -o results.json 2>&1 | grep "Redistributing"
+```
 
 **Tips:**
 - Use `info` (default) for normal operations
-- Use `debug` when investigating simulation behavior or troubleshooting
+- Use `debug` when investigating simulation behavior, understanding trade dynamics, or troubleshooting
+- Use `trace` for deep analysis of individual agent decisions
 - Use `warn` or `error` for minimal output in production/batch scenarios
-- Combine with `--no-progress` flag to disable the progress bar when using debug logging
+- Combine with `--no-progress` flag to disable the progress bar when using debug/trace logging
+- Redirect stderr to a file for large logs: `RUST_LOG=debug ./target/release/economic_simulation ... 2> debug.log`
 
 ## Code Structure
 

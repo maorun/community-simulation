@@ -1,4 +1,5 @@
 use crate::market::Market;
+use log::debug;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
@@ -300,11 +301,22 @@ impl OriginalPriceUpdater {
                 rng.gen_range(-price_range_for_volatility..=price_range_for_volatility);
             new_price += random_fluctuation;
 
+            let old_price = skill.current_price;
             new_price = new_price
                 .max(market.min_skill_price)
                 .min(market.max_skill_price);
 
             skill.current_price = new_price;
+
+            debug!(
+                "Original scenario price update: Skill {:?} ${:.2} -> ${:.2} (demand/supply: {:.2}/{:.2}, ratio: {:.2})",
+                skill_id,
+                old_price,
+                new_price,
+                demand,
+                supply,
+                demand_supply_ratio
+            );
 
             if let Some(history) = market.skill_price_history.get_mut(skill_id) {
                 history.push(new_price);
@@ -346,14 +358,23 @@ impl DynamicPricingUpdater {
         for (skill_id, skill) in market.skills.iter_mut() {
             let sales_count = *market.sales_this_step.get(skill_id).unwrap_or(&0);
 
+            let old_price = skill.current_price;
             let mut new_price = skill.current_price;
 
             if sales_count > 0 {
                 // Increase price if the skill was sold
                 new_price *= 1.0 + price_change_rate;
+                debug!(
+                    "DynamicPricing: Skill {:?} sold {} times, price ${:.2} -> ${:.2} (+5%)",
+                    skill_id, sales_count, old_price, new_price
+                );
             } else {
                 // Decrease price if the skill was not sold
                 new_price *= 1.0 - price_change_rate;
+                debug!(
+                    "DynamicPricing: Skill {:?} not sold, price ${:.2} -> ${:.2} (-5%)",
+                    skill_id, old_price, new_price
+                );
             }
 
             // Clamp price to min/max boundaries
@@ -427,6 +448,16 @@ impl AdaptivePricingUpdater {
             let clamped_price = new_price
                 .max(market.min_skill_price)
                 .min(market.max_skill_price);
+
+            debug!(
+                "AdaptivePricing: Skill {:?} {} (sales: {}), price ${:.2} -> ${:.2} (target: ${:.2})",
+                skill_id,
+                if sales_count > 0 { "sold" } else { "not sold" },
+                sales_count,
+                current_price,
+                clamped_price,
+                target_price
+            );
 
             skill.current_price = clamped_price;
 
