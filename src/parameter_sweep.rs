@@ -428,6 +428,7 @@ mod tests {
             resume_from_checkpoint: false,
             tax_rate: 0.0,
             enable_tax_redistribution: false,
+            skills_per_person: 1,
         };
 
         let parameter_range = ParameterRange::InitialMoney {

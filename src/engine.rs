@@ -121,12 +121,12 @@ impl SimulationEngine {
         }
 
         let mut entities = Vec::with_capacity(config.entity_count);
-        
+
         // Distribute skills to persons
         // Strategy: Cycle through skills, assigning skills_per_person skills to each person
         for i in 0..config.entity_count {
             let mut person_skills = Vec::with_capacity(config.skills_per_person);
-            
+
             // Assign skills_per_person skills to this person
             for j in 0..config.skills_per_person {
                 // Calculate which skill this person should get
@@ -134,17 +134,17 @@ impl SimulationEngine {
                 // (i + j * entity_count) % total_skills
                 let skill_index = (i + j * config.entity_count) % config.entity_count;
                 let skill = available_skills_for_market[skill_index].clone();
-                
+
                 // Increment supply for this skill in the market
                 market.increment_skill_supply(&skill.id);
-                
+
                 person_skills.push(skill);
             }
 
             let entity = Entity::new(i, config.initial_money_per_person, person_skills);
             entities.push(entity);
         }
-        
+
         entities
     }
 
@@ -638,12 +638,7 @@ impl SimulationEngine {
                     .person_data
                     .own_skills
                     .iter()
-                    .map(|skill| {
-                        seasonal_factors
-                            .get(&skill.id)
-                            .copied()
-                            .unwrap_or(1.0)
-                    })
+                    .map(|skill| seasonal_factors.get(&skill.id).copied().unwrap_or(1.0))
                     .sum::<f64>()
                     / entity.person_data.own_skills.len() as f64;
                 // Modulate the number of needs, clamping between 1 and 5
@@ -704,7 +699,7 @@ impl SimulationEngine {
                 for skill in &self.entities[entity_idx].person_data.own_skills {
                     skill_providers
                         .entry(skill.id.clone())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(self.entities[entity_idx].id);
                 }
             }
