@@ -29,6 +29,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Monte Carlo Simulations:** Run multiple parallel simulations with different random seeds to achieve statistical significance. Automatically aggregates results across runs with mean, standard deviation, min, max, and median statistics for key metrics (average money, Gini coefficient, trade volume, reputation). Ideal for research, parameter sensitivity analysis, and understanding simulation variability.
 - **Parameter Sweep Analysis:** Automated sensitivity analysis through systematic parameter sweeps (grid search). Test a parameter across a range of values with multiple runs per value to understand how parameter choices affect simulation outcomes. Supports sweeping initial_money, base_price, savings_rate, and transaction_fee. Results include aggregated statistics and identification of optimal parameter values for different objectives. Perfect for research, parameter tuning, and understanding system robustness.
 - **Checkpoint System:** Save and resume simulation state at any point. Automatically save checkpoints at regular intervals during long simulations. Resume from saved checkpoints to continue interrupted simulations without starting from scratch. Useful for multi-hour simulations, distributed computing, incremental analysis, and crash recovery. Checkpoints are stored in JSON format with complete simulation state including entities, market data, loans, and statistics.
+- **Streaming Output (JSONL):** Real-time streaming of step-by-step simulation data to a JSON Lines (JSONL) file. Each simulation step appends one JSON object containing key metrics (trades, volume, money statistics, Gini coefficient, reputation) to the output file. Enables real-time monitoring of long-running simulations, reduces memory footprint by not storing all step data in memory, and allows progressive analysis. Each line is a complete JSON object that can be parsed independently, making it ideal for streaming analysis tools and real-time dashboards.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
 - **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, and time-series price history.
@@ -108,6 +109,18 @@ The simulation accepts the following CLI arguments:
         *   `{prefix}_skill_prices.csv` - Final skill prices
         *   `{prefix}_price_history.csv` - Skill price history over time
     *   Example: `--csv-output results` creates `results_summary.csv`, `results_money.csv`, etc.
+*   `--stream-output <FILEPATH>`:
+    *   Path to stream step-by-step simulation data in JSONL (JSON Lines) format.
+    *   When enabled, the simulation appends one JSON object per line to this file after each step.
+    *   Each line contains step metrics: step number, trades count, volume exchanged, average money, Gini coefficient, average reputation, and top 5 skill prices.
+    *   **Use cases:**
+        *   Real-time monitoring of long-running simulations
+        *   Reduced memory footprint (doesn't store all history in RAM)
+        *   Progressive analysis with streaming tools (e.g., `tail -f`, data pipelines)
+        *   Real-time dashboards and visualization
+    *   JSONL format: Each line is a complete, independent JSON object that can be parsed separately
+    *   Example: `--stream-output simulation_stream.jsonl`
+    *   Can be used alongside `--output` for both real-time and final results
 *   `--threads <NUM_THREADS>`:
     *   (Optional) Number of threads for Rayon to use. Defaults to Rayon's choice (usually number of logical cores).
 *   `--seed <SEED>`:
@@ -420,6 +433,42 @@ The checkpoint file stores:
 - Current step number and configuration
 - All transaction history and price data up to that point
 - JSON format for easy inspection and debugging
+
+**Example with Streaming Output:**
+
+```bash
+# Stream step-by-step data to a JSONL file for real-time monitoring
+./target/release/economic_simulation --steps 1000 --persons 100 \
+  --stream-output ./stream/simulation.jsonl \
+  --output results.json
+
+# Monitor the simulation in real-time (in another terminal)
+tail -f ./stream/simulation.jsonl | jq '.step, .trades, .avg_money'
+
+# Stream without final output (for pure streaming mode)
+./target/release/economic_simulation --steps 5000 --persons 200 \
+  --stream-output simulation_progress.jsonl
+
+# Combine streaming with other features
+./target/release/economic_simulation --steps 2000 --persons 150 \
+  --stream-output stream.jsonl \
+  --output final.json \
+  --compress \
+  --seasonal-amplitude 0.3 \
+  --transaction-fee 0.05
+```
+
+Streaming output benefits:
+- **Real-Time Monitoring**: Watch simulation progress as it runs using `tail -f` or similar tools
+- **Memory Efficiency**: Doesn't store all step data in RAM, ideal for very long simulations
+- **Progressive Analysis**: Analyze data while the simulation is still running
+- **Dashboards**: Feed the JSONL stream into real-time visualization tools
+- **JSONL Format**: Each line is a complete JSON object (step number, trades, volume, money stats, Gini coefficient, reputation, top skill prices)
+
+Example JSONL line (one per step):
+```json
+{"step":42,"trades":18,"volume":234.56,"avg_money":102.34,"gini_coefficient":0.15,"avg_reputation":1.23,"top_skill_prices":[{"id":"Skill5","price":25.67},...]}
+```
 
 **Using Configuration Files:**
 

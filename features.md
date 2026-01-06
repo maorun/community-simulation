@@ -126,11 +126,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Langfristige Speicherung und Abfragen
 - **Technologie**: SQLite für lokale Speicherung 
 
-#### 5.2 Streaming Output
-- **Beschreibung**: Ergebnisse während der Simulation streamen
-- **Nutzen**: Echtzeit-Monitoring und reduzierter Memory-Footprint
-- **Implementierung**: Append-only JSON oder JSONL
-
 ## 📊 Analyse und Forschung
 
 ### 1. Wirtschaftliche Analysen
