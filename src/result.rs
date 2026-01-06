@@ -6,7 +6,26 @@ use flate2::Compression;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufWriter, Write};
+
+/// Data for a single simulation step, used for streaming output
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StepData {
+    /// Current step number
+    pub step: usize,
+    /// Number of trades in this step
+    pub trades: usize,
+    /// Total money exchanged in this step
+    pub volume: f64,
+    /// Average money across all persons at this step
+    pub avg_money: f64,
+    /// Gini coefficient at this step
+    pub gini_coefficient: f64,
+    /// Average reputation at this step
+    pub avg_reputation: f64,
+    /// Skill prices at this step (top 5 by price)
+    pub top_skill_prices: Vec<SkillPriceInfo>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MoneyStats {
@@ -844,6 +863,25 @@ pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
         max,
         median,
     }
+}
+
+/// Write step data to a JSONL (JSON Lines) stream file
+///
+/// This function appends a single line of JSON data to the streaming output file.
+/// Each line represents one simulation step and contains key metrics for monitoring.
+///
+/// # Arguments
+/// * `writer` - A mutable reference to the BufWriter for the output file
+/// * `step_data` - The step data to write
+///
+/// # Returns
+/// * `Result<()>` - Ok if successful, or an error if writing failed
+pub fn write_step_to_stream(writer: &mut BufWriter<File>, step_data: &StepData) -> Result<()> {
+    let json = serde_json::to_string(step_data)
+        .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
+    writeln!(writer, "{}", json).map_err(SimulationError::IoError)?;
+    writer.flush().map_err(SimulationError::IoError)?;
+    Ok(())
 }
 
 impl MonteCarloResult {

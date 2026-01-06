@@ -429,6 +429,7 @@ mod tests {
             tax_rate: 0.0,
             enable_tax_redistribution: false,
             skills_per_person: 1,
+            stream_output_path: None,
         };
 
         let parameter_range = ParameterRange::InitialMoney {

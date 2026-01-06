@@ -226,6 +226,15 @@ pub struct SimulationConfig {
     /// increasing market redundancy and competition.
     #[serde(default = "default_skills_per_person")]
     pub skills_per_person: usize,
+
+    /// Path to stream step-by-step simulation data in JSONL format.
+    ///
+    /// When enabled, the simulation appends one JSON object per line to this file after each step.
+    /// This allows real-time monitoring of long-running simulations and reduces memory usage
+    /// by not storing all step data in memory.
+    /// Set to None to disable streaming output (default).
+    #[serde(default)]
+    pub stream_output_path: Option<String>,
 }
 
 fn default_seasonal_period() -> usize {
@@ -273,6 +282,7 @@ impl Default for SimulationConfig {
             tax_rate: 0.0,                    // Disabled by default
             enable_tax_redistribution: false, // Disabled by default
             skills_per_person: 1,             // One skill per person by default
+            stream_output_path: None,         // Disabled by default
         }
     }
 }
@@ -478,6 +488,7 @@ impl SimulationConfig {
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
+                stream_output_path: None,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -502,6 +513,7 @@ impl SimulationConfig {
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
+                stream_output_path: None,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -526,6 +538,7 @@ impl SimulationConfig {
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
+                stream_output_path: None,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -550,6 +563,7 @@ impl SimulationConfig {
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
+                stream_output_path: None,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -574,6 +588,7 @@ impl SimulationConfig {
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
+                stream_output_path: None,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -598,6 +613,7 @@ impl SimulationConfig {
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
+                stream_output_path: None,
             },
         }
     }

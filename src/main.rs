@@ -142,6 +142,12 @@ struct Args {
     /// Higher values create more versatile persons who can participate in multiple markets
     #[arg(long)]
     skills_per_person: Option<usize>,
+
+    /// Path to stream step-by-step simulation data in JSONL (JSON Lines) format
+    /// When enabled, simulation appends one JSON object per line after each step
+    /// Useful for real-time monitoring and reduced memory usage
+    #[arg(long)]
+    stream_output: Option<String>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -249,6 +255,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(skills_per_person) = args.skills_per_person {
             cfg.skills_per_person = skills_per_person;
         }
+        if let Some(stream_output) = &args.stream_output {
+            cfg.stream_output_path = Some(stream_output.clone());
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -305,6 +314,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(skills_per_person) = args.skills_per_person {
                 cfg.skills_per_person = skills_per_person;
             }
+            if let Some(stream_output) = &args.stream_output {
+                cfg.stream_output_path = Some(stream_output.clone());
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -355,6 +367,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             skills_per_person: args
                 .skills_per_person
                 .unwrap_or(SimulationConfig::default().skills_per_person),
+            stream_output_path: args.stream_output.clone(),
         }
     };
 
