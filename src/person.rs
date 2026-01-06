@@ -7,13 +7,14 @@ pub type UrgencyLevel = u8; // Define UrgencyLevel (e.g., 1-3, higher is more ur
 
 /// Defines different behavioral strategies for agents in the simulation.
 /// Each strategy affects how aggressively a person spends money on needed skills.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Strategy {
     /// Conservative strategy: Prefers saving, lower spending threshold (0.7x).
     /// These agents are risk-averse and only spend when they have ample reserves.
     Conservative,
     /// Balanced strategy: Normal behavior (1.0x), default strategy.
     /// These agents spend according to standard market conditions.
+    #[default]
     Balanced,
     /// Aggressive strategy: Higher spending threshold (1.3x), prioritizes acquiring skills.
     /// These agents are willing to spend more of their money to acquire needed skills.
@@ -50,12 +51,6 @@ impl Strategy {
             Strategy::Aggressive,
             Strategy::Frugal,
         ]
-    }
-}
-
-impl Default for Strategy {
-    fn default() -> Self {
-        Strategy::Balanced
     }
 }
 
@@ -116,7 +111,12 @@ impl Person {
     /// * `initial_money` - Starting money amount
     /// * `own_skills` - Vector of skills this person can provide
     /// * `strategy` - Behavioral strategy for spending decisions
-    pub fn new(id: PersonId, initial_money: f64, own_skills: Vec<Skill>, strategy: Strategy) -> Self {
+    pub fn new(
+        id: PersonId,
+        initial_money: f64,
+        own_skills: Vec<Skill>,
+        strategy: Strategy,
+    ) -> Self {
         Person {
             id,
             money: initial_money,
@@ -449,7 +449,7 @@ mod tests {
     fn test_can_afford_with_strategy_conservative() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let person = Person::new(1, 100.0, vec![skill], Strategy::Conservative);
-        
+
         // Conservative has 0.7x multiplier, so with $100 can afford up to $70
         assert!(person.can_afford_with_strategy(70.0));
         assert!(person.can_afford_with_strategy(69.0));
@@ -461,7 +461,7 @@ mod tests {
     fn test_can_afford_with_strategy_balanced() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let person = Person::new(1, 100.0, vec![skill], Strategy::Balanced);
-        
+
         // Balanced has 1.0x multiplier, so with $100 can afford up to $100
         assert!(person.can_afford_with_strategy(100.0));
         assert!(person.can_afford_with_strategy(99.0));
@@ -472,7 +472,7 @@ mod tests {
     fn test_can_afford_with_strategy_aggressive() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive);
-        
+
         // Aggressive has 1.3x multiplier, so with $100 can afford up to $130
         assert!(person.can_afford_with_strategy(130.0));
         assert!(person.can_afford_with_strategy(129.0));
@@ -483,7 +483,7 @@ mod tests {
     fn test_can_afford_with_strategy_frugal() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let person = Person::new(1, 100.0, vec![skill], Strategy::Frugal);
-        
+
         // Frugal has 0.5x multiplier, so with $100 can afford up to $50
         assert!(person.can_afford_with_strategy(50.0));
         assert!(person.can_afford_with_strategy(49.0));
@@ -495,7 +495,7 @@ mod tests {
     fn test_person_has_strategy_field() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive);
-        
+
         assert_eq!(person.strategy, Strategy::Aggressive);
     }
 }

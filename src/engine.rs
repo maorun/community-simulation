@@ -129,7 +129,7 @@ impl SimulationEngine {
     // This is the version from feat/economic-simulation-model
     fn initialize_entities(
         config: &SimulationConfig,
-        rng: &mut StdRng,
+        _rng: &mut StdRng,
         market: &mut Market,
     ) -> Vec<Entity> {
         // Create all unique skills for the market (one per person)
@@ -772,7 +772,10 @@ impl SimulationEngine {
                         efficiency_adjusted_price
                     };
 
-                    if self.entities[buyer_idx].person_data.can_afford_with_strategy(final_price) {
+                    if self.entities[buyer_idx]
+                        .person_data
+                        .can_afford_with_strategy(final_price)
+                    {
                         if let Some(seller_id) = seller_id_opt {
                             let seller_idx = seller_id;
 

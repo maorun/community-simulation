@@ -66,7 +66,12 @@ impl Entity {
     /// assert_eq!(entity.id, 1);
     /// assert_eq!(entity.person_data.money, 200.0);
     /// ```
-    pub fn new(id: EntityId, initial_money: f64, own_skills: Vec<Skill>, strategy: Strategy) -> Self {
+    pub fn new(
+        id: EntityId,
+        initial_money: f64,
+        own_skills: Vec<Skill>,
+        strategy: Strategy,
+    ) -> Self {
         let person = Person::new(id as InnerPersonId, initial_money, own_skills, strategy);
         Self {
             id,
