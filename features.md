@@ -61,12 +61,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 6. Verschiedene Agentenstrategien
 
-#### 6.1 Verschiedene Verhaltensweisen
-- **Beschreibung**: Verschiedene regelbasierte Verhaltensweisen (risikofreudig, konservativ, gierig, altruistisch, etc.)
-- **Nutzen**: Heterogenität in der Population
-- **Implementierung**: `Strategy` Trait und verschiedene Implementierungen
-
-#### 6.3 Prioritätsbasierte Kaufentscheidungen
+#### 6.2 Prioritätsbasierte Kaufentscheidungen
 - **Beschreibung**: Erweiterte regelbasierte Entscheidungsfindung für Käufe
 - **Nutzen**: Realistischeres Agenten-Verhalten
 - **Implementierung**: Erweiterte Logik in `Person` mit Prioritätsregeln

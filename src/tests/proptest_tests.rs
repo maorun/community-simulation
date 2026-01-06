@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod proptests {
     use crate::market::Market;
-    use crate::person::{Person, TransactionType};
+    use crate::person::{Person, Strategy, TransactionType};
     use crate::result::calculate_gini_coefficient;
     use crate::scenario::{PriceUpdater, Scenario};
     use crate::skill::Skill;
@@ -20,7 +20,7 @@ mod proptests {
             decays in 0usize..10000
         )| {
             let skill = Skill::new("TestSkill".to_string(), 10.0);
-            let mut person = Person::new(0, initial_money, vec![skill]);
+            let mut person = Person::new(0, initial_money, vec![skill], Strategy::Balanced);
 
             // Apply seller reputation increases
             for _ in 0..seller_increases {
@@ -51,7 +51,7 @@ mod proptests {
             amount in 0.0f64..10000.0
         )| {
             let skill = Skill::new("TestSkill".to_string(), 10.0);
-            let person = Person::new(0, money, vec![skill]);
+            let person = Person::new(0, money, vec![skill], Strategy::Balanced);
 
             let can_afford = person.can_afford(amount);
 
@@ -143,7 +143,7 @@ mod proptests {
             counterparty in 0usize..100
         )| {
             let skill = Skill::new("TestSkill".to_string(), 10.0);
-            let mut person = Person::new(0, initial_money, vec![skill.clone()]);
+            let mut person = Person::new(0, initial_money, vec![skill.clone()], Strategy::Balanced);
 
             let skill_id = skill.id.clone();
             person.record_transaction(

@@ -16,6 +16,12 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Savings System:** Persons can save a configurable percentage of their money each simulation step. Saved money is moved from available cash to a separate savings account, affecting spending capacity while enabling wealth accumulation studies. Configurable via `--savings-rate` parameter (0.0-1.0 range representing 0-100% savings rate). Savings statistics (total, average, median, min, max) are tracked and reported in results.
 - **Tax System:** Configurable income tax on trade proceeds with optional redistribution. The system collects taxes from sellers' proceeds after transaction fees and can redistribute collected taxes equally among all persons at the end of each step. This simulates government taxation and wealth redistribution policies, allowing study of their effects on wealth inequality and economic activity. Controlled via `--tax-rate` parameter (0.0-1.0 range representing 0-100% tax rate) and `--enable-tax-redistribution` flag. Tax statistics (total collected, total redistributed) are tracked and reported in results.
 - **Loan System:** Persons can borrow and lend money with interest and repayment schedules. When enabled, the system tracks loans between persons, processes scheduled repayments each step, and provides statistics on loan activity. Loans have configurable interest rates and repayment periods. Enable via configuration file with `enable_loans: true`, then configure `loan_interest_rate`, `loan_repayment_period`, and `min_money_to_lend` parameters. Loan statistics (total issued, repaid, active) are included in simulation results.
+- **Behavioral Strategies:** Persons are assigned different behavioral strategies that affect their spending decisions, creating heterogeneous agent behavior. Four strategy types are supported:
+  - **Conservative** (0.7x spending multiplier): Risk-averse agents who prefer saving and only spend when they have ample reserves. Willing to spend up to 70% of their money on needed skills.
+  - **Balanced** (1.0x spending multiplier): Standard agents with normal spending behavior. This is the default strategy.
+  - **Aggressive** (1.3x spending multiplier): Risk-taking agents who prioritize acquiring skills and are willing to spend beyond their immediate means. Can afford skills up to 130% of their current money.
+  - **Frugal** (0.5x spending multiplier): Extremely cautious agents who minimize spending and maximize savings. Only willing to spend up to 50% of their money.
+  Strategies are distributed equally across the population using round-robin assignment, ensuring balanced representation. The strategy system enables studying how different agent behaviors affect market dynamics, wealth distribution, and economic activity.
 - **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
@@ -542,7 +548,7 @@ RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
 *   `src/lib.rs`: Main library crate, exporting core modules.
 *   `src/config.rs`: Defines `SimulationConfig` for simulation parameters.
 *   `src/engine.rs`: Contains `SimulationEngine` which runs the main simulation loop and step-by-step logic.
-*   `src/person.rs`: Defines the `Person` struct, `Transaction`, `NeededSkillItem`, and related types.
+*   `src/person.rs`: Defines the `Person` struct, `Transaction`, `NeededSkillItem`, `Strategy` enum, and related types. The `Strategy` enum defines four behavioral strategies (Conservative, Balanced, Aggressive, Frugal) that affect how persons make spending decisions.
 *   `src/skill.rs`: Defines the `Skill` struct.
 *   `src/market.rs`: Defines the `Market` struct and its logic for price adjustments and history.
 *   `src/entity.rs`: Defines the `Entity` struct which wraps a `Person` for compatibility with the engine structure.
