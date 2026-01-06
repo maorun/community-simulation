@@ -25,7 +25,7 @@ pub type EntityId = usize;
 /// use simulation_framework::{Entity, Skill};
 ///
 /// let skill = Skill::new("Programming".to_string(), 50.0);
-/// let entity = Entity::new(0, 100.0, skill);
+/// let entity = Entity::new(0, 100.0, vec![skill]);
 ///
 /// assert_eq!(entity.id, 0);
 /// assert_eq!(entity.get_money(), 100.0);
@@ -52,7 +52,7 @@ impl Entity {
     ///
     /// * `id` - Unique identifier for the entity
     /// * `initial_money` - Starting money amount for the person
-    /// * `own_skill` - The skill this person can provide to others
+    /// * `own_skills` - The skills this person can provide to others
     ///
     /// # Examples
     ///
@@ -60,13 +60,13 @@ impl Entity {
     /// use simulation_framework::{Entity, Skill};
     ///
     /// let skill = Skill::new("Accounting".to_string(), 45.0);
-    /// let entity = Entity::new(1, 200.0, skill);
+    /// let entity = Entity::new(1, 200.0, vec![skill]);
     ///
     /// assert_eq!(entity.id, 1);
     /// assert_eq!(entity.person_data.money, 200.0);
     /// ```
-    pub fn new(id: EntityId, initial_money: f64, own_skill: Skill) -> Self {
-        let person = Person::new(id as InnerPersonId, initial_money, own_skill);
+    pub fn new(id: EntityId, initial_money: f64, own_skills: Vec<Skill>) -> Self {
+        let person = Person::new(id as InnerPersonId, initial_money, own_skills);
         Self {
             id,
             person_data: person,
@@ -86,7 +86,7 @@ impl Entity {
     /// use simulation_framework::{Entity, Skill};
     ///
     /// let skill = Skill::new("Writing".to_string(), 30.0);
-    /// let entity = Entity::new(0, 150.0, skill);
+    /// let entity = Entity::new(0, 150.0, vec![skill]);
     ///
     /// assert_eq!(entity.get_money(), 150.0);
     /// ```

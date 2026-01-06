@@ -137,6 +137,11 @@ struct Args {
     /// When enabled, taxes are distributed equally among all persons at the end of each step
     #[arg(long, default_value_t = false)]
     enable_tax_redistribution: bool,
+
+    /// Number of skills each person can provide (default: 1)
+    /// Higher values create more versatile persons who can participate in multiple markets
+    #[arg(long)]
+    skills_per_person: Option<usize>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -241,6 +246,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if args.enable_tax_redistribution {
             cfg.enable_tax_redistribution = true;
         }
+        if let Some(skills_per_person) = args.skills_per_person {
+            cfg.skills_per_person = skills_per_person;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -294,6 +302,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if args.enable_tax_redistribution {
                 cfg.enable_tax_redistribution = true;
             }
+            if let Some(skills_per_person) = args.skills_per_person {
+                cfg.skills_per_person = skills_per_person;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -341,6 +352,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .tax_rate
                 .unwrap_or(SimulationConfig::default().tax_rate),
             enable_tax_redistribution: args.enable_tax_redistribution,
+            skills_per_person: args
+                .skills_per_person
+                .unwrap_or(SimulationConfig::default().skills_per_person),
         }
     };
 

@@ -30,7 +30,9 @@ pub struct NeededSkillItem {
 pub struct Person {
     pub id: PersonId,
     pub money: f64,
-    pub own_skill: Skill,
+    /// Skills this person can provide to others in the market.
+    /// Each person can have one or more skills they offer.
+    pub own_skills: Vec<Skill>,
     // Now stores tuples of (SkillId, UrgencyLevel)
     pub needed_skills: Vec<NeededSkillItem>,
     pub transaction_history: Vec<Transaction>,
@@ -50,11 +52,17 @@ pub struct Person {
 }
 
 impl Person {
-    pub fn new(id: PersonId, initial_money: f64, own_skill: Skill) -> Self {
+    /// Creates a new person with multiple skills.
+    ///
+    /// # Arguments
+    /// * `id` - Unique identifier for this person
+    /// * `initial_money` - Starting money amount
+    /// * `own_skills` - Vector of skills this person can provide
+    pub fn new(id: PersonId, initial_money: f64, own_skills: Vec<Skill>) -> Self {
         Person {
             id,
             money: initial_money,
-            own_skill,
+            own_skills,
             needed_skills: Vec::new(),
             transaction_history: Vec::new(),
             satisfied_needs_current_step: Vec::new(),
