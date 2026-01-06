@@ -30,7 +30,9 @@ pub struct NeededSkillItem {
 pub struct Person {
     pub id: PersonId,
     pub money: f64,
-    pub own_skill: Skill,
+    /// Skills this person can provide to others in the market.
+    /// Each person can have one or more skills they offer.
+    pub own_skills: Vec<Skill>,
     // Now stores tuples of (SkillId, UrgencyLevel)
     pub needed_skills: Vec<NeededSkillItem>,
     pub transaction_history: Vec<Transaction>,
@@ -50,11 +52,17 @@ pub struct Person {
 }
 
 impl Person {
-    pub fn new(id: PersonId, initial_money: f64, own_skill: Skill) -> Self {
+    /// Creates a new person with multiple skills.
+    ///
+    /// # Arguments
+    /// * `id` - Unique identifier for this person
+    /// * `initial_money` - Starting money amount
+    /// * `own_skills` - Vector of skills this person can provide
+    pub fn new(id: PersonId, initial_money: f64, own_skills: Vec<Skill>) -> Self {
         Person {
             id,
             money: initial_money,
-            own_skill,
+            own_skills,
             needed_skills: Vec::new(),
             transaction_history: Vec::new(),
             satisfied_needs_current_step: Vec::new(),
@@ -155,14 +163,14 @@ mod tests {
     #[test]
     fn test_person_reputation_initialization() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, skill);
+        let person = Person::new(1, 100.0, vec![skill]);
         assert_eq!(person.reputation, 1.0, "Reputation should start at 1.0");
     }
 
     #[test]
     fn test_increase_reputation_as_seller() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
 
         person.increase_reputation_as_seller();
         assert_eq!(
@@ -180,7 +188,7 @@ mod tests {
     #[test]
     fn test_increase_reputation_as_buyer() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
 
         person.increase_reputation_as_buyer();
         assert_eq!(
@@ -198,7 +206,7 @@ mod tests {
     #[test]
     fn test_reputation_decay_above_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
         person.reputation = 1.5;
 
         person.apply_reputation_decay();
@@ -219,7 +227,7 @@ mod tests {
     #[test]
     fn test_reputation_decay_below_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
         person.reputation = 0.5;
 
         person.apply_reputation_decay();
@@ -240,7 +248,7 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, skill);
+        let person = Person::new(1, 100.0, vec![skill]);
         let multiplier = person.reputation_price_multiplier();
         assert_eq!(
             multiplier, 1.0,
@@ -251,7 +259,7 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_high() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
         person.reputation = 2.0; // Maximum reputation
 
         let multiplier = person.reputation_price_multiplier();
@@ -261,7 +269,7 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_low() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
         person.reputation = 0.5;
 
         let multiplier = person.reputation_price_multiplier();
@@ -277,7 +285,7 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_clamping() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
 
         // Test extreme high reputation
         person.reputation = 10.0;
@@ -293,7 +301,7 @@ mod tests {
     #[test]
     fn test_savings_basic() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
 
         // Test 10% savings rate
         let saved = person.apply_savings(0.1);
@@ -317,7 +325,7 @@ mod tests {
     #[test]
     fn test_savings_zero_rate() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
 
         let saved = person.apply_savings(0.0);
         assert_eq!(saved, 0.0, "Should save nothing with 0% rate");
@@ -328,7 +336,7 @@ mod tests {
     #[test]
     fn test_savings_negative_money() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, -10.0, skill);
+        let mut person = Person::new(1, -10.0, vec![skill]);
 
         let saved = person.apply_savings(0.1);
         assert_eq!(saved, 0.0, "Should not save with negative money");
@@ -339,7 +347,7 @@ mod tests {
     #[test]
     fn test_savings_full_amount() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, skill);
+        let mut person = Person::new(1, 100.0, vec![skill]);
 
         let saved = person.apply_savings(1.0);
         assert_eq!(saved, 100.0, "Should save 100% (all money)");

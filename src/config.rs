@@ -213,6 +213,19 @@ pub struct SimulationConfig {
     /// Set to false to collect taxes without redistribution (default).
     #[serde(default)]
     pub enable_tax_redistribution: bool,
+
+    /// Number of skills each person can provide.
+    ///
+    /// Determines how many different skills each person possesses and can offer to others.
+    /// A value of 1 means each person specializes in a single skill (default).
+    /// Higher values create more versatile persons who can participate in multiple markets.
+    /// Valid range: 1 to entity_count
+    ///
+    /// **Note:** The total number of unique skills in the market remains entity_count,
+    /// but with skills_per_person > 1, skills will be distributed across multiple persons,
+    /// increasing market redundancy and competition.
+    #[serde(default = "default_skills_per_person")]
+    pub skills_per_person: usize,
 }
 
 fn default_seasonal_period() -> usize {
@@ -229,6 +242,10 @@ fn default_loan_repayment_period() -> usize {
 
 fn default_min_money_to_lend() -> f64 {
     50.0 // Must have at least 50 money to lend
+}
+
+fn default_skills_per_person() -> usize {
+    1 // Each person specializes in one skill by default
 }
 
 impl Default for SimulationConfig {
@@ -255,6 +272,7 @@ impl Default for SimulationConfig {
             resume_from_checkpoint: false,    // Don't resume by default
             tax_rate: 0.0,                    // Disabled by default
             enable_tax_redistribution: false, // Disabled by default
+            skills_per_person: 1,             // One skill per person by default
         }
     }
 }
@@ -403,6 +421,19 @@ impl SimulationConfig {
             )));
         }
 
+        if self.skills_per_person == 0 {
+            return Err(SimulationError::ValidationError(
+                "skills_per_person must be at least 1".to_string(),
+            ));
+        }
+
+        if self.skills_per_person > self.entity_count {
+            return Err(SimulationError::ValidationError(format!(
+                "skills_per_person ({}) cannot exceed entity_count ({})",
+                self.skills_per_person, self.entity_count
+            )));
+        }
+
         Ok(())
     }
 
@@ -446,6 +477,7 @@ impl SimulationConfig {
                 resume_from_checkpoint: false,
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
+                skills_per_person: 1,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -469,6 +501,7 @@ impl SimulationConfig {
                 resume_from_checkpoint: false,
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
+                skills_per_person: 1,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -492,6 +525,7 @@ impl SimulationConfig {
                 resume_from_checkpoint: false,
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
+                skills_per_person: 1,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -515,6 +549,7 @@ impl SimulationConfig {
                 resume_from_checkpoint: false,
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
+                skills_per_person: 1,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -538,6 +573,7 @@ impl SimulationConfig {
                 resume_from_checkpoint: false,
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
+                skills_per_person: 1,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -561,6 +597,7 @@ impl SimulationConfig {
                 resume_from_checkpoint: false,
                 tax_rate: 0.0,
                 enable_tax_redistribution: false,
+                skills_per_person: 1,
             },
         }
     }

@@ -435,6 +435,7 @@ mod integration_tests {
             resume_from_checkpoint: false,
             tax_rate: 0.0,
             enable_tax_redistribution: false,
+            skills_per_person: 1,
         };
 
         let config_with_seasonality = SimulationConfig {
@@ -459,6 +460,7 @@ mod integration_tests {
             resume_from_checkpoint: false,
             tax_rate: 0.0,
             enable_tax_redistribution: false,
+            skills_per_person: 1,
         };
 
         let mut engine_no_season = SimulationEngine::new(config_no_seasonality);

@@ -108,9 +108,10 @@ impl SimulationEngine {
     // This is the version from feat/economic-simulation-model
     fn initialize_entities(
         config: &SimulationConfig,
-        _rng: &mut StdRng, // Prefixed with _ as it was marked unused after prior cleanup
+        _rng: &mut StdRng, // Currently unused but kept for potential future use
         market: &mut Market,
     ) -> Vec<Entity> {
+        // Create all unique skills for the market (one per person)
         let mut available_skills_for_market = Vec::new();
         for i in 0..config.entity_count {
             let skill_name = format!("Skill{}", i);
@@ -120,17 +121,30 @@ impl SimulationEngine {
         }
 
         let mut entities = Vec::with_capacity(config.entity_count);
+
+        // Distribute skills to persons
+        // Strategy: Cycle through skills, assigning skills_per_person skills to each person
         for i in 0..config.entity_count {
-            let person_skill = available_skills_for_market
-                .get(i)
-                .expect("Not enough unique skills generated for persons")
-                .clone();
+            let mut person_skills = Vec::with_capacity(config.skills_per_person);
 
-            market.increment_skill_supply(&person_skill.id);
+            // Assign skills_per_person skills to this person
+            for j in 0..config.skills_per_person {
+                // Calculate which skill this person should get
+                // Use a round-robin distribution: person i gets skills at indices
+                // (i + j * entity_count) % total_skills
+                let skill_index = (i + j * config.entity_count) % config.entity_count;
+                let skill = available_skills_for_market[skill_index].clone();
 
-            let entity = Entity::new(i, config.initial_money_per_person, person_skill.clone());
+                // Increment supply for this skill in the market
+                market.increment_skill_supply(&skill.id);
+
+                person_skills.push(skill);
+            }
+
+            let entity = Entity::new(i, config.initial_money_per_person, person_skills);
             entities.push(entity);
         }
+
         entities
     }
 
@@ -618,23 +632,34 @@ impl SimulationEngine {
             let base_num_needs = self.rng.gen_range(2..=5);
 
             // Apply seasonal modulation to the number of needs
+            // Use the average seasonal factor across all owned skills
             let num_needs = if seasonal_enabled {
-                let seasonal_factor = seasonal_factors
-                    .get(&entity.person_data.own_skill.id)
-                    .copied()
-                    .unwrap_or(1.0);
+                let avg_seasonal_factor: f64 = entity
+                    .person_data
+                    .own_skills
+                    .iter()
+                    .map(|skill| seasonal_factors.get(&skill.id).copied().unwrap_or(1.0))
+                    .sum::<f64>()
+                    / entity.person_data.own_skills.len() as f64;
                 // Modulate the number of needs, clamping between 1 and 5
-                ((base_num_needs as f64 * seasonal_factor).round() as usize).clamp(1, 5)
+                ((base_num_needs as f64 * avg_seasonal_factor).round() as usize).clamp(1, 5)
             } else {
                 base_num_needs
             };
 
-            let own_skill_id = &entity.person_data.own_skill.id;
+            // Collect IDs of all skills this person owns
+            let own_skill_ids: Vec<&SkillId> = entity
+                .person_data
+                .own_skills
+                .iter()
+                .map(|skill| &skill.id)
+                .collect();
 
+            // Filter out skills the person already owns
             let mut potential_needs: Vec<SkillId> = self
                 .all_skill_ids
                 .iter()
-                .filter(|&id| id != own_skill_id)
+                .filter(|&id| !own_skill_ids.contains(&id))
                 .cloned()
                 .collect();
 
@@ -666,11 +691,17 @@ impl SimulationEngine {
 
         self.market.update_prices(&mut self.rng);
 
-        let mut skill_providers: HashMap<SkillId, usize> = HashMap::new();
+        // Build a map of skill providers
+        // Since multiple persons can now provide the same skill, we use Vec<usize>
+        let mut skill_providers: HashMap<SkillId, Vec<usize>> = HashMap::new();
         for entity_idx in 0..self.entities.len() {
             if self.entities[entity_idx].active {
-                let skill_id = self.entities[entity_idx].person_data.own_skill.id.clone();
-                skill_providers.insert(skill_id, self.entities[entity_idx].id);
+                for skill in &self.entities[entity_idx].person_data.own_skills {
+                    skill_providers
+                        .entry(skill.id.clone())
+                        .or_default()
+                        .push(self.entities[entity_idx].id);
+                }
             }
         }
 
@@ -699,9 +730,14 @@ impl SimulationEngine {
                     let efficiency = self.market.get_skill_efficiency(needed_skill_id);
                     let efficiency_adjusted_price = skill_price / efficiency;
 
+                    // Find a provider for this skill - select the first available one
+                    // (Could be enhanced to select based on reputation or other criteria)
+                    let seller_id_opt = skill_providers
+                        .get(needed_skill_id)
+                        .and_then(|providers| providers.first().copied());
+
                     // Apply reputation-based price multiplier for the seller
-                    let final_price = if let Some(&seller_id) = skill_providers.get(needed_skill_id)
-                    {
+                    let final_price = if let Some(seller_id) = seller_id_opt {
                         let seller_reputation_multiplier = self.entities[seller_id]
                             .person_data
                             .reputation_price_multiplier();
@@ -711,7 +747,7 @@ impl SimulationEngine {
                     };
 
                     if self.entities[buyer_idx].person_data.can_afford(final_price) {
-                        if let Some(&seller_id) = skill_providers.get(needed_skill_id) {
+                        if let Some(seller_id) = seller_id_opt {
                             let seller_idx = seller_id;
 
                             if buyer_idx == seller_idx {
