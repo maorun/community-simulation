@@ -365,15 +365,22 @@ impl DynamicPricingUpdater {
                 // Increase price if the skill was sold
                 new_price *= 1.0 + price_change_rate;
                 debug!(
-                    "DynamicPricing: Skill {:?} sold {} times, price ${:.2} -> ${:.2} (+5%)",
-                    skill_id, sales_count, old_price, new_price
+                    "DynamicPricing: Skill {:?} sold {} times, price ${:.2} -> ${:.2} (+{:.1}%)",
+                    skill_id,
+                    sales_count,
+                    old_price,
+                    new_price,
+                    price_change_rate * 100.0
                 );
             } else {
                 // Decrease price if the skill was not sold
                 new_price *= 1.0 - price_change_rate;
                 debug!(
-                    "DynamicPricing: Skill {:?} not sold, price ${:.2} -> ${:.2} (-5%)",
-                    skill_id, old_price, new_price
+                    "DynamicPricing: Skill {:?} not sold, price ${:.2} -> ${:.2} (-{:.1}%)",
+                    skill_id,
+                    old_price,
+                    new_price,
+                    price_change_rate * 100.0
                 );
             }
 
