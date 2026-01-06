@@ -6,11 +6,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Erweiterte Wirtschaftsmechaniken
 
-#### 1.1 Mehrere Fähigkeiten pro Person
-- **Beschreibung**: Personen können mehrere Fähigkeiten erlernen und anbieten
-- **Nutzen**: Realistischere Arbeitsmärkte
-- **Implementierung**: `Person.own_skill` von `Skill` zu `Vec<Skill>` ändern
-
 ### 2. Erweiterte Marktmechanismen
 
 #### 2.1 Auktionssystem

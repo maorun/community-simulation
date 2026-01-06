@@ -5,6 +5,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 ## Features
 
 - **Agent-Based Simulation:** Simulates individual persons with money, unique skills, and randomly generated needs for other skills.
+- **Multiple Skills Per Person:** Each person can possess and offer multiple skills in the market, creating more realistic labor dynamics with skill redundancy and competition. Configurable via `--skills-per-person` parameter (default: 1). When set to values > 1, skills are distributed across persons using a round-robin approach, allowing multiple providers per skill and more complex market interactions.
 - **Dynamic Market:** Features a market mechanism where skill prices are adjusted based on supply (fixed per provider) and demand (generated each step).
 - **Trading System:** Persons attempt to buy needed skills from providers if they can afford them, leading to money exchange and transaction logging.
 - **Panic Recovery:** Robust error handling with graceful degradation - if a panic occurs during simulation step execution, it is caught and logged, allowing the simulation to continue. Failed steps are tracked and reported in the results.
@@ -154,6 +155,14 @@ The simulation accepts the following CLI arguments:
         *   Model social welfare programs
         *   Compare taxation with and without redistribution effects
     *   The total amount redistributed is tracked separately and reported in the simulation results.
+*   `--skills-per-person <COUNT>`:
+    *   Number of skills each person can provide (default: 1). Higher values create more versatile persons who can participate in multiple markets, introducing skill redundancy and increased competition. Skills are distributed using a round-robin approach across all persons. For example, with 10 persons and `--skills-per-person 2`, each skill will have 2 providers. Valid range: 1 to entity_count. If not specified, uses default (1) or preset value.
+    *   **Use cases:** 
+        *   Model labor markets with multi-skilled workers
+        *   Study the impact of skill redundancy on market dynamics and prices
+        *   Simulate economies with cross-training and skill diversification
+        *   Analyze how market competition changes with multiple providers per skill
+    *   **Example:** `--persons 20 --skills-per-person 3` creates 20 persons, each with 3 different skills from a pool of 20 unique skills, resulting in 3 providers per skill.
 *   `--no-progress`:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
 *   `--no-color`:
