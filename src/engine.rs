@@ -1,5 +1,6 @@
 use crate::{
     loan::{Loan, LoanId},
+    result::{write_step_to_stream, StepData},
     scenario::PriceUpdater,
     Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
 };
@@ -73,6 +74,8 @@ pub struct SimulationEngine {
     // Tax system tracking
     total_taxes_collected: f64,
     total_taxes_redistributed: f64,
+    // Streaming output writer
+    stream_writer: Option<BufWriter<File>>,
 }
 
 impl SimulationEngine {
@@ -85,6 +88,22 @@ impl SimulationEngine {
         let entities = Self::initialize_entities(&config, &mut rng, &mut market);
 
         let all_skill_ids = market.skills.keys().cloned().collect::<Vec<SkillId>>();
+
+        // Initialize streaming output writer if path is provided
+        let stream_writer = if let Some(path) = &config.stream_output_path {
+            match File::create(path) {
+                Ok(file) => Some(BufWriter::new(file)),
+                Err(e) => {
+                    warn!(
+                        "Failed to create streaming output file: {}. Continuing without streaming.",
+                        e
+                    );
+                    None
+                }
+            }
+        } else {
+            None
+        };
 
         Self {
             config,
@@ -102,6 +121,7 @@ impl SimulationEngine {
             total_loans_repaid: 0,
             total_taxes_collected: 0.0,
             total_taxes_redistributed: 0.0,
+            stream_writer,
         }
     }
 
@@ -883,6 +903,74 @@ impl SimulationEngine {
             }
         }
 
+        // Write step data to streaming output if enabled
+        if let Some(writer) = &mut self.stream_writer {
+            use crate::result::SkillPriceInfo;
+
+            // Calculate current step statistics
+            let money_values: Vec<f64> = self
+                .entities
+                .iter()
+                .filter(|e| e.active)
+                .map(|e| e.person_data.money)
+                .collect();
+
+            let avg_money = if !money_values.is_empty() {
+                money_values.iter().sum::<f64>() / money_values.len() as f64
+            } else {
+                0.0
+            };
+
+            let gini = {
+                let sum: f64 = money_values.iter().sum();
+                crate::result::calculate_gini_coefficient(&money_values, sum)
+            };
+
+            let reputation_values: Vec<f64> = self
+                .entities
+                .iter()
+                .filter(|e| e.active)
+                .map(|e| e.person_data.reputation)
+                .collect();
+
+            let avg_reputation = if !reputation_values.is_empty() {
+                reputation_values.iter().sum::<f64>() / reputation_values.len() as f64
+            } else {
+                1.0
+            };
+
+            // Get top 5 skill prices
+            let mut skill_prices: Vec<SkillPriceInfo> = self
+                .market
+                .skills
+                .iter()
+                .map(|(id, skill)| SkillPriceInfo {
+                    id: id.clone(),
+                    price: skill.current_price,
+                })
+                .collect();
+            skill_prices.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap());
+            skill_prices.truncate(5);
+
+            let step_data = StepData {
+                step: self.current_step,
+                trades: trades_count,
+                volume: total_volume,
+                avg_money,
+                gini_coefficient: gini,
+                avg_reputation,
+                top_skill_prices: skill_prices,
+            };
+
+            // Write to stream, but don't fail the simulation if streaming fails
+            if let Err(e) = write_step_to_stream(writer, &step_data) {
+                warn!(
+                    "Failed to write step {} to streaming output: {}",
+                    self.current_step, e
+                );
+            }
+        }
+
         self.current_step += 1;
     }
 
@@ -1066,6 +1154,22 @@ impl SimulationEngine {
             checkpoint.entities.len()
         );
 
+        // Re-initialize streaming output writer if path is provided
+        let stream_writer = if let Some(path) = &checkpoint.config.stream_output_path {
+            match File::create(path) {
+                Ok(file) => Some(BufWriter::new(file)),
+                Err(e) => {
+                    warn!(
+                        "Failed to create streaming output file: {}. Continuing without streaming.",
+                        e
+                    );
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         Ok(Self {
             config: checkpoint.config,
             entities: checkpoint.entities,
@@ -1082,6 +1186,7 @@ impl SimulationEngine {
             total_loans_repaid: checkpoint.total_loans_repaid,
             total_taxes_collected: checkpoint.total_taxes_collected,
             total_taxes_redistributed: checkpoint.total_taxes_redistributed,
+            stream_writer,
         })
     }
 }

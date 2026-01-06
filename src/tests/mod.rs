@@ -29,6 +29,7 @@ mod engine_tests {
             tax_rate: 0.0,
             enable_tax_redistribution: false,
             skills_per_person: 1,
+            stream_output_path: None,
         }
     }
 
@@ -342,5 +343,66 @@ mod engine_tests {
             loaded_engine.current_step <= 10,
             "Checkpoint step should not exceed max_steps"
         );
+    }
+
+    #[test]
+    fn test_streaming_output() {
+        use std::fs::File;
+        use std::io::{BufRead, BufReader};
+        use tempfile::NamedTempFile;
+
+        // Create a temporary file for streaming output
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let stream_path = temp_file.path().to_str().unwrap().to_string();
+
+        // Create simulation config with streaming output enabled
+        let mut config = get_test_config();
+        config.max_steps = 5;
+        config.entity_count = 5;
+        config.stream_output_path = Some(stream_path.clone());
+
+        let mut engine = SimulationEngine::new(config);
+        let _result = engine.run();
+
+        // Read and verify streaming output file
+        let file = File::open(&stream_path).expect("Failed to open streaming output file");
+        let reader = BufReader::new(file);
+        let lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
+
+        // Should have one line per step
+        assert_eq!(lines.len(), 5, "Should have 5 lines (one per step)");
+
+        // Verify each line is valid JSON and contains expected fields
+        for (i, line) in lines.iter().enumerate() {
+            let json: serde_json::Value =
+                serde_json::from_str(line).expect("Each line should be valid JSON");
+
+            assert!(json.get("step").is_some(), "Should have 'step' field");
+            assert!(json.get("trades").is_some(), "Should have 'trades' field");
+            assert!(json.get("volume").is_some(), "Should have 'volume' field");
+            assert!(
+                json.get("avg_money").is_some(),
+                "Should have 'avg_money' field"
+            );
+            assert!(
+                json.get("gini_coefficient").is_some(),
+                "Should have 'gini_coefficient' field"
+            );
+            assert!(
+                json.get("avg_reputation").is_some(),
+                "Should have 'avg_reputation' field"
+            );
+            assert!(
+                json.get("top_skill_prices").is_some(),
+                "Should have 'top_skill_prices' field"
+            );
+
+            // Verify step number matches line number
+            let step = json["step"].as_u64().unwrap();
+            assert_eq!(
+                step as usize, i,
+                "Step number should match line number (0-indexed)"
+            );
+        }
     }
 }
