@@ -194,6 +194,25 @@ pub struct SimulationConfig {
     /// Set to false to start a new simulation (default).
     #[serde(default)]
     pub resume_from_checkpoint: bool,
+
+    /// Tax rate as a percentage of trade income (0.0-1.0, e.g., 0.10 = 10% tax).
+    ///
+    /// This represents an income tax collected on seller's proceeds from trades.
+    /// The tax is deducted from the seller's proceeds after the transaction fee.
+    /// A value of 0.10 means a 10% tax is collected on each sale.
+    /// Set to 0.0 to disable taxation (default).
+    /// Valid range: 0.0 to 1.0 (0% to 100%)
+    #[serde(default)]
+    pub tax_rate: f64,
+
+    /// Enable redistribution of collected taxes to all persons.
+    ///
+    /// When enabled, taxes collected during each step are distributed equally
+    /// among all persons at the end of each step. This simulates basic income
+    /// or wealth redistribution policies.
+    /// Set to false to collect taxes without redistribution (default).
+    #[serde(default)]
+    pub enable_tax_redistribution: bool,
 }
 
 fn default_seasonal_period() -> usize {
@@ -231,9 +250,11 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
-            checkpoint_interval: 0,        // Disabled by default
-            checkpoint_file: None,         // No default checkpoint file
-            resume_from_checkpoint: false, // Don't resume by default
+            checkpoint_interval: 0,           // Disabled by default
+            checkpoint_file: None,            // No default checkpoint file
+            resume_from_checkpoint: false,    // Don't resume by default
+            tax_rate: 0.0,                    // Disabled by default
+            enable_tax_redistribution: false, // Disabled by default
         }
     }
 }
@@ -375,6 +396,13 @@ impl SimulationConfig {
             )));
         }
 
+        if !(0.0..=1.0).contains(&self.tax_rate) {
+            return Err(SimulationError::ValidationError(format!(
+                "tax_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                self.tax_rate
+            )));
+        }
+
         Ok(())
     }
 
@@ -416,6 +444,8 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                tax_rate: 0.0,
+                enable_tax_redistribution: false,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -437,6 +467,8 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                tax_rate: 0.0,
+                enable_tax_redistribution: false,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -458,6 +490,8 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                tax_rate: 0.0,
+                enable_tax_redistribution: false,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -479,6 +513,8 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                tax_rate: 0.0,
+                enable_tax_redistribution: false,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -500,6 +536,8 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                tax_rate: 0.0,
+                enable_tax_redistribution: false,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -521,6 +559,8 @@ impl SimulationConfig {
                 checkpoint_interval: 0,
                 checkpoint_file: None,
                 resume_from_checkpoint: false,
+                tax_rate: 0.0,
+                enable_tax_redistribution: false,
             },
         }
     }

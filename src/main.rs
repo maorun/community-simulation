@@ -127,6 +127,16 @@ struct Args {
     /// Each run uses a different random seed for statistical robustness
     #[arg(long)]
     sweep_runs: Option<usize>,
+
+    /// Tax rate as a percentage of trade income (0.0-1.0, e.g., 0.10 = 10% tax)
+    /// Tax is deducted from seller's proceeds after transaction fee
+    #[arg(long)]
+    tax_rate: Option<f64>,
+
+    /// Enable redistribution of collected taxes to all persons
+    /// When enabled, taxes are distributed equally among all persons at the end of each step
+    #[arg(long, default_value_t = false)]
+    enable_tax_redistribution: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -225,6 +235,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if args.resume {
             cfg.resume_from_checkpoint = true;
         }
+        if let Some(tax_rate) = args.tax_rate {
+            cfg.tax_rate = tax_rate;
+        }
+        if args.enable_tax_redistribution {
+            cfg.enable_tax_redistribution = true;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -272,6 +288,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if args.resume {
                 cfg.resume_from_checkpoint = true;
             }
+            if let Some(tax_rate) = args.tax_rate {
+                cfg.tax_rate = tax_rate;
+            }
+            if args.enable_tax_redistribution {
+                cfg.enable_tax_redistribution = true;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -315,6 +337,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or(SimulationConfig::default().checkpoint_interval),
             checkpoint_file: args.checkpoint_file.clone(),
             resume_from_checkpoint: args.resume,
+            tax_rate: args
+                .tax_rate
+                .unwrap_or(SimulationConfig::default().tax_rate),
+            enable_tax_redistribution: args.enable_tax_redistribution,
         }
     };
 
