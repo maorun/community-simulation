@@ -1,5 +1,6 @@
 use crate::{
     loan::{Loan, LoanId},
+    person::Strategy,
     result::{write_step_to_stream, StepData},
     scenario::PriceUpdater,
     Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
@@ -128,7 +129,7 @@ impl SimulationEngine {
     // This is the version from feat/economic-simulation-model
     fn initialize_entities(
         config: &SimulationConfig,
-        _rng: &mut StdRng, // Currently unused but kept for potential future use
+        rng: &mut StdRng,
         market: &mut Market,
     ) -> Vec<Entity> {
         // Create all unique skills for the market (one per person)
@@ -161,7 +162,12 @@ impl SimulationEngine {
                 person_skills.push(skill);
             }
 
-            let entity = Entity::new(i, config.initial_money_per_person, person_skills);
+            // Assign a strategy to this person using round-robin distribution
+            // This ensures equal distribution of strategies across the population
+            let all_strategies = Strategy::all_variants();
+            let strategy = all_strategies[i % all_strategies.len()];
+
+            let entity = Entity::new(i, config.initial_money_per_person, person_skills, strategy);
             entities.push(entity);
         }
 
@@ -766,7 +772,7 @@ impl SimulationEngine {
                         efficiency_adjusted_price
                     };
 
-                    if self.entities[buyer_idx].person_data.can_afford(final_price) {
+                    if self.entities[buyer_idx].person_data.can_afford_with_strategy(final_price) {
                         if let Some(seller_id) = seller_id_opt {
                             let seller_idx = seller_id;
 

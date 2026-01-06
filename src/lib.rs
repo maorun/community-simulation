@@ -91,7 +91,7 @@ pub use error::{Result, SimulationError};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
 pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
-pub use person::{Person, PersonId, Transaction, TransactionType};
+pub use person::{Person, PersonId, Strategy, Transaction, TransactionType};
 pub use result::{
     calculate_statistics, write_step_to_stream, MonteCarloResult, MonteCarloStats,
     SimulationResult, StepData,

@@ -4,7 +4,7 @@
 //! with the simulation engine architecture. The entity abstraction allows the engine
 //! to manage persons uniformly while encapsulating person-specific economic behavior.
 
-use crate::person::{Person, PersonId as InnerPersonId};
+use crate::person::{Person, PersonId as InnerPersonId, Strategy};
 use crate::skill::Skill;
 use serde::{Deserialize, Serialize};
 
@@ -22,10 +22,10 @@ pub type EntityId = usize;
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::{Entity, Skill};
+/// use simulation_framework::{Entity, Skill, Strategy};
 ///
 /// let skill = Skill::new("Programming".to_string(), 50.0);
-/// let entity = Entity::new(0, 100.0, vec![skill]);
+/// let entity = Entity::new(0, 100.0, vec![skill], Strategy::Balanced);
 ///
 /// assert_eq!(entity.id, 0);
 /// assert_eq!(entity.get_money(), 100.0);
@@ -53,20 +53,21 @@ impl Entity {
     /// * `id` - Unique identifier for the entity
     /// * `initial_money` - Starting money amount for the person
     /// * `own_skills` - The skills this person can provide to others
+    /// * `strategy` - Behavioral strategy for spending decisions
     ///
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::{Entity, Skill};
+    /// use simulation_framework::{Entity, Skill, Strategy};
     ///
     /// let skill = Skill::new("Accounting".to_string(), 45.0);
-    /// let entity = Entity::new(1, 200.0, vec![skill]);
+    /// let entity = Entity::new(1, 200.0, vec![skill], Strategy::Balanced);
     ///
     /// assert_eq!(entity.id, 1);
     /// assert_eq!(entity.person_data.money, 200.0);
     /// ```
-    pub fn new(id: EntityId, initial_money: f64, own_skills: Vec<Skill>) -> Self {
-        let person = Person::new(id as InnerPersonId, initial_money, own_skills);
+    pub fn new(id: EntityId, initial_money: f64, own_skills: Vec<Skill>, strategy: Strategy) -> Self {
+        let person = Person::new(id as InnerPersonId, initial_money, own_skills, strategy);
         Self {
             id,
             person_data: person,
@@ -83,10 +84,10 @@ impl Entity {
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::{Entity, Skill};
+    /// use simulation_framework::{Entity, Skill, Strategy};
     ///
     /// let skill = Skill::new("Writing".to_string(), 30.0);
-    /// let entity = Entity::new(0, 150.0, vec![skill]);
+    /// let entity = Entity::new(0, 150.0, vec![skill], Strategy::Balanced);
     ///
     /// assert_eq!(entity.get_money(), 150.0);
     /// ```
