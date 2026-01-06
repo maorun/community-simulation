@@ -7,6 +7,12 @@ pub type UrgencyLevel = u8; // Define UrgencyLevel (e.g., 1-3, higher is more ur
 
 /// Defines different behavioral strategies for agents in the simulation.
 /// Each strategy affects how aggressively a person spends money on needed skills.
+///
+/// # Debt Behavior
+/// Some strategies (notably Aggressive) may allow agents to spend beyond their current money,
+/// resulting in negative balances (debt). This is intentional and simulates risk-taking behavior.
+/// The simulation already supports negative money as indicated by Gini coefficient calculations
+/// that can exceed 1.0 when debt is present.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Strategy {
     /// Conservative strategy: Prefers saving, lower spending threshold (0.7x).

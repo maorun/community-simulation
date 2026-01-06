@@ -816,6 +816,9 @@ impl SimulationEngine {
             let seller_proceeds = price - fee;
 
             // Buyer pays full price
+            // Note: This may result in negative balance (debt) for Aggressive strategy agents,
+            // which is intentional behavior to simulate risk-taking. The simulation supports
+            // negative money as reflected in Gini coefficient calculations.
             self.entities[buyer_idx].person_data.money -= price;
             self.entities[buyer_idx].person_data.record_transaction(
                 self.current_step,
