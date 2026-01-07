@@ -244,6 +244,38 @@ pub struct SimulationConfig {
     /// Set to None to disable streaming output (default).
     #[serde(default)]
     pub stream_output_path: Option<String>,
+
+    /// Weight for urgency in priority-based buying decisions (0.0-1.0).
+    ///
+    /// Controls how much the urgency level influences purchase priority.
+    /// Higher values make buyers prioritize urgent needs more strongly.
+    /// Default: 0.5 (balanced with other factors)
+    #[serde(default = "default_priority_urgency_weight")]
+    pub priority_urgency_weight: f64,
+
+    /// Weight for affordability in priority-based buying decisions (0.0-1.0).
+    ///
+    /// Controls how much the cost relative to available money influences purchase priority.
+    /// Higher values make buyers prioritize cheaper items more strongly.
+    /// Default: 0.3 (moderate consideration of affordability)
+    #[serde(default = "default_priority_affordability_weight")]
+    pub priority_affordability_weight: f64,
+
+    /// Weight for efficiency in priority-based buying decisions (0.0-1.0).
+    ///
+    /// Controls how much skill efficiency (from technological progress) influences purchase priority.
+    /// Higher values make buyers prioritize more efficient skills more strongly.
+    /// Default: 0.1 (minor consideration of efficiency)
+    #[serde(default = "default_priority_efficiency_weight")]
+    pub priority_efficiency_weight: f64,
+
+    /// Weight for seller reputation in priority-based buying decisions (0.0-1.0).
+    ///
+    /// Controls how much the seller's reputation influences purchase priority.
+    /// Higher values make buyers strongly prefer reputable sellers.
+    /// Default: 0.1 (minor consideration of reputation)
+    #[serde(default = "default_priority_reputation_weight")]
+    pub priority_reputation_weight: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -270,6 +302,22 @@ fn default_skills_per_person() -> usize {
     1 // Each person specializes in one skill by default
 }
 
+fn default_priority_urgency_weight() -> f64 {
+    0.5 // Balanced consideration of urgency
+}
+
+fn default_priority_affordability_weight() -> f64 {
+    0.3 // Moderate consideration of affordability
+}
+
+fn default_priority_efficiency_weight() -> f64 {
+    0.1 // Minor consideration of efficiency
+}
+
+fn default_priority_reputation_weight() -> f64 {
+    0.1 // Minor consideration of reputation
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -290,13 +338,17 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
-            checkpoint_interval: 0,           // Disabled by default
-            checkpoint_file: None,            // No default checkpoint file
-            resume_from_checkpoint: false,    // Don't resume by default
-            tax_rate: 0.0,                    // Disabled by default
-            enable_tax_redistribution: false, // Disabled by default
-            skills_per_person: 1,             // One skill per person by default
-            stream_output_path: None,         // Disabled by default
+            checkpoint_interval: 0,             // Disabled by default
+            checkpoint_file: None,              // No default checkpoint file
+            resume_from_checkpoint: false,      // Don't resume by default
+            tax_rate: 0.0,                      // Disabled by default
+            enable_tax_redistribution: false,   // Disabled by default
+            skills_per_person: 1,               // One skill per person by default
+            stream_output_path: None,           // Disabled by default
+            priority_urgency_weight: 0.5,       // Balanced urgency consideration
+            priority_affordability_weight: 0.3, // Moderate affordability consideration
+            priority_efficiency_weight: 0.1,    // Minor efficiency consideration
+            priority_reputation_weight: 0.1,    // Minor reputation consideration
         }
     }
 }
@@ -472,6 +524,34 @@ impl SimulationConfig {
             )));
         }
 
+        if !(0.0..=1.0).contains(&self.priority_urgency_weight) {
+            return Err(SimulationError::ValidationError(format!(
+                "priority_urgency_weight must be between 0.0 and 1.0, got: {}",
+                self.priority_urgency_weight
+            )));
+        }
+
+        if !(0.0..=1.0).contains(&self.priority_affordability_weight) {
+            return Err(SimulationError::ValidationError(format!(
+                "priority_affordability_weight must be between 0.0 and 1.0, got: {}",
+                self.priority_affordability_weight
+            )));
+        }
+
+        if !(0.0..=1.0).contains(&self.priority_efficiency_weight) {
+            return Err(SimulationError::ValidationError(format!(
+                "priority_efficiency_weight must be between 0.0 and 1.0, got: {}",
+                self.priority_efficiency_weight
+            )));
+        }
+
+        if !(0.0..=1.0).contains(&self.priority_reputation_weight) {
+            return Err(SimulationError::ValidationError(format!(
+                "priority_reputation_weight must be between 0.0 and 1.0, got: {}",
+                self.priority_reputation_weight
+            )));
+        }
+
         Ok(())
     }
 
@@ -518,6 +598,10 @@ impl SimulationConfig {
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
                 stream_output_path: None,
+                priority_urgency_weight: 0.5,
+                priority_affordability_weight: 0.3,
+                priority_efficiency_weight: 0.1,
+                priority_reputation_weight: 0.1,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -544,6 +628,10 @@ impl SimulationConfig {
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
                 stream_output_path: None,
+                priority_urgency_weight: 0.5,
+                priority_affordability_weight: 0.3,
+                priority_efficiency_weight: 0.1,
+                priority_reputation_weight: 0.1,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -570,6 +658,10 @@ impl SimulationConfig {
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
                 stream_output_path: None,
+                priority_urgency_weight: 0.5,
+                priority_affordability_weight: 0.3,
+                priority_efficiency_weight: 0.1,
+                priority_reputation_weight: 0.1,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -596,6 +688,10 @@ impl SimulationConfig {
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
                 stream_output_path: None,
+                priority_urgency_weight: 0.5,
+                priority_affordability_weight: 0.3,
+                priority_efficiency_weight: 0.1,
+                priority_reputation_weight: 0.1,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -622,6 +718,10 @@ impl SimulationConfig {
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
                 stream_output_path: None,
+                priority_urgency_weight: 0.5,
+                priority_affordability_weight: 0.3,
+                priority_efficiency_weight: 0.1,
+                priority_reputation_weight: 0.1,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -648,6 +748,10 @@ impl SimulationConfig {
                 enable_tax_redistribution: false,
                 skills_per_person: 1,
                 stream_output_path: None,
+                priority_urgency_weight: 0.5,
+                priority_affordability_weight: 0.3,
+                priority_efficiency_weight: 0.1,
+                priority_reputation_weight: 0.1,
             },
         }
     }

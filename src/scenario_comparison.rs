@@ -342,6 +342,10 @@ mod tests {
             enable_tax_redistribution: false,
             skills_per_person: 1,
             stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
         };
 
         let scenarios = vec![Scenario::Original, Scenario::DynamicPricing];
@@ -382,6 +386,10 @@ mod tests {
             enable_tax_redistribution: false,
             skills_per_person: 1,
             stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
         };
 
         let scenarios = vec![];
@@ -417,6 +425,10 @@ mod tests {
             enable_tax_redistribution: false,
             skills_per_person: 1,
             stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
         };
 
         let scenarios = vec![Scenario::Original];
@@ -452,6 +464,10 @@ mod tests {
             enable_tax_redistribution: false,
             skills_per_person: 1,
             stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
         };
 
         let scenarios = vec![Scenario::Original];
