@@ -22,6 +22,13 @@ initial_money_per_person: 100.0
 # Base price for all skills at simulation start
 base_skill_price: 10.0
 
+# Minimum price floor for skills
+# Prevents skill prices from dropping below this threshold
+# Models real-world price floors like minimum wages or regulatory price controls
+# Must be positive and less than or equal to base_skill_price
+# Default: 1.0
+min_skill_price: 1.0
+
 # Time step (for discrete turn-based simulation)
 # This represents one discrete step or turn
 time_step: 1.0

@@ -87,6 +87,15 @@ pub struct SimulationConfig {
     pub initial_money_per_person: f64,
     pub base_skill_price: f64,
     // num_unique_skills will be equal to entity_count as each person has one unique skill
+    /// Minimum price floor for skills.
+    ///
+    /// Prevents skill prices from dropping below this threshold, modeling real-world
+    /// price floors like minimum wages or regulatory price controls.
+    /// This ensures market stability and prevents skills from becoming worthless.
+    /// Must be positive and less than or equal to base_skill_price.
+    /// Default: 1.0
+    #[serde(default = "default_min_skill_price")]
+    pub min_skill_price: f64,
 
     // time_step might not be directly relevant for a turn-based economic sim,
     // but we can keep it or remove it later. For now, let's keep it.
@@ -241,6 +250,10 @@ fn default_seasonal_period() -> usize {
     100
 }
 
+fn default_min_skill_price() -> f64 {
+    1.0 // Minimum price floor to prevent market crashes
+}
+
 fn default_loan_interest_rate() -> f64 {
     0.01 // 1% per step
 }
@@ -265,6 +278,7 @@ impl Default for SimulationConfig {
             seed: 42,
             initial_money_per_person: 100.0, // 100 Euros
             base_skill_price: 10.0,          // 10 Euros base price for skills
+            min_skill_price: 1.0,            // Minimum price floor
             time_step: 1.0,                  // Represents one discrete step or turn
             scenario: Scenario::Original,
             tech_growth_rate: 0.0,   // Disabled by default
@@ -338,6 +352,20 @@ impl SimulationConfig {
             return Err(SimulationError::ValidationError(format!(
                 "base_skill_price must be greater than 0, got: {}",
                 self.base_skill_price
+            )));
+        }
+
+        if self.min_skill_price <= 0.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "min_skill_price must be greater than 0, got: {}",
+                self.min_skill_price
+            )));
+        }
+
+        if self.min_skill_price > self.base_skill_price {
+            return Err(SimulationError::ValidationError(format!(
+                "min_skill_price ({}) cannot exceed base_skill_price ({})",
+                self.min_skill_price, self.base_skill_price
             )));
         }
 
@@ -471,6 +499,7 @@ impl SimulationConfig {
                 seed: 42,
                 initial_money_per_person: 100.0,
                 base_skill_price: 10.0,
+                min_skill_price: 1.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.0,
@@ -496,6 +525,7 @@ impl SimulationConfig {
                 seed: 42,
                 initial_money_per_person: 200.0,
                 base_skill_price: 10.0,
+                min_skill_price: 1.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.0,
@@ -521,6 +551,7 @@ impl SimulationConfig {
                 seed: 42,
                 initial_money_per_person: 50.0,
                 base_skill_price: 25.0,
+                min_skill_price: 2.0, // Higher floor for crisis scenario
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.0,
@@ -546,6 +577,7 @@ impl SimulationConfig {
                 seed: 42,
                 initial_money_per_person: 100.0,
                 base_skill_price: 15.0,
+                min_skill_price: 1.0,
                 time_step: 1.0,
                 scenario: Scenario::DynamicPricing,
                 tech_growth_rate: 0.0,
@@ -571,6 +603,7 @@ impl SimulationConfig {
                 seed: 42,
                 initial_money_per_person: 250.0,
                 base_skill_price: 8.0,
+                min_skill_price: 0.5, // Lower floor for tech growth scenario
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.001, // 0.1% growth per step - significant over 1500 steps
@@ -596,6 +629,7 @@ impl SimulationConfig {
                 seed: 42,
                 initial_money_per_person: 100.0,
                 base_skill_price: 10.0,
+                min_skill_price: 1.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
                 tech_growth_rate: 0.0,
@@ -1097,5 +1131,65 @@ scenario: Original
             ..Default::default()
         };
         assert!(config6.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_min_skill_price_zero() {
+        let config = SimulationConfig {
+            min_skill_price: 0.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("min_skill_price must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_min_skill_price_negative() {
+        let config = SimulationConfig {
+            min_skill_price: -5.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("min_skill_price must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_min_skill_price_exceeds_base() {
+        let config = SimulationConfig {
+            base_skill_price: 10.0,
+            min_skill_price: 15.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("min_skill_price (15) cannot exceed base_skill_price (10)"));
+    }
+
+    #[test]
+    fn test_validate_min_skill_price_equals_base() {
+        let config = SimulationConfig {
+            base_skill_price: 10.0,
+            min_skill_price: 10.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_min_skill_price_valid() {
+        let config = SimulationConfig {
+            base_skill_price: 10.0,
+            min_skill_price: 5.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_ok());
     }
 }

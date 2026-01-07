@@ -36,6 +36,11 @@ struct Args {
     #[arg(long)]
     base_price: Option<f64>,
 
+    /// Minimum price floor for skills (must be positive and ≤ base_price)
+    /// Prevents skills from becoming worthless, models price controls/minimum wage
+    #[arg(long)]
+    min_skill_price: Option<f64>,
+
     #[arg(short, long)]
     output: Option<String>,
 
@@ -219,6 +224,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(base_price) = args.base_price {
             cfg.base_skill_price = base_price;
         }
+        if let Some(min_skill_price) = args.min_skill_price {
+            cfg.min_skill_price = min_skill_price;
+        }
         if let Some(scenario) = args.scenario.clone() {
             cfg.scenario = scenario;
         }
@@ -278,6 +286,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(base_price) = args.base_price {
                 cfg.base_skill_price = base_price;
             }
+            if let Some(min_skill_price) = args.min_skill_price {
+                cfg.min_skill_price = min_skill_price;
+            }
             if let Some(scenario) = args.scenario.clone() {
                 cfg.scenario = scenario;
             }
@@ -333,6 +344,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             base_skill_price: args
                 .base_price
                 .unwrap_or(SimulationConfig::default().base_skill_price),
+            min_skill_price: args
+                .min_skill_price
+                .unwrap_or(SimulationConfig::default().min_skill_price),
             scenario: args
                 .scenario
                 .unwrap_or(SimulationConfig::default().scenario),

@@ -83,7 +83,11 @@ impl SimulationEngine {
     pub fn new(config: SimulationConfig) -> Self {
         let mut rng = StdRng::seed_from_u64(config.seed);
         let price_updater = PriceUpdater::from(config.scenario.clone());
-        let mut market = Market::new(config.base_skill_price, price_updater);
+        let mut market = Market::new(
+            config.base_skill_price,
+            config.min_skill_price,
+            price_updater,
+        );
 
         // This is the version from feat/economic-simulation-model
         let entities = Self::initialize_entities(&config, &mut rng, &mut market);

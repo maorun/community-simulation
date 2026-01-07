@@ -11,6 +11,7 @@ mod engine_tests {
             max_steps: 100,
             initial_money_per_person: 100.0,
             base_skill_price: 50.0,
+            min_skill_price: 1.0,
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
