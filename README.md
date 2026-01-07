@@ -100,6 +100,14 @@ The simulation accepts the following CLI arguments:
     *   Initial amount of money each person starts with. If not specified, uses default (100.0) or preset value.
 *   `--base-price <PRICE>`:
     *   Initial base price for all skills. If not specified, uses default (10.0) or preset value.
+*   `--min-skill-price <PRICE>`:
+    *   Minimum price floor for skills. Prevents skill prices from dropping below this threshold, modeling real-world price controls like minimum wages or regulatory price floors. Must be positive and less than or equal to base_price. Useful for preventing market crashes and maintaining economic stability. If not specified, uses default (1.0) or preset value.
+    *   **Use cases:**
+        *   Model minimum wage policies in labor markets
+        *   Prevent deflationary spirals and market collapse
+        *   Study the effects of price floor regulations
+        *   Maintain market liquidity during economic crises
+    *   Example: `--base-price 10.0 --min-skill-price 2.0` ensures no skill price falls below $2
 *   `--output <FILEPATH>` or `-o <FILEPATH>`:
     *   Specifies the path to save the simulation results in JSON format. If not provided, results are printed to console only (summary).
 *   `--compress`:
@@ -281,6 +289,19 @@ This runs the simulation for 1000 steps with 50 persons, each starting with 200 
 ./target/release/economic_simulation --steps 500 --persons 100 --seasonal-amplitude 0.3 --seasonal-period 50 --output seasonal_results.json
 ```
 This runs the simulation with seasonal demand fluctuations. The `--seasonal-amplitude 0.3` parameter creates ±30% variation in demand, and `--seasonal-period 50` means the seasonal cycle repeats every 50 steps. Different skills will have their peak demand at different times due to phase offsets, creating realistic market dynamics.
+
+**Example with Price Floor:**
+
+```bash
+# Crisis scenario with price floor to prevent market collapse
+./target/release/economic_simulation --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 3 --scenario DynamicPricing --output price_floor_results.json
+
+# Compare with and without price floor
+./target/release/economic_simulation --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 1 --scenario DynamicPricing --output no_floor.json
+./target/release/economic_simulation --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 5 --scenario DynamicPricing --output with_floor.json
+```
+
+The price floor feature is particularly useful in crisis scenarios or with dynamic pricing that can drive prices down. By setting `--min-skill-price 3`, you ensure that no skill price falls below $3, preventing deflationary spirals and maintaining minimum market viability. This models real-world economic policies like minimum wage laws or regulatory price controls.
 
 **Example with Transaction Fees:**
 
