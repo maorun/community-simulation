@@ -735,10 +735,6 @@ fn run_scenario_comparison(
     // Remove duplicates while preserving order
     scenarios.dedup();
 
-    if scenarios.len() < 2 {
-        return Err("At least two different scenarios must be provided for comparison".into());
-    }
-
     info!(
         "{}",
         format!(

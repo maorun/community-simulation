@@ -12,7 +12,6 @@ use log::info;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io;
 
 /// Result from a single scenario in a comparison
 #[derive(Debug, Serialize, Deserialize)]
@@ -68,6 +67,12 @@ impl ScenarioComparisonResult {
         if scenarios.is_empty() {
             return Err(SimulationError::ValidationError(
                 "At least one scenario must be provided for comparison".to_string(),
+            ));
+        }
+
+        if scenarios.len() < 2 {
+            return Err(SimulationError::ValidationError(
+                "At least two different scenarios must be provided for comparison".to_string(),
             ));
         }
 
@@ -177,7 +182,7 @@ impl ScenarioComparisonResult {
                 a.avg_money_stats
                     .mean
                     .partial_cmp(&b.avg_money_stats.mean)
-                    .unwrap()
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|p| p.scenario.clone())
             .unwrap_or_default();
@@ -188,7 +193,7 @@ impl ScenarioComparisonResult {
                 a.gini_coefficient_stats
                     .mean
                     .partial_cmp(&b.gini_coefficient_stats.mean)
-                    .unwrap()
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|p| p.scenario.clone())
             .unwrap_or_default();
@@ -199,7 +204,7 @@ impl ScenarioComparisonResult {
                 a.total_trades_stats
                     .mean
                     .partial_cmp(&b.total_trades_stats.mean)
-                    .unwrap()
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|p| p.scenario.clone())
             .unwrap_or_default();
@@ -210,7 +215,7 @@ impl ScenarioComparisonResult {
                 a.avg_reputation_stats
                     .mean
                     .partial_cmp(&b.avg_reputation_stats.mean)
-                    .unwrap()
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .map(|p| p.scenario.clone())
             .unwrap_or_default();
@@ -225,12 +230,7 @@ impl ScenarioComparisonResult {
 
     /// Save the comparison results to a JSON file
     pub fn save_to_file(&self, path: &str) -> Result<()> {
-        let file = File::create(path).map_err(|e| {
-            SimulationError::IoError(io::Error::other(format!(
-                "Failed to create output file {}: {}",
-                path, e
-            )))
-        })?;
+        let file = File::create(path).map_err(SimulationError::from)?;
 
         serde_json::to_writer_pretty(file, self).map_err(|e| {
             SimulationError::JsonSerialize(format!(
@@ -421,6 +421,41 @@ mod tests {
 
         let scenarios = vec![Scenario::Original];
         let result = ScenarioComparisonResult::run(config, scenarios, 0);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_scenario_comparison_single_scenario() {
+        let config = SimulationConfig {
+            max_steps: 10,
+            entity_count: 5,
+            seed: 42,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            time_step: 1.0,
+            scenario: Scenario::Original,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 10,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+        };
+
+        let scenarios = vec![Scenario::Original];
+        let result = ScenarioComparisonResult::run(config, scenarios, 2);
 
         assert!(result.is_err());
     }
