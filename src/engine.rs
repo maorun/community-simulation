@@ -730,6 +730,11 @@ impl SimulationEngine {
             priority_score: f64,
         }
 
+        // Constants for priority score normalization
+        const EFFICIENCY_SCALE_FACTOR: f64 = 10.0; // Scales efficiency (typically 1.0-1.1) to 0.0-1.0 range
+        const REPUTATION_OFFSET: f64 = 0.5; // Offset to center reputation (neutral = 1.0) at 0.5
+        const REPUTATION_SCALE_FACTOR: f64 = 1.5; // Scales reputation (0.0-2.0) to 0.0-1.0 range
+
         // Build a map of skill providers
         // Since multiple persons can now provide the same skill, we use Vec<usize>
         let mut skill_providers: HashMap<SkillId, Vec<usize>> = HashMap::new();
@@ -794,11 +799,14 @@ impl SimulationEngine {
 
                     // 3. Efficiency component (efficiency typically > 1.0 due to tech progress)
                     // Normalize to 0.0-1.0 range, where 1.0 = neutral, > 1.0 = better
-                    let efficiency_score = ((efficiency - 1.0) * 10.0).clamp(0.0, 1.0);
+                    let efficiency_score =
+                        ((efficiency - 1.0) * EFFICIENCY_SCALE_FACTOR).clamp(0.0, 1.0);
 
                     // 4. Reputation component (reputation 0.0-2.0, normalize to 0.0-1.0)
                     // Higher reputation = better, centered at 1.0 (neutral)
-                    let reputation_score = ((seller_reputation - 0.5) / 1.5).clamp(0.0, 1.0);
+                    let reputation_score = ((seller_reputation - REPUTATION_OFFSET)
+                        / REPUTATION_SCALE_FACTOR)
+                        .clamp(0.0, 1.0);
 
                     // Weighted priority score
                     let priority_score = self.config.priority_urgency_weight * urgency_score

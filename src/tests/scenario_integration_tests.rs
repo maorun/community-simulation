@@ -949,18 +949,24 @@ mod integration_tests {
     #[test]
     fn test_priority_weights_validation() {
         // Test that priority weights must be in 0.0-1.0 range
-        let mut config = SimulationConfig::default();
 
         // Valid weights should pass
-        config.priority_urgency_weight = 0.5;
+        let mut config = SimulationConfig {
+            priority_urgency_weight: 0.5,
+            ..Default::default()
+        };
         assert!(config.validate().is_ok());
 
         // Invalid weight > 1.0 should fail
         config.priority_urgency_weight = 1.5;
         assert!(config.validate().is_err());
 
-        config.priority_urgency_weight = 0.5; // Reset
-        config.priority_affordability_weight = -0.1;
+        // Invalid negative weight should fail
+        config = SimulationConfig {
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: -0.1,
+            ..Default::default()
+        };
         assert!(config.validate().is_err());
     }
 
