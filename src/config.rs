@@ -276,6 +276,33 @@ pub struct SimulationConfig {
     /// Default: 0.1 (minor consideration of reputation)
     #[serde(default = "default_priority_reputation_weight")]
     pub priority_reputation_weight: f64,
+
+    /// Enable a parallel black market with different pricing rules.
+    ///
+    /// When enabled, a percentage of trades are routed to an alternative market
+    /// that operates with different prices and rules, simulating informal economy.
+    /// Set to false to disable black market (default).
+    #[serde(default)]
+    pub enable_black_market: bool,
+
+    /// Price multiplier for the black market (0.0-2.0).
+    ///
+    /// Skills on the black market are priced at this multiple of the regular market price.
+    /// Values < 1.0 make black market cheaper (typical), values > 1.0 make it more expensive.
+    /// For example, 0.8 means black market prices are 20% lower than regular market.
+    /// Only used when enable_black_market is true.
+    /// Default: 0.8 (20% discount)
+    #[serde(default = "default_black_market_price_multiplier")]
+    pub black_market_price_multiplier: f64,
+
+    /// Percentage of trades routed to black market (0.0-1.0).
+    ///
+    /// Determines what fraction of eligible trades occur on the black market.
+    /// For example, 0.2 means 20% of trades use the black market.
+    /// Only used when enable_black_market is true.
+    /// Default: 0.2 (20% of trades)
+    #[serde(default = "default_black_market_participation_rate")]
+    pub black_market_participation_rate: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -318,6 +345,14 @@ fn default_priority_reputation_weight() -> f64 {
     0.1 // Minor consideration of reputation
 }
 
+fn default_black_market_price_multiplier() -> f64 {
+    0.8 // Black market is 20% cheaper
+}
+
+fn default_black_market_participation_rate() -> f64 {
+    0.2 // 20% of trades use black market
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -338,17 +373,20 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
-            checkpoint_interval: 0,             // Disabled by default
-            checkpoint_file: None,              // No default checkpoint file
-            resume_from_checkpoint: false,      // Don't resume by default
-            tax_rate: 0.0,                      // Disabled by default
-            enable_tax_redistribution: false,   // Disabled by default
-            skills_per_person: 1,               // One skill per person by default
-            stream_output_path: None,           // Disabled by default
-            priority_urgency_weight: 0.5,       // Balanced urgency consideration
-            priority_affordability_weight: 0.3, // Moderate affordability consideration
-            priority_efficiency_weight: 0.1,    // Minor efficiency consideration
-            priority_reputation_weight: 0.1,    // Minor reputation consideration
+            checkpoint_interval: 0,               // Disabled by default
+            checkpoint_file: None,                // No default checkpoint file
+            resume_from_checkpoint: false,        // Don't resume by default
+            tax_rate: 0.0,                        // Disabled by default
+            enable_tax_redistribution: false,     // Disabled by default
+            skills_per_person: 1,                 // One skill per person by default
+            stream_output_path: None,             // Disabled by default
+            priority_urgency_weight: 0.5,         // Balanced urgency consideration
+            priority_affordability_weight: 0.3,   // Moderate affordability consideration
+            priority_efficiency_weight: 0.1,      // Minor efficiency consideration
+            priority_reputation_weight: 0.1,      // Minor reputation consideration
+            enable_black_market: false,           // Disabled by default
+            black_market_price_multiplier: 0.8,   // 20% cheaper
+            black_market_participation_rate: 0.2, // 20% of trades
         }
     }
 }
@@ -511,6 +549,20 @@ impl SimulationConfig {
             )));
         }
 
+        if self.black_market_price_multiplier < 0.0 || self.black_market_price_multiplier > 2.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "black_market_price_multiplier must be between 0.0 (exclusive) and 2.0, got: {}",
+                self.black_market_price_multiplier
+            )));
+        }
+
+        if !(0.0..=1.0).contains(&self.black_market_participation_rate) {
+            return Err(SimulationError::ValidationError(format!(
+                "black_market_participation_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                self.black_market_participation_rate
+            )));
+        }
+
         if self.skills_per_person == 0 {
             return Err(SimulationError::ValidationError(
                 "skills_per_person must be at least 1".to_string(),
@@ -602,6 +654,9 @@ impl SimulationConfig {
                 priority_affordability_weight: 0.3,
                 priority_efficiency_weight: 0.1,
                 priority_reputation_weight: 0.1,
+                enable_black_market: false,
+                black_market_price_multiplier: 0.8,
+                black_market_participation_rate: 0.2,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -632,6 +687,9 @@ impl SimulationConfig {
                 priority_affordability_weight: 0.3,
                 priority_efficiency_weight: 0.1,
                 priority_reputation_weight: 0.1,
+                enable_black_market: false,
+                black_market_price_multiplier: 0.8,
+                black_market_participation_rate: 0.2,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -662,6 +720,9 @@ impl SimulationConfig {
                 priority_affordability_weight: 0.3,
                 priority_efficiency_weight: 0.1,
                 priority_reputation_weight: 0.1,
+                enable_black_market: false,
+                black_market_price_multiplier: 0.8,
+                black_market_participation_rate: 0.2,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -692,6 +753,9 @@ impl SimulationConfig {
                 priority_affordability_weight: 0.3,
                 priority_efficiency_weight: 0.1,
                 priority_reputation_weight: 0.1,
+                enable_black_market: false,
+                black_market_price_multiplier: 0.8,
+                black_market_participation_rate: 0.2,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -722,6 +786,9 @@ impl SimulationConfig {
                 priority_affordability_weight: 0.3,
                 priority_efficiency_weight: 0.1,
                 priority_reputation_weight: 0.1,
+                enable_black_market: false,
+                black_market_price_multiplier: 0.8,
+                black_market_participation_rate: 0.2,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -752,6 +819,9 @@ impl SimulationConfig {
                 priority_affordability_weight: 0.3,
                 priority_efficiency_weight: 0.1,
                 priority_reputation_weight: 0.1,
+                enable_black_market: false,
+                black_market_price_multiplier: 0.8,
+                black_market_participation_rate: 0.2,
             },
         }
     }

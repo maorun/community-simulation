@@ -30,6 +30,8 @@ pub struct SimulationCheckpoint {
     pub entities: Vec<Entity>,
     /// Market state including prices and history
     pub market: Market,
+    /// Black market state (if enabled)
+    pub black_market: Option<Market>,
     /// Current simulation step
     pub current_step: usize,
     /// All skill IDs in the market
@@ -38,6 +40,10 @@ pub struct SimulationCheckpoint {
     pub trades_per_step: Vec<usize>,
     /// Money volume per step history
     pub volume_per_step: Vec<f64>,
+    /// Black market trade volume per step history
+    pub black_market_trades_per_step: Vec<usize>,
+    /// Black market money volume per step history
+    pub black_market_volume_per_step: Vec<f64>,
     /// Total transaction fees collected
     pub total_fees_collected: f64,
     /// Number of failed steps (recovered from panics)
@@ -58,12 +64,17 @@ pub struct SimulationEngine {
     config: SimulationConfig,
     entities: Vec<Entity>,
     market: Market,
+    /// Secondary market for black market trades (if enabled)
+    black_market: Option<Market>,
     pub current_step: usize,
     rng: StdRng,
     all_skill_ids: Vec<SkillId>,
     // Trade volume tracking
     trades_per_step: Vec<usize>,
     volume_per_step: Vec<f64>,
+    // Black market trade tracking
+    black_market_trades_per_step: Vec<usize>,
+    black_market_volume_per_step: Vec<f64>,
     // Transaction fees tracking
     total_fees_collected: f64,
     // Panic recovery tracking
@@ -86,13 +97,39 @@ impl SimulationEngine {
         let mut market = Market::new(
             config.base_skill_price,
             config.min_skill_price,
-            price_updater,
+            price_updater.clone(),
         );
 
         // This is the version from feat/economic-simulation-model
         let entities = Self::initialize_entities(&config, &mut rng, &mut market);
 
         let all_skill_ids = market.skills.keys().cloned().collect::<Vec<SkillId>>();
+
+        // Initialize black market if enabled
+        let black_market = if config.enable_black_market {
+            let mut bm = Market::new(
+                config.base_skill_price * config.black_market_price_multiplier,
+                config.min_skill_price * config.black_market_price_multiplier,
+                price_updater,
+            );
+            // Add all skills to black market with adjusted prices
+            for skill_id in &all_skill_ids {
+                if let Some(skill) = market.skills.get(skill_id) {
+                    let bm_skill = Skill::new(
+                        skill.id.clone(),
+                        skill.current_price * config.black_market_price_multiplier,
+                    );
+                    bm.add_skill(bm_skill);
+                }
+            }
+            debug!(
+                "Black market initialized with price multiplier: {}",
+                config.black_market_price_multiplier
+            );
+            Some(bm)
+        } else {
+            None
+        };
 
         // Initialize streaming output writer if path is provided
         let stream_writer = if let Some(path) = &config.stream_output_path {
@@ -114,11 +151,14 @@ impl SimulationEngine {
             config,
             entities,
             market,
+            black_market,
             current_step: 0,
             rng,
             all_skill_ids,
             trades_per_step: Vec::new(),
             volume_per_step: Vec::new(),
+            black_market_trades_per_step: Vec::new(),
+            black_market_volume_per_step: Vec::new(),
             total_fees_collected: 0.0,
             failed_steps: 0,
             loans: HashMap::new(),
@@ -616,6 +656,41 @@ impl SimulationEngine {
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
+            black_market_statistics: if self.config.enable_black_market {
+                let total_black_market_trades: usize =
+                    self.black_market_trades_per_step.iter().sum();
+                let total_black_market_volume: f64 = self.black_market_volume_per_step.iter().sum();
+                let total_trades: usize = self.trades_per_step.iter().sum();
+                let total_volume: f64 = self.volume_per_step.iter().sum();
+                let steps_with_data = self.black_market_trades_per_step.len() as f64;
+
+                Some(crate::result::BlackMarketStats {
+                    total_black_market_trades,
+                    total_black_market_volume,
+                    avg_black_market_trades_per_step: if steps_with_data > 0.0 {
+                        total_black_market_trades as f64 / steps_with_data
+                    } else {
+                        0.0
+                    },
+                    avg_black_market_volume_per_step: if steps_with_data > 0.0 {
+                        total_black_market_volume / steps_with_data
+                    } else {
+                        0.0
+                    },
+                    black_market_trade_percentage: if total_trades > 0 {
+                        (total_black_market_trades as f64 / total_trades as f64) * 100.0
+                    } else {
+                        0.0
+                    },
+                    black_market_volume_percentage: if total_volume > 0.0 {
+                        (total_black_market_volume / total_volume) * 100.0
+                    } else {
+                        0.0
+                    },
+                })
+            } else {
+                None
+            },
             total_taxes_collected: if self.config.tax_rate > 0.0 {
                 Some(self.total_taxes_collected)
             } else {
@@ -940,6 +1015,51 @@ impl SimulationEngine {
         let total_volume: f64 = trades_to_execute.iter().map(|(_, _, _, price)| price).sum();
         let step_taxes_collected_start = self.total_taxes_collected;
 
+        // Determine which trades go to black market (if enabled)
+        let mut black_market_trade_indices: Vec<usize> = Vec::new();
+        let mut black_market_volume = 0.0;
+
+        if self.config.enable_black_market && self.black_market.is_some() {
+            let num_black_market_trades = (trades_to_execute.len() as f64
+                * self.config.black_market_participation_rate)
+                .round() as usize;
+
+            if num_black_market_trades > 0 {
+                // Randomly select trades to route to black market
+                let mut all_indices: Vec<usize> = (0..trades_to_execute.len()).collect();
+                all_indices.shuffle(&mut self.rng);
+                black_market_trade_indices = all_indices
+                    .into_iter()
+                    .take(num_black_market_trades)
+                    .collect();
+
+                debug!(
+                    "Routing {} out of {} trades to black market ({}% participation rate)",
+                    num_black_market_trades,
+                    trades_to_execute.len(),
+                    (self.config.black_market_participation_rate * 100.0)
+                );
+
+                // Apply black market price multiplier directly to selected trades
+                for &trade_idx in &black_market_trade_indices {
+                    let (_buyer_idx, _seller_idx, _skill_id, regular_price) =
+                        &mut trades_to_execute[trade_idx];
+                    let black_market_price =
+                        *regular_price * self.config.black_market_price_multiplier;
+                    trace!(
+                        "Trade {} uses black market: ${:.2} -> ${:.2} ({}x multiplier)",
+                        trade_idx,
+                        *regular_price,
+                        black_market_price,
+                        self.config.black_market_price_multiplier
+                    );
+                    *regular_price = black_market_price;
+                    black_market_volume += black_market_price;
+                }
+            }
+        }
+
+        // Execute all trades (prices already adjusted for black market trades)
         for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
             let seller_entity_id = self.entities[seller_idx].id;
             let buyer_entity_id = self.entities[buyer_idx].id;
@@ -1044,6 +1164,11 @@ impl SimulationEngine {
         self.trades_per_step.push(trades_count);
         self.volume_per_step.push(total_volume);
 
+        // Record black market trade statistics
+        self.black_market_trades_per_step
+            .push(black_market_trade_indices.len());
+        self.black_market_volume_per_step.push(black_market_volume);
+
         // Apply reputation decay for all active entities
         for entity in &mut self.entities {
             if entity.active {
@@ -1081,6 +1206,12 @@ impl SimulationEngine {
         if self.config.tech_growth_rate > 0.0 {
             for skill in self.market.skills.values_mut() {
                 skill.efficiency_multiplier *= 1.0 + self.config.tech_growth_rate;
+            }
+            // Apply same technological progress to black market
+            if let Some(ref mut bm) = self.black_market {
+                for skill in bm.skills.values_mut() {
+                    skill.efficiency_multiplier *= 1.0 + self.config.tech_growth_rate;
+                }
             }
         }
 
@@ -1310,10 +1441,13 @@ impl SimulationEngine {
             config: self.config.clone(),
             entities: self.entities.clone(),
             market: self.market.clone(),
+            black_market: self.black_market.clone(),
             current_step: self.current_step,
             all_skill_ids: self.all_skill_ids.clone(),
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
+            black_market_trades_per_step: self.black_market_trades_per_step.clone(),
+            black_market_volume_per_step: self.black_market_volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
             failed_steps: self.failed_steps,
             loans: self.loans.clone(),
@@ -1400,11 +1534,14 @@ impl SimulationEngine {
             config: checkpoint.config,
             entities: checkpoint.entities,
             market: checkpoint.market,
+            black_market: checkpoint.black_market,
             current_step: checkpoint.current_step,
             rng,
             all_skill_ids: checkpoint.all_skill_ids,
             trades_per_step: checkpoint.trades_per_step,
             volume_per_step: checkpoint.volume_per_step,
+            black_market_trades_per_step: checkpoint.black_market_trades_per_step,
+            black_market_volume_per_step: checkpoint.black_market_volume_per_step,
             total_fees_collected: checkpoint.total_fees_collected,
             failed_steps: checkpoint.failed_steps,
             loans: checkpoint.loans,

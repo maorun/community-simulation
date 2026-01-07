@@ -346,6 +346,7 @@ mod tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let scenarios = vec![Scenario::Original, Scenario::DynamicPricing];
@@ -390,6 +391,7 @@ mod tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let scenarios = vec![];
@@ -429,6 +431,7 @@ mod tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let scenarios = vec![Scenario::Original];
@@ -468,6 +471,7 @@ mod tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let scenarios = vec![Scenario::Original];

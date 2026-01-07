@@ -18,11 +18,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Stabilere Preise und planbare Einnahmen
 - **Implementierung**: `Contract` Struktur mit Laufzeit und Konditionen
 
-#### 2.3 Schwarzmarkt
-- **Beschreibung**: Paralleler Markt mit anderen Preisen und Regeln
-- **Nutzen**: Untersuchung informeller Wirtschaft
-- **Implementierung**: Zweiter `Market` mit angepassten Parametern
-
 ### 3. Soziale Netzwerke und Beziehungen
 
 #### 3.1 Freundschaftssystem

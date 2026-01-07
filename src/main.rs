@@ -398,6 +398,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .priority_affordability_weight,
             priority_efficiency_weight: SimulationConfig::default().priority_efficiency_weight,
             priority_reputation_weight: SimulationConfig::default().priority_reputation_weight,
+            enable_black_market: SimulationConfig::default().enable_black_market,
+            black_market_price_multiplier: SimulationConfig::default()
+                .black_market_price_multiplier,
+            black_market_participation_rate: SimulationConfig::default()
+                .black_market_participation_rate,
         }
     };
 
