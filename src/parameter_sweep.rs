@@ -412,6 +412,7 @@ mod tests {
             seed: 42,
             initial_money_per_person: 100.0,
             base_skill_price: 10.0,
+            min_skill_price: 1.0,
             time_step: 1.0,
             scenario: Scenario::Original,
             tech_growth_rate: 0.0,

@@ -72,7 +72,7 @@ mod proptests {
             supply in 1usize..100,
             steps in 0usize..50
         )| {
-            let mut market = Market::new(base_price, PriceUpdater::from(Scenario::Original));
+            let mut market = Market::new(base_price, 1.0, PriceUpdater::from(Scenario::Original));
             let skill = Skill::new("TestSkill".to_string(), base_price);
             let skill_id = skill.id.clone();
             market.add_skill(skill);
@@ -184,7 +184,7 @@ mod proptests {
             base_price in 10.0f64..100.0,
             supply in 1usize..50,
         )| {
-            let mut market = Market::new(base_price, PriceUpdater::from(Scenario::Original));
+            let mut market = Market::new(base_price, 1.0, PriceUpdater::from(Scenario::Original));
             market.volatility_percentage = 0.0; // Disable volatility for predictable test
 
             let skill = Skill::new("TestSkill".to_string(), base_price);

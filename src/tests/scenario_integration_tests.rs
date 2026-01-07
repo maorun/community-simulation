@@ -418,6 +418,7 @@ mod integration_tests {
             max_steps: 200, // Need enough steps to see seasonal cycles
             initial_money_per_person: 100.0,
             base_skill_price: 10.0,
+            min_skill_price: 1.0,
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
@@ -444,6 +445,7 @@ mod integration_tests {
             max_steps: 200,
             initial_money_per_person: 100.0,
             base_skill_price: 10.0,
+            min_skill_price: 1.0,
             seed: 42,
             scenario: Scenario::Original,
             time_step: 1.0,
@@ -754,5 +756,86 @@ mod integration_tests {
 
         // Trading should still occur (buyers still willing to buy)
         // but sellers receive nothing, so economy should decline rapidly
+    }
+
+    #[test]
+    fn test_min_skill_price_enforcement() {
+        // Test that skill prices don't fall below the configured minimum
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 200,
+            initial_money_per_person: 50.0, // Low initial money
+            base_skill_price: 10.0,
+            min_skill_price: 3.0, // Set a price floor
+            seed: 42,
+            scenario: Scenario::DynamicPricing, // Use dynamic pricing which can decrease prices
+            time_step: 1.0,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Check that all final skill prices are at or above the minimum
+        for skill_price_info in &result.final_skill_prices {
+            assert!(
+                skill_price_info.price >= 3.0,
+                "Skill {} has price {} which is below the minimum of 3.0",
+                skill_price_info.id,
+                skill_price_info.price
+            );
+        }
+
+        // Verify the least valuable skill is at least the minimum
+        if let Some(least_valuable) = &result.least_valuable_skill {
+            assert!(
+                least_valuable.price >= 3.0,
+                "Least valuable skill has price {} which is below the minimum of 3.0",
+                least_valuable.price
+            );
+        }
+    }
+
+    #[test]
+    fn test_min_skill_price_equals_base() {
+        // Test edge case where min_skill_price equals base_skill_price
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 5.0,
+            min_skill_price: 5.0, // Same as base
+            seed: 42,
+            scenario: Scenario::Original,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // All prices should remain at or near the base price (which is also the minimum)
+        for skill_price_info in &result.final_skill_prices {
+            assert!(
+                skill_price_info.price >= 5.0,
+                "Skill {} has price {} which is below the minimum of 5.0",
+                skill_price_info.id,
+                skill_price_info.price
+            );
+        }
     }
 }
