@@ -82,6 +82,7 @@ pub mod person;
 // pub mod physics; // Removed
 pub mod result;
 pub mod scenario;
+pub mod scenario_comparison;
 pub mod skill;
 
 pub use config::{PresetName, SimulationConfig};
@@ -97,6 +98,7 @@ pub use result::{
     SimulationResult, StepData,
 };
 pub use scenario::{PriceUpdater, Scenario};
+pub use scenario_comparison::ScenarioComparisonResult;
 pub use skill::{Skill, SkillId};
 
 #[cfg(test)]
