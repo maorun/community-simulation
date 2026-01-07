@@ -125,13 +125,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Wirtschaftliche Analysen
 
-### 2. Vergleichsstudien
-
-#### 2.1 Szenario-Vergleich
-- **Beschreibung**: Automatisierter Vergleich verschiedener Szenarien
-- **Nutzen**: A/B-Testing von Politiken
-- **Implementierung**: Batch-Ausführung und Vergleichsberichte
-
 ## 🛠️ Entwickler-Tools
 
 ### 1. CLI-Verbesserungen

@@ -153,6 +153,17 @@ struct Args {
     /// Useful for real-time monitoring and reduced memory usage
     #[arg(long)]
     stream_output: Option<String>,
+
+    /// Compare multiple simulation scenarios to analyze policy effects
+    /// Provide comma-separated scenario names (e.g., "Original,DynamicPricing,AdaptivePricing")
+    /// Each scenario will be run multiple times with different seeds for statistical robustness
+    #[arg(long)]
+    compare_scenarios: Option<String>,
+
+    /// Number of simulation runs per scenario in comparison mode (default: 3)
+    /// Higher values provide more reliable statistics but take longer to execute
+    #[arg(long)]
+    comparison_runs: Option<usize>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -388,8 +399,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Validate configuration before proceeding
     config.validate()?;
 
-    // Check if parameter sweep mode is enabled
-    if let Some(sweep_spec) = args.parameter_sweep {
+    // Check if scenario comparison mode is enabled
+    if let Some(scenario_spec) = args.compare_scenarios {
+        let comparison_runs = args.comparison_runs.unwrap_or(3);
+        if comparison_runs < 1 {
+            return Err("Comparison runs must be at least 1".into());
+        }
+
+        run_scenario_comparison(config, &scenario_spec, comparison_runs, args.output)?;
+    } else if let Some(sweep_spec) = args.parameter_sweep {
         let sweep_runs = args.sweep_runs.unwrap_or(3);
         if sweep_runs < 1 {
             return Err("Parameter sweep runs must be at least 1".into());
@@ -676,6 +694,92 @@ fn run_parameter_sweep(
         info!(
             "{}",
             format!("Parameter sweep results saved to {}", output_path).bright_blue()
+        );
+    }
+
+    // Print summary
+    result.print_summary();
+
+    Ok(())
+}
+
+/// Parse and run a scenario comparison analysis
+fn run_scenario_comparison(
+    base_config: SimulationConfig,
+    scenario_spec: &str,
+    runs_per_scenario: usize,
+    output: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use simulation_framework::{Scenario, ScenarioComparisonResult};
+    use std::str::FromStr;
+
+    // Parse scenario specification: comma-separated list of scenario names
+    let scenario_names: Vec<&str> = scenario_spec.split(',').map(|s| s.trim()).collect();
+
+    if scenario_names.is_empty() {
+        return Err("At least one scenario must be provided for comparison".into());
+    }
+
+    // Parse each scenario name
+    let mut scenarios = Vec::new();
+    for name in scenario_names {
+        let scenario = Scenario::from_str(name).map_err(|e| {
+            format!(
+                "Invalid scenario '{}': {}. Available: Original, DynamicPricing, AdaptivePricing",
+                name, e
+            )
+        })?;
+        scenarios.push(scenario);
+    }
+
+    // Remove duplicates while preserving order
+    scenarios.dedup();
+
+    info!(
+        "{}",
+        format!(
+            "Starting scenario comparison: {} scenarios with {} runs each",
+            scenarios.len(),
+            runs_per_scenario
+        )
+        .bright_cyan()
+    );
+    info!(
+        "Scenarios to compare: {}",
+        scenarios
+            .iter()
+            .map(|s| format!("{:?}", s))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    info!(
+        "Total simulations to run: {}",
+        scenarios.len() * runs_per_scenario
+    );
+
+    let start_time = Instant::now();
+
+    // Run the scenario comparison
+    let result = ScenarioComparisonResult::run(base_config, scenarios, runs_per_scenario)?;
+
+    let duration = start_time.elapsed();
+
+    info!(
+        "{}",
+        format!(
+            "Scenario comparison completed in {:.2}s ({:.1}s per scenario)",
+            duration.as_secs_f64(),
+            duration.as_secs_f64() / result.scenarios.len() as f64
+        )
+        .bright_green()
+    );
+
+    // Save results if output path specified
+    if let Some(output_path) = output {
+        result.save_to_file(&output_path)?;
+        info!(
+            "{}",
+            format!("Scenario comparison results saved to {}", output_path).bright_blue()
         );
     }
 
