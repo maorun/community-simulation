@@ -65,6 +65,19 @@ pub struct SkillPriceInfo {
     pub price: f64,
 }
 
+/// Statistics for a single skill's trade activity
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SkillTradeStats {
+    /// Unique identifier for the skill
+    pub skill_id: SkillId,
+    /// Total number of trades for this skill
+    pub trade_count: usize,
+    /// Total money volume exchanged for this skill
+    pub total_volume: f64,
+    /// Average price per trade for this skill
+    pub avg_price: f64,
+}
+
 /// Statistics about trade volume and economic activity
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TradeVolumeStats {
@@ -185,6 +198,8 @@ pub struct SimulationResult {
     pub volume_per_step: Vec<f64>,
     /// Total transaction fees collected across all trades
     pub total_fees_collected: f64,
+    /// Per-skill trade statistics (sorted by trade volume, highest first)
+    pub per_skill_trade_stats: Vec<SkillTradeStats>,
 
     /// Black market statistics (only present if black market is enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -255,6 +270,7 @@ impl SimulationResult {
     /// #     trades_per_step: vec![],
     /// #     volume_per_step: vec![],
     /// #     total_fees_collected: 0.0,
+    /// #     per_skill_trade_stats: vec![],
     /// #     black_market_statistics: None,
     /// #     total_taxes_collected: None,
     /// #     total_taxes_redistributed: None,
@@ -1045,6 +1061,7 @@ mod tests {
                 100.0, 120.0, 80.0, 100.0, 150.0, 90.0, 110.0, 100.0, 50.0, 100.0,
             ],
             total_fees_collected: 0.0,
+            per_skill_trade_stats: vec![],
             black_market_statistics: None,
             total_taxes_collected: None,
             total_taxes_redistributed: None,
