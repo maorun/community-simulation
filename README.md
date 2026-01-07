@@ -22,7 +22,13 @@ This repository contains a configurable economic simulation written in Rust. It 
   - **Aggressive** (1.3x spending multiplier): Risk-taking agents who prioritize acquiring skills and are willing to spend beyond their immediate means. Can afford skills up to 130% of their current money.
   - **Frugal** (0.5x spending multiplier): Extremely cautious agents who minimize spending and maximize savings. Only willing to spend up to 50% of their money.
   Strategies are distributed equally across the population using round-robin assignment, ensuring balanced representation. The strategy system enables studying how different agent behaviors affect market dynamics, wealth distribution, and economic activity.
-- **Urgency-Based Decisions:** Persons prioritize buying skills based on a randomly assigned urgency level.
+- **Priority-Based Buying Decisions:** Sophisticated multi-factor decision-making system for purchase prioritization. Each purchase option is scored based on four weighted factors:
+  - **Urgency** (default weight: 0.5): Need urgency level (1-3 scale, randomly assigned)
+  - **Affordability** (default weight: 0.3): Cost relative to available money (lower cost = higher priority)
+  - **Efficiency** (default weight: 0.1): Technological progress factor (more efficient skills prioritized)
+  - **Reputation** (default weight: 0.1): Seller reputation score (higher reputation = higher priority)
+  
+  All weights are configurable (0.0-1.0 range), allowing experimentation with different decision strategies. The system combines these factors into a single priority score for each potential purchase, then sorts options by priority (highest first). This enables realistic, heterogeneous agent behavior that considers multiple objectives simultaneously rather than simple urgency-only sorting.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
 - **Input Validation:** Comprehensive validation of all configuration parameters with clear error messages. Ensures parameters are within acceptable ranges (e.g., positive values for steps/persons, valid ranges for rates/amplitudes) to prevent crashes and provide immediate feedback on configuration errors.
