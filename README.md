@@ -35,6 +35,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **Monte Carlo Simulations:** Run multiple parallel simulations with different random seeds to achieve statistical significance. Automatically aggregates results across runs with mean, standard deviation, min, max, and median statistics for key metrics (average money, Gini coefficient, trade volume, reputation). Ideal for research, parameter sensitivity analysis, and understanding simulation variability.
 - **Parameter Sweep Analysis:** Automated sensitivity analysis through systematic parameter sweeps (grid search). Test a parameter across a range of values with multiple runs per value to understand how parameter choices affect simulation outcomes. Supports sweeping initial_money, base_price, savings_rate, and transaction_fee. Results include aggregated statistics and identification of optimal parameter values for different objectives. Perfect for research, parameter tuning, and understanding system robustness.
+- **Scenario Comparison:** Compare multiple simulation scenarios side-by-side to analyze the effects of different economic policies. Run A/B testing on pricing mechanisms (Original, DynamicPricing, AdaptivePricing) with multiple runs per scenario for statistical robustness. Automatically determines winners based on different criteria: highest average wealth, lowest inequality, highest trade volume, and highest reputation. Results are saved in JSON format with detailed statistics and winner analysis. Ideal for policy evaluation, economic research, and understanding the impact of different market mechanisms on outcomes.
 - **Checkpoint System:** Save and resume simulation state at any point. Automatically save checkpoints at regular intervals during long simulations. Resume from saved checkpoints to continue interrupted simulations without starting from scratch. Useful for multi-hour simulations, distributed computing, incremental analysis, and crash recovery. Checkpoints are stored in JSON format with complete simulation state including entities, market data, loans, and statistics.
 - **Streaming Output (JSONL):** Real-time streaming of step-by-step simulation data to a JSON Lines (JSONL) file. Each simulation step appends one JSON object containing key metrics (trades, volume, money statistics, Gini coefficient, reputation) to the output file. Enables real-time monitoring of long-running simulations, reduces memory footprint by not storing all step data in memory, and allows progressive analysis. Each line is a complete JSON object that can be parsed independently, making it ideal for streaming analysis tools and real-time dashboards.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
@@ -262,6 +263,30 @@ The simulation accepts the following CLI arguments:
     *   Each run uses a different random seed (seed, seed+1, seed+2, etc.) for statistical robustness.
     *   Higher values provide more reliable statistics but increase computation time.
     *   Example: `--sweep-runs 5` (run 5 simulations at each parameter value)
+*   `--compare-scenarios <SCENARIOS>`:
+    *   Compare multiple simulation scenarios side-by-side to analyze the effects of different economic policies.
+    *   Format: Comma-separated list of scenario names (e.g., `"Original,DynamicPricing,AdaptivePricing"`)
+    *   Available scenarios:
+        *   `Original` - Supply/demand-based pricing with volatility
+        *   `DynamicPricing` - Sales-based pricing (increase if sold, decrease if not)
+        *   `AdaptivePricing` - Gradual price adjustments using exponential moving average
+    *   Runs multiple simulations for each scenario (controlled by `--comparison-runs`)
+    *   Results include:
+        *   Aggregated statistics for each scenario (mean, std dev, min, max, median)
+        *   Winner determination for different criteria (wealth, inequality, trade volume, reputation)
+        *   Side-by-side comparison data for analysis
+    *   **Use cases:**
+        *   A/B testing of economic policies
+        *   Comparing the effectiveness of different pricing mechanisms
+        *   Understanding trade-offs between scenarios (e.g., efficiency vs. equality)
+        *   Research on market dynamics under different rules
+    *   Example: `--compare-scenarios "Original,DynamicPricing" --comparison-runs 5`
+    *   Minimum: 2 different scenarios required
+*   `--comparison-runs <NUM>`:
+    *   Number of simulation runs per scenario in scenario comparison mode (default: 3).
+    *   Each run uses a different random seed (seed, seed+1, seed+2, etc.) for statistical robustness.
+    *   Higher values provide more reliable comparison results but increase computation time.
+    *   Example: `--comparison-runs 5` (run 5 simulations for each scenario being compared)
 
 **Example with Preset:**
 
@@ -373,6 +398,49 @@ This is ideal for:
 - **Sensitivity Analysis**: Understanding how random variation affects outcomes
 - **Parameter Tuning**: Finding robust configurations that work across multiple seeds
 - **Publication**: Providing mean ± std dev statistics for academic papers
+
+**Example with Scenario Comparison:**
+
+```bash
+# Compare Original and DynamicPricing scenarios with 5 runs each
+./target/release/economic_simulation -s 500 -p 100 \
+  --compare-scenarios "Original,DynamicPricing" \
+  --comparison-runs 5 \
+  -o comparison_results.json
+
+# Compare all three available scenarios with custom parameters
+./target/release/economic_simulation -s 1000 -p 50 \
+  --compare-scenarios "Original,DynamicPricing,AdaptivePricing" \
+  --comparison-runs 10 \
+  --initial-money 150 --base-price 12 \
+  -o full_comparison.json
+
+# Scenario comparison with economic features enabled
+./target/release/economic_simulation -s 500 -p 100 \
+  --compare-scenarios "Original,DynamicPricing" \
+  --comparison-runs 5 \
+  --transaction-fee 0.05 --tax-rate 0.1 --enable-tax-redistribution \
+  -o comparison_with_policies.json
+```
+
+Scenario comparison output includes:
+- Individual results from each run for each scenario
+- Aggregated statistics per scenario:
+  - **Average Money**: Mean wealth distribution across runs
+  - **Gini Coefficient**: Wealth inequality comparison
+  - **Total Trades**: Economic activity levels
+  - **Average Reputation**: Trust dynamics
+- Winner determination for each criterion:
+  - **Highest Avg Wealth**: Which scenario produces the most wealth
+  - **Lowest Inequality**: Which scenario is most equitable
+  - **Highest Trade Volume**: Which scenario is most economically active
+  - **Highest Reputation**: Which scenario builds the most trust
+
+This is ideal for:
+- **Policy Evaluation**: Comparing the effects of different economic rules
+- **A/B Testing**: Determining which pricing mechanism works best for specific goals
+- **Research**: Understanding trade-offs between efficiency and equity
+- **Decision Making**: Choosing the right scenario for your simulation objectives
 
 **Example with Parameter Sweep Analysis:**
 
