@@ -6,7 +6,7 @@ use crate::{
     Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use log::{debug, info, warn};
+use log::{debug, info, trace, warn};
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -748,6 +748,11 @@ impl SimulationEngine {
                     .satisfied_needs_current_step
                     .contains(needed_skill_id)
                 {
+                    trace!(
+                        "Person {} already satisfied need for skill {:?} in this step",
+                        self.entities[buyer_idx].id,
+                        needed_skill_id
+                    );
                     continue;
                 }
 
@@ -780,11 +785,30 @@ impl SimulationEngine {
                             let seller_idx = seller_id;
 
                             if buyer_idx == seller_idx {
+                                trace!(
+                                    "Person {} cannot buy their own skill {:?}",
+                                    self.entities[buyer_idx].id,
+                                    needed_skill_id
+                                );
                                 continue;
                             }
                             if !self.entities[seller_idx].active {
+                                trace!(
+                                    "Seller {} for skill {:?} is inactive",
+                                    seller_id,
+                                    needed_skill_id
+                                );
                                 continue;
                             }
+
+                            debug!(
+                                "Trade scheduled: Person {} buying skill {:?} from Person {} for ${:.2} (urgency: {})",
+                                self.entities[buyer_idx].id,
+                                needed_skill_id,
+                                seller_id,
+                                final_price,
+                                needed_item.urgency
+                            );
 
                             trades_to_execute.push((
                                 buyer_idx,
@@ -797,6 +821,15 @@ impl SimulationEngine {
                                 .satisfied_needs_current_step
                                 .push(needed_skill_id.clone());
                         }
+                    } else {
+                        trace!(
+                            "Person {} cannot afford skill {:?} at ${:.2} (has ${:.2}, strategy allows ${:.2})",
+                            self.entities[buyer_idx].id,
+                            needed_skill_id,
+                            final_price,
+                            self.entities[buyer_idx].person_data.money,
+                            self.entities[buyer_idx].person_data.money * self.entities[buyer_idx].person_data.strategy.spending_multiplier()
+                        );
                     }
                 }
             }
@@ -815,11 +848,24 @@ impl SimulationEngine {
             let fee = price * self.config.transaction_fee;
             let seller_proceeds = price - fee;
 
+            debug!(
+                "Executing trade: Buyer {} pays ${:.2}, Seller {} receives ${:.2} (fee: ${:.2})",
+                buyer_entity_id, price, seller_entity_id, seller_proceeds, fee
+            );
+
             // Buyer pays full price
             // Note: This may result in negative balance (debt) for Aggressive strategy agents,
             // which is intentional behavior to simulate risk-taking. The simulation supports
             // negative money as reflected in Gini coefficient calculations.
+            let buyer_balance_before = self.entities[buyer_idx].person_data.money;
             self.entities[buyer_idx].person_data.money -= price;
+            trace!(
+                "Person {} balance: ${:.2} -> ${:.2} (spent ${:.2})",
+                buyer_entity_id,
+                buyer_balance_before,
+                self.entities[buyer_idx].person_data.money,
+                price
+            );
             self.entities[buyer_idx].person_data.record_transaction(
                 self.current_step,
                 skill_id.clone(),
@@ -828,17 +874,42 @@ impl SimulationEngine {
                 Some(seller_entity_id),
             );
             // Increase buyer reputation for completing a purchase
+            let buyer_rep_before = self.entities[buyer_idx].person_data.reputation;
             self.entities[buyer_idx]
                 .person_data
                 .increase_reputation_as_buyer();
+            debug!(
+                "Person {} reputation increased as buyer: {:.3} -> {:.3}",
+                buyer_entity_id, buyer_rep_before, self.entities[buyer_idx].person_data.reputation
+            );
 
             // Seller receives price minus fee
+            let seller_balance_before = self.entities[seller_idx].person_data.money;
             self.entities[seller_idx].person_data.money += seller_proceeds;
 
             // Calculate and collect tax on seller's proceeds (after transaction fee)
             let tax = seller_proceeds * self.config.tax_rate;
             self.entities[seller_idx].person_data.money -= tax;
+
+            if tax > 0.0 {
+                trace!(
+                    "Person {} paid tax: ${:.2} on proceeds ${:.2}",
+                    seller_entity_id,
+                    tax,
+                    seller_proceeds
+                );
+            }
+
             self.total_taxes_collected += tax;
+
+            trace!(
+                "Person {} balance: ${:.2} -> ${:.2} (received ${:.2}, tax ${:.2})",
+                seller_entity_id,
+                seller_balance_before,
+                self.entities[seller_idx].person_data.money,
+                seller_proceeds,
+                tax
+            );
 
             self.entities[seller_idx].person_data.record_transaction(
                 self.current_step,
@@ -848,9 +919,16 @@ impl SimulationEngine {
                 Some(buyer_entity_id),
             );
             // Increase seller reputation for completing a sale
+            let seller_rep_before = self.entities[seller_idx].person_data.reputation;
             self.entities[seller_idx]
                 .person_data
                 .increase_reputation_as_seller();
+            debug!(
+                "Person {} reputation increased as seller: {:.3} -> {:.3}",
+                seller_entity_id,
+                seller_rep_before,
+                self.entities[seller_idx].person_data.reputation
+            );
 
             // Track total fees collected
             self.total_fees_collected += fee;
@@ -877,7 +955,19 @@ impl SimulationEngine {
         if self.config.savings_rate > 0.0 {
             for entity in &mut self.entities {
                 if entity.active {
+                    let money_before = entity.person_data.money;
                     entity.person_data.apply_savings(self.config.savings_rate);
+                    let saved_amount = money_before - entity.person_data.money;
+                    if saved_amount > 0.0 {
+                        trace!(
+                            "Person {} saved ${:.2} (rate: {:.1}%), balance: ${:.2} -> ${:.2}",
+                            entity.id,
+                            saved_amount,
+                            self.config.savings_rate * 100.0,
+                            money_before,
+                            entity.person_data.money
+                        );
+                    }
                 }
             }
         }
@@ -903,6 +993,11 @@ impl SimulationEngine {
 
                 if step_taxes > 0.0 {
                     let redistribution_per_person = step_taxes / active_count as f64;
+
+                    debug!(
+                        "Redistributing ${:.2} in taxes (${:.2} per person) to {} active persons",
+                        step_taxes, redistribution_per_person, active_count
+                    );
 
                     for entity in &mut self.entities {
                         if entity.active {
@@ -1008,10 +1103,29 @@ impl SimulationEngine {
                 self.entities[borrower_idx].person_data.money -= payment_amount;
                 self.entities[lender_idx].person_data.money += payment_amount;
 
+                debug!(
+                    "Loan payment: Person {} paid ${:.2} to Person {} (remaining: ${:.2})",
+                    self.entities[borrower_idx].id,
+                    payment_amount,
+                    self.entities[lender_idx].id,
+                    loan.remaining_principal
+                );
+
                 // Check if loan is now fully repaid
                 if loan.is_repaid {
                     completed_loans.push(*loan_id);
+                    debug!(
+                        "Loan {} fully repaid: Person {} to Person {}",
+                        loan_id, self.entities[borrower_idx].id, self.entities[lender_idx].id
+                    );
                 }
+            } else {
+                trace!(
+                    "Person {} cannot afford loan payment of ${:.2} (has ${:.2})",
+                    self.entities[borrower_idx].id,
+                    loan.payment_per_step,
+                    self.entities[borrower_idx].person_data.money
+                );
             }
             // Note: If borrower can't afford payment, they skip it (could add penalties later)
         }
