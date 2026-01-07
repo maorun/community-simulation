@@ -721,6 +721,20 @@ impl SimulationEngine {
 
         self.market.update_prices(&mut self.rng);
 
+        /// Helper struct to hold priority information for purchase decisions.
+        /// Combines multiple factors (urgency, affordability, efficiency, reputation)
+        /// into a single priority score for sorting purchase options.
+        #[derive(Debug, Clone)]
+        struct PurchaseOption {
+            needed_item: crate::person::NeededSkillItem,
+            priority_score: f64,
+        }
+
+        // Constants for priority score normalization
+        const EFFICIENCY_SCALE_FACTOR: f64 = 10.0; // Scales efficiency (typically 1.0-1.1) to 0.0-1.0 range
+        const REPUTATION_OFFSET: f64 = 0.5; // Offset to center reputation (neutral = 1.0) at 0.5
+        const REPUTATION_SCALE_FACTOR: f64 = 1.5; // Scales reputation (0.0-2.0) to 0.0-1.0 range
+
         // Build a map of skill providers
         // Since multiple persons can now provide the same skill, we use Vec<usize>
         let mut skill_providers: HashMap<SkillId, Vec<usize>> = HashMap::new();
@@ -742,10 +756,91 @@ impl SimulationEngine {
                 continue;
             }
 
-            let mut current_needs = self.entities[buyer_idx].person_data.needed_skills.clone();
-            current_needs.sort_by(|a, b| b.urgency.cmp(&a.urgency));
+            // Calculate priority scores for all needed skills
+            let buyer_money = self.entities[buyer_idx].person_data.money;
+            let mut purchase_options: Vec<PurchaseOption> = Vec::new();
 
-            for needed_item in current_needs {
+            for needed_item in &self.entities[buyer_idx].person_data.needed_skills {
+                let needed_skill_id = &needed_item.id;
+
+                // Skip if already satisfied in this step
+                if self.entities[buyer_idx]
+                    .person_data
+                    .satisfied_needs_current_step
+                    .contains(needed_skill_id)
+                {
+                    continue;
+                }
+
+                // Get price information for priority calculation
+                if let Some(skill_price) = self.market.get_price(needed_skill_id) {
+                    let efficiency = self.market.get_skill_efficiency(needed_skill_id);
+                    let efficiency_adjusted_price = skill_price / efficiency;
+
+                    // Get seller reputation if available
+                    let seller_reputation = skill_providers
+                        .get(needed_skill_id)
+                        .and_then(|providers| providers.first().copied())
+                        .map(|seller_id| self.entities[seller_id].person_data.reputation)
+                        .unwrap_or(1.0); // Neutral reputation if no seller
+
+                    // Calculate priority score components (normalized to 0.0-1.0 range)
+
+                    // 1. Urgency component (urgency is 1-3, normalize to 0.0-1.0)
+                    let urgency_score = (needed_item.urgency as f64 - 1.0) / 2.0;
+
+                    // 2. Affordability component (inverse of price-to-money ratio, capped at 1.0)
+                    // Higher score = more affordable (cheaper relative to available money)
+                    let affordability_score = if buyer_money > 0.0 {
+                        (1.0 - (efficiency_adjusted_price / buyer_money)).clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    };
+
+                    // 3. Efficiency component (efficiency typically > 1.0 due to tech progress)
+                    // Normalize to 0.0-1.0 range, where 1.0 = neutral, > 1.0 = better
+                    let efficiency_score =
+                        ((efficiency - 1.0) * EFFICIENCY_SCALE_FACTOR).clamp(0.0, 1.0);
+
+                    // 4. Reputation component (reputation 0.0-2.0, normalize to 0.0-1.0)
+                    // Higher reputation = better, centered at 1.0 (neutral)
+                    let reputation_score = ((seller_reputation - REPUTATION_OFFSET)
+                        / REPUTATION_SCALE_FACTOR)
+                        .clamp(0.0, 1.0);
+
+                    // Weighted priority score
+                    let priority_score = self.config.priority_urgency_weight * urgency_score
+                        + self.config.priority_affordability_weight * affordability_score
+                        + self.config.priority_efficiency_weight * efficiency_score
+                        + self.config.priority_reputation_weight * reputation_score;
+
+                    trace!(
+                        "Person {} - Skill {:?} priority: {:.3} (urgency: {:.2}, affordability: {:.2}, efficiency: {:.2}, reputation: {:.2})",
+                        self.entities[buyer_idx].id,
+                        needed_skill_id,
+                        priority_score,
+                        urgency_score,
+                        affordability_score,
+                        efficiency_score,
+                        reputation_score
+                    );
+
+                    purchase_options.push(PurchaseOption {
+                        needed_item: needed_item.clone(),
+                        priority_score,
+                    });
+                }
+            }
+
+            // Sort by priority score (highest first)
+            purchase_options.sort_by(|a, b| {
+                b.priority_score
+                    .partial_cmp(&a.priority_score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+
+            for option in purchase_options {
+                let needed_item = option.needed_item;
                 let needed_skill_id = &needed_item.id;
                 if self.entities[buyer_idx]
                     .person_data
@@ -806,12 +901,13 @@ impl SimulationEngine {
                             }
 
                             debug!(
-                                "Trade scheduled: Person {} buying skill {:?} from Person {} for ${:.2} (urgency: {})",
+                                "Trade scheduled: Person {} buying skill {:?} from Person {} for ${:.2} (urgency: {}, priority: {:.3})",
                                 self.entities[buyer_idx].id,
                                 needed_skill_id,
                                 seller_id,
                                 final_price,
-                                needed_item.urgency
+                                needed_item.urgency,
+                                option.priority_score
                             );
 
                             trades_to_execute.push((

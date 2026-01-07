@@ -61,11 +61,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 6. Verschiedene Agentenstrategien
 
-#### 6.2 Prioritätsbasierte Kaufentscheidungen
-- **Beschreibung**: Erweiterte regelbasierte Entscheidungsfindung für Käufe
-- **Nutzen**: Realistischeres Agenten-Verhalten
-- **Implementierung**: Erweiterte Logik in `Person` mit Prioritätsregeln
-
 ## 🔧 Code-Verbesserungen
 
 ### 1. Architektur und Design

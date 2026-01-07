@@ -393,6 +393,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .skills_per_person
                 .unwrap_or(SimulationConfig::default().skills_per_person),
             stream_output_path: args.stream_output.clone(),
+            priority_urgency_weight: SimulationConfig::default().priority_urgency_weight,
+            priority_affordability_weight: SimulationConfig::default()
+                .priority_affordability_weight,
+            priority_efficiency_weight: SimulationConfig::default().priority_efficiency_weight,
+            priority_reputation_weight: SimulationConfig::default().priority_reputation_weight,
         }
     };
 

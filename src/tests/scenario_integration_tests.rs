@@ -438,6 +438,10 @@ mod integration_tests {
             enable_tax_redistribution: false,
             skills_per_person: 1,
             stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
         };
 
         let config_with_seasonality = SimulationConfig {
@@ -465,6 +469,10 @@ mod integration_tests {
             enable_tax_redistribution: false,
             skills_per_person: 1,
             stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
         };
 
         let mut engine_no_season = SimulationEngine::new(config_no_seasonality);
@@ -786,6 +794,10 @@ mod integration_tests {
             enable_tax_redistribution: false,
             skills_per_person: 1,
             stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -837,5 +849,212 @@ mod integration_tests {
                 skill_price_info.price
             );
         }
+    }
+
+    /// Test priority-based buying decisions with default weights
+    #[test]
+    fn test_priority_based_decisions_default_weights() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            // Default balanced weights
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Should complete successfully
+        assert_eq!(result.total_steps, 50);
+        assert_eq!(result.active_persons, 10);
+        // With priority system, should still have reasonable trade activity
+        assert!(
+            result.trade_volume_statistics.total_trades > 0,
+            "Should have some trades"
+        );
+    }
+
+    /// Test priority-based buying with urgency-only weighting
+    #[test]
+    fn test_priority_urgency_only() {
+        let config_urgency = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            // Only urgency matters
+            priority_urgency_weight: 1.0,
+            priority_affordability_weight: 0.0,
+            priority_efficiency_weight: 0.0,
+            priority_reputation_weight: 0.0,
+        };
+
+        let mut engine = SimulationEngine::new(config_urgency);
+        let result = engine.run();
+
+        // Should complete successfully with urgency-only prioritization
+        assert_eq!(result.total_steps, 50);
+        assert!(
+            result.trade_volume_statistics.total_trades > 0,
+            "Should have trades with urgency prioritization"
+        );
+    }
+
+    /// Test priority weights validation
+    #[test]
+    fn test_priority_weights_validation() {
+        // Test that priority weights must be in 0.0-1.0 range
+
+        // Valid weights should pass
+        let mut config = SimulationConfig {
+            priority_urgency_weight: 0.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_ok());
+
+        // Invalid weight > 1.0 should fail
+        config.priority_urgency_weight = 1.5;
+        assert!(config.validate().is_err());
+
+        // Invalid negative weight should fail
+        config = SimulationConfig {
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: -0.1,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+    }
+
+    /// Test that priority system works with technological progress
+    #[test]
+    fn test_priority_with_tech_progress() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.01, // 1% growth per step
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            // Include efficiency in priority
+            priority_urgency_weight: 0.4,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.2, // Higher weight to test tech progress impact
+            priority_reputation_weight: 0.1,
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert_eq!(result.total_steps, 100);
+        // Tech progress should enable more trades over time as skills become more efficient
+        assert!(result.trade_volume_statistics.total_trades > 0);
+    }
+
+    /// Test that priority system works with reputation
+    #[test]
+    fn test_priority_with_reputation() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            // Reputation matters more
+            priority_urgency_weight: 0.3,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.0,
+            priority_reputation_weight: 0.4, // Higher weight for reputation
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert_eq!(result.total_steps, 100);
+        // With reputation weighted heavily, agents should prefer trading with reputable sellers
+        assert!(result.trade_volume_statistics.total_trades > 0);
+        // Check that reputation statistics are tracked
+        assert!(result.reputation_statistics.average >= 1.0); // Should be >= neutral (1.0)
     }
 }
