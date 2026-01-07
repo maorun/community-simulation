@@ -1017,48 +1017,50 @@ impl SimulationEngine {
 
         // Determine which trades go to black market (if enabled)
         let mut black_market_trade_indices: Vec<usize> = Vec::new();
+        let mut black_market_volume = 0.0;
+
         if self.config.enable_black_market && self.black_market.is_some() {
             let num_black_market_trades = (trades_to_execute.len() as f64
                 * self.config.black_market_participation_rate)
                 .round() as usize;
 
-            // Randomly select trades to route to black market
-            let mut all_indices: Vec<usize> = (0..trades_to_execute.len()).collect();
-            all_indices.shuffle(&mut self.rng);
-            black_market_trade_indices = all_indices
-                .into_iter()
-                .take(num_black_market_trades)
-                .collect();
+            if num_black_market_trades > 0 {
+                // Randomly select trades to route to black market
+                let mut all_indices: Vec<usize> = (0..trades_to_execute.len()).collect();
+                all_indices.shuffle(&mut self.rng);
+                black_market_trade_indices = all_indices
+                    .into_iter()
+                    .take(num_black_market_trades)
+                    .collect();
 
-            debug!(
-                "Routing {} out of {} trades to black market ({}% participation rate)",
-                num_black_market_trades,
-                trades_to_execute.len(),
-                (self.config.black_market_participation_rate * 100.0)
-            );
+                debug!(
+                    "Routing {} out of {} trades to black market ({}% participation rate)",
+                    num_black_market_trades,
+                    trades_to_execute.len(),
+                    (self.config.black_market_participation_rate * 100.0)
+                );
+
+                // Apply black market price multiplier directly to selected trades
+                for &trade_idx in &black_market_trade_indices {
+                    let (_buyer_idx, _seller_idx, _skill_id, regular_price) =
+                        &mut trades_to_execute[trade_idx];
+                    let black_market_price =
+                        *regular_price * self.config.black_market_price_multiplier;
+                    trace!(
+                        "Trade {} uses black market: ${:.2} -> ${:.2} ({}x multiplier)",
+                        trade_idx,
+                        *regular_price,
+                        black_market_price,
+                        self.config.black_market_price_multiplier
+                    );
+                    *regular_price = black_market_price;
+                    black_market_volume += black_market_price;
+                }
+            }
         }
 
-        // Adjust prices for black market trades
-        let mut adjusted_trades = trades_to_execute.clone();
-        let mut black_market_volume = 0.0;
-        for &trade_idx in &black_market_trade_indices {
-            let (_buyer_idx, _seller_idx, _skill_id, regular_price) =
-                &mut adjusted_trades[trade_idx];
-            // Apply black market price multiplier
-            let black_market_price = *regular_price * self.config.black_market_price_multiplier;
-            trace!(
-                "Trade {} uses black market: ${:.2} -> ${:.2} ({}x multiplier)",
-                trade_idx,
-                *regular_price,
-                black_market_price,
-                self.config.black_market_price_multiplier
-            );
-            *regular_price = black_market_price;
-            black_market_volume += black_market_price;
-        }
-
-        // Execute trades with adjusted prices
-        for (buyer_idx, seller_idx, skill_id, price) in adjusted_trades {
+        // Execute all trades (prices already adjusted for black market trades)
+        for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
             let seller_entity_id = self.entities[seller_idx].id;
             let buyer_entity_id = self.entities[buyer_idx].id;
 

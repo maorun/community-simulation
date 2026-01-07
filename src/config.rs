@@ -549,9 +549,9 @@ impl SimulationConfig {
             )));
         }
 
-        if self.black_market_price_multiplier <= 0.0 || self.black_market_price_multiplier > 2.0 {
+        if self.black_market_price_multiplier < 0.0 || self.black_market_price_multiplier > 2.0 {
             return Err(SimulationError::ValidationError(format!(
-                "black_market_price_multiplier must be between 0.0 and 2.0, got: {}",
+                "black_market_price_multiplier must be between 0.0 (exclusive) and 2.0, got: {}",
                 self.black_market_price_multiplier
             )));
         }
