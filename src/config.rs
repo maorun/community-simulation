@@ -373,19 +373,19 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
-            checkpoint_interval: 0,             // Disabled by default
-            checkpoint_file: None,              // No default checkpoint file
-            resume_from_checkpoint: false,      // Don't resume by default
-            tax_rate: 0.0,                      // Disabled by default
-            enable_tax_redistribution: false,   // Disabled by default
-            skills_per_person: 1,               // One skill per person by default
-            stream_output_path: None,           // Disabled by default
-            priority_urgency_weight: 0.5,       // Balanced urgency consideration
-            priority_affordability_weight: 0.3, // Moderate affordability consideration
-            priority_efficiency_weight: 0.1,    // Minor efficiency consideration
-            priority_reputation_weight: 0.1,    // Minor reputation consideration
-            enable_black_market: false,         // Disabled by default
-            black_market_price_multiplier: 0.8, // 20% cheaper
+            checkpoint_interval: 0,               // Disabled by default
+            checkpoint_file: None,                // No default checkpoint file
+            resume_from_checkpoint: false,        // Don't resume by default
+            tax_rate: 0.0,                        // Disabled by default
+            enable_tax_redistribution: false,     // Disabled by default
+            skills_per_person: 1,                 // One skill per person by default
+            stream_output_path: None,             // Disabled by default
+            priority_urgency_weight: 0.5,         // Balanced urgency consideration
+            priority_affordability_weight: 0.3,   // Moderate affordability consideration
+            priority_efficiency_weight: 0.1,      // Minor efficiency consideration
+            priority_reputation_weight: 0.1,      // Minor reputation consideration
+            enable_black_market: false,           // Disabled by default
+            black_market_price_multiplier: 0.8,   // 20% cheaper
             black_market_participation_rate: 0.2, // 20% of trades
         }
     }

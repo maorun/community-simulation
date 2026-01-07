@@ -84,6 +84,23 @@ pub struct TradeVolumeStats {
     pub max_trades_per_step: usize,
 }
 
+/// Statistics about black market activity (parallel informal market)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlackMarketStats {
+    /// Total number of trades conducted on the black market
+    pub total_black_market_trades: usize,
+    /// Total money exchanged on the black market
+    pub total_black_market_volume: f64,
+    /// Average number of black market trades per step
+    pub avg_black_market_trades_per_step: f64,
+    /// Average money exchanged on black market per step
+    pub avg_black_market_volume_per_step: f64,
+    /// Percentage of all trades that used the black market
+    pub black_market_trade_percentage: f64,
+    /// Percentage of all trading volume that went through the black market
+    pub black_market_volume_percentage: f64,
+}
+
 /// Statistics about the loan system
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LoanStats {
@@ -169,6 +186,10 @@ pub struct SimulationResult {
     /// Total transaction fees collected across all trades
     pub total_fees_collected: f64,
 
+    /// Black market statistics (only present if black market is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub black_market_statistics: Option<BlackMarketStats>,
+
     /// Total taxes collected from seller proceeds (only present if tax_rate > 0)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_taxes_collected: Option<f64>,
@@ -234,6 +255,7 @@ impl SimulationResult {
     /// #     trades_per_step: vec![],
     /// #     volume_per_step: vec![],
     /// #     total_fees_collected: 0.0,
+    /// #     black_market_statistics: None,
     /// #     total_taxes_collected: None,
     /// #     total_taxes_redistributed: None,
     /// #     loan_statistics: None,
@@ -1023,6 +1045,7 @@ mod tests {
                 100.0, 120.0, 80.0, 100.0, 150.0, 90.0, 110.0, 100.0, 50.0, 100.0,
             ],
             total_fees_collected: 0.0,
+            black_market_statistics: None,
             total_taxes_collected: None,
             total_taxes_redistributed: None,
             loan_statistics: None,

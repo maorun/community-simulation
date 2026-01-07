@@ -656,6 +656,41 @@ impl SimulationEngine {
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
+            black_market_statistics: if self.config.enable_black_market {
+                let total_black_market_trades: usize =
+                    self.black_market_trades_per_step.iter().sum();
+                let total_black_market_volume: f64 = self.black_market_volume_per_step.iter().sum();
+                let total_trades: usize = self.trades_per_step.iter().sum();
+                let total_volume: f64 = self.volume_per_step.iter().sum();
+                let steps_with_data = self.black_market_trades_per_step.len() as f64;
+
+                Some(crate::result::BlackMarketStats {
+                    total_black_market_trades,
+                    total_black_market_volume,
+                    avg_black_market_trades_per_step: if steps_with_data > 0.0 {
+                        total_black_market_trades as f64 / steps_with_data
+                    } else {
+                        0.0
+                    },
+                    avg_black_market_volume_per_step: if steps_with_data > 0.0 {
+                        total_black_market_volume / steps_with_data
+                    } else {
+                        0.0
+                    },
+                    black_market_trade_percentage: if total_trades > 0 {
+                        (total_black_market_trades as f64 / total_trades as f64) * 100.0
+                    } else {
+                        0.0
+                    },
+                    black_market_volume_percentage: if total_volume > 0.0 {
+                        (total_black_market_volume / total_volume) * 100.0
+                    } else {
+                        0.0
+                    },
+                })
+            } else {
+                None
+            },
             total_taxes_collected: if self.config.tax_rate > 0.0 {
                 Some(self.total_taxes_collected)
             } else {
@@ -980,7 +1015,50 @@ impl SimulationEngine {
         let total_volume: f64 = trades_to_execute.iter().map(|(_, _, _, price)| price).sum();
         let step_taxes_collected_start = self.total_taxes_collected;
 
-        for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
+        // Determine which trades go to black market (if enabled)
+        let mut black_market_trade_indices: Vec<usize> = Vec::new();
+        if self.config.enable_black_market && self.black_market.is_some() {
+            let num_black_market_trades = (trades_to_execute.len() as f64
+                * self.config.black_market_participation_rate)
+                .round() as usize;
+
+            // Randomly select trades to route to black market
+            let mut all_indices: Vec<usize> = (0..trades_to_execute.len()).collect();
+            all_indices.shuffle(&mut self.rng);
+            black_market_trade_indices = all_indices
+                .into_iter()
+                .take(num_black_market_trades)
+                .collect();
+
+            debug!(
+                "Routing {} out of {} trades to black market ({}% participation rate)",
+                num_black_market_trades,
+                trades_to_execute.len(),
+                (self.config.black_market_participation_rate * 100.0)
+            );
+        }
+
+        // Adjust prices for black market trades
+        let mut adjusted_trades = trades_to_execute.clone();
+        let mut black_market_volume = 0.0;
+        for &trade_idx in &black_market_trade_indices {
+            let (_buyer_idx, _seller_idx, _skill_id, regular_price) =
+                &mut adjusted_trades[trade_idx];
+            // Apply black market price multiplier
+            let black_market_price = *regular_price * self.config.black_market_price_multiplier;
+            trace!(
+                "Trade {} uses black market: ${:.2} -> ${:.2} ({}x multiplier)",
+                trade_idx,
+                *regular_price,
+                black_market_price,
+                self.config.black_market_price_multiplier
+            );
+            *regular_price = black_market_price;
+            black_market_volume += black_market_price;
+        }
+
+        // Execute trades with adjusted prices
+        for (buyer_idx, seller_idx, skill_id, price) in adjusted_trades {
             let seller_entity_id = self.entities[seller_idx].id;
             let buyer_entity_id = self.entities[buyer_idx].id;
 
@@ -1084,6 +1162,11 @@ impl SimulationEngine {
         self.trades_per_step.push(trades_count);
         self.volume_per_step.push(total_volume);
 
+        // Record black market trade statistics
+        self.black_market_trades_per_step
+            .push(black_market_trade_indices.len());
+        self.black_market_volume_per_step.push(black_market_volume);
+
         // Apply reputation decay for all active entities
         for entity in &mut self.entities {
             if entity.active {
@@ -1121,6 +1204,12 @@ impl SimulationEngine {
         if self.config.tech_growth_rate > 0.0 {
             for skill in self.market.skills.values_mut() {
                 skill.efficiency_multiplier *= 1.0 + self.config.tech_growth_rate;
+            }
+            // Apply same technological progress to black market
+            if let Some(ref mut bm) = self.black_market {
+                for skill in bm.skills.values_mut() {
+                    skill.efficiency_multiplier *= 1.0 + self.config.tech_growth_rate;
+                }
             }
         }
 

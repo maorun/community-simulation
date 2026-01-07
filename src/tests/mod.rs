@@ -35,6 +35,7 @@ mod engine_tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         }
     }
 

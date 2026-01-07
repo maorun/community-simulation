@@ -442,6 +442,7 @@ mod integration_tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let config_with_seasonality = SimulationConfig {
@@ -473,6 +474,7 @@ mod integration_tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let mut engine_no_season = SimulationEngine::new(config_no_seasonality);
@@ -798,6 +800,7 @@ mod integration_tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -884,6 +887,7 @@ mod integration_tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.1,
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -932,6 +936,7 @@ mod integration_tests {
             priority_affordability_weight: 0.0,
             priority_efficiency_weight: 0.0,
             priority_reputation_weight: 0.0,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config_urgency);
@@ -1003,6 +1008,7 @@ mod integration_tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.2, // Higher weight to test tech progress impact
             priority_reputation_weight: 0.1,
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
@@ -1046,6 +1052,7 @@ mod integration_tests {
             priority_affordability_weight: 0.3,
             priority_efficiency_weight: 0.0,
             priority_reputation_weight: 0.4, // Higher weight for reputation
+            ..Default::default()
         };
 
         let mut engine = SimulationEngine::new(config);
