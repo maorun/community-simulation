@@ -497,6 +497,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             learning_probability: args
                 .learning_probability
                 .unwrap_or(SimulationConfig::default().learning_probability),
+            enable_crisis_events: SimulationConfig::default().enable_crisis_events,
+            crisis_probability: SimulationConfig::default().crisis_probability,
+            crisis_severity: SimulationConfig::default().crisis_severity,
         }
     };
 

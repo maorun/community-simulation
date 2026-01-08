@@ -74,6 +74,7 @@
 
 pub mod config;
 pub mod contract;
+pub mod crisis;
 pub mod engine;
 pub mod entity; // Represents a Person in the simulation
 pub mod error;
@@ -89,6 +90,7 @@ pub mod skill;
 
 pub use config::{PresetName, SimulationConfig};
 pub use contract::{Contract, ContractId};
+pub use crisis::CrisisEvent;
 pub use engine::{SimulationCheckpoint, SimulationEngine};
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use error::{Result, SimulationError};

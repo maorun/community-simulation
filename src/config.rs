@@ -365,6 +365,34 @@ pub struct SimulationConfig {
     /// Default: 0.1 (10% chance per step)
     #[serde(default = "default_learning_probability")]
     pub learning_probability: f64,
+
+    /// Enable crisis events that create economic shocks during the simulation.
+    ///
+    /// When enabled, random crisis events (market crashes, demand shocks, supply shocks,
+    /// currency devaluations) can occur, testing the resilience of the simulated economy.
+    /// Set to false to disable crisis events (default).
+    #[serde(default)]
+    pub enable_crisis_events: bool,
+
+    /// Probability per step that a crisis event will occur (0.0-1.0).
+    ///
+    /// Each simulation step has this probability of triggering a random crisis event.
+    /// Lower values create rare but impactful crises, higher values create more frequent disruptions.
+    /// Only used when enable_crisis_events is true.
+    /// Default: 0.02 (2% chance per step, roughly one crisis every 50 steps)
+    #[serde(default = "default_crisis_probability")]
+    pub crisis_probability: f64,
+
+    /// Crisis severity level (0.0-1.0).
+    ///
+    /// Controls how severe crisis effects are when they occur.
+    /// 0.0 = minimal impact, 1.0 = maximum impact.
+    /// For example, with severity 0.5, a market crash might reduce prices by ~30%,
+    /// while severity 1.0 would cause a ~40% reduction.
+    /// Only used when enable_crisis_events is true.
+    /// Default: 0.5 (moderate severity)
+    #[serde(default = "default_crisis_severity")]
+    pub crisis_severity: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -435,6 +463,14 @@ fn default_learning_probability() -> f64 {
     0.1 // 10% chance per step to attempt learning
 }
 
+fn default_crisis_probability() -> f64 {
+    0.02 // 2% chance per step (approximately once every 50 steps)
+}
+
+fn default_crisis_severity() -> f64 {
+    0.5 // Moderate severity (50% of maximum impact)
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -476,6 +512,9 @@ impl Default for SimulationConfig {
             enable_education: false,              // Disabled by default
             learning_cost_multiplier: 3.0,        // Learning costs 3x market price
             learning_probability: 0.1,            // 10% chance per step
+            enable_crisis_events: false,          // Disabled by default
+            crisis_probability: 0.02,             // 2% chance per step
+            crisis_severity: 0.5,                 // Moderate severity
         }
     }
 }
@@ -739,6 +778,22 @@ impl SimulationConfig {
             }
         }
 
+        if self.enable_crisis_events {
+            if !(0.0..=1.0).contains(&self.crisis_probability) {
+                return Err(SimulationError::ValidationError(format!(
+                    "crisis_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.crisis_probability
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.crisis_severity) {
+                return Err(SimulationError::ValidationError(format!(
+                    "crisis_severity must be between 0.0 and 1.0, got: {}",
+                    self.crisis_severity
+                )));
+            }
+        }
+
         Ok(())
     }
 
@@ -799,6 +854,9 @@ impl SimulationConfig {
                 enable_education: false,
                 learning_cost_multiplier: 3.0,
                 learning_probability: 0.1,
+                enable_crisis_events: false,
+                crisis_probability: 0.02,
+                crisis_severity: 0.5,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -839,6 +897,9 @@ impl SimulationConfig {
                 enable_education: false,
                 learning_cost_multiplier: 3.0,
                 learning_probability: 0.1,
+                enable_crisis_events: false,
+                crisis_probability: 0.02,
+                crisis_severity: 0.5,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -879,6 +940,9 @@ impl SimulationConfig {
                 enable_education: false,
                 learning_cost_multiplier: 3.0,
                 learning_probability: 0.1,
+                enable_crisis_events: true,  // Enable crisis events for crisis scenario!
+                crisis_probability: 0.05,    // Higher probability (5% per step)
+                crisis_severity: 0.7,         // Higher severity for crisis scenario
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -919,6 +983,9 @@ impl SimulationConfig {
                 enable_education: false,
                 learning_cost_multiplier: 3.0,
                 learning_probability: 0.1,
+                enable_crisis_events: false,
+                crisis_probability: 0.02,
+                crisis_severity: 0.5,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -959,6 +1026,9 @@ impl SimulationConfig {
                 enable_education: false,
                 learning_cost_multiplier: 3.0,
                 learning_probability: 0.1,
+                enable_crisis_events: false,
+                crisis_probability: 0.02,
+                crisis_severity: 0.5,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -999,6 +1069,9 @@ impl SimulationConfig {
                 enable_education: false,
                 learning_cost_multiplier: 3.0,
                 learning_probability: 0.1,
+                enable_crisis_events: false,
+                crisis_probability: 0.02,
+                crisis_severity: 0.5,
             },
         }
     }
