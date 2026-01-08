@@ -338,6 +338,33 @@ pub struct SimulationConfig {
     /// Default: 0.05 (5% discount)
     #[serde(default = "default_contract_price_discount")]
     pub contract_price_discount: f64,
+
+    /// Enable education system where persons can learn new skills.
+    ///
+    /// When enabled, persons can invest money to learn new skills over time,
+    /// simulating human capital formation and skill development.
+    /// Set to false to disable skill learning (default).
+    #[serde(default)]
+    pub enable_education: bool,
+
+    /// Cost multiplier for learning a new skill based on its market price.
+    ///
+    /// The cost to learn a skill is calculated as: skill_price * learning_cost_multiplier.
+    /// For example, a value of 3.0 means learning costs 3x the current market price.
+    /// This represents time, effort, and resources needed for education.
+    /// Only used when enable_education is true.
+    /// Default: 3.0 (learning costs 3x market price)
+    #[serde(default = "default_learning_cost_multiplier")]
+    pub learning_cost_multiplier: f64,
+
+    /// Probability per step that a person will attempt to learn a new skill (0.0-1.0).
+    ///
+    /// Each step, persons have this probability of trying to learn a skill they don't have.
+    /// Higher values lead to faster skill accumulation across the population.
+    /// Only used when enable_education is true.
+    /// Default: 0.1 (10% chance per step)
+    #[serde(default = "default_learning_probability")]
+    pub learning_probability: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -400,6 +427,14 @@ fn default_contract_price_discount() -> f64 {
     0.05 // 5% discount for contract stability
 }
 
+fn default_learning_cost_multiplier() -> f64 {
+    3.0 // Learning costs 3x the market price
+}
+
+fn default_learning_probability() -> f64 {
+    0.1 // 10% chance per step to attempt learning
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -438,6 +473,9 @@ impl Default for SimulationConfig {
             max_contract_duration: 50,            // Maximum 50 steps
             min_contract_duration: 10,            // Minimum 10 steps
             contract_price_discount: 0.05,        // 5% discount
+            enable_education: false,              // Disabled by default
+            learning_cost_multiplier: 3.0,        // Learning costs 3x market price
+            learning_probability: 0.1,            // 10% chance per step
         }
     }
 }
@@ -685,6 +723,22 @@ impl SimulationConfig {
             }
         }
 
+        if self.enable_education {
+            if self.learning_cost_multiplier < 0.0 {
+                return Err(SimulationError::ValidationError(format!(
+                    "learning_cost_multiplier must be non-negative, got: {}",
+                    self.learning_cost_multiplier
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.learning_probability) {
+                return Err(SimulationError::ValidationError(format!(
+                    "learning_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.learning_probability
+                )));
+            }
+        }
+
         Ok(())
     }
 
@@ -742,6 +796,9 @@ impl SimulationConfig {
                 max_contract_duration: 50,
                 min_contract_duration: 10,
                 contract_price_discount: 0.05,
+                enable_education: false,
+                learning_cost_multiplier: 3.0,
+                learning_probability: 0.1,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -779,6 +836,9 @@ impl SimulationConfig {
                 max_contract_duration: 50,
                 min_contract_duration: 10,
                 contract_price_discount: 0.05,
+                enable_education: false,
+                learning_cost_multiplier: 3.0,
+                learning_probability: 0.1,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -816,6 +876,9 @@ impl SimulationConfig {
                 max_contract_duration: 50,
                 min_contract_duration: 10,
                 contract_price_discount: 0.05,
+                enable_education: false,
+                learning_cost_multiplier: 3.0,
+                learning_probability: 0.1,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -853,6 +916,9 @@ impl SimulationConfig {
                 max_contract_duration: 50,
                 min_contract_duration: 10,
                 contract_price_discount: 0.05,
+                enable_education: false,
+                learning_cost_multiplier: 3.0,
+                learning_probability: 0.1,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -890,6 +956,9 @@ impl SimulationConfig {
                 max_contract_duration: 50,
                 min_contract_duration: 10,
                 contract_price_discount: 0.05,
+                enable_education: false,
+                learning_cost_multiplier: 3.0,
+                learning_probability: 0.1,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -927,6 +996,9 @@ impl SimulationConfig {
                 max_contract_duration: 50,
                 min_contract_duration: 10,
                 contract_price_discount: 0.05,
+                enable_education: false,
+                learning_cost_multiplier: 3.0,
+                learning_probability: 0.1,
             },
         }
     }

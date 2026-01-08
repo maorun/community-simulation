@@ -107,6 +107,9 @@ pub struct Person {
     /// Behavioral strategy that affects spending decisions.
     /// Determines how aggressively this person spends money to acquire needed skills.
     pub strategy: Strategy,
+    /// Skills that this person has learned through education.
+    /// These skills can also be provided to others in the market.
+    pub learned_skills: Vec<Skill>,
 }
 
 impl Person {
@@ -135,6 +138,7 @@ impl Person {
             borrowed_loans: Vec::new(),
             lent_loans: Vec::new(),
             strategy,
+            learned_skills: Vec::new(), // Start with no learned skills
         }
     }
 
@@ -235,6 +239,55 @@ impl Person {
         self.money -= amount_to_save;
         self.savings += amount_to_save;
         amount_to_save
+    }
+
+    /// Attempts to learn a new skill if the person can afford it.
+    ///
+    /// # Arguments
+    /// * `skill` - The skill to learn (will be cloned and added to learned_skills)
+    /// * `cost` - The cost to learn this skill
+    ///
+    /// # Returns
+    /// `true` if the skill was successfully learned, `false` if the person couldn't afford it
+    /// or already knows the skill
+    pub fn learn_skill(&mut self, skill: Skill, cost: f64) -> bool {
+        // Check if person already has this skill (either as own_skill or learned)
+        if self.has_skill(&skill.id) {
+            return false;
+        }
+
+        // Check if person can afford the learning cost
+        if !self.can_afford(cost) {
+            return false;
+        }
+
+        // Deduct the cost and add the skill
+        self.money -= cost;
+        self.learned_skills.push(skill);
+        true
+    }
+
+    /// Checks if this person has a specific skill (either as own_skill or learned).
+    ///
+    /// # Arguments
+    /// * `skill_id` - The ID of the skill to check
+    ///
+    /// # Returns
+    /// `true` if the person has this skill, `false` otherwise
+    pub fn has_skill(&self, skill_id: &SkillId) -> bool {
+        self.own_skills.iter().any(|s| &s.id == skill_id)
+            || self.learned_skills.iter().any(|s| &s.id == skill_id)
+    }
+
+    /// Returns all skills this person can provide (both own_skills and learned_skills).
+    ///
+    /// # Returns
+    /// A vector of references to all skills this person possesses
+    pub fn all_skills(&self) -> Vec<&Skill> {
+        self.own_skills
+            .iter()
+            .chain(self.learned_skills.iter())
+            .collect()
     }
 }
 
