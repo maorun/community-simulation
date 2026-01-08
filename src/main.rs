@@ -199,6 +199,22 @@ struct Args {
     /// Only used when --enable-education is set
     #[arg(long)]
     learning_probability: Option<f64>,
+
+    /// Enable random crisis events that create economic shocks during the simulation
+    /// When enabled, crises like market crashes, demand shocks, supply shocks, and currency devaluations can occur
+    #[arg(long, default_value_t = false)]
+    enable_crisis_events: bool,
+
+    /// Probability per step that a crisis event will occur (0.0-1.0, e.g., 0.02 = 2%)
+    /// Only used when --enable-crisis-events is set. Lower values = rarer crises
+    #[arg(long)]
+    crisis_probability: Option<f64>,
+
+    /// Crisis severity level (0.0-1.0, e.g., 0.5 = moderate severity)
+    /// Controls how severe crisis effects are. 0.0 = minimal impact, 1.0 = maximum impact
+    /// Only used when --enable-crisis-events is set
+    #[arg(long)]
+    crisis_severity: Option<f64>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -416,6 +432,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(probability) = args.learning_probability {
                 cfg.learning_probability = probability;
             }
+            if args.enable_crisis_events {
+                cfg.enable_crisis_events = true;
+            }
+            if let Some(crisis_prob) = args.crisis_probability {
+                cfg.crisis_probability = crisis_prob;
+            }
+            if let Some(severity) = args.crisis_severity {
+                cfg.crisis_severity = severity;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -497,9 +522,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             learning_probability: args
                 .learning_probability
                 .unwrap_or(SimulationConfig::default().learning_probability),
-            enable_crisis_events: SimulationConfig::default().enable_crisis_events,
-            crisis_probability: SimulationConfig::default().crisis_probability,
-            crisis_severity: SimulationConfig::default().crisis_severity,
+            enable_crisis_events: args.enable_crisis_events,
+            crisis_probability: args
+                .crisis_probability
+                .unwrap_or(SimulationConfig::default().crisis_probability),
+            crisis_severity: args
+                .crisis_severity
+                .unwrap_or(SimulationConfig::default().crisis_severity),
         }
     };
 

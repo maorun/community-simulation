@@ -1,5 +1,6 @@
 use crate::{
     contract::{Contract, ContractId},
+    crisis::CrisisEvent,
     loan::{Loan, LoanId},
     person::Strategy,
     result::{write_step_to_stream, StepData},
@@ -277,6 +278,128 @@ impl SimulationEngine {
 
         // Scale sine wave (-1 to 1) by amplitude and center around 1.0
         1.0 + sine_value * self.config.seasonal_amplitude
+    }
+
+    /// Check for and potentially trigger a crisis event.
+    ///
+    /// This method is called once per simulation step. It randomly determines
+    /// whether a crisis occurs based on the configured probability, and if so,
+    /// randomly selects a crisis type and applies its effects to the economy.
+    fn check_and_trigger_crisis(&mut self) {
+        if !self.config.enable_crisis_events {
+            return;
+        }
+
+        // Check if a crisis should occur this step
+        let random_value: f64 = self.rng.random();
+        if random_value >= self.config.crisis_probability {
+            return; // No crisis this step
+        }
+
+        // Select a random crisis type
+        let crisis_types = CrisisEvent::all_types();
+        let crisis = crisis_types.choose(&mut self.rng).unwrap();
+
+        info!(
+            "🚨 CRISIS EVENT at step {}: {} - {}",
+            self.current_step,
+            crisis.name(),
+            crisis.description()
+        );
+
+        // Apply crisis effects based on type
+        match crisis {
+            CrisisEvent::MarketCrash => {
+                // Reduce all skill prices
+                debug!("Applying market crash: reducing all skill prices");
+                for (_skill_id, skill) in self.market.skills.iter_mut() {
+                    let old_price = skill.current_price;
+                    skill.current_price = crisis.apply_effect(
+                        skill.current_price,
+                        self.config.crisis_severity,
+                        &mut self.rng,
+                    );
+                    // Respect minimum price floor
+                    skill.current_price = skill.current_price.max(self.config.min_skill_price);
+                    debug!(
+                        "  Skill {}: ${:.2} -> ${:.2}",
+                        skill.id, old_price, skill.current_price
+                    );
+                }
+                // Also apply to black market if enabled
+                if let Some(ref mut bm) = self.black_market {
+                    for (_skill_id, skill) in bm.skills.iter_mut() {
+                        skill.current_price = crisis.apply_effect(
+                            skill.current_price,
+                            self.config.crisis_severity,
+                            &mut self.rng,
+                        );
+                        skill.current_price = skill.current_price.max(self.config.min_skill_price);
+                    }
+                }
+            }
+            CrisisEvent::DemandShock => {
+                // Reduce demand by removing some needed skills from entities
+                debug!("Applying demand shock: reducing skill demand");
+                for entity in self.entities.iter_mut() {
+                    if !entity.active {
+                        continue;
+                    }
+                    let original_count = entity.person_data.needed_skills.len();
+                    if original_count > 0 {
+                        // Apply crisis effect to determine how many needs to keep
+                        let keep_count = (original_count as f64
+                            * (1.0
+                                - crisis.apply_effect(
+                                    1.0,
+                                    self.config.crisis_severity,
+                                    &mut self.rng,
+                                )))
+                        .ceil() as usize;
+                        entity.person_data.needed_skills.truncate(keep_count.max(0));
+                    }
+                }
+            }
+            CrisisEvent::SupplyShock => {
+                // Temporarily reduce supply (simulated by temporarily disabling some entities)
+                // For simplicity, we'll just log this - in a more complex implementation,
+                // we could track "supply reduction" and reduce effective supply counts
+                debug!("Applying supply shock: supply chain disruptions");
+                // Apply effect to supply counts in the market
+                for (_skill_id, count) in self.market.supply_counts.iter_mut() {
+                    let old_supply = *count;
+                    *count = ((*count) as f64
+                        * crisis.apply_effect(1.0, self.config.crisis_severity, &mut self.rng))
+                        as usize;
+                    debug!("  Supply reduced from {} to {}", old_supply, *count);
+                }
+            }
+            CrisisEvent::CurrencyDevaluation => {
+                // Reduce everyone's money holdings
+                debug!("Applying currency devaluation: reducing all money holdings");
+                for entity in self.entities.iter_mut() {
+                    if !entity.active {
+                        continue;
+                    }
+                    let old_money = entity.person_data.money;
+                    entity.person_data.money = crisis.apply_effect(
+                        entity.person_data.money,
+                        self.config.crisis_severity,
+                        &mut self.rng,
+                    );
+                    // Also affect savings
+                    entity.person_data.savings = crisis.apply_effect(
+                        entity.person_data.savings,
+                        self.config.crisis_severity,
+                        &mut self.rng,
+                    );
+                    debug!(
+                        "  Person {}: ${:.2} -> ${:.2}",
+                        entity.id, old_money, entity.person_data.money
+                    );
+                }
+            }
+        }
     }
 
     pub fn run(&mut self) -> SimulationResult {
@@ -914,6 +1037,9 @@ impl SimulationEngine {
         }
 
         self.market.update_prices(&mut self.rng);
+
+        // Check for and trigger crisis events (if enabled)
+        self.check_and_trigger_crisis();
 
         /// Helper struct to hold priority information for purchase decisions.
         /// Combines multiple factors (urgency, affordability, efficiency, reputation)
