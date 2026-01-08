@@ -61,6 +61,7 @@
 //! ## Modules
 //!
 //! - [`config`] - Simulation configuration parameters
+//! - [`contract`] - Contract system for long-term agreements
 //! - [`engine`] - Main simulation engine and execution loop
 //! - [`entity`] - Entity wrapper around Person for simulation framework
 //! - [`error`] - Custom error types for robust error handling
@@ -72,6 +73,7 @@
 //! - [`skill`] - Skill definitions and generation
 
 pub mod config;
+pub mod contract;
 pub mod engine;
 pub mod entity; // Represents a Person in the simulation
 pub mod error;
@@ -86,6 +88,7 @@ pub mod scenario_comparison;
 pub mod skill;
 
 pub use config::{PresetName, SimulationConfig};
+pub use contract::{Contract, ContractId};
 pub use engine::{SimulationCheckpoint, SimulationEngine};
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use error::{Result, SimulationError};

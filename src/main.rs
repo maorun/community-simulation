@@ -403,6 +403,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .black_market_price_multiplier,
             black_market_participation_rate: SimulationConfig::default()
                 .black_market_participation_rate,
+            enable_contracts: SimulationConfig::default().enable_contracts,
+            max_contract_duration: SimulationConfig::default().max_contract_duration,
+            min_contract_duration: SimulationConfig::default().min_contract_duration,
+            contract_price_discount: SimulationConfig::default().contract_price_discount,
         }
     };
 
