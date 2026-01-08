@@ -1011,12 +1011,16 @@ pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
 pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartnerStats {
     use std::collections::{HashMap, HashSet};
 
+    // Type alias to simplify complex nested HashMap
+    // Maps person_id to (buyer_count, seller_count, partner_map)
+    // where partner_map is partner_id -> (trade_count, total_value)
+    type PersonTradeData = (usize, usize, HashMap<usize, (usize, f64)>);
+
     let active_entities: Vec<_> = entities.iter().filter(|e| e.active).collect();
     let num_persons = active_entities.len();
 
     // Track partners and trade details for each person
-    let mut person_stats: HashMap<usize, (usize, usize, HashMap<usize, (usize, f64)>)> =
-        HashMap::new();
+    let mut person_stats: HashMap<usize, PersonTradeData> = HashMap::new();
 
     // Track all unique pairs for network density calculation
     let mut unique_pairs: HashSet<(usize, usize)> = HashSet::new();
@@ -1024,7 +1028,9 @@ pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartn
     // Process each entity's transaction history
     for entity in &active_entities {
         let person_id = entity.person_data.id;
-        let entry = person_stats.entry(person_id).or_insert((0, 0, HashMap::new()));
+        let entry = person_stats
+            .entry(person_id)
+            .or_insert((0, 0, HashMap::new()));
 
         for transaction in &entity.person_data.transaction_history {
             if let Some(partner_id) = transaction.counterparty_id {
@@ -1092,8 +1098,7 @@ pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartn
 
     // Calculate network metrics
     let avg_unique_partners = if !per_person.is_empty() {
-        per_person.iter().map(|s| s.unique_partners).sum::<usize>() as f64
-            / per_person.len() as f64
+        per_person.iter().map(|s| s.unique_partners).sum::<usize>() as f64 / per_person.len() as f64
     } else {
         0.0
     };
@@ -1848,7 +1853,7 @@ mod tests {
 
     #[test]
     fn test_trading_partner_statistics() {
-        use crate::person::{Person, Strategy, Transaction, TransactionType};
+        use crate::person::{Strategy, Transaction, TransactionType};
         use crate::skill::Skill;
         use crate::Entity;
 
@@ -1864,43 +1869,55 @@ mod tests {
         // Add transactions to simulate trades
         // Person 0 buys from Person 1 three times
         for _ in 0..3 {
-            entities[0].person_data.transaction_history.push(Transaction {
-                step: 1,
-                skill_id: "Skill1".to_string(),
-                transaction_type: TransactionType::Buy,
-                amount: 10.0,
-                counterparty_id: Some(1),
-            });
+            entities[0]
+                .person_data
+                .transaction_history
+                .push(Transaction {
+                    step: 1,
+                    skill_id: "Skill1".to_string(),
+                    transaction_type: TransactionType::Buy,
+                    amount: 10.0,
+                    counterparty_id: Some(1),
+                });
         }
 
         // Person 1 sells to Person 0 three times
         for _ in 0..3 {
-            entities[1].person_data.transaction_history.push(Transaction {
-                step: 1,
-                skill_id: "Skill0".to_string(),
-                transaction_type: TransactionType::Sell,
-                amount: 10.0,
-                counterparty_id: Some(0),
-            });
+            entities[1]
+                .person_data
+                .transaction_history
+                .push(Transaction {
+                    step: 1,
+                    skill_id: "Skill0".to_string(),
+                    transaction_type: TransactionType::Sell,
+                    amount: 10.0,
+                    counterparty_id: Some(0),
+                });
         }
 
         // Person 2 buys from Person 3 once
-        entities[2].person_data.transaction_history.push(Transaction {
-            step: 1,
-            skill_id: "Skill3".to_string(),
-            transaction_type: TransactionType::Buy,
-            amount: 15.0,
-            counterparty_id: Some(3),
-        });
+        entities[2]
+            .person_data
+            .transaction_history
+            .push(Transaction {
+                step: 1,
+                skill_id: "Skill3".to_string(),
+                transaction_type: TransactionType::Buy,
+                amount: 15.0,
+                counterparty_id: Some(3),
+            });
 
         // Person 3 sells to Person 2 once
-        entities[3].person_data.transaction_history.push(Transaction {
-            step: 1,
-            skill_id: "Skill2".to_string(),
-            transaction_type: TransactionType::Sell,
-            amount: 15.0,
-            counterparty_id: Some(2),
-        });
+        entities[3]
+            .person_data
+            .transaction_history
+            .push(Transaction {
+                step: 1,
+                skill_id: "Skill2".to_string(),
+                transaction_type: TransactionType::Sell,
+                amount: 15.0,
+                counterparty_id: Some(2),
+            });
 
         // Calculate trading partner statistics
         let stats = calculate_trading_partner_statistics(&entities);
