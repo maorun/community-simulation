@@ -294,6 +294,7 @@ impl SimulationResult {
     /// #     total_taxes_collected: None,
     /// #     total_taxes_redistributed: None,
     /// #     loan_statistics: None,
+    /// #     contract_statistics: None,
     /// #     final_persons_data: vec![],
     /// # };
     /// // Save uncompressed JSON
