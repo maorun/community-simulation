@@ -1,4 +1,5 @@
 use crate::{
+    contract::{Contract, ContractId},
     loan::{Loan, LoanId},
     person::Strategy,
     result::{write_step_to_stream, StepData},
@@ -60,6 +61,12 @@ pub struct SimulationCheckpoint {
     pub total_taxes_redistributed: f64,
     /// Per-skill trade tracking: (skill_id -> (trade_count, total_volume))
     pub per_skill_trades: HashMap<SkillId, (usize, f64)>,
+    /// All contracts in the system
+    pub contracts: HashMap<ContractId, Contract>,
+    /// Total contracts created counter
+    pub total_contracts_created: usize,
+    /// Total contracts completed counter
+    pub total_contracts_completed: usize,
 }
 
 pub struct SimulationEngine {
@@ -92,6 +99,10 @@ pub struct SimulationEngine {
     per_skill_trades: HashMap<SkillId, (usize, f64)>,
     // Streaming output writer
     stream_writer: Option<BufWriter<File>>,
+    // Contract system tracking
+    contracts: HashMap<ContractId, Contract>,
+    total_contracts_created: usize,
+    total_contracts_completed: usize,
 }
 
 impl SimulationEngine {
@@ -172,6 +183,9 @@ impl SimulationEngine {
             total_taxes_redistributed: 0.0,
             per_skill_trades: HashMap::new(),
             stream_writer,
+            contracts: HashMap::new(),
+            total_contracts_created: 0,
+            total_contracts_completed: 0,
         }
     }
 
@@ -736,6 +750,41 @@ impl SimulationEngine {
                 None
             },
             loan_statistics,
+            contract_statistics: if self.config.enable_contracts {
+                let active_contracts = self.contracts.values().filter(|c| c.is_active()).count();
+
+                let completed_contracts: Vec<_> = self
+                    .contracts
+                    .values()
+                    .filter(|c| !c.is_active() && c.remaining_steps == 0)
+                    .collect();
+
+                let avg_contract_duration = if !completed_contracts.is_empty() {
+                    completed_contracts
+                        .iter()
+                        .map(|c| c.duration as f64)
+                        .sum::<f64>()
+                        / completed_contracts.len() as f64
+                } else {
+                    0.0
+                };
+
+                let total_contract_value: f64 = self
+                    .contracts
+                    .values()
+                    .map(|c| c.total_value_exchanged())
+                    .sum();
+
+                Some(crate::result::ContractStats {
+                    total_contracts_created: self.total_contracts_created,
+                    total_contracts_completed: self.total_contracts_completed,
+                    active_contracts,
+                    avg_contract_duration,
+                    total_contract_value,
+                })
+            } else {
+                None
+            },
             final_persons_data: self.entities.clone(),
         }
     }
@@ -1496,6 +1545,9 @@ impl SimulationEngine {
             total_taxes_collected: self.total_taxes_collected,
             total_taxes_redistributed: self.total_taxes_redistributed,
             per_skill_trades: self.per_skill_trades.clone(),
+            contracts: self.contracts.clone(),
+            total_contracts_created: self.total_contracts_created,
+            total_contracts_completed: self.total_contracts_completed,
         };
 
         let file = File::create(path)?;
@@ -1592,6 +1644,9 @@ impl SimulationEngine {
             total_taxes_redistributed: checkpoint.total_taxes_redistributed,
             per_skill_trades: checkpoint.per_skill_trades,
             stream_writer,
+            contracts: checkpoint.contracts,
+            total_contracts_created: checkpoint.total_contracts_created,
+            total_contracts_completed: checkpoint.total_contracts_completed,
         })
     }
 }
