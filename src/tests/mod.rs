@@ -411,4 +411,79 @@ mod engine_tests {
             );
         }
     }
+
+    #[test]
+    fn test_per_skill_trade_statistics() {
+        // Test that per-skill trade statistics are correctly tracked and reported
+        let mut config = get_test_config();
+        config.max_steps = 50;
+        config.entity_count = 20;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify per_skill_trade_stats exists
+        assert!(
+            !result.per_skill_trade_stats.is_empty(),
+            "Per-skill trade stats should not be empty after simulation"
+        );
+
+        // Verify structure and data consistency
+        for skill_stat in &result.per_skill_trade_stats {
+            // Check that all fields are valid
+            assert!(
+                !skill_stat.skill_id.is_empty(),
+                "Skill ID should not be empty"
+            );
+            assert!(
+                skill_stat.trade_count > 0,
+                "Trade count should be positive for tracked skills"
+            );
+            assert!(
+                skill_stat.total_volume > 0.0,
+                "Total volume should be positive for traded skills"
+            );
+            assert!(
+                skill_stat.avg_price > 0.0,
+                "Average price should be positive"
+            );
+
+            // Verify avg_price calculation is correct
+            let calculated_avg = skill_stat.total_volume / (skill_stat.trade_count as f64);
+            assert!(
+                (skill_stat.avg_price - calculated_avg).abs() < 0.01,
+                "Average price should equal total_volume / trade_count"
+            );
+        }
+
+        // Verify stats are sorted by total volume (highest first)
+        for i in 1..result.per_skill_trade_stats.len() {
+            assert!(
+                result.per_skill_trade_stats[i - 1].total_volume
+                    >= result.per_skill_trade_stats[i].total_volume,
+                "Per-skill trade stats should be sorted by total volume (descending)"
+            );
+        }
+
+        // Verify sum of per-skill stats matches total trade stats
+        let total_trades_from_skills: usize = result
+            .per_skill_trade_stats
+            .iter()
+            .map(|s| s.trade_count)
+            .sum();
+        let total_volume_from_skills: f64 = result
+            .per_skill_trade_stats
+            .iter()
+            .map(|s| s.total_volume)
+            .sum();
+
+        assert_eq!(
+            total_trades_from_skills, result.trade_volume_statistics.total_trades,
+            "Sum of per-skill trade counts should equal total trades"
+        );
+        assert!(
+            (total_volume_from_skills - result.trade_volume_statistics.total_volume).abs() < 0.01,
+            "Sum of per-skill volumes should equal total volume"
+        );
+    }
 }

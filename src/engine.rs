@@ -58,6 +58,8 @@ pub struct SimulationCheckpoint {
     pub total_taxes_collected: f64,
     /// Total amount redistributed through tax system
     pub total_taxes_redistributed: f64,
+    /// Per-skill trade tracking: (skill_id -> (trade_count, total_volume))
+    pub per_skill_trades: HashMap<SkillId, (usize, f64)>,
 }
 
 pub struct SimulationEngine {
@@ -86,6 +88,8 @@ pub struct SimulationEngine {
     // Tax system tracking
     total_taxes_collected: f64,
     total_taxes_redistributed: f64,
+    // Per-skill trade tracking: (skill_id -> (trade_count, total_volume))
+    per_skill_trades: HashMap<SkillId, (usize, f64)>,
     // Streaming output writer
     stream_writer: Option<BufWriter<File>>,
 }
@@ -166,6 +170,7 @@ impl SimulationEngine {
             total_loans_repaid: 0,
             total_taxes_collected: 0.0,
             total_taxes_redistributed: 0.0,
+            per_skill_trades: HashMap::new(),
             stream_writer,
         }
     }
@@ -636,6 +641,32 @@ impl SimulationEngine {
             None
         };
 
+        // Calculate per-skill trade statistics
+        let mut per_skill_trade_stats: Vec<crate::result::SkillTradeStats> = self
+            .per_skill_trades
+            .iter()
+            .map(|(skill_id, (trade_count, total_volume))| {
+                let avg_price = if *trade_count > 0 {
+                    total_volume / (*trade_count as f64)
+                } else {
+                    0.0
+                };
+                crate::result::SkillTradeStats {
+                    skill_id: skill_id.clone(),
+                    trade_count: *trade_count,
+                    total_volume: *total_volume,
+                    avg_price,
+                }
+            })
+            .collect();
+
+        // Sort by total volume (highest first)
+        per_skill_trade_stats.sort_by(|a, b| {
+            b.total_volume
+                .partial_cmp(&a.total_volume)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
         SimulationResult {
             total_steps: self.config.max_steps,
             total_duration: total_duration.as_secs_f64(),
@@ -656,6 +687,7 @@ impl SimulationEngine {
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
+            per_skill_trade_stats,
             black_market_statistics: if self.config.enable_black_market {
                 let total_black_market_trades: usize =
                     self.black_market_trades_per_step.iter().sum();
@@ -1153,6 +1185,14 @@ impl SimulationEngine {
             // Track total fees collected
             self.total_fees_collected += fee;
 
+            // Update per-skill trade statistics
+            let skill_stats = self
+                .per_skill_trades
+                .entry(skill_id.clone())
+                .or_insert((0, 0.0));
+            skill_stats.0 += 1; // Increment trade count
+            skill_stats.1 += price; // Add to total volume
+
             *self
                 .market
                 .sales_this_step
@@ -1455,6 +1495,7 @@ impl SimulationEngine {
             total_loans_repaid: self.total_loans_repaid,
             total_taxes_collected: self.total_taxes_collected,
             total_taxes_redistributed: self.total_taxes_redistributed,
+            per_skill_trades: self.per_skill_trades.clone(),
         };
 
         let file = File::create(path)?;
@@ -1549,6 +1590,7 @@ impl SimulationEngine {
             total_loans_repaid: checkpoint.total_loans_repaid,
             total_taxes_collected: checkpoint.total_taxes_collected,
             total_taxes_redistributed: checkpoint.total_taxes_redistributed,
+            per_skill_trades: checkpoint.per_skill_trades,
             stream_writer,
         })
     }
