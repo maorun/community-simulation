@@ -940,9 +940,9 @@ impl SimulationConfig {
                 enable_education: false,
                 learning_cost_multiplier: 3.0,
                 learning_probability: 0.1,
-                enable_crisis_events: true,  // Enable crisis events for crisis scenario!
-                crisis_probability: 0.05,    // Higher probability (5% per step)
-                crisis_severity: 0.7,         // Higher severity for crisis scenario
+                enable_crisis_events: true, // Enable crisis events for crisis scenario!
+                crisis_probability: 0.05,   // Higher probability (5% per step)
+                crisis_severity: 0.7,       // Higher severity for crisis scenario
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
