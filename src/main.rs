@@ -184,6 +184,21 @@ struct Args {
     /// Contracts offer stability and this discount incentivizes their formation
     #[arg(long)]
     contract_price_discount: Option<f64>,
+
+    /// Enable education system where persons can learn new skills
+    /// Persons invest money to learn skills, simulating human capital formation
+    #[arg(long, default_value_t = false)]
+    enable_education: bool,
+
+    /// Cost multiplier for learning a skill based on market price (e.g., 3.0 = 3x market price)
+    /// Only used when --enable-education is set
+    #[arg(long)]
+    learning_cost_multiplier: Option<f64>,
+
+    /// Probability per step that a person attempts to learn a skill (0.0-1.0, e.g., 0.1 = 10%)
+    /// Only used when --enable-education is set
+    #[arg(long)]
+    learning_probability: Option<f64>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -297,6 +312,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(stream_output) = &args.stream_output {
             cfg.stream_output_path = Some(stream_output.clone());
         }
+        if args.enable_contracts {
+            cfg.enable_contracts = true;
+        }
+        if let Some(max_duration) = args.max_contract_duration {
+            cfg.max_contract_duration = max_duration;
+        }
+        if let Some(min_duration) = args.min_contract_duration {
+            cfg.min_contract_duration = min_duration;
+        }
+        if let Some(discount) = args.contract_price_discount {
+            cfg.contract_price_discount = discount;
+        }
+        if args.enable_education {
+            cfg.enable_education = true;
+        }
+        if let Some(cost_multiplier) = args.learning_cost_multiplier {
+            cfg.learning_cost_multiplier = cost_multiplier;
+        }
+        if let Some(probability) = args.learning_probability {
+            cfg.learning_probability = probability;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -370,6 +406,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Some(discount) = args.contract_price_discount {
                 cfg.contract_price_discount = discount;
+            }
+            if args.enable_education {
+                cfg.enable_education = true;
+            }
+            if let Some(cost_multiplier) = args.learning_cost_multiplier {
+                cfg.learning_cost_multiplier = cost_multiplier;
+            }
+            if let Some(probability) = args.learning_probability {
+                cfg.learning_probability = probability;
             }
         })?
     } else {
@@ -445,6 +490,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             contract_price_discount: args
                 .contract_price_discount
                 .unwrap_or(SimulationConfig::default().contract_price_discount),
+            enable_education: args.enable_education,
+            learning_cost_multiplier: args
+                .learning_cost_multiplier
+                .unwrap_or(SimulationConfig::default().learning_cost_multiplier),
+            learning_probability: args
+                .learning_probability
+                .unwrap_or(SimulationConfig::default().learning_probability),
         }
     };
 

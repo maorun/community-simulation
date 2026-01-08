@@ -174,6 +174,19 @@ pub struct MonteCarloResult {
     pub avg_reputation_stats: MonteCarloStats,
 }
 
+/// Statistics about education system activity (skill learning)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EducationStats {
+    /// Total number of skills learned across all persons
+    pub total_skills_learned: usize,
+    /// Average number of learned skills per person
+    pub avg_learned_skills_per_person: f64,
+    /// Person with the most learned skills
+    pub max_learned_skills: usize,
+    /// Total money spent on education across all persons
+    pub total_education_spending: f64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     // Core simulation metrics
@@ -236,6 +249,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contract_statistics: Option<ContractStats>,
 
+    /// Education system statistics (only present if education is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub education_statistics: Option<EducationStats>,
+
     // final_entities might be too verbose if Person struct grows large with transaction history.
     // Consider summarizing person data if needed, or providing it under a flag.
     // For now, let's keep it as it contains all person data including transaction history.
@@ -295,6 +312,7 @@ impl SimulationResult {
     /// #     total_taxes_redistributed: None,
     /// #     loan_statistics: None,
     /// #     contract_statistics: None,
+    /// #     education_statistics: None,
     /// #     final_persons_data: vec![],
     /// # };
     /// // Save uncompressed JSON
@@ -1087,6 +1105,7 @@ mod tests {
             total_taxes_redistributed: None,
             loan_statistics: None,
             contract_statistics: None,
+            education_statistics: None,
             final_persons_data: vec![],
         }
     }

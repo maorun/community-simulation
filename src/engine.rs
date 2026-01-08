@@ -8,8 +8,10 @@ use crate::{
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info, trace, warn};
+use rand::prelude::IndexedRandom;
 use rand::rngs::StdRng;
-use rand::{seq::SliceRandom, Rng, SeedableRng};
+use rand::seq::SliceRandom;
+use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
@@ -785,6 +787,50 @@ impl SimulationEngine {
             } else {
                 None
             },
+            education_statistics: if self.config.enable_education {
+                let total_skills_learned: usize = self
+                    .entities
+                    .iter()
+                    .filter(|e| e.active)
+                    .map(|e| e.person_data.learned_skills.len())
+                    .sum();
+
+                let active_persons = self.entities.iter().filter(|e| e.active).count();
+                let avg_learned_skills_per_person = if active_persons > 0 {
+                    total_skills_learned as f64 / active_persons as f64
+                } else {
+                    0.0
+                };
+
+                let max_learned_skills = self
+                    .entities
+                    .iter()
+                    .filter(|e| e.active)
+                    .map(|e| e.person_data.learned_skills.len())
+                    .max()
+                    .unwrap_or(0);
+
+                // Calculate total education spending
+                // Note: This is an approximation as we don't track historical learning costs
+                // We estimate based on current learned skills and their current market prices
+                let total_education_spending: f64 = self
+                    .entities
+                    .iter()
+                    .filter(|e| e.active)
+                    .flat_map(|e| &e.person_data.learned_skills)
+                    .filter_map(|skill| self.market.skills.get(&skill.id))
+                    .map(|skill| skill.current_price * self.config.learning_cost_multiplier)
+                    .sum();
+
+                Some(crate::result::EducationStats {
+                    total_skills_learned,
+                    avg_learned_skills_per_person,
+                    max_learned_skills,
+                    total_education_spending,
+                })
+            } else {
+                None
+            },
             final_persons_data: self.entities.clone(),
         }
     }
@@ -833,19 +879,11 @@ impl SimulationEngine {
                 base_num_needs
             };
 
-            // Collect IDs of all skills this person owns
-            let own_skill_ids: Vec<&SkillId> = entity
-                .person_data
-                .own_skills
-                .iter()
-                .map(|skill| &skill.id)
-                .collect();
-
-            // Filter out skills the person already owns
+            // Filter out skills the person already has (either as own_skills or learned_skills)
             let mut potential_needs: Vec<SkillId> = self
                 .all_skill_ids
                 .iter()
-                .filter(|&id| !own_skill_ids.contains(&id))
+                .filter(|&id| !entity.person_data.has_skill(id))
                 .cloned()
                 .collect();
 
@@ -896,7 +934,14 @@ impl SimulationEngine {
         let mut skill_providers: HashMap<SkillId, Vec<usize>> = HashMap::new();
         for entity_idx in 0..self.entities.len() {
             if self.entities[entity_idx].active {
+                // Include both own_skills and learned_skills
                 for skill in &self.entities[entity_idx].person_data.own_skills {
+                    skill_providers
+                        .entry(skill.id.clone())
+                        .or_default()
+                        .push(self.entities[entity_idx].id);
+                }
+                for skill in &self.entities[entity_idx].person_data.learned_skills {
                     skill_providers
                         .entry(skill.id.clone())
                         .or_default()
@@ -1280,6 +1325,53 @@ impl SimulationEngine {
                             self.config.savings_rate * 100.0,
                             money_before,
                             entity.person_data.money
+                        );
+                    }
+                }
+            }
+        }
+
+        // Education system - persons can learn new skills
+        if self.config.enable_education && self.config.learning_probability > 0.0 {
+            for entity in &mut self.entities {
+                if !entity.active {
+                    continue;
+                }
+
+                // Check if this person attempts to learn a skill this step
+                let attempt_learning: f64 = self.rng.gen();
+                if attempt_learning >= self.config.learning_probability {
+                    continue;
+                }
+
+                // Find skills this person doesn't have yet
+                let potential_skills: Vec<&Skill> = self
+                    .market
+                    .skills
+                    .values()
+                    .filter(|skill| !entity.person_data.has_skill(&skill.id))
+                    .collect();
+
+                if potential_skills.is_empty() {
+                    continue;
+                }
+
+                // Randomly select a skill to learn
+                if let Some(&skill_to_learn) = potential_skills.as_slice().choose(&mut self.rng) {
+                    let learning_cost =
+                        skill_to_learn.current_price * self.config.learning_cost_multiplier;
+
+                    // Attempt to learn the skill
+                    if entity
+                        .person_data
+                        .learn_skill(skill_to_learn.clone(), learning_cost)
+                    {
+                        debug!(
+                            "Person {} learned skill '{}' for ${:.2} (market price: ${:.2})",
+                            entity.id,
+                            skill_to_learn.id,
+                            learning_cost,
+                            skill_to_learn.current_price
                         );
                     }
                 }

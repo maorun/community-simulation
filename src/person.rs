@@ -107,6 +107,9 @@ pub struct Person {
     /// Behavioral strategy that affects spending decisions.
     /// Determines how aggressively this person spends money to acquire needed skills.
     pub strategy: Strategy,
+    /// Skills that this person has learned through education.
+    /// These skills can also be provided to others in the market.
+    pub learned_skills: Vec<Skill>,
 }
 
 impl Person {
@@ -135,6 +138,7 @@ impl Person {
             borrowed_loans: Vec::new(),
             lent_loans: Vec::new(),
             strategy,
+            learned_skills: Vec::new(), // Start with no learned skills
         }
     }
 
@@ -235,6 +239,55 @@ impl Person {
         self.money -= amount_to_save;
         self.savings += amount_to_save;
         amount_to_save
+    }
+
+    /// Attempts to learn a new skill if the person can afford it.
+    ///
+    /// # Arguments
+    /// * `skill` - The skill to learn (will be cloned and added to learned_skills)
+    /// * `cost` - The cost to learn this skill
+    ///
+    /// # Returns
+    /// `true` if the skill was successfully learned, `false` if the person couldn't afford it
+    /// or already knows the skill
+    pub fn learn_skill(&mut self, skill: Skill, cost: f64) -> bool {
+        // Check if person already has this skill (either as own_skill or learned)
+        if self.has_skill(&skill.id) {
+            return false;
+        }
+
+        // Check if person can afford the learning cost
+        if !self.can_afford(cost) {
+            return false;
+        }
+
+        // Deduct the cost and add the skill
+        self.money -= cost;
+        self.learned_skills.push(skill);
+        true
+    }
+
+    /// Checks if this person has a specific skill (either as own_skill or learned).
+    ///
+    /// # Arguments
+    /// * `skill_id` - The ID of the skill to check
+    ///
+    /// # Returns
+    /// `true` if the person has this skill, `false` otherwise
+    pub fn has_skill(&self, skill_id: &SkillId) -> bool {
+        self.own_skills.iter().any(|s| &s.id == skill_id)
+            || self.learned_skills.iter().any(|s| &s.id == skill_id)
+    }
+
+    /// Returns all skills this person can provide (both own_skills and learned_skills).
+    ///
+    /// # Returns
+    /// A vector of references to all skills this person possesses
+    pub fn all_skills(&self) -> Vec<&Skill> {
+        self.own_skills
+            .iter()
+            .chain(self.learned_skills.iter())
+            .collect()
     }
 }
 
@@ -503,5 +556,146 @@ mod tests {
         let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive);
 
         assert_eq!(person.strategy, Strategy::Aggressive);
+    }
+
+    #[test]
+    fn test_learn_skill_success() {
+        let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+
+        let new_skill = Skill::new("NewSkill".to_string(), 15.0);
+        let learning_cost = 30.0;
+
+        let result = person.learn_skill(new_skill.clone(), learning_cost);
+
+        assert!(result, "Should successfully learn the skill");
+        assert_eq!(person.money, 70.0, "Money should be deducted");
+        assert_eq!(
+            person.learned_skills.len(),
+            1,
+            "Should have one learned skill"
+        );
+        assert_eq!(
+            person.learned_skills[0].id, "NewSkill",
+            "Learned skill should be NewSkill"
+        );
+    }
+
+    #[test]
+    fn test_learn_skill_cannot_afford() {
+        let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 50.0, vec![own_skill], Strategy::default());
+
+        let new_skill = Skill::new("ExpensiveSkill".to_string(), 15.0);
+        let learning_cost = 100.0; // More than person has
+
+        let result = person.learn_skill(new_skill, learning_cost);
+
+        assert!(!result, "Should fail to learn due to insufficient money");
+        assert_eq!(person.money, 50.0, "Money should not be deducted");
+        assert_eq!(
+            person.learned_skills.len(),
+            0,
+            "Should have no learned skills"
+        );
+    }
+
+    #[test]
+    fn test_learn_skill_already_has_as_own_skill() {
+        let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![own_skill.clone()], Strategy::default());
+
+        let learning_cost = 30.0;
+        let result = person.learn_skill(own_skill, learning_cost);
+
+        assert!(
+            !result,
+            "Should fail to learn skill they already have as own_skill"
+        );
+        assert_eq!(person.money, 100.0, "Money should not be deducted");
+        assert_eq!(
+            person.learned_skills.len(),
+            0,
+            "Should have no learned skills"
+        );
+    }
+
+    #[test]
+    fn test_learn_skill_already_learned() {
+        let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+
+        let new_skill = Skill::new("NewSkill".to_string(), 15.0);
+        let learning_cost = 20.0;
+
+        // Learn the skill once
+        person.learn_skill(new_skill.clone(), learning_cost);
+        let money_after_first_learning = person.money;
+
+        // Try to learn it again
+        let result = person.learn_skill(new_skill, learning_cost);
+
+        assert!(!result, "Should fail to learn skill they already learned");
+        assert_eq!(
+            person.money, money_after_first_learning,
+            "Money should not be deducted on second attempt"
+        );
+        assert_eq!(
+            person.learned_skills.len(),
+            1,
+            "Should still have only one learned skill"
+        );
+    }
+
+    #[test]
+    fn test_has_skill_with_own_skill() {
+        let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+
+        assert!(
+            person.has_skill(&"OwnSkill".to_string()),
+            "Should have OwnSkill as own_skill"
+        );
+        assert!(
+            !person.has_skill(&"OtherSkill".to_string()),
+            "Should not have OtherSkill"
+        );
+    }
+
+    #[test]
+    fn test_has_skill_with_learned_skill() {
+        let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+
+        let learned_skill = Skill::new("LearnedSkill".to_string(), 15.0);
+        person.learn_skill(learned_skill, 30.0);
+
+        assert!(
+            person.has_skill(&"LearnedSkill".to_string()),
+            "Should have LearnedSkill as learned_skill"
+        );
+        assert!(
+            person.has_skill(&"OwnSkill".to_string()),
+            "Should still have OwnSkill"
+        );
+    }
+
+    #[test]
+    fn test_all_skills() {
+        let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+
+        let learned_skill1 = Skill::new("LearnedSkill1".to_string(), 15.0);
+        let learned_skill2 = Skill::new("LearnedSkill2".to_string(), 20.0);
+        person.learn_skill(learned_skill1, 30.0);
+        person.learn_skill(learned_skill2, 40.0);
+
+        let all_skills = person.all_skills();
+        assert_eq!(all_skills.len(), 3, "Should have 3 total skills");
+
+        let skill_ids: Vec<String> = all_skills.iter().map(|s| s.id.clone()).collect();
+        assert!(skill_ids.contains(&"OwnSkill".to_string()));
+        assert!(skill_ids.contains(&"LearnedSkill1".to_string()));
+        assert!(skill_ids.contains(&"LearnedSkill2".to_string()));
     }
 }
