@@ -52,6 +52,28 @@ tech_growth_rate: 0.0
 # Valid range: 0.0 to 1.0 (0% to 100%)
 transaction_fee: 0.0
 
+# Contract System Configuration
+# Enable long-term agreements for stable trading relationships
+# When enabled, persons can form contracts that lock in prices for multiple steps
+enable_contracts: false
+
+# Maximum duration for contracts in simulation steps
+# Determines how long a contract can remain active
+# Default: 50
+max_contract_duration: 50
+
+# Minimum duration for contracts in simulation steps
+# Contracts must last at least this many steps
+# Default: 10
+min_contract_duration: 10
+
+# Price discount for contract trades as a percentage
+# Contracts offer stability, and this discount incentivizes their formation
+# A value of 0.05 means contract prices are 5% lower than current market price
+# Valid range: 0.0 to 1.0 (0% to 100%)
+# Default: 0.05
+contract_price_discount: 0.05
+
 # Example configurations for different use cases:
 
 # Small economy for quick testing:
