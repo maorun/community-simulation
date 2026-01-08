@@ -125,6 +125,21 @@ pub struct LoanStats {
     pub active_loans: usize,
 }
 
+/// Statistics about the contract system
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ContractStats {
+    /// Total number of contracts created during the simulation
+    pub total_contracts_created: usize,
+    /// Total number of contracts successfully completed
+    pub total_contracts_completed: usize,
+    /// Number of active contracts at simulation end
+    pub active_contracts: usize,
+    /// Average duration of completed contracts (in steps)
+    pub avg_contract_duration: f64,
+    /// Total value exchanged through contracts
+    pub total_contract_value: f64,
+}
+
 /// Aggregated statistics across multiple Monte Carlo runs
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MonteCarloStats {
@@ -217,6 +232,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub loan_statistics: Option<LoanStats>,
 
+    /// Contract system statistics (only present if contracts are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contract_statistics: Option<ContractStats>,
+
     // final_entities might be too verbose if Person struct grows large with transaction history.
     // Consider summarizing person data if needed, or providing it under a flag.
     // For now, let's keep it as it contains all person data including transaction history.
@@ -275,6 +294,7 @@ impl SimulationResult {
     /// #     total_taxes_collected: None,
     /// #     total_taxes_redistributed: None,
     /// #     loan_statistics: None,
+    /// #     contract_statistics: None,
     /// #     final_persons_data: vec![],
     /// # };
     /// // Save uncompressed JSON
@@ -1066,6 +1086,7 @@ mod tests {
             total_taxes_collected: None,
             total_taxes_redistributed: None,
             loan_statistics: None,
+            contract_statistics: None,
             final_persons_data: vec![],
         }
     }

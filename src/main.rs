@@ -164,6 +164,26 @@ struct Args {
     /// Higher values provide more reliable statistics but take longer to execute
     #[arg(long)]
     comparison_runs: Option<usize>,
+
+    /// Enable contract system for long-term agreements between persons
+    /// When enabled, persons can form contracts that lock in prices for multiple steps
+    #[arg(long, default_value_t = false)]
+    enable_contracts: bool,
+
+    /// Maximum duration for contracts in simulation steps (default: 50)
+    /// Determines how long a contract can remain active
+    #[arg(long)]
+    max_contract_duration: Option<usize>,
+
+    /// Minimum duration for contracts in simulation steps (default: 10)
+    /// Contracts must last at least this many steps
+    #[arg(long)]
+    min_contract_duration: Option<usize>,
+
+    /// Price discount for contract trades as a percentage (0.0-1.0, e.g., 0.05 = 5%)
+    /// Contracts offer stability and this discount incentivizes their formation
+    #[arg(long)]
+    contract_price_discount: Option<f64>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -339,6 +359,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(stream_output) = &args.stream_output {
                 cfg.stream_output_path = Some(stream_output.clone());
             }
+            if args.enable_contracts {
+                cfg.enable_contracts = true;
+            }
+            if let Some(max_duration) = args.max_contract_duration {
+                cfg.max_contract_duration = max_duration;
+            }
+            if let Some(min_duration) = args.min_contract_duration {
+                cfg.min_contract_duration = min_duration;
+            }
+            if let Some(discount) = args.contract_price_discount {
+                cfg.contract_price_discount = discount;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -403,6 +435,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .black_market_price_multiplier,
             black_market_participation_rate: SimulationConfig::default()
                 .black_market_participation_rate,
+            enable_contracts: args.enable_contracts,
+            max_contract_duration: args
+                .max_contract_duration
+                .unwrap_or(SimulationConfig::default().max_contract_duration),
+            min_contract_duration: args
+                .min_contract_duration
+                .unwrap_or(SimulationConfig::default().min_contract_duration),
+            contract_price_discount: args
+                .contract_price_discount
+                .unwrap_or(SimulationConfig::default().contract_price_discount),
         }
     };
 

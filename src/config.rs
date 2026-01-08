@@ -303,6 +303,41 @@ pub struct SimulationConfig {
     /// Default: 0.2 (20% of trades)
     #[serde(default = "default_black_market_participation_rate")]
     pub black_market_participation_rate: f64,
+
+    /// Enable contract system for long-term agreements between persons.
+    ///
+    /// When enabled, persons can form long-term contracts that lock in prices
+    /// for regular transactions over multiple steps, providing stability and predictability.
+    /// Set to false to disable contracts (default).
+    #[serde(default)]
+    pub enable_contracts: bool,
+
+    /// Maximum duration for contracts in simulation steps.
+    ///
+    /// Determines the maximum length of time a contract can remain active.
+    /// Contracts will execute automatically for this many steps at a fixed price.
+    /// Only used when enable_contracts is true.
+    /// Default: 50 steps
+    #[serde(default = "default_max_contract_duration")]
+    pub max_contract_duration: usize,
+
+    /// Minimum duration for contracts in simulation steps.
+    ///
+    /// Determines the minimum length of time a contract must last.
+    /// This prevents very short contracts that wouldn't provide stability benefits.
+    /// Only used when enable_contracts is true.
+    /// Default: 10 steps
+    #[serde(default = "default_min_contract_duration")]
+    pub min_contract_duration: usize,
+
+    /// Percentage discount on market price for contract trades (0.0-1.0).
+    ///
+    /// Contracts offer price stability, and this discount incentivizes their formation.
+    /// For example, 0.1 means contract prices are 10% lower than current market price.
+    /// Only used when enable_contracts is true.
+    /// Default: 0.05 (5% discount)
+    #[serde(default = "default_contract_price_discount")]
+    pub contract_price_discount: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -353,6 +388,18 @@ fn default_black_market_participation_rate() -> f64 {
     0.2 // 20% of trades use black market
 }
 
+fn default_max_contract_duration() -> usize {
+    50 // Maximum 50 steps per contract
+}
+
+fn default_min_contract_duration() -> usize {
+    10 // Minimum 10 steps per contract
+}
+
+fn default_contract_price_discount() -> f64 {
+    0.05 // 5% discount for contract stability
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -387,6 +434,10 @@ impl Default for SimulationConfig {
             enable_black_market: false,           // Disabled by default
             black_market_price_multiplier: 0.8,   // 20% cheaper
             black_market_participation_rate: 0.2, // 20% of trades
+            enable_contracts: false,              // Disabled by default
+            max_contract_duration: 50,            // Maximum 50 steps
+            min_contract_duration: 10,            // Minimum 10 steps
+            contract_price_discount: 0.05,        // 5% discount
         }
     }
 }
@@ -604,6 +655,36 @@ impl SimulationConfig {
             )));
         }
 
+        if self.enable_contracts {
+            if self.min_contract_duration == 0 {
+                return Err(SimulationError::ValidationError(
+                    "min_contract_duration must be greater than 0 when contracts are enabled"
+                        .to_string(),
+                ));
+            }
+
+            if self.max_contract_duration == 0 {
+                return Err(SimulationError::ValidationError(
+                    "max_contract_duration must be greater than 0 when contracts are enabled"
+                        .to_string(),
+                ));
+            }
+
+            if self.min_contract_duration > self.max_contract_duration {
+                return Err(SimulationError::ValidationError(format!(
+                    "min_contract_duration ({}) cannot exceed max_contract_duration ({})",
+                    self.min_contract_duration, self.max_contract_duration
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.contract_price_discount) {
+                return Err(SimulationError::ValidationError(format!(
+                    "contract_price_discount must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.contract_price_discount
+                )));
+            }
+        }
+
         Ok(())
     }
 
@@ -657,6 +738,10 @@ impl SimulationConfig {
                 enable_black_market: false,
                 black_market_price_multiplier: 0.8,
                 black_market_participation_rate: 0.2,
+                enable_contracts: false,
+                max_contract_duration: 50,
+                min_contract_duration: 10,
+                contract_price_discount: 0.05,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -690,6 +775,10 @@ impl SimulationConfig {
                 enable_black_market: false,
                 black_market_price_multiplier: 0.8,
                 black_market_participation_rate: 0.2,
+                enable_contracts: false,
+                max_contract_duration: 50,
+                min_contract_duration: 10,
+                contract_price_discount: 0.05,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -723,6 +812,10 @@ impl SimulationConfig {
                 enable_black_market: false,
                 black_market_price_multiplier: 0.8,
                 black_market_participation_rate: 0.2,
+                enable_contracts: false,
+                max_contract_duration: 50,
+                min_contract_duration: 10,
+                contract_price_discount: 0.05,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -756,6 +849,10 @@ impl SimulationConfig {
                 enable_black_market: false,
                 black_market_price_multiplier: 0.8,
                 black_market_participation_rate: 0.2,
+                enable_contracts: false,
+                max_contract_duration: 50,
+                min_contract_duration: 10,
+                contract_price_discount: 0.05,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -789,6 +886,10 @@ impl SimulationConfig {
                 enable_black_market: false,
                 black_market_price_multiplier: 0.8,
                 black_market_participation_rate: 0.2,
+                enable_contracts: false,
+                max_contract_duration: 50,
+                min_contract_duration: 10,
+                contract_price_discount: 0.05,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -822,6 +923,10 @@ impl SimulationConfig {
                 enable_black_market: false,
                 black_market_price_multiplier: 0.8,
                 black_market_participation_rate: 0.2,
+                enable_contracts: false,
+                max_contract_duration: 50,
+                min_contract_duration: 10,
+                contract_price_discount: 0.05,
             },
         }
     }

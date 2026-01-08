@@ -13,11 +13,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Alternative Preisfindungsmechanismen testen
 - **Implementierung**: Neues `AuctionHouse` Modul
 
-#### 2.2 Verträge und Langzeitvereinbarungen
-- **Beschreibung**: Personen können langfristige Lieferverträge abschließen
-- **Nutzen**: Stabilere Preise und planbare Einnahmen
-- **Implementierung**: `Contract` Struktur mit Laufzeit und Konditionen
-
 ### 3. Soziale Netzwerke und Beziehungen
 
 #### 3.1 Freundschaftssystem
