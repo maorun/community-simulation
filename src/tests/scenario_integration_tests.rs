@@ -1064,4 +1064,100 @@ mod integration_tests {
         // Check that reputation statistics are tracked
         assert!(result.reputation_statistics.average >= 1.0); // Should be >= neutral (1.0)
     }
+
+    /// Test that crisis events can be triggered and don't crash the simulation
+    #[test]
+    fn test_crisis_events_enabled() {
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_crisis_events: true,
+            crisis_probability: 0.10, // High probability to ensure at least one crisis
+            crisis_severity: 0.5,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify simulation completed successfully despite crises
+        assert_eq!(result.total_steps, 50);
+        assert_eq!(result.active_persons, 20);
+
+        // Check that money distribution is still valid (no NaN or infinite values)
+        for money in &result.final_money_distribution {
+            assert!(money.is_finite(), "Money should be finite");
+        }
+
+        // Check that prices are still valid
+        for skill_price in &result.final_skill_prices {
+            assert!(
+                skill_price.price.is_finite() && skill_price.price > 0.0,
+                "Skill prices should be finite and positive"
+            );
+        }
+    }
+
+    /// Test that crisis events respect minimum price floor
+    #[test]
+    fn test_crisis_respects_min_price() {
+        let min_price = 2.0;
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: min_price, // Set a price floor
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_crisis_events: true,
+            crisis_probability: 0.10,
+            crisis_severity: 1.0, // Maximum severity to test price floor
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Check that no skill price fell below the minimum
+        for skill_price in &result.final_skill_prices {
+            assert!(
+                skill_price.price >= min_price,
+                "Skill price {} should not be below minimum {}",
+                skill_price.price,
+                min_price
+            );
+        }
+    }
+
+    /// Test that simulation works correctly with crisis events disabled
+    #[test]
+    fn test_crisis_events_disabled() {
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            enable_crisis_events: false, // Explicitly disabled
+            crisis_probability: 1.0,     // Even with 100% probability, no crisis should occur
+            crisis_severity: 1.0,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Simulation should complete successfully
+        assert_eq!(result.total_steps, 100);
+        assert_eq!(result.active_persons, 20);
+
+        // With no crises, market should be relatively stable
+        // (This is a basic smoke test - more detailed assertions could be added)
+        assert!(result.money_statistics.average > 0.0);
+    }
 }
