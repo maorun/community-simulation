@@ -756,7 +756,7 @@ impl SimulationEngine {
                 let completed_contracts: Vec<_> = self
                     .contracts
                     .values()
-                    .filter(|c| !c.is_active() && c.remaining_steps == 0)
+                    .filter(|c| c.remaining_steps == 0)
                     .collect();
 
                 let avg_contract_duration = if !completed_contracts.is_empty() {

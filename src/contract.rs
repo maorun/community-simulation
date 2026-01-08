@@ -116,14 +116,17 @@ impl Contract {
 mod tests {
     use super::*;
 
+    // Test helper constant for skill ID following the "SkillN" pattern used in the codebase
+    const TEST_SKILL_ID: &str = "Skill5";
+
     #[test]
     fn test_contract_creation() {
-        let contract = Contract::new(1, 10, 20, "Skill5".to_string(), 15.0, 10, 100);
+        let contract = Contract::new(1, 10, 20, TEST_SKILL_ID.to_string(), 15.0, 10, 100);
 
         assert_eq!(contract.id, 1);
         assert_eq!(contract.buyer_id, 10);
         assert_eq!(contract.seller_id, 20);
-        assert_eq!(contract.skill_id, "Skill5");
+        assert_eq!(contract.skill_id, TEST_SKILL_ID);
         assert_eq!(contract.price, 15.0);
         assert_eq!(contract.duration, 10);
         assert_eq!(contract.remaining_steps, 10);
@@ -134,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_contract_execution() {
-        let mut contract = Contract::new(1, 10, 20, "Skill5".to_string(), 15.0, 3, 100);
+        let mut contract = Contract::new(1, 10, 20, TEST_SKILL_ID.to_string(), 15.0, 3, 100);
 
         assert!(contract.is_active());
         assert_eq!(contract.remaining_steps, 3);
@@ -158,7 +161,7 @@ mod tests {
 
     #[test]
     fn test_contract_termination() {
-        let mut contract = Contract::new(1, 10, 20, "Skill5".to_string(), 15.0, 10, 100);
+        let mut contract = Contract::new(1, 10, 20, TEST_SKILL_ID.to_string(), 15.0, 10, 100);
 
         assert!(contract.is_active());
 
@@ -171,7 +174,7 @@ mod tests {
 
     #[test]
     fn test_contract_value_calculations() {
-        let mut contract = Contract::new(1, 10, 20, "Skill5".to_string(), 15.0, 5, 100);
+        let mut contract = Contract::new(1, 10, 20, TEST_SKILL_ID.to_string(), 15.0, 5, 100);
 
         assert_eq!(contract.expected_total_value(), 75.0); // 5 * 15.0
         assert_eq!(contract.total_value_exchanged(), 0.0);
@@ -187,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_execute_after_expiration() {
-        let mut contract = Contract::new(1, 10, 20, "Skill5".to_string(), 15.0, 1, 100);
+        let mut contract = Contract::new(1, 10, 20, TEST_SKILL_ID.to_string(), 15.0, 1, 100);
 
         contract.execute_step();
         assert!(!contract.is_active());
