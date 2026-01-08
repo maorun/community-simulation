@@ -1161,4 +1161,3 @@ mod integration_tests {
         assert!(result.money_statistics.average > 0.0);
     }
 }
-

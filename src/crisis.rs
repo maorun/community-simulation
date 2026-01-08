@@ -74,31 +74,40 @@ impl CrisisEvent {
     /// # Returns
     /// The modified value after applying the crisis effect
     pub fn apply_effect<R: Rng>(&self, base_value: f64, severity: f64, rng: &mut R) -> f64 {
+        // Randomness factors for crisis effects
+        const STANDARD_RANDOMNESS_MIN: f64 = 0.9; // -10% randomness
+        const STANDARD_RANDOMNESS_MAX: f64 = 1.1; // +10% randomness
+        const MONEY_RANDOMNESS_MIN: f64 = 0.95; // -5% randomness for money (less volatile)
+        const MONEY_RANDOMNESS_MAX: f64 = 1.05; // +5% randomness for money (less volatile)
+
         let severity = severity.clamp(0.0, 1.0);
 
         match self {
             CrisisEvent::MarketCrash => {
                 // Price drop: 20% to 40% reduction, scaled by severity
                 let drop_percentage = 0.20 + (severity * 0.20);
-                let randomness = rng.random_range(0.9..=1.1); // ±10% randomness
+                let randomness =
+                    rng.random_range(STANDARD_RANDOMNESS_MIN..=STANDARD_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
             }
             CrisisEvent::DemandShock => {
                 // Demand drop: 30% to 50% reduction, scaled by severity
                 let drop_percentage = 0.30 + (severity * 0.20);
-                let randomness = rng.random_range(0.9..=1.1);
+                let randomness =
+                    rng.random_range(STANDARD_RANDOMNESS_MIN..=STANDARD_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
             }
             CrisisEvent::SupplyShock => {
                 // Supply drop: 20% to 40% reduction, scaled by severity
                 let drop_percentage = 0.20 + (severity * 0.20);
-                let randomness = rng.random_range(0.9..=1.1);
+                let randomness =
+                    rng.random_range(STANDARD_RANDOMNESS_MIN..=STANDARD_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
             }
             CrisisEvent::CurrencyDevaluation => {
                 // Money reduction: 10% to 30% reduction, scaled by severity
                 let drop_percentage = 0.10 + (severity * 0.20);
-                let randomness = rng.random_range(0.95..=1.05); // Less randomness for money
+                let randomness = rng.random_range(MONEY_RANDOMNESS_MIN..=MONEY_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
             }
         }

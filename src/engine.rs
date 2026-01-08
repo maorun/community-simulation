@@ -348,14 +348,10 @@ impl SimulationEngine {
                     let original_count = entity.person_data.needed_skills.len();
                     if original_count > 0 {
                         // Apply crisis effect to determine how many needs to keep
-                        let keep_count = (original_count as f64
-                            * (1.0
-                                - crisis.apply_effect(
-                                    1.0,
-                                    self.config.crisis_severity,
-                                    &mut self.rng,
-                                )))
-                        .ceil() as usize;
+                        let reduction_factor =
+                            crisis.apply_effect(1.0, self.config.crisis_severity, &mut self.rng);
+                        let keep_ratio = 1.0 - reduction_factor;
+                        let keep_count = ((original_count as f64) * keep_ratio).ceil() as usize;
                         entity.person_data.needed_skills.truncate(keep_count.max(0));
                     }
                 }
@@ -368,9 +364,9 @@ impl SimulationEngine {
                 // Apply effect to supply counts in the market
                 for (_skill_id, count) in self.market.supply_counts.iter_mut() {
                     let old_supply = *count;
-                    *count = ((*count) as f64
-                        * crisis.apply_effect(1.0, self.config.crisis_severity, &mut self.rng))
-                        as usize;
+                    let reduction_factor =
+                        crisis.apply_effect(1.0, self.config.crisis_severity, &mut self.rng);
+                    *count = ((old_supply as f64) * reduction_factor) as usize;
                     debug!("  Supply reduced from {} to {}", old_supply, *count);
                 }
             }
