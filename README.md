@@ -46,6 +46,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Parameter Sweep Analysis:** Automated sensitivity analysis through systematic parameter sweeps (grid search). Test a parameter across a range of values with multiple runs per value to understand how parameter choices affect simulation outcomes. Supports sweeping initial_money, base_price, savings_rate, and transaction_fee. Results include aggregated statistics and identification of optimal parameter values for different objectives. Perfect for research, parameter tuning, and understanding system robustness.
 - **Scenario Comparison:** Compare multiple simulation scenarios side-by-side to analyze the effects of different economic policies. Run A/B testing on pricing mechanisms (Original, DynamicPricing, AdaptivePricing) with multiple runs per scenario for statistical robustness. Automatically determines winners based on different criteria: highest average wealth, lowest inequality, highest trade volume, and highest reputation. Results are saved in JSON format with detailed statistics and winner analysis. Ideal for policy evaluation, economic research, and understanding the impact of different market mechanisms on outcomes.
 - **Checkpoint System:** Save and resume simulation state at any point. Automatically save checkpoints at regular intervals during long simulations. Resume from saved checkpoints to continue interrupted simulations without starting from scratch. Useful for multi-hour simulations, distributed computing, incremental analysis, and crash recovery. Checkpoints are stored in JSON format with complete simulation state including entities, market data, loans, and statistics.
+- **Education System:** Persons can learn new skills over time by investing money in education. Each simulation step, persons have a configurable probability of attempting to learn a skill they don't currently possess. The cost to learn a skill is based on the current market price multiplied by a learning cost multiplier (default: 3x). This simulates human capital formation and skill development, allowing persons to become more versatile and participate in multiple markets. Education statistics (total skills learned, average per person, total spending) are tracked and reported. Enable via `--enable-education` flag or configuration file with parameters `learning_cost_multiplier` and `learning_probability`. Learned skills allow persons to provide those services in the market, increasing their earning potential.
 - **Streaming Output (JSONL):** Real-time streaming of step-by-step simulation data to a JSON Lines (JSONL) file. Each simulation step appends one JSON object containing key metrics (trades, volume, money statistics, Gini coefficient, reputation) to the output file. Enables real-time monitoring of long-running simulations, reduces memory footprint by not storing all step data in memory, and allows progressive analysis. Each line is a complete JSON object that can be parsed independently, making it ideal for streaming analysis tools and real-time dashboards.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
@@ -364,6 +365,41 @@ Tax system usage:
 - **With redistribution:** Taxes collected each step are redistributed equally to all persons at the end of the step, simulating basic income or welfare programs. This can reduce wealth inequality while maintaining total money supply.
 - The total taxes collected and (if enabled) redistributed are reported in the JSON output for analysis.
 - Taxes are calculated on net seller proceeds (after transaction fees): `tax = (price - transaction_fee) * tax_rate`
+
+**Example with Education System:**
+
+```bash
+# Enable education with default parameters (3x market price, 10% learning probability per step)
+./target/release/economic_simulation --steps 500 --persons 100 --enable-education --output education_results.json
+
+# Custom education parameters: cheaper learning (2x price) and higher probability (50%)
+./target/release/economic_simulation --steps 1000 --persons 50 \
+  --enable-education --learning-cost-multiplier 2.0 --learning-probability 0.5 \
+  --initial-money 500 --output education_custom.json
+
+# Study skill acquisition in a wealthy economy
+./target/release/economic_simulation --steps 1500 --persons 100 \
+  --enable-education --learning-cost-multiplier 1.5 --learning-probability 0.3 \
+  --initial-money 1000 --output wealthy_education.json
+```
+
+Education system usage:
+- When enabled, persons can invest money to learn new skills they don't currently possess.
+- Each simulation step, each person has a `learning_probability` chance (default: 10%) of attempting to learn a random skill.
+- The cost to learn a skill is calculated as: `current_market_price * learning_cost_multiplier` (default multiplier: 3.0).
+- Persons can only learn skills they don't already have (either as own_skill or previously learned).
+- Once learned, skills become part of the person's repertoire and can be provided to others in the market, increasing earning potential.
+- Education statistics are tracked and reported in the JSON output:
+  - Total skills learned across all persons
+  - Average number of learned skills per person
+  - Maximum number of skills learned by any individual
+  - Total money spent on education
+- **Use cases:**
+  - Simulate human capital formation and workforce development
+  - Study how skill acquisition affects wealth distribution over time
+  - Model economies where workers can retrain and adapt to market demands
+  - Analyze the relationship between education investment and economic mobility
+- Learned skills persist through the simulation and count toward a person's available skills for trading.
 
 **Example with CSV Export:**
 

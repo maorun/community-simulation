@@ -128,22 +128,17 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
-### 1. Bildungssimulation
-- **Beschreibung**: Personen können Fähigkeiten erlernen
-- **Nutzen**: Humankapitalbildung simulieren
-- **Implementierung**: `Education` System
-
-### 2. Produktionssimulation
+### 1. Produktionssimulation
 - **Beschreibung**: Fähigkeiten können kombiniert werden, um neue zu erstellen
 - **Nutzen**: Supply-Chain-Dynamiken
 - **Implementierung**: `Production` Modul mit Rezepten
 
-### 3. Umweltsimulation
+### 2. Umweltsimulation
 - **Beschreibung**: Ressourcenverbrauch und Nachhaltigkeit
 - **Nutzen**: Ökologische Ökonomie
 - **Implementierung**: `Environment` und `Resource` Strukturen
 
-### 4. Politische Simulation
+### 3. Politische Simulation
 - **Beschreibung**: Abstimmungen und kollektive Entscheidungsfindung
 - **Nutzen**: Governance-Mechanismen testen
 - **Implementierung**: `VotingSystem` Modul
