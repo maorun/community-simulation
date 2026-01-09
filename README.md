@@ -49,6 +49,7 @@ This repository contains a configurable economic simulation written in Rust. It 
   - These metrics provide actionable insights into wealth distribution patterns and are included in all output formats (JSON, CSV, terminal summary).
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **Per-Skill Trade Analytics:** Detailed trade statistics for each skill type, tracking trade count, total volume, and average price per skill. Enables identification of the most traded and valuable skills in the market. Results are sorted by total trading volume and included in JSON output for easy analysis.
+- **Per-Step Wealth Distribution Statistics:** Time-series tracking of wealth distribution metrics at each simulation step. Captures comprehensive statistics including average/median/std dev, min/max money, Gini coefficient, Herfindahl index, and wealth concentration ratios (top 10%, top 1%, bottom 50%). Enables analysis of how economic inequality evolves over time. Available in both JSON output (`wealth_stats_history` array) and CSV format (`{prefix}_wealth_stats_history.csv`). Perfect for studying inequality dynamics, comparing policy scenarios, and generating time-series plots for research.
 - **Trading Partner Statistics:** Comprehensive analysis of trading relationships and network structure. For each person, tracks unique trading partners, buyer/seller trade counts, and top partners by trade frequency and value. Network-level metrics include average unique partners per person, network density (0.0-1.0 indicating connectivity), and identification of the most active trading pairs. This feature enables social network analysis without complex graph structures, helping understand market dynamics, trading patterns, and relationship formation. All statistics are automatically calculated and included in JSON output for further analysis.
 - **Monte Carlo Simulations:** Run multiple parallel simulations with different random seeds to achieve statistical significance. Automatically aggregates results across runs with mean, standard deviation, min, max, and median statistics for key metrics (average money, Gini coefficient, trade volume, reputation). Ideal for research, parameter sensitivity analysis, and understanding simulation variability.
 - **Parameter Sweep Analysis:** Automated sensitivity analysis through systematic parameter sweeps (grid search). Test a parameter across a range of values with multiple runs per value to understand how parameter choices affect simulation outcomes. Supports sweeping initial_money, base_price, savings_rate, and transaction_fee. Results include aggregated statistics and identification of optimal parameter values for different objectives. Perfect for research, parameter tuning, and understanding system robustness.
@@ -913,9 +914,10 @@ When using the `--csv-output` flag, the simulation generates multiple CSV files 
 *   `{prefix}_reputation.csv`: Reputation distribution per person
 *   `{prefix}_skill_prices.csv`: Final skill prices
 *   `{prefix}_price_history.csv`: Skill price history over time (if available)
+*   `{prefix}_wealth_stats_history.csv`: **Wealth distribution statistics over time** (if available)
 *   `{prefix}_trade_volume.csv`: **Trade volume history showing trades count and money exchanged per step**
 
-The trade volume CSV provides time-series data perfect for analyzing market activity and economic vitality trends.
+The trade volume CSV provides time-series data perfect for analyzing market activity and economic vitality trends. The wealth stats history CSV contains comprehensive inequality metrics at each step, ideal for studying how wealth distribution evolves over the course of the simulation.
 
 ## License
 

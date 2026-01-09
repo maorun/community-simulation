@@ -1160,4 +1160,61 @@ mod integration_tests {
         // (This is a basic smoke test - more detailed assertions could be added)
         assert!(result.money_statistics.average > 0.0);
     }
+
+    /// Test that wealth stats history is collected at each step
+    #[test]
+    fn test_wealth_stats_history_collection() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            time_step: 1.0,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify wealth stats history is collected
+        assert!(!result.wealth_stats_history.is_empty());
+        assert_eq!(
+            result.wealth_stats_history.len(),
+            50,
+            "Should have one snapshot per step"
+        );
+
+        // Verify each snapshot has valid data
+        for (i, snapshot) in result.wealth_stats_history.iter().enumerate() {
+            assert_eq!(snapshot.step, i, "Step number should match index");
+            assert!(snapshot.average.is_finite(), "Average should be finite");
+            assert!(snapshot.median.is_finite(), "Median should be finite");
+            assert!(snapshot.std_dev >= 0.0, "Std dev should be non-negative");
+            assert!(
+                snapshot.min_money <= snapshot.max_money,
+                "Min should be <= max"
+            );
+            // Gini coefficient can go above 1.0 when negative money (debt) exists
+            assert!(
+                snapshot.gini_coefficient.is_finite(),
+                "Gini coefficient should be finite"
+            );
+        }
+
+        // Verify that statistics evolve over time (they should not all be identical)
+        let first_snapshot = &result.wealth_stats_history[0];
+        let last_snapshot = &result.wealth_stats_history[result.wealth_stats_history.len() - 1];
+
+        // At least one metric should change over the course of the simulation
+        let has_changed = first_snapshot.average != last_snapshot.average
+            || first_snapshot.gini_coefficient != last_snapshot.gini_coefficient
+            || first_snapshot.median != last_snapshot.median;
+
+        assert!(
+            has_changed,
+            "Wealth distribution should evolve over the simulation"
+        );
+    }
 }

@@ -70,6 +70,8 @@ pub struct SimulationCheckpoint {
     pub total_contracts_created: usize,
     /// Total contracts completed counter
     pub total_contracts_completed: usize,
+    /// Time-series of wealth distribution statistics
+    pub wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
 }
 
 pub struct SimulationEngine {
@@ -106,6 +108,8 @@ pub struct SimulationEngine {
     contracts: HashMap<ContractId, Contract>,
     total_contracts_created: usize,
     total_contracts_completed: usize,
+    // Wealth statistics history tracking
+    wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
 }
 
 impl SimulationEngine {
@@ -189,6 +193,7 @@ impl SimulationEngine {
             contracts: HashMap::new(),
             total_contracts_created: 0,
             total_contracts_completed: 0,
+            wealth_stats_history: Vec::new(),
         }
     }
 
@@ -828,6 +833,7 @@ impl SimulationEngine {
             most_valuable_skill,
             least_valuable_skill,
             skill_price_history: self.market.skill_price_history.clone(),
+            wealth_stats_history: self.wealth_stats_history.clone(),
             trade_volume_statistics,
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
@@ -1727,6 +1733,62 @@ impl SimulationEngine {
             }
         }
 
+        // Collect wealth distribution statistics for this step
+        // This enables time-series analysis of how wealth inequality evolves
+        let money_values: Vec<f64> = self
+            .entities
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| e.person_data.money)
+            .collect();
+
+        if !money_values.is_empty() {
+            let mut sorted_money = money_values.clone();
+            sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+            let sum: f64 = sorted_money.iter().sum();
+            let count = sorted_money.len() as f64;
+            let average = sum / count;
+
+            let median = if sorted_money.len() % 2 == 1 {
+                sorted_money[sorted_money.len() / 2]
+            } else {
+                (sorted_money[sorted_money.len() / 2 - 1] + sorted_money[sorted_money.len() / 2])
+                    / 2.0
+            };
+
+            let variance = sorted_money
+                .iter()
+                .map(|value| {
+                    let diff = average - value;
+                    diff * diff
+                })
+                .sum::<f64>()
+                / count;
+            let std_dev = variance.sqrt();
+
+            let gini_coefficient = crate::result::calculate_gini_coefficient(&sorted_money, sum);
+            let herfindahl_index = crate::result::calculate_herfindahl_index(&sorted_money);
+            let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
+                crate::result::calculate_wealth_concentration(&sorted_money, sum);
+
+            let snapshot = crate::result::WealthStatsSnapshot {
+                step: self.current_step,
+                average,
+                median,
+                std_dev,
+                min_money: *sorted_money.first().unwrap_or(&0.0),
+                max_money: *sorted_money.last().unwrap_or(&0.0),
+                gini_coefficient,
+                herfindahl_index,
+                top_10_percent_share,
+                top_1_percent_share,
+                bottom_50_percent_share,
+            };
+
+            self.wealth_stats_history.push(snapshot);
+        }
+
         self.current_step += 1;
     }
 
@@ -1877,6 +1939,7 @@ impl SimulationEngine {
             contracts: self.contracts.clone(),
             total_contracts_created: self.total_contracts_created,
             total_contracts_completed: self.total_contracts_completed,
+            wealth_stats_history: self.wealth_stats_history.clone(),
         };
 
         let file = File::create(path)?;
@@ -1976,6 +2039,7 @@ impl SimulationEngine {
             contracts: checkpoint.contracts,
             total_contracts_created: checkpoint.total_contracts_created,
             total_contracts_completed: checkpoint.total_contracts_completed,
+            wealth_stats_history: checkpoint.wealth_stats_history,
         })
     }
 }
