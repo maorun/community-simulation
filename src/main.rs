@@ -64,6 +64,14 @@ struct Args {
     #[arg(long)]
     scenario: Option<Scenario>,
 
+    /// Demand generation strategy (Uniform, Concentrated, Cyclical)
+    /// Controls how many skills each person needs per step
+    /// - Uniform: Random 2-5 needs (default, balanced)
+    /// - Concentrated: Most have low demand, few have high (inequality)
+    /// - Cyclical: Demand varies over time (business cycles)
+    #[arg(long)]
+    demand_strategy: Option<simulation_framework::scenario::DemandStrategy>,
+
     /// Technology growth rate per step (e.g., 0.001 = 0.1% per step)
     /// Simulates productivity improvements over time
     #[arg(long)]
@@ -292,6 +300,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(scenario) = args.scenario.clone() {
             cfg.scenario = scenario;
         }
+        if let Some(demand_strategy) = args.demand_strategy.clone() {
+            cfg.demand_strategy = demand_strategy;
+        }
         if let Some(tech_growth_rate) = args.tech_growth_rate {
             cfg.tech_growth_rate = tech_growth_rate;
         }
@@ -374,6 +385,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Some(scenario) = args.scenario.clone() {
                 cfg.scenario = scenario;
+            }
+            if let Some(demand_strategy) = args.demand_strategy.clone() {
+                cfg.demand_strategy = demand_strategy;
             }
             if let Some(tech_growth_rate) = args.tech_growth_rate {
                 cfg.tech_growth_rate = tech_growth_rate;
@@ -463,6 +477,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             scenario: args
                 .scenario
                 .unwrap_or(SimulationConfig::default().scenario),
+            demand_strategy: args
+                .demand_strategy
+                .unwrap_or(SimulationConfig::default().demand_strategy),
             tech_growth_rate: args
                 .tech_growth_rate
                 .unwrap_or(SimulationConfig::default().tech_growth_rate),

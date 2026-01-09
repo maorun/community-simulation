@@ -1,5 +1,5 @@
 use crate::error::{Result, SimulationError};
-use crate::scenario::Scenario;
+use crate::scenario::{DemandStrategy, Scenario};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -101,6 +101,20 @@ pub struct SimulationConfig {
     // but we can keep it or remove it later. For now, let's keep it.
     pub time_step: f64,
     pub scenario: Scenario,
+
+    /// Demand generation strategy.
+    ///
+    /// Controls how the number of needed skills per person is determined each step.
+    /// Different strategies create different market dynamics:
+    /// - Uniform: Random 2-5 needs per person (balanced market, default)
+    /// - Concentrated: Most persons have low demand, few have high (inequality)
+    /// - Cyclical: Demand varies over time in cycles (business cycles)
+    ///
+    /// This enables experimentation with demand patterns to study their effects
+    /// on market behavior, wealth distribution, and economic activity.
+    /// Default: Uniform
+    #[serde(default)]
+    pub demand_strategy: DemandStrategy,
 
     /// Technology growth rate per simulation step.
     ///
@@ -519,12 +533,13 @@ impl Default for SimulationConfig {
             min_skill_price: 1.0,            // Minimum price floor
             time_step: 1.0,                  // Represents one discrete step or turn
             scenario: Scenario::Original,
-            tech_growth_rate: 0.0,   // Disabled by default
-            seasonal_amplitude: 0.0, // Disabled by default
-            seasonal_period: 100,    // Default cycle length
-            transaction_fee: 0.0,    // Disabled by default
-            savings_rate: 0.0,       // Disabled by default
-            enable_loans: false,     // Disabled by default
+            demand_strategy: DemandStrategy::default(), // Uniform demand by default
+            tech_growth_rate: 0.0,                      // Disabled by default
+            seasonal_amplitude: 0.0,                    // Disabled by default
+            seasonal_period: 100,                       // Default cycle length
+            transaction_fee: 0.0,                       // Disabled by default
+            savings_rate: 0.0,                          // Disabled by default
+            enable_loans: false,                        // Disabled by default
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
@@ -881,6 +896,7 @@ impl SimulationConfig {
                 min_skill_price: 1.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                demand_strategy: DemandStrategy::default(),
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
@@ -927,6 +943,7 @@ impl SimulationConfig {
                 min_skill_price: 1.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                demand_strategy: DemandStrategy::default(),
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
@@ -973,6 +990,7 @@ impl SimulationConfig {
                 min_skill_price: 2.0, // Higher floor for crisis scenario
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                demand_strategy: DemandStrategy::default(),
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
@@ -1019,6 +1037,7 @@ impl SimulationConfig {
                 min_skill_price: 1.0,
                 time_step: 1.0,
                 scenario: Scenario::DynamicPricing,
+                demand_strategy: DemandStrategy::default(),
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
@@ -1065,6 +1084,7 @@ impl SimulationConfig {
                 min_skill_price: 0.5, // Lower floor for tech growth scenario
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                demand_strategy: DemandStrategy::default(),
                 tech_growth_rate: 0.001, // 0.1% growth per step - significant over 1500 steps
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
@@ -1111,6 +1131,7 @@ impl SimulationConfig {
                 min_skill_price: 1.0,
                 time_step: 1.0,
                 scenario: Scenario::Original,
+                demand_strategy: DemandStrategy::default(),
                 tech_growth_rate: 0.0,
                 seasonal_amplitude: 0.0,
                 seasonal_period: 100,
