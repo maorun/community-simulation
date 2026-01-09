@@ -187,6 +187,52 @@ pub struct EducationStats {
     pub total_education_spending: f64,
 }
 
+/// Information about a trading partner relationship
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PartnerInfo {
+    /// ID of the trading partner
+    pub partner_id: usize,
+    /// Number of trades with this partner
+    pub trade_count: usize,
+    /// Total value exchanged with this partner
+    pub total_value: f64,
+}
+
+/// Trading statistics for an individual person
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PersonTradingStats {
+    /// ID of the person
+    pub person_id: usize,
+    /// Number of unique trading partners
+    pub unique_partners: usize,
+    /// Total trades as a buyer
+    pub total_trades_as_buyer: usize,
+    /// Total trades as a seller
+    pub total_trades_as_seller: usize,
+    /// Top trading partners (sorted by trade count, descending)
+    pub top_partners: Vec<PartnerInfo>,
+}
+
+/// Network-level trading statistics
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkMetrics {
+    /// Average number of unique partners per person
+    pub avg_unique_partners: f64,
+    /// Network density (actual connections / possible connections)
+    pub network_density: f64,
+    /// Most active trading pair
+    pub most_active_pair: Option<(usize, usize, usize)>, // (person1_id, person2_id, trade_count)
+}
+
+/// Complete trading partner statistics
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TradingPartnerStats {
+    /// Per-person trading statistics
+    pub per_person: Vec<PersonTradingStats>,
+    /// Network-level metrics
+    pub network_metrics: NetworkMetrics,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     // Core simulation metrics
@@ -253,6 +299,9 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub education_statistics: Option<EducationStats>,
 
+    /// Trading partner statistics showing network relationships and trading patterns
+    pub trading_partner_statistics: TradingPartnerStats,
+
     // final_entities might be too verbose if Person struct grows large with transaction history.
     // Consider summarizing person data if needed, or providing it under a flag.
     // For now, let's keep it as it contains all person data including transaction history.
@@ -313,6 +362,14 @@ impl SimulationResult {
     /// #     loan_statistics: None,
     /// #     contract_statistics: None,
     /// #     education_statistics: None,
+    /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
+    /// #         per_person: vec![],
+    /// #         network_metrics: simulation_framework::result::NetworkMetrics {
+    /// #             avg_unique_partners: 0.0,
+    /// #             network_density: 0.0,
+    /// #             most_active_pair: None,
+    /// #         },
+    /// #     },
     /// #     final_persons_data: vec![],
     /// # };
     /// // Save uncompressed JSON
@@ -941,6 +998,162 @@ pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
     }
 }
 
+/// Calculate trading partner statistics from entities' transaction history
+///
+/// This function analyzes the transaction history of all persons to identify
+/// trading relationships, partner counts, and network metrics.
+///
+/// # Arguments
+/// * `entities` - Slice of all entities (persons) in the simulation
+///
+/// # Returns
+/// * `TradingPartnerStats` - Complete trading partner statistics
+pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartnerStats {
+    use std::collections::{HashMap, HashSet};
+
+    // Type alias to simplify complex nested HashMap
+    // Maps person_id to (buyer_count, seller_count, partner_map)
+    // where partner_map is partner_id -> (trade_count, total_value)
+    type PersonTradeData = (usize, usize, HashMap<usize, (usize, f64)>);
+
+    let active_entities: Vec<_> = entities.iter().filter(|e| e.active).collect();
+    let num_persons = active_entities.len();
+
+    // Track partners and trade details for each person
+    let mut person_stats: HashMap<usize, PersonTradeData> = HashMap::new();
+
+    // Track all unique pairs for network density calculation
+    let mut unique_pairs: HashSet<(usize, usize)> = HashSet::new();
+
+    // Process each entity's transaction history
+    for entity in &active_entities {
+        let person_id = entity.person_data.id;
+        let entry = person_stats
+            .entry(person_id)
+            .or_insert((0, 0, HashMap::new()));
+
+        for transaction in &entity.person_data.transaction_history {
+            if let Some(partner_id) = transaction.counterparty_id {
+                // Record trade based on type
+                match transaction.transaction_type {
+                    crate::person::TransactionType::Buy => {
+                        entry.0 += 1; // Increment buyer count
+                    }
+                    crate::person::TransactionType::Sell => {
+                        entry.1 += 1; // Increment seller count
+                    }
+                }
+
+                // Track partner relationship
+                let partner_entry = entry.2.entry(partner_id).or_insert((0, 0.0));
+                partner_entry.0 += 1; // Increment trade count with this partner
+                partner_entry.1 += transaction.amount; // Add trade value
+
+                // Add to unique pairs (normalize pair ordering)
+                let pair = if person_id < partner_id {
+                    (person_id, partner_id)
+                } else {
+                    (partner_id, person_id)
+                };
+                unique_pairs.insert(pair);
+            }
+        }
+    }
+
+    // Build per-person statistics
+    let mut per_person: Vec<PersonTradingStats> = Vec::new();
+    for entity in &active_entities {
+        let person_id = entity.person_data.id;
+        let (buyer_count, seller_count, partners) =
+            person_stats.get(&person_id).cloned().unwrap_or_default();
+
+        // Sort partners by trade count (descending) and take top 5
+        let mut partner_list: Vec<(usize, usize, f64)> = partners
+            .iter()
+            .map(|(&id, &(count, value))| (id, count, value))
+            .collect();
+        partner_list.sort_by(|a, b| b.1.cmp(&a.1));
+
+        let top_partners: Vec<PartnerInfo> = partner_list
+            .iter()
+            .take(5)
+            .map(|&(id, count, value)| PartnerInfo {
+                partner_id: id,
+                trade_count: count,
+                total_value: value,
+            })
+            .collect();
+
+        per_person.push(PersonTradingStats {
+            person_id,
+            unique_partners: partners.len(),
+            total_trades_as_buyer: buyer_count,
+            total_trades_as_seller: seller_count,
+            top_partners,
+        });
+    }
+
+    // Sort by person_id for consistent output
+    per_person.sort_by_key(|s| s.person_id);
+
+    // Calculate network metrics
+    let avg_unique_partners = if !per_person.is_empty() {
+        per_person.iter().map(|s| s.unique_partners).sum::<usize>() as f64 / per_person.len() as f64
+    } else {
+        0.0
+    };
+
+    // Network density = (actual connections) / (possible connections)
+    // Possible connections = n * (n - 1) / 2 for undirected network
+    let possible_connections = if num_persons > 1 {
+        (num_persons * (num_persons - 1)) / 2
+    } else {
+        1
+    };
+    let network_density = if possible_connections > 0 {
+        unique_pairs.len() as f64 / possible_connections as f64
+    } else {
+        0.0
+    };
+
+    // Find most active trading pair
+    let most_active_pair = if !unique_pairs.is_empty() {
+        // Count trades for each pair
+        let mut pair_trade_counts: HashMap<(usize, usize), usize> = HashMap::new();
+
+        for entity in &active_entities {
+            for transaction in &entity.person_data.transaction_history {
+                if let Some(partner_id) = transaction.counterparty_id {
+                    let person_id = entity.person_data.id;
+                    let pair = if person_id < partner_id {
+                        (person_id, partner_id)
+                    } else {
+                        (partner_id, person_id)
+                    };
+                    *pair_trade_counts.entry(pair).or_insert(0) += 1;
+                }
+            }
+        }
+
+        // Find pair with maximum trades
+        pair_trade_counts
+            .into_iter()
+            .max_by_key(|&(_, count)| count)
+            .map(|((p1, p2), count)| (p1, p2, count))
+    } else {
+        None
+    };
+
+    TradingPartnerStats {
+        per_person,
+        network_metrics: NetworkMetrics {
+            avg_unique_partners,
+            network_density,
+            most_active_pair,
+        },
+    }
+}
+
 /// Write step data to a JSONL (JSON Lines) stream file
 ///
 /// This function appends a single line of JSON data to the streaming output file.
@@ -1106,6 +1319,14 @@ mod tests {
             loan_statistics: None,
             contract_statistics: None,
             education_statistics: None,
+            trading_partner_statistics: TradingPartnerStats {
+                per_person: vec![],
+                network_metrics: NetworkMetrics {
+                    avg_unique_partners: 0.0,
+                    network_density: 0.0,
+                    most_active_pair: None,
+                },
+            },
             final_persons_data: vec![],
         }
     }
@@ -1628,5 +1849,117 @@ mod tests {
         let stats = calculate_money_stats(&money);
         // Monopoly: HHI should be 10000
         assert!((stats.herfindahl_index - 10000.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_trading_partner_statistics() {
+        use crate::person::{Strategy, Transaction, TransactionType};
+        use crate::skill::Skill;
+        use crate::Entity;
+
+        // Create test entities with transaction histories
+        let mut entities = vec![];
+
+        // Create persons with skills
+        for i in 0..5 {
+            let skill = Skill::new(format!("Skill{}", i), 10.0);
+            entities.push(Entity::new(i, 100.0, vec![skill], Strategy::Balanced));
+        }
+
+        // Add transactions to simulate trades
+        // Person 0 buys from Person 1 three times
+        for _ in 0..3 {
+            entities[0]
+                .person_data
+                .transaction_history
+                .push(Transaction {
+                    step: 1,
+                    skill_id: "Skill1".to_string(),
+                    transaction_type: TransactionType::Buy,
+                    amount: 10.0,
+                    counterparty_id: Some(1),
+                });
+        }
+
+        // Person 1 sells to Person 0 three times
+        for _ in 0..3 {
+            entities[1]
+                .person_data
+                .transaction_history
+                .push(Transaction {
+                    step: 1,
+                    skill_id: "Skill0".to_string(),
+                    transaction_type: TransactionType::Sell,
+                    amount: 10.0,
+                    counterparty_id: Some(0),
+                });
+        }
+
+        // Person 2 buys from Person 3 once
+        entities[2]
+            .person_data
+            .transaction_history
+            .push(Transaction {
+                step: 1,
+                skill_id: "Skill3".to_string(),
+                transaction_type: TransactionType::Buy,
+                amount: 15.0,
+                counterparty_id: Some(3),
+            });
+
+        // Person 3 sells to Person 2 once
+        entities[3]
+            .person_data
+            .transaction_history
+            .push(Transaction {
+                step: 1,
+                skill_id: "Skill2".to_string(),
+                transaction_type: TransactionType::Sell,
+                amount: 15.0,
+                counterparty_id: Some(2),
+            });
+
+        // Calculate trading partner statistics
+        let stats = calculate_trading_partner_statistics(&entities);
+
+        // Verify per-person statistics
+        assert_eq!(stats.per_person.len(), 5);
+
+        // Person 0: 1 unique partner, 3 trades as buyer, 0 as seller
+        let person0_stats = stats.per_person.iter().find(|s| s.person_id == 0).unwrap();
+        assert_eq!(person0_stats.unique_partners, 1);
+        assert_eq!(person0_stats.total_trades_as_buyer, 3);
+        assert_eq!(person0_stats.total_trades_as_seller, 0);
+        assert_eq!(person0_stats.top_partners.len(), 1);
+        assert_eq!(person0_stats.top_partners[0].partner_id, 1);
+        assert_eq!(person0_stats.top_partners[0].trade_count, 3);
+        assert!((person0_stats.top_partners[0].total_value - 30.0).abs() < 0.01);
+
+        // Person 1: 1 unique partner, 0 trades as buyer, 3 as seller
+        let person1_stats = stats.per_person.iter().find(|s| s.person_id == 1).unwrap();
+        assert_eq!(person1_stats.unique_partners, 1);
+        assert_eq!(person1_stats.total_trades_as_buyer, 0);
+        assert_eq!(person1_stats.total_trades_as_seller, 3);
+
+        // Person 4: no trades
+        let person4_stats = stats.per_person.iter().find(|s| s.person_id == 4).unwrap();
+        assert_eq!(person4_stats.unique_partners, 0);
+        assert_eq!(person4_stats.total_trades_as_buyer, 0);
+        assert_eq!(person4_stats.total_trades_as_seller, 0);
+
+        // Verify network metrics
+        // Average unique partners = (1 + 1 + 1 + 1 + 0) / 5 = 0.8
+        assert!((stats.network_metrics.avg_unique_partners - 0.8).abs() < 0.01);
+
+        // Network density = 2 unique pairs / 10 possible pairs = 0.2
+        // Possible pairs for 5 persons = 5 * 4 / 2 = 10
+        // Unique pairs: (0,1) and (2,3)
+        assert!((stats.network_metrics.network_density - 0.2).abs() < 0.01);
+
+        // Most active pair should be (0, 1) with 6 trades (3 buy + 3 sell)
+        let most_active = stats.network_metrics.most_active_pair.unwrap();
+        assert_eq!(most_active.0, 0);
+        assert_eq!(most_active.1, 1);
+        assert_eq!(most_active.2, 6); // 3 from person 0 + 3 from person 1
     }
 }

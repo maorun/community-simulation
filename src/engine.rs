@@ -950,6 +950,9 @@ impl SimulationEngine {
             } else {
                 None
             },
+            trading_partner_statistics: crate::result::calculate_trading_partner_statistics(
+                &self.entities,
+            ),
             final_persons_data: self.entities.clone(),
         }
     }

@@ -42,6 +42,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **Per-Skill Trade Analytics:** Detailed trade statistics for each skill type, tracking trade count, total volume, and average price per skill. Enables identification of the most traded and valuable skills in the market. Results are sorted by total trading volume and included in JSON output for easy analysis.
+- **Trading Partner Statistics:** Comprehensive analysis of trading relationships and network structure. For each person, tracks unique trading partners, buyer/seller trade counts, and top partners by trade frequency and value. Network-level metrics include average unique partners per person, network density (0.0-1.0 indicating connectivity), and identification of the most active trading pairs. This feature enables social network analysis without complex graph structures, helping understand market dynamics, trading patterns, and relationship formation. All statistics are automatically calculated and included in JSON output for further analysis.
 - **Monte Carlo Simulations:** Run multiple parallel simulations with different random seeds to achieve statistical significance. Automatically aggregates results across runs with mean, standard deviation, min, max, and median statistics for key metrics (average money, Gini coefficient, trade volume, reputation). Ideal for research, parameter sensitivity analysis, and understanding simulation variability.
 - **Parameter Sweep Analysis:** Automated sensitivity analysis through systematic parameter sweeps (grid search). Test a parameter across a range of values with multiple runs per value to understand how parameter choices affect simulation outcomes. Supports sweeping initial_money, base_price, savings_rate, and transaction_fee. Results include aggregated statistics and identification of optimal parameter values for different objectives. Perfect for research, parameter tuning, and understanding system robustness.
 - **Scenario Comparison:** Compare multiple simulation scenarios side-by-side to analyze the effects of different economic policies. Run A/B testing on pricing mechanisms (Original, DynamicPricing, AdaptivePricing) with multiple runs per scenario for statistical robustness. Automatically determines winners based on different criteria: highest average wealth, lowest inequality, highest trade volume, and highest reputation. Results are saved in JSON format with detailed statistics and winner analysis. Ideal for policy evaluation, economic research, and understanding the impact of different market mechanisms on outcomes.
@@ -873,6 +874,20 @@ The JSON output file contains a comprehensive summary of the simulation, includi
 *   `trades_per_step`: An array tracking the number of trades at each simulation step
 *   `volume_per_step`: An array tracking the total money exchanged at each simulation step
 *   `total_fees_collected`: Total transaction fees collected across all trades when a non-zero transaction fee is configured. This represents the cumulative cost of trading in the market.
+*   `trading_partner_statistics`: Comprehensive trading relationship analysis including:
+    *   `per_person`: Array of per-person trading statistics, each containing:
+        *   `person_id`: Unique identifier for the person
+        *   `unique_partners`: Number of unique trading partners
+        *   `total_trades_as_buyer`: Total trades where this person was the buyer
+        *   `total_trades_as_seller`: Total trades where this person was the seller
+        *   `top_partners`: Top 5 trading partners sorted by trade count, each with:
+            *   `partner_id`: ID of the trading partner
+            *   `trade_count`: Number of trades with this partner
+            *   `total_value`: Total money exchanged with this partner
+    *   `network_metrics`: Network-level connectivity metrics:
+        *   `avg_unique_partners`: Average number of unique partners per person
+        *   `network_density`: Ratio of actual connections to possible connections (0.0-1.0)
+        *   `most_active_pair`: Tuple of (person1_id, person2_id, trade_count) for the most active trading pair
 *   `final_skill_prices`: A list of all skills sorted by their final price (descending), including `id` and `price`.
 *   `most_valuable_skill`, `least_valuable_skill`: Information on the skills with the highest and lowest final prices.
 *   `skill_price_history`: A map where keys are `SkillId`s and values are lists of prices for that skill at each step of the simulation. This data can be used for plotting price trends.
