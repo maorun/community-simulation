@@ -142,18 +142,14 @@ impl Market {
             skill_price_history: HashMap::new(),
             price_updater,
             sales_this_step: HashMap::new(),
-            cache: MarketStatsCache {
-                average_price: None,
-                total_market_value: None,
-                min_price: None,
-                max_price: None,
-            },
+            cache: MarketStatsCache::default(),
         }
     }
 
     /// Adds a skill to the market.
     ///
     /// Initializes supply/demand counters and price history tracking for the skill.
+    /// The cache is invalidated as adding a skill changes aggregate statistics.
     ///
     /// # Arguments
     ///
@@ -164,6 +160,8 @@ impl Market {
         self.skill_price_history
             .insert(skill.id.clone(), Vec::new());
         self.skills.insert(skill.id.clone(), skill);
+        // Invalidate cache since adding a skill changes aggregate statistics
+        self.invalidate_cache();
     }
 
     /// Increments the supply counter for a skill.
@@ -313,14 +311,16 @@ impl Market {
             return (min, max);
         }
 
-        // Compute min and max
+        // Compute min and max in a single pass
         let (min, max) = if self.skills.is_empty() {
             (0.0, 0.0)
         } else {
-            let prices: Vec<f64> = self.skills.values().map(|s| s.current_price).collect();
-            let min = prices.iter().cloned().fold(f64::INFINITY, f64::min);
-            let max = prices.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-            (min, max)
+            self.skills
+                .values()
+                .map(|s| s.current_price)
+                .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), price| {
+                    (min.min(price), max.max(price))
+                })
         };
 
         // Cache the values
