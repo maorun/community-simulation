@@ -1020,9 +1020,15 @@ pub fn calculate_wealth_concentration(sorted_values: &[f64], sum: f64) -> (f64, 
 
     // Calculate index boundaries for each group
     // Note: sorted_values is ascending (poorest to richest)
-    let top_10_pct_start_idx = n.saturating_sub((n as f64 * 0.1).ceil() as usize);
-    let top_1_pct_start_idx = n.saturating_sub((n as f64 * 0.01).ceil() as usize);
-    let bottom_50_pct_end_idx = ((n as f64 * 0.5).ceil() as usize).min(n);
+    // Use max(1, ...) to ensure at least one person in top groups for small populations
+    let top_10_pct_count = (n as f64 * 0.1).ceil() as usize;
+    let top_10_pct_start_idx = n.saturating_sub(top_10_pct_count);
+
+    let top_1_pct_count = ((n as f64 * 0.01).ceil() as usize).max(1);
+    let top_1_pct_start_idx = n.saturating_sub(top_1_pct_count);
+
+    let bottom_50_pct_count = (n as f64 * 0.5).ceil() as usize;
+    let bottom_50_pct_end_idx = bottom_50_pct_count.min(n);
 
     // Sum wealth for each group
     let top_10_pct_wealth: f64 = sorted_values[top_10_pct_start_idx..].iter().sum();
