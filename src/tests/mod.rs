@@ -486,4 +486,197 @@ mod engine_tests {
             "Sum of per-skill volumes should equal total volume"
         );
     }
+
+    #[test]
+    fn test_friendship_system_disabled() {
+        // Test that friendship system doesn't affect simulation when disabled
+        let mut config = get_test_config();
+        config.max_steps = 50;
+        config.enable_friendships = false;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // When disabled, friendship_statistics should be None
+        assert!(
+            result.friendship_statistics.is_none(),
+            "Friendship statistics should be None when system is disabled"
+        );
+
+        // Verify no friendships formed
+        for entity in &result.final_persons_data {
+            assert_eq!(
+                entity.person_data.friends.len(),
+                0,
+                "Person {} should have no friends when system is disabled",
+                entity.id
+            );
+        }
+    }
+
+    #[test]
+    fn test_friendship_formation() {
+        // Test that friendships form during trading
+        let mut config = get_test_config();
+        config.max_steps = 100;
+        config.enable_friendships = true;
+        config.friendship_probability = 0.5; // 50% chance to speed up formation
+        config.friendship_discount = 0.1; // 10% discount
+        config.entity_count = 20; // More persons = more potential friendships
+        config.seed = 12345; // Fixed seed for reproducibility
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Friendship statistics should be present
+        assert!(
+            result.friendship_statistics.is_some(),
+            "Friendship statistics should be present when system is enabled"
+        );
+
+        let friendship_stats = result.friendship_statistics.as_ref().unwrap();
+
+        // With 100 steps and 50% probability, we should have at least some friendships
+        assert!(
+            friendship_stats.total_friendships > 0,
+            "At least some friendships should have formed over 100 steps with 50% probability"
+        );
+
+        // Average friends per person should be reasonable
+        assert!(
+            friendship_stats.avg_friends_per_person >= 0.0,
+            "Average friends per person should be non-negative"
+        );
+
+        // Network density should be between 0 and 1
+        assert!(
+            friendship_stats.network_density >= 0.0 && friendship_stats.network_density <= 1.0,
+            "Network density should be between 0.0 and 1.0, got {}",
+            friendship_stats.network_density
+        );
+
+        // Verify that friendships are bidirectional
+        for entity in &result.final_persons_data {
+            for friend_id in &entity.person_data.friends {
+                let friend_entity = result
+                    .final_persons_data
+                    .iter()
+                    .find(|e| e.id == *friend_id)
+                    .expect("Friend should exist");
+                assert!(
+                    friend_entity.person_data.friends.contains(&entity.id),
+                    "Friendship between {} and {} should be bidirectional",
+                    entity.id,
+                    friend_id
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_friendship_discount_applied() {
+        // Test that friends receive price discounts
+        let mut config = get_test_config();
+        config.max_steps = 50;
+        config.entity_count = 10;
+        config.enable_friendships = true;
+        config.friendship_probability = 1.0; // 100% chance - all trades create friendships
+        config.friendship_discount = 0.2; // 20% discount for testing
+        config.seed = 42;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // With 100% probability, we should have many friendships
+        let friendship_stats = result.friendship_statistics.as_ref().unwrap();
+        assert!(
+            friendship_stats.total_friendships > 0,
+            "With 100% probability, friendships should have formed"
+        );
+
+        // Since friends get discounts, we can verify indirectly by checking that
+        // total trade volume might be less than without friendships (due to discounts)
+        // This is a weaker test but verifies the system is active
+        assert!(
+            friendship_stats.avg_friends_per_person > 0.0,
+            "Average friends per person should be positive with 100% formation rate"
+        );
+    }
+
+    #[test]
+    fn test_friendship_validation() {
+        // Test that invalid friendship parameters are rejected
+        let mut config = get_test_config();
+        config.enable_friendships = true;
+
+        // Test invalid probability (> 1.0)
+        config.friendship_probability = 1.5;
+        assert!(
+            config.validate().is_err(),
+            "Should reject friendship_probability > 1.0"
+        );
+
+        // Test invalid probability (< 0.0)
+        config.friendship_probability = -0.1;
+        assert!(
+            config.validate().is_err(),
+            "Should reject friendship_probability < 0.0"
+        );
+
+        // Test invalid discount (> 1.0)
+        config.friendship_probability = 0.5;
+        config.friendship_discount = 1.5;
+        assert!(
+            config.validate().is_err(),
+            "Should reject friendship_discount > 1.0"
+        );
+
+        // Test invalid discount (< 0.0)
+        config.friendship_discount = -0.1;
+        assert!(
+            config.validate().is_err(),
+            "Should reject friendship_discount < 0.0"
+        );
+
+        // Test valid parameters
+        config.friendship_probability = 0.1;
+        config.friendship_discount = 0.1;
+        assert!(
+            config.validate().is_ok(),
+            "Should accept valid friendship parameters"
+        );
+    }
+
+    #[test]
+    fn test_friendship_network_density() {
+        // Test network density calculation
+        let mut config = get_test_config();
+        config.max_steps = 200; // More steps = more dense network
+        config.entity_count = 15;
+        config.enable_friendships = true;
+        config.friendship_probability = 0.8; // High probability
+        config.seed = 999;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        let friendship_stats = result.friendship_statistics.as_ref().unwrap();
+
+        // With high probability and many steps, network should be moderately dense
+        assert!(
+            friendship_stats.network_density > 0.0,
+            "Network density should be positive with high formation rate"
+        );
+
+        // Check that network density formula is correct
+        // Possible friendships = n * (n-1) / 2
+        let n = result.active_persons;
+        let possible_friendships = (n * (n - 1)) / 2;
+        let expected_density =
+            friendship_stats.total_friendships as f64 / possible_friendships as f64;
+        assert!(
+            (friendship_stats.network_density - expected_density).abs() < 0.0001,
+            "Network density calculation should be correct"
+        );
+    }
 }

@@ -392,6 +392,7 @@ impl SimulationResult {
     /// #     loan_statistics: None,
     /// #     contract_statistics: None,
     /// #     education_statistics: None,
+    /// #     friendship_statistics: None,
     /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
     /// #         per_person: vec![],
     /// #         network_metrics: simulation_framework::result::NetworkMetrics {
