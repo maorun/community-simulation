@@ -617,6 +617,10 @@ impl SimulationEngine {
             let herfindahl_index =
                 crate::result::calculate_herfindahl_index(&final_money_distribution);
 
+            // Calculate wealth concentration ratios
+            let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
+                crate::result::calculate_wealth_concentration(&final_money_distribution, sum);
+
             crate::result::MoneyStats {
                 average,
                 median,
@@ -625,6 +629,9 @@ impl SimulationEngine {
                 max_money: *final_money_distribution.last().unwrap_or(&0.0),
                 gini_coefficient,
                 herfindahl_index,
+                top_10_percent_share,
+                top_1_percent_share,
+                bottom_50_percent_share,
             }
         } else {
             crate::result::MoneyStats {
@@ -635,6 +642,9 @@ impl SimulationEngine {
                 max_money: 0.0,
                 gini_coefficient: 0.0,
                 herfindahl_index: 0.0,
+                top_10_percent_share: 0.0,
+                top_1_percent_share: 0.0,
+                bottom_50_percent_share: 0.0,
             }
         };
 

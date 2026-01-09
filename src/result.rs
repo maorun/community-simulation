@@ -39,6 +39,15 @@ pub struct MoneyStats {
     /// Herfindahl-Hirschman Index: measure of market concentration for wealth (0 = perfect competition, 10000 = monopoly)
     /// Values < 1500 indicate competitive distribution, 1500-2500 moderate concentration, > 2500 high concentration
     pub herfindahl_index: f64,
+    /// Share of total wealth held by the top 10% wealthiest persons (0.0-1.0)
+    /// Values > 0.5 indicate high wealth concentration at the top
+    pub top_10_percent_share: f64,
+    /// Share of total wealth held by the top 1% wealthiest persons (0.0-1.0)
+    /// Values > 0.2 indicate extreme wealth concentration
+    pub top_1_percent_share: f64,
+    /// Share of total wealth held by the bottom 50% of persons (0.0-1.0)
+    /// Values < 0.1 indicate high inequality with poverty concentration
+    pub bottom_50_percent_share: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -331,6 +340,7 @@ impl SimulationResult {
     /// #     money_statistics: simulation_framework::result::MoneyStats {
     /// #         average: 0.0, median: 0.0, std_dev: 0.0,
     /// #         min_money: 0.0, max_money: 0.0, gini_coefficient: 0.0, herfindahl_index: 0.0,
+    /// #         top_10_percent_share: 0.0, top_1_percent_share: 0.0, bottom_50_percent_share: 0.0,
     /// #     },
     /// #     final_reputation_distribution: vec![],
     /// #     reputation_statistics: simulation_framework::result::ReputationStats {
@@ -462,6 +472,21 @@ impl SimulationResult {
             file,
             "Gini Coefficient,{:.6}",
             self.money_statistics.gini_coefficient
+        )?;
+        writeln!(
+            file,
+            "Top 10%% Wealth Share (%%),{:.4}",
+            self.money_statistics.top_10_percent_share * 100.0
+        )?;
+        writeln!(
+            file,
+            "Top 1%% Wealth Share (%%),{:.4}",
+            self.money_statistics.top_1_percent_share * 100.0
+        )?;
+        writeln!(
+            file,
+            "Bottom 50%% Wealth Share (%%),{:.4}",
+            self.money_statistics.bottom_50_percent_share * 100.0
         )?;
         writeln!(
             file,
@@ -706,10 +731,30 @@ impl SimulationResult {
             gini_str.bright_red()
         };
         println!(
-            "{} {} {}",
+            "  {} {} {}",
             "Gini Coefficient:".bold(),
             gini_colored,
             "(0 = perfect equality, 1 = perfect inequality)".dimmed()
+        );
+
+        // Print wealth concentration ratios
+        println!(
+            "  {} {:.2}% {}",
+            "Top 10% Wealth Share:".bold(),
+            self.money_statistics.top_10_percent_share * 100.0,
+            "(of total wealth)".dimmed()
+        );
+        println!(
+            "  {} {:.2}% {}",
+            "Top 1% Wealth Share:".bold(),
+            self.money_statistics.top_1_percent_share * 100.0,
+            "(of total wealth)".dimmed()
+        );
+        println!(
+            "  {} {:.2}% {}",
+            "Bottom 50% Wealth Share:".bold(),
+            self.money_statistics.bottom_50_percent_share * 100.0,
+            "(of total wealth)".dimmed()
         );
 
         // Color code HHI based on concentration level
@@ -723,7 +768,7 @@ impl SimulationResult {
             hhi_str.bright_red()
         };
         println!(
-            "{} {} {}",
+            "  {} {} {}",
             "Herfindahl Index:".bold(),
             hhi_colored,
             "(< 1500 = competitive, 1500-2500 = moderate, > 2500 = high concentration)".dimmed()
@@ -934,6 +979,68 @@ pub fn calculate_herfindahl_index(values: &[f64]) -> f64 {
             share_percentage * share_percentage
         })
         .sum()
+}
+
+/// Calculate wealth concentration ratios for different percentile groups.
+///
+/// This function computes what share of total wealth is held by different groups:
+/// - Top 10% wealthiest persons
+/// - Top 1% wealthiest persons  
+/// - Bottom 50% of persons
+///
+/// These metrics provide intuitive measures of wealth inequality that complement
+/// the Gini coefficient. High values for top groups and low values for bottom groups
+/// indicate high inequality.
+///
+/// # Arguments
+/// * `sorted_values` - A slice of values sorted in ascending order (poorest to richest)
+/// * `sum` - The sum of all values
+///
+/// # Returns
+/// A tuple of (top_10_pct_share, top_1_pct_share, bottom_50_pct_share)
+///
+/// # Examples
+/// ```
+/// use simulation_framework::result::calculate_wealth_concentration;
+///
+/// // Perfect equality: each group holds wealth proportional to size
+/// let equal = vec![100.0; 100];
+/// let sum: f64 = equal.iter().sum();
+/// let (top10, top1, bottom50) = calculate_wealth_concentration(&equal, sum);
+/// assert!((top10 - 0.1).abs() < 0.01); // Top 10% holds 10%
+/// assert!((top1 - 0.01).abs() < 0.01); // Top 1% holds 1%
+/// assert!((bottom50 - 0.5).abs() < 0.01); // Bottom 50% holds 50%
+/// ```
+pub fn calculate_wealth_concentration(sorted_values: &[f64], sum: f64) -> (f64, f64, f64) {
+    if sorted_values.is_empty() || sum == 0.0 {
+        return (0.0, 0.0, 0.0);
+    }
+
+    let n = sorted_values.len();
+
+    // Calculate index boundaries for each group
+    // Note: sorted_values is ascending (poorest to richest)
+    // Use max(1, ...) to ensure at least one person in top groups for small populations
+    let top_10_pct_count = (n as f64 * 0.1).ceil() as usize;
+    let top_10_pct_start_idx = n.saturating_sub(top_10_pct_count);
+
+    let top_1_pct_count = ((n as f64 * 0.01).ceil() as usize).max(1);
+    let top_1_pct_start_idx = n.saturating_sub(top_1_pct_count);
+
+    let bottom_50_pct_count = (n as f64 * 0.5).ceil() as usize;
+    let bottom_50_pct_end_idx = bottom_50_pct_count.min(n);
+
+    // Sum wealth for each group
+    let top_10_pct_wealth: f64 = sorted_values[top_10_pct_start_idx..].iter().sum();
+    let top_1_pct_wealth: f64 = sorted_values[top_1_pct_start_idx..].iter().sum();
+    let bottom_50_pct_wealth: f64 = sorted_values[..bottom_50_pct_end_idx].iter().sum();
+
+    // Calculate shares as fractions of total wealth
+    let top_10_pct_share = top_10_pct_wealth / sum;
+    let top_1_pct_share = top_1_pct_wealth / sum;
+    let bottom_50_pct_share = bottom_50_pct_wealth / sum;
+
+    (top_10_pct_share, top_1_pct_share, bottom_50_pct_share)
 }
 
 /// Calculate statistics for a set of values
@@ -1277,6 +1384,9 @@ mod tests {
                 max_money: 150.0,
                 gini_coefficient: 0.2,
                 herfindahl_index: 2200.0,
+                top_10_percent_share: 0.3,
+                top_1_percent_share: 0.15,
+                bottom_50_percent_share: 0.25,
             },
             final_reputation_distribution: vec![0.95, 1.0, 1.0, 1.05, 1.1],
             reputation_statistics: ReputationStats {
@@ -1451,6 +1561,9 @@ mod tests {
                 max_money: 0.0,
                 gini_coefficient: 0.0,
                 herfindahl_index: 0.0,
+                top_10_percent_share: 0.0,
+                top_1_percent_share: 0.0,
+                bottom_50_percent_share: 0.0,
             };
         }
 
@@ -1487,6 +1600,10 @@ mod tests {
         // Calculate Herfindahl Index using the shared utility function
         let herfindahl_index = calculate_herfindahl_index(&sorted_money);
 
+        // Calculate wealth concentration ratios
+        let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
+            calculate_wealth_concentration(&sorted_money, sum);
+
         MoneyStats {
             average,
             median,
@@ -1495,6 +1612,9 @@ mod tests {
             max_money: *sorted_money.last().unwrap_or(&0.0),
             gini_coefficient,
             herfindahl_index,
+            top_10_percent_share,
+            top_1_percent_share,
+            bottom_50_percent_share,
         }
     }
 
@@ -1508,6 +1628,9 @@ mod tests {
         assert_eq!(stats.max_money, 0.0);
         assert_eq!(stats.gini_coefficient, 0.0);
         assert_eq!(stats.herfindahl_index, 0.0);
+        assert_eq!(stats.top_10_percent_share, 0.0);
+        assert_eq!(stats.top_1_percent_share, 0.0);
+        assert_eq!(stats.bottom_50_percent_share, 0.0);
     }
 
     #[test]
@@ -1521,6 +1644,10 @@ mod tests {
         assert_eq!(stats.gini_coefficient, 0.0);
         // Single person = monopoly = HHI of 10,000
         assert!((stats.herfindahl_index - 10000.0).abs() < 0.1);
+        // Single person holds 100% of wealth
+        assert!((stats.top_10_percent_share - 1.0).abs() < 1e-10);
+        assert!((stats.top_1_percent_share - 1.0).abs() < 1e-10);
+        assert!((stats.bottom_50_percent_share - 1.0).abs() < 1e-10);
     }
 
     #[test]
@@ -1606,6 +1733,81 @@ mod tests {
         // For n=2: G = (2 * (1*25 + 2*75)) / (2 * 100) - 3/2
         // = (2 * (25 + 150)) / 200 - 1.5 = 350 / 200 - 1.5 = 1.75 - 1.5 = 0.25
         assert!((stats.gini_coefficient - 0.25).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_wealth_concentration_perfect_equality() {
+        // 100 persons with equal wealth
+        let equal = vec![100.0; 100];
+        let sum: f64 = equal.iter().sum();
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&equal, sum);
+
+        // With perfect equality, each group holds wealth proportional to its size
+        assert!((top10 - 0.1).abs() < 0.01); // Top 10% holds ~10%
+        assert!((top1 - 0.01).abs() < 0.01); // Top 1% holds ~1%
+        assert!((bottom50 - 0.5).abs() < 0.01); // Bottom 50% holds ~50%
+    }
+
+    #[test]
+    fn test_wealth_concentration_high_inequality() {
+        // High inequality: top person has much more
+        let mut values = vec![10.0; 99]; // 99 persons with 10 each
+        values.push(1000.0); // 1 person with 1000
+        values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let sum: f64 = values.iter().sum();
+
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&values, sum);
+
+        // Top 1% (1 person) should hold significant wealth
+        // Total wealth = 99*10 + 1000 = 1990
+        // Top 1% wealth = 1000, share = 1000/1990 ≈ 0.503
+        assert!((top1 - 0.5025).abs() < 0.01);
+
+        // Top 10% (10 persons including the richest)
+        // Top 10% wealth = 9*10 + 1000 = 1090, share = 1090/1990 ≈ 0.548
+        assert!((top10 - 0.5477).abs() < 0.01);
+
+        // Bottom 50% (50 persons with 10 each)
+        // Bottom 50% wealth = 50*10 = 500, share = 500/1990 ≈ 0.251
+        assert!((bottom50 - 0.2513).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_wealth_concentration_empty() {
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&[], 0.0);
+        assert_eq!(top10, 0.0);
+        assert_eq!(top1, 0.0);
+        assert_eq!(bottom50, 0.0);
+    }
+
+    #[test]
+    fn test_wealth_concentration_single_person() {
+        let values = vec![100.0];
+        let sum: f64 = values.iter().sum();
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&values, sum);
+
+        // Single person is in all groups
+        assert!((top10 - 1.0).abs() < 1e-10);
+        assert!((top1 - 1.0).abs() < 1e-10);
+        assert!((bottom50 - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_wealth_concentration_small_population() {
+        // 10 persons with ascending wealth
+        let values: Vec<f64> = (1..=10).map(|x| x as f64 * 10.0).collect();
+        let sum: f64 = values.iter().sum(); // 550
+
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&values, sum);
+
+        // Top 10% = top 1 person = 100, share = 100/550 ≈ 0.182
+        assert!((top10 - 0.1818).abs() < 0.01);
+
+        // Top 1% = top 1 person (ceil(10 * 0.01) = 1) = 100, share = 100/550 ≈ 0.182
+        assert!((top1 - 0.1818).abs() < 0.01);
+
+        // Bottom 50% = bottom 5 persons = 10+20+30+40+50 = 150, share = 150/550 ≈ 0.273
+        assert!((bottom50 - 0.2727).abs() < 0.01);
     }
 
     #[test]

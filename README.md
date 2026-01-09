@@ -39,7 +39,13 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **Trace Mode:** Comprehensive debug logging for problem diagnosis. Enable detailed logging of all simulation actions including trade attempts, price updates, reputation changes, loan payments, and tax redistribution. Use environment variable `RUST_LOG=debug` for detailed logs or `RUST_LOG=trace` for extremely detailed output. Ideal for debugging simulation behavior, understanding agent decision-making, and diagnosing unexpected results.
 - **Colored Terminal Output:** Enhanced terminal output with color-coded statistics and messages for improved readability. Automatically detects terminal capabilities and can be disabled with `--no-color` flag.
-- **Wealth Inequality Analysis:** Automatic calculation of the Gini coefficient to measure wealth inequality in the simulated economy.
+- **Wealth Inequality Analysis:** Comprehensive wealth distribution analysis including:
+  - **Gini Coefficient:** Measures overall inequality (0 = perfect equality, 1 = perfect inequality)
+  - **Wealth Concentration Ratios:** Intuitive metrics showing what percentage of total wealth is held by:
+    - Top 10% wealthiest persons (indicates upper class concentration)
+    - Top 1% wealthiest persons (indicates extreme wealth concentration)
+    - Bottom 50% of persons (indicates poverty/lower class share)
+  - These metrics provide actionable insights into wealth distribution patterns and are included in all output formats (JSON, CSV, terminal summary).
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **Per-Skill Trade Analytics:** Detailed trade statistics for each skill type, tracking trade count, total volume, and average price per skill. Enables identification of the most traded and valuable skills in the market. Results are sorted by total trading volume and included in JSON output for easy analysis.
 - **Trading Partner Statistics:** Comprehensive analysis of trading relationships and network structure. For each person, tracks unique trading partners, buyer/seller trade counts, and top partners by trade frequency and value. Network-level metrics include average unique partners per person, network density (0.0-1.0 indicating connectivity), and identification of the most active trading pairs. This feature enables social network analysis without complex graph structures, helping understand market dynamics, trading patterns, and relationship formation. All statistics are automatically calculated and included in JSON output for further analysis.
