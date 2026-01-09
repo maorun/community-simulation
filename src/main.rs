@@ -529,6 +529,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             crisis_severity: args
                 .crisis_severity
                 .unwrap_or(SimulationConfig::default().crisis_severity),
+            enable_friendships: SimulationConfig::default().enable_friendships,
+            friendship_probability: SimulationConfig::default().friendship_probability,
+            friendship_discount: SimulationConfig::default().friendship_discount,
         }
     };
 

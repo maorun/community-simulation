@@ -960,6 +960,64 @@ impl SimulationEngine {
             } else {
                 None
             },
+            friendship_statistics: if self.config.enable_friendships {
+                // Calculate friendship statistics
+                let total_friendships: usize = self
+                    .entities
+                    .iter()
+                    .filter(|e| e.active)
+                    .map(|e| e.person_data.friends.len())
+                    .sum();
+                // Divide by 2 because each friendship is counted twice (bidirectional)
+                let total_friendships = total_friendships / 2;
+
+                let active_persons = self.entities.iter().filter(|e| e.active).count();
+                let avg_friends_per_person = if active_persons > 0 {
+                    self.entities
+                        .iter()
+                        .filter(|e| e.active)
+                        .map(|e| e.person_data.friends.len())
+                        .sum::<usize>() as f64
+                        / active_persons as f64
+                } else {
+                    0.0
+                };
+
+                let max_friends = self
+                    .entities
+                    .iter()
+                    .filter(|e| e.active)
+                    .map(|e| e.person_data.friends.len())
+                    .max()
+                    .unwrap_or(0);
+
+                let min_friends = self
+                    .entities
+                    .iter()
+                    .filter(|e| e.active)
+                    .map(|e| e.person_data.friends.len())
+                    .min()
+                    .unwrap_or(0);
+
+                // Calculate network density: actual friendships / possible friendships
+                // Possible friendships = n * (n-1) / 2 where n is number of active persons
+                let network_density = if active_persons > 1 {
+                    let possible_friendships = (active_persons * (active_persons - 1)) / 2;
+                    total_friendships as f64 / possible_friendships as f64
+                } else {
+                    0.0
+                };
+
+                Some(crate::result::FriendshipStats {
+                    total_friendships,
+                    avg_friends_per_person,
+                    max_friends,
+                    min_friends,
+                    network_density,
+                })
+            } else {
+                None
+            },
             trading_partner_statistics: crate::result::calculate_trading_partner_statistics(
                 &self.entities,
             ),
@@ -1203,7 +1261,7 @@ impl SimulationEngine {
                         .and_then(|providers| providers.first().copied());
 
                     // Apply reputation-based price multiplier for the seller
-                    let final_price = if let Some(seller_id) = seller_id_opt {
+                    let mut final_price = if let Some(seller_id) = seller_id_opt {
                         let seller_reputation_multiplier = self.entities[seller_id]
                             .person_data
                             .reputation_price_multiplier();
@@ -1211,6 +1269,25 @@ impl SimulationEngine {
                     } else {
                         efficiency_adjusted_price
                     };
+
+                    // Apply friendship discount if enabled and buyer-seller are friends
+                    if self.config.enable_friendships {
+                        if let Some(seller_id) = seller_id_opt {
+                            if self.entities[buyer_idx]
+                                .person_data
+                                .is_friend_with(self.entities[seller_id].id)
+                            {
+                                let friendship_multiplier = 1.0 - self.config.friendship_discount;
+                                final_price *= friendship_multiplier;
+                                trace!(
+                                    "Friendship discount applied: Person {} and Person {} are friends, price reduced by {:.1}%",
+                                    self.entities[buyer_idx].id,
+                                    self.entities[seller_id].id,
+                                    self.config.friendship_discount * 100.0
+                                );
+                            }
+                        }
+                    }
 
                     if self.entities[buyer_idx]
                         .person_data
@@ -1413,6 +1490,31 @@ impl SimulationEngine {
 
             // Track total fees collected
             self.total_fees_collected += fee;
+
+            // Friendship formation (if enabled)
+            // After a successful trade, there's a chance the buyer and seller become friends
+            if self.config.enable_friendships {
+                let buyer_id = self.entities[buyer_idx].id;
+                let seller_id = self.entities[seller_idx].id;
+
+                // Check if they're not already friends
+                if !self.entities[buyer_idx]
+                    .person_data
+                    .is_friend_with(seller_id)
+                {
+                    // Roll for friendship formation
+                    let friendship_roll: f64 = self.rng.gen();
+                    if friendship_roll < self.config.friendship_probability {
+                        // Form bidirectional friendship
+                        self.entities[buyer_idx].person_data.add_friend(seller_id);
+                        self.entities[seller_idx].person_data.add_friend(buyer_id);
+                        debug!(
+                            "Friendship formed: Person {} and Person {} are now friends after successful trade",
+                            buyer_id, seller_id
+                        );
+                    }
+                }
+            }
 
             // Update per-skill trade statistics
             let skill_stats = self
