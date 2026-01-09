@@ -650,6 +650,8 @@ mod engine_tests {
     #[test]
     fn test_friendship_network_density() {
         // Test network density calculation
+        const FLOAT_TOLERANCE: f64 = 0.0001; // Tolerance for floating-point comparisons
+
         let mut config = get_test_config();
         config.max_steps = 200; // More steps = more dense network
         config.entity_count = 15;
@@ -671,12 +673,22 @@ mod engine_tests {
         // Check that network density formula is correct
         // Possible friendships = n * (n-1) / 2
         let n = result.active_persons;
-        let possible_friendships = (n * (n - 1)) / 2;
-        let expected_density =
-            friendship_stats.total_friendships as f64 / possible_friendships as f64;
-        assert!(
-            (friendship_stats.network_density - expected_density).abs() < 0.0001,
-            "Network density calculation should be correct"
-        );
+
+        // Guard against edge cases where density calculation would be invalid
+        if n > 1 {
+            let possible_friendships = (n * (n - 1)) / 2;
+            let expected_density =
+                friendship_stats.total_friendships as f64 / possible_friendships as f64;
+            assert!(
+                (friendship_stats.network_density - expected_density).abs() < FLOAT_TOLERANCE,
+                "Network density calculation should be correct"
+            );
+        } else {
+            // With 0 or 1 persons, network density should be 0
+            assert_eq!(
+                friendship_stats.network_density, 0.0,
+                "Network density should be 0 with 0 or 1 persons"
+            );
+        }
     }
 }
