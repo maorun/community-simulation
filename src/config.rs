@@ -533,13 +533,13 @@ impl Default for SimulationConfig {
             min_skill_price: 1.0,            // Minimum price floor
             time_step: 1.0,                  // Represents one discrete step or turn
             scenario: Scenario::Original,
-            demand_strategy: DemandStrategy::default(), // Uniform demand by default
-            tech_growth_rate: 0.0,                      // Disabled by default
-            seasonal_amplitude: 0.0,                    // Disabled by default
-            seasonal_period: 100,                       // Default cycle length
-            transaction_fee: 0.0,                       // Disabled by default
-            savings_rate: 0.0,                          // Disabled by default
-            enable_loans: false,                        // Disabled by default
+            demand_strategy: DemandStrategy::default(),
+            tech_growth_rate: 0.0,   // Disabled by default
+            seasonal_amplitude: 0.0, // Disabled by default
+            seasonal_period: 100,    // Default cycle length
+            transaction_fee: 0.0,    // Disabled by default
+            savings_rate: 0.0,       // Disabled by default
+            enable_loans: false,     // Disabled by default
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,

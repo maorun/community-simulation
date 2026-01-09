@@ -483,7 +483,7 @@ impl AdaptivePricingUpdater {
 ///
 /// Different demand generation strategies create different market dynamics:
 /// - Uniform: All persons have similar demand levels (balanced market)
-/// - Concentrated: Some persons have high demand, others low (unequal market)  
+/// - Concentrated: Some persons have high demand, others low (unequal market)
 /// - Cyclical: Demand varies periodically over time (dynamic market)
 ///
 /// This trait enables experimentation with different demand patterns to study
@@ -515,6 +515,7 @@ pub trait DemandGeneratorTrait: Send + Sync + Debug {
 /// - `Concentrated`: Pareto-like distribution (inequality)
 /// - `Cyclical`: Time-varying cyclical demand (dynamics)
 #[derive(Debug, Clone, Serialize, Deserialize, EnumString, PartialEq, Default)]
+#[strum(serialize_all = "PascalCase")]
 pub enum DemandStrategy {
     /// Uniform random distribution: each person has 2-5 needs with equal probability.
     /// This is the default strategy that maintains current behavior.
@@ -661,13 +662,15 @@ impl DemandGeneratorTrait for CyclicalDemandGenerator {
         const CYCLE_PERIOD: f64 = 100.0;
         const MIN_DEMAND: usize = 2;
         const MAX_DEMAND: usize = 5;
+        const PHASE_OFFSET_MULTIPLIER: f64 = 0.1;
+        const FULL_CYCLE_MULTIPLIER: f64 = 2.0; // Full sine wave cycle
 
         // Calculate phase offset based on person_id for variety
-        let phase_offset = (person_id as f64) * 0.1;
+        let phase_offset = (person_id as f64) * PHASE_OFFSET_MULTIPLIER;
 
         // Calculate current position in cycle
         let cycle_position = (step as f64 + phase_offset) / CYCLE_PERIOD;
-        let sine_value = (cycle_position * 2.0 * std::f64::consts::PI).sin();
+        let sine_value = (cycle_position * FULL_CYCLE_MULTIPLIER * std::f64::consts::PI).sin();
 
         // Map sine wave [-1, 1] to demand range [MIN_DEMAND, MAX_DEMAND]
         let normalized = (sine_value + 1.0) / 2.0; // Map to [0, 1]
@@ -691,11 +694,7 @@ mod demand_tests {
         // Test that generated values are always in valid range
         for _ in 0..100 {
             let demand = generator.generate_demand_count(0, 0, &mut rng);
-            assert!(
-                (2..=5).contains(&demand),
-                "Demand {} out of range",
-                demand
-            );
+            assert!((2..=5).contains(&demand), "Demand {} out of range", demand);
         }
     }
 
@@ -707,11 +706,7 @@ mod demand_tests {
         // Test that generated values are always in valid range
         for _ in 0..100 {
             let demand = generator.generate_demand_count(0, 0, &mut rng);
-            assert!(
-                (2..=5).contains(&demand),
-                "Demand {} out of range",
-                demand
-            );
+            assert!((2..=5).contains(&demand), "Demand {} out of range", demand);
         }
     }
 
@@ -723,11 +718,7 @@ mod demand_tests {
         // Test across multiple steps to cover full cycle
         for step in 0..200 {
             let demand = generator.generate_demand_count(0, step, &mut rng);
-            assert!(
-                (2..=5).contains(&demand),
-                "Demand {} out of range",
-                demand
-            );
+            assert!((2..=5).contains(&demand), "Demand {} out of range", demand);
         }
     }
 
