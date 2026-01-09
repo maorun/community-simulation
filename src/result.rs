@@ -139,6 +139,26 @@ pub struct TradeVolumeStats {
     pub max_trades_per_step: usize,
 }
 
+/// Statistics about failed trade attempts (trades that failed due to insufficient funds).
+///
+/// This provides insight into unmet demand and market accessibility issues.
+/// High failure rates indicate economic stress where persons want to buy skills
+/// but cannot afford them, revealing inefficiencies in wealth distribution.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FailedTradeStats {
+    /// Total number of trade attempts that failed due to insufficient funds
+    pub total_failed_attempts: usize,
+    /// Ratio of failed attempts to total attempts (failed / (successful + failed))
+    /// Value ranges from 0.0 (no failures) to 1.0 (all attempts failed)
+    pub failure_rate: f64,
+    /// Average number of failed attempts per simulation step
+    pub avg_failed_per_step: f64,
+    /// Minimum failed attempts in a single step
+    pub min_failed_per_step: usize,
+    /// Maximum failed attempts in a single step
+    pub max_failed_per_step: usize,
+}
+
 /// Statistics about black market activity (parallel informal market)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BlackMarketStats {
@@ -338,6 +358,11 @@ pub struct SimulationResult {
     /// Per-skill trade statistics (sorted by trade volume, highest first)
     pub per_skill_trade_stats: Vec<SkillTradeStats>,
 
+    /// Failed trade attempt statistics (trade attempts that failed due to insufficient funds)
+    pub failed_trade_statistics: FailedTradeStats,
+    /// Number of failed trade attempts at each step
+    pub failed_attempts_per_step: Vec<usize>,
+
     /// Black market statistics (only present if black market is enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub black_market_statistics: Option<BlackMarketStats>,
@@ -425,6 +450,12 @@ impl SimulationResult {
     /// #     volume_per_step: vec![],
     /// #     total_fees_collected: 0.0,
     /// #     per_skill_trade_stats: vec![],
+    /// #     failed_trade_statistics: simulation_framework::result::FailedTradeStats {
+    /// #         total_failed_attempts: 0, failure_rate: 0.0,
+    /// #         avg_failed_per_step: 0.0,
+    /// #         min_failed_per_step: 0, max_failed_per_step: 0,
+    /// #     },
+    /// #     failed_attempts_per_step: vec![],
     /// #     black_market_statistics: None,
     /// #     total_taxes_collected: None,
     /// #     total_taxes_redistributed: None,
@@ -627,6 +658,34 @@ impl SimulationResult {
             file,
             "Max Trades Per Step,{}",
             self.trade_volume_statistics.max_trades_per_step
+        )?;
+
+        writeln!(file)?;
+        writeln!(file, "Failed Trade Attempt Statistics")?;
+        writeln!(
+            file,
+            "Total Failed Attempts,{}",
+            self.failed_trade_statistics.total_failed_attempts
+        )?;
+        writeln!(
+            file,
+            "Failure Rate,{:.6}",
+            self.failed_trade_statistics.failure_rate
+        )?;
+        writeln!(
+            file,
+            "Avg Failed Per Step,{:.4}",
+            self.failed_trade_statistics.avg_failed_per_step
+        )?;
+        writeln!(
+            file,
+            "Min Failed Per Step,{}",
+            self.failed_trade_statistics.min_failed_per_step
+        )?;
+        writeln!(
+            file,
+            "Max Failed Per Step,{}",
+            self.failed_trade_statistics.max_failed_per_step
         )?;
 
         Ok(())
@@ -954,6 +1013,46 @@ impl SimulationResult {
             "Min/Max Trades Per Step:".bold(),
             self.trade_volume_statistics.min_trades_per_step,
             self.trade_volume_statistics.max_trades_per_step
+        );
+
+        // Display failed trade attempt statistics
+        println!(
+            "\n{}",
+            "--- Failed Trade Attempts ---".bright_magenta().bold()
+        );
+        println!(
+            "{} {}",
+            "Total Failed Attempts:".bold(),
+            self.failed_trade_statistics.total_failed_attempts
+        );
+
+        // Color code failure rate based on severity
+        let failure_rate_pct = self.failed_trade_statistics.failure_rate * 100.0;
+        let failure_rate_str = format!("{:.2}%", failure_rate_pct);
+        let failure_rate_colored = if failure_rate_pct < 10.0 {
+            failure_rate_str.bright_green()
+        } else if failure_rate_pct < 30.0 {
+            failure_rate_str.bright_yellow()
+        } else {
+            failure_rate_str.bright_red()
+        };
+        println!(
+            "{} {} {}",
+            "Failure Rate:".bold(),
+            failure_rate_colored,
+            "(failed / total attempts)".dimmed()
+        );
+
+        println!(
+            "{} {:.2}",
+            "Avg Failed Per Step:".bold(),
+            self.failed_trade_statistics.avg_failed_per_step
+        );
+        println!(
+            "{} {} / {}",
+            "Min/Max Failed Per Step:".bold(),
+            self.failed_trade_statistics.min_failed_per_step,
+            self.failed_trade_statistics.max_failed_per_step
         );
 
         println!("\n{}", "Top 5 Most Valuable Skills:".bright_cyan().bold());
@@ -1526,6 +1625,14 @@ mod tests {
             ],
             total_fees_collected: 0.0,
             per_skill_trade_stats: vec![],
+            failed_trade_statistics: FailedTradeStats {
+                total_failed_attempts: 20,
+                failure_rate: 0.1667, // 20 / (100 + 20) = 0.1667
+                avg_failed_per_step: 2.0,
+                min_failed_per_step: 0,
+                max_failed_per_step: 5,
+            },
+            failed_attempts_per_step: vec![2, 3, 1, 2, 5, 1, 2, 2, 0, 2],
             black_market_statistics: None,
             total_taxes_collected: None,
             total_taxes_redistributed: None,

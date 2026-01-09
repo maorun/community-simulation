@@ -52,6 +52,10 @@ pub struct SimulationCheckpoint {
     pub total_fees_collected: f64,
     /// Number of failed steps (recovered from panics)
     pub failed_steps: usize,
+    /// Total failed trade attempts (due to insufficient funds)
+    pub failed_trade_attempts: usize,
+    /// Failed trade attempts per step history
+    pub failed_attempts_per_step: Vec<usize>,
     /// All loans in the system
     pub loans: HashMap<LoanId, Loan>,
     /// Total loans issued counter
@@ -93,6 +97,9 @@ pub struct SimulationEngine {
     total_fees_collected: f64,
     // Panic recovery tracking
     failed_steps: usize,
+    // Failed trade attempts tracking
+    failed_trade_attempts: usize,
+    failed_attempts_per_step: Vec<usize>,
     // Loan system tracking
     loans: HashMap<LoanId, Loan>,
     total_loans_issued: usize,
@@ -183,6 +190,8 @@ impl SimulationEngine {
             black_market_volume_per_step: Vec::new(),
             total_fees_collected: 0.0,
             failed_steps: 0,
+            failed_trade_attempts: 0,
+            failed_attempts_per_step: Vec::new(),
             loans: HashMap::new(),
             total_loans_issued: 0,
             total_loans_repaid: 0,
@@ -791,6 +800,33 @@ impl SimulationEngine {
             None
         };
 
+        // Calculate failed trade attempt statistics
+        let failed_trade_statistics = {
+            let total_attempts = total_trades + self.failed_trade_attempts;
+            let failure_rate = if total_attempts > 0 {
+                self.failed_trade_attempts as f64 / total_attempts as f64
+            } else {
+                0.0
+            };
+
+            let avg_failed_per_step = if steps_with_data > 0.0 {
+                self.failed_trade_attempts as f64 / steps_with_data
+            } else {
+                0.0
+            };
+
+            let min_failed_per_step = *self.failed_attempts_per_step.iter().min().unwrap_or(&0);
+            let max_failed_per_step = *self.failed_attempts_per_step.iter().max().unwrap_or(&0);
+
+            crate::result::FailedTradeStats {
+                total_failed_attempts: self.failed_trade_attempts,
+                failure_rate,
+                avg_failed_per_step,
+                min_failed_per_step,
+                max_failed_per_step,
+            }
+        };
+
         // Calculate per-skill trade statistics
         let mut per_skill_trade_stats: Vec<crate::result::SkillTradeStats> = self
             .per_skill_trades
@@ -839,6 +875,8 @@ impl SimulationEngine {
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
             per_skill_trade_stats,
+            failed_trade_statistics,
+            failed_attempts_per_step: self.failed_attempts_per_step.clone(),
             black_market_statistics: if self.config.enable_black_market {
                 let total_black_market_trades: usize =
                     self.black_market_trades_per_step.iter().sum();
@@ -1150,6 +1188,7 @@ impl SimulationEngine {
         }
 
         let mut trades_to_execute: Vec<(usize, usize, SkillId, f64)> = Vec::new();
+        let mut failed_attempts_this_step = 0usize;
 
         for buyer_idx in 0..self.entities.len() {
             if !self.entities[buyer_idx].active {
@@ -1341,6 +1380,10 @@ impl SimulationEngine {
                                 .push(needed_skill_id.clone());
                         }
                     } else {
+                        // Trade failed due to insufficient funds - track this
+                        failed_attempts_this_step += 1;
+                        self.failed_trade_attempts += 1;
+
                         trace!(
                             "Person {} cannot afford skill {:?} at ${:.2} (has ${:.2}, strategy allows ${:.2})",
                             self.entities[buyer_idx].id,
@@ -1358,6 +1401,10 @@ impl SimulationEngine {
         let trades_count = trades_to_execute.len();
         let total_volume: f64 = trades_to_execute.iter().map(|(_, _, _, price)| price).sum();
         let step_taxes_collected_start = self.total_taxes_collected;
+
+        // Track failed trade attempts for this step
+        self.failed_attempts_per_step
+            .push(failed_attempts_this_step);
 
         // Determine which trades go to black market (if enabled)
         let mut black_market_trade_indices: Vec<usize> = Vec::new();
@@ -1930,6 +1977,8 @@ impl SimulationEngine {
             black_market_volume_per_step: self.black_market_volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
             failed_steps: self.failed_steps,
+            failed_trade_attempts: self.failed_trade_attempts,
+            failed_attempts_per_step: self.failed_attempts_per_step.clone(),
             loans: self.loans.clone(),
             total_loans_issued: self.total_loans_issued,
             total_loans_repaid: self.total_loans_repaid,
@@ -2029,6 +2078,8 @@ impl SimulationEngine {
             black_market_volume_per_step: checkpoint.black_market_volume_per_step,
             total_fees_collected: checkpoint.total_fees_collected,
             failed_steps: checkpoint.failed_steps,
+            failed_trade_attempts: checkpoint.failed_trade_attempts,
+            failed_attempts_per_step: checkpoint.failed_attempts_per_step,
             loans: checkpoint.loans,
             total_loans_issued: checkpoint.total_loans_issued,
             total_loans_repaid: checkpoint.total_loans_repaid,
