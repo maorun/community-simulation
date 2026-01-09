@@ -67,17 +67,12 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Schnellere Simulationen
 - **Bereiche**: Transaktionsverarbeitung, Marktaktualisierungen
 
-#### 2.2 Caching von Berechnungen
-- **Beschreibung**: Häufig berechnete Werte cachen
-- **Nutzen**: Weniger redundante Berechnungen
-- **Beispiele**: Marktstatistiken, Preistrends
-
-#### 2.3 Memory Pooling
+#### 2.2 Memory Pooling
 - **Beschreibung**: Objekt-Pools für häufig allokierte Strukturen
 - **Nutzen**: Reduzierte Allokationskosten
 - **Technologie**: Custom Allocator oder bestehende Crates
 
-#### 2.4 SIMD-Optimierungen
+#### 2.3 SIMD-Optimierungen
 - **Beschreibung**: Vektorisierte Operationen für Berechnungen
 - **Nutzen**: Schnellere numerische Berechnungen
 - **Technologie**: `std::simd` oder externe Crates

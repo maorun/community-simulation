@@ -11,6 +11,22 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Cached market statistics to reduce redundant calculations.
+///
+/// This cache stores frequently accessed aggregate statistics about the market.
+/// It is invalidated whenever prices are updated to ensure data consistency.
+#[derive(Clone, Debug, Default)]
+struct MarketStatsCache {
+    /// Average price across all skills in the market
+    average_price: Option<f64>,
+    /// Total value of all skills (sum of all prices)
+    total_market_value: Option<f64>,
+    /// Minimum skill price in the market
+    min_price: Option<f64>,
+    /// Maximum skill price in the market
+    max_price: Option<f64>,
+}
+
 /// Represents the market where skills are traded and prices are determined.
 ///
 /// The market tracks supply and demand for each skill, adjusts prices based on
@@ -86,6 +102,13 @@ pub struct Market {
     /// Reset at the beginning of each simulation step.
     #[serde(skip)]
     pub sales_this_step: HashMap<SkillId, usize>,
+
+    /// Cached market statistics to avoid redundant calculations
+    ///
+    /// This cache stores aggregate statistics and is invalidated when prices change.
+    /// Not serialized as it can be recomputed from skill data.
+    #[serde(skip)]
+    cache: MarketStatsCache,
 }
 
 impl Market {
@@ -119,12 +142,14 @@ impl Market {
             skill_price_history: HashMap::new(),
             price_updater,
             sales_this_step: HashMap::new(),
+            cache: MarketStatsCache::default(),
         }
     }
 
     /// Adds a skill to the market.
     ///
     /// Initializes supply/demand counters and price history tracking for the skill.
+    /// The cache is invalidated as adding a skill changes aggregate statistics.
     ///
     /// # Arguments
     ///
@@ -135,6 +160,8 @@ impl Market {
         self.skill_price_history
             .insert(skill.id.clone(), Vec::new());
         self.skills.insert(skill.id.clone(), skill);
+        // Invalidate cache since adding a skill changes aggregate statistics
+        self.invalidate_cache();
     }
 
     /// Increments the supply counter for a skill.
@@ -206,6 +233,7 @@ impl Market {
     ///
     /// This method delegates to the configured [`PriceUpdater`] to perform the actual
     /// price adjustments. Price history is automatically recorded.
+    /// The statistics cache is invalidated after price updates.
     ///
     /// # Arguments
     ///
@@ -213,6 +241,93 @@ impl Market {
     pub fn update_prices<R: Rng + ?Sized>(&mut self, rng: &mut R) {
         let updater = self.price_updater.clone();
         updater.update_prices(self, rng);
+        // Invalidate cache after price update
+        self.invalidate_cache();
+    }
+
+    /// Invalidates the cached market statistics.
+    ///
+    /// This should be called whenever skill prices change to ensure cache consistency.
+    fn invalidate_cache(&mut self) {
+        self.cache.average_price = None;
+        self.cache.total_market_value = None;
+        self.cache.min_price = None;
+        self.cache.max_price = None;
+    }
+
+    /// Gets the average price across all skills in the market.
+    ///
+    /// This method uses caching to avoid redundant calculations.
+    /// The cache is automatically invalidated when prices change.
+    ///
+    /// # Returns
+    ///
+    /// The average price, or 0.0 if there are no skills in the market
+    pub fn get_average_price(&mut self) -> f64 {
+        if let Some(avg) = self.cache.average_price {
+            return avg;
+        }
+
+        let avg = if self.skills.is_empty() {
+            0.0
+        } else {
+            let sum: f64 = self.skills.values().map(|s| s.current_price).sum();
+            sum / self.skills.len() as f64
+        };
+
+        self.cache.average_price = Some(avg);
+        avg
+    }
+
+    /// Gets the total market value (sum of all skill prices).
+    ///
+    /// This method uses caching to avoid redundant calculations.
+    /// The cache is automatically invalidated when prices change.
+    ///
+    /// # Returns
+    ///
+    /// The total market value
+    pub fn get_total_market_value(&mut self) -> f64 {
+        if let Some(total) = self.cache.total_market_value {
+            return total;
+        }
+
+        let total: f64 = self.skills.values().map(|s| s.current_price).sum();
+        self.cache.total_market_value = Some(total);
+        total
+    }
+
+    /// Gets the minimum and maximum skill prices in the market.
+    ///
+    /// This method uses caching to avoid redundant calculations.
+    /// The cache is automatically invalidated when prices change.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of (min_price, max_price), or (0.0, 0.0) if there are no skills
+    pub fn get_price_range(&mut self) -> (f64, f64) {
+        // Check if both cached values exist
+        if let (Some(min), Some(max)) = (self.cache.min_price, self.cache.max_price) {
+            return (min, max);
+        }
+
+        // Compute min and max in a single pass
+        let (min, max) = if self.skills.is_empty() {
+            (0.0, 0.0)
+        } else {
+            self.skills
+                .values()
+                .map(|s| s.current_price)
+                .fold((f64::INFINITY, f64::NEG_INFINITY), |(min, max), price| {
+                    (min.min(price), max.max(price))
+                })
+        };
+
+        // Cache the values
+        self.cache.min_price = Some(min);
+        self.cache.max_price = Some(max);
+
+        (min, max)
     }
 
     /// Gets all current skill prices as a map.
@@ -225,5 +340,151 @@ impl Market {
             .iter()
             .map(|(id, skill)| (id.clone(), skill.current_price))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scenario::Scenario;
+
+    #[test]
+    fn test_cache_average_price() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, price_updater);
+
+        // Add some skills with different prices
+        let skill1 = Skill::new("Programming".to_string(), 50.0);
+        let skill2 = Skill::new("Design".to_string(), 30.0);
+        let skill3 = Skill::new("Writing".to_string(), 20.0);
+
+        market.add_skill(skill1);
+        market.add_skill(skill2);
+        market.add_skill(skill3);
+
+        // First call should compute and cache
+        let avg1 = market.get_average_price();
+        assert!((avg1 - 33.333333).abs() < 0.001); // (50 + 30 + 20) / 3
+
+        // Second call should return cached value (same result)
+        let avg2 = market.get_average_price();
+        assert_eq!(avg1, avg2);
+
+        // Verify cache was hit by checking it's still Some
+        assert!(market.cache.average_price.is_some());
+    }
+
+    #[test]
+    fn test_cache_invalidation_on_price_update() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, price_updater);
+
+        // Add skills
+        let skill = Skill::new("Programming".to_string(), 50.0);
+        market.add_skill(skill);
+
+        // Compute average to populate cache
+        let _avg = market.get_average_price();
+        assert!(market.cache.average_price.is_some());
+
+        // Update prices (which should invalidate cache)
+        let mut rng = rand::thread_rng();
+        market.update_prices(&mut rng);
+
+        // Cache should be invalidated
+        assert!(market.cache.average_price.is_none());
+    }
+
+    #[test]
+    fn test_cache_total_market_value() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, price_updater);
+
+        // Add skills
+        let skill1 = Skill::new("Skill1".to_string(), 15.0);
+        let skill2 = Skill::new("Skill2".to_string(), 25.0);
+        let skill3 = Skill::new("Skill3".to_string(), 10.0);
+
+        market.add_skill(skill1);
+        market.add_skill(skill2);
+        market.add_skill(skill3);
+
+        // First call computes and caches
+        let total1 = market.get_total_market_value();
+        assert_eq!(total1, 50.0); // 15 + 25 + 10
+
+        // Second call returns cached value
+        let total2 = market.get_total_market_value();
+        assert_eq!(total1, total2);
+    }
+
+    #[test]
+    fn test_cache_price_range() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, price_updater);
+
+        // Add skills with different prices
+        let skill1 = Skill::new("Expensive".to_string(), 100.0);
+        let skill2 = Skill::new("Medium".to_string(), 50.0);
+        let skill3 = Skill::new("Cheap".to_string(), 10.0);
+
+        market.add_skill(skill1);
+        market.add_skill(skill2);
+        market.add_skill(skill3);
+
+        // First call computes and caches
+        let (min1, max1) = market.get_price_range();
+        assert_eq!(min1, 10.0);
+        assert_eq!(max1, 100.0);
+
+        // Second call returns cached values
+        let (min2, max2) = market.get_price_range();
+        assert_eq!(min1, min2);
+        assert_eq!(max1, max2);
+
+        // Verify cache was populated
+        assert!(market.cache.min_price.is_some());
+        assert!(market.cache.max_price.is_some());
+    }
+
+    #[test]
+    fn test_empty_market_statistics() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, price_updater);
+
+        // Test empty market
+        let avg = market.get_average_price();
+        assert_eq!(avg, 0.0);
+
+        let total = market.get_total_market_value();
+        assert_eq!(total, 0.0);
+
+        let (min, max) = market.get_price_range();
+        assert_eq!(min, 0.0);
+        assert_eq!(max, 0.0);
+    }
+
+    #[test]
+    fn test_cache_consistency_after_multiple_invalidations() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, price_updater);
+
+        let skill = Skill::new("TestSkill".to_string(), 30.0);
+        market.add_skill(skill);
+
+        // Get initial cached value
+        let _avg1 = market.get_average_price();
+
+        // Invalidate and recompute multiple times
+        let mut rng = rand::thread_rng();
+        for _ in 0..5 {
+            market.update_prices(&mut rng);
+            let _avg = market.get_average_price(); // Recompute after each invalidation
+        }
+
+        // Cache should still be functioning correctly
+        let avg_final = market.get_average_price();
+        assert!(avg_final > 0.0); // Price should still be positive
+        assert!(market.cache.average_price.is_some());
     }
 }
