@@ -842,12 +842,16 @@ mod tests {
 
 ### Continuous Integration
 
-Tests are automatically run via GitHub Actions on every push and pull request to the `master` branch. The workflow configuration is located at `.github/workflows/rust.yml`.
+The project uses GitHub Actions for continuous integration, automatically running on every push and pull request to the `master` branch. The workflow configuration is located at `.github/workflows/rust.yml`.
 
-The CI pipeline:
-1. Checks out the code
-2. Builds the project with `cargo build --verbose`
-3. Runs all tests with `cargo test --verbose`
+The CI pipeline enforces code quality through:
+1. **Code Formatting**: Checks that all code follows Rust formatting standards with `cargo fmt --all -- --check`
+2. **Linting**: Runs Clippy to catch common mistakes and enforce best practices with `cargo clippy --all-targets --all-features -- -D warnings -A deprecated`
+3. **Build**: Compiles the project with `cargo build --verbose`
+4. **Tests**: Runs all tests with `cargo test --verbose`
+5. **Release Build**: Verifies that release builds succeed with `cargo build --release --verbose`
+
+All PRs must pass these checks before merging, ensuring consistent code style and quality across the project.
 
 ## Output Format (`results.json`)
 
