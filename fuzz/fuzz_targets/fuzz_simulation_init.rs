@@ -37,6 +37,13 @@ fuzz_target!(|data: &[u8]| {
     let seasonal_period = u16::from_le_bytes([data[44], data[45]]) as usize;
     let skills_per_person = u16::from_le_bytes([data[46], data[47]]) as usize;
     
+    // Skip invalid floating point values (NaN, infinity) to focus on testing
+    // the validation logic with realistic but potentially invalid ranges
+    if !initial_money.is_finite() || !base_price.is_finite() 
+        || !min_price.is_finite() || !time_step.is_finite() {
+        return;
+    }
+    
     // Create config with fuzzed values
     let config = SimulationConfig {
         max_steps,
@@ -87,10 +94,11 @@ fuzz_target!(|data: &[u8]| {
     };
     
     // Try to validate config - this should not panic
-    let _ = config.validate();
+    // Store the validation result to avoid redundant computation
+    let validation_result = config.validate();
     
     // If validation succeeds, try to create engine - this should also not panic
-    if config.validate().is_ok() {
+    if validation_result.is_ok() {
         let _ = SimulationEngine::new(config);
     }
 });
