@@ -7,6 +7,12 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Agent-Based Simulation:** Simulates individual persons with money, unique skills, and randomly generated needs for other skills.
 - **Multiple Skills Per Person:** Each person can possess and offer multiple skills in the market, creating more realistic labor dynamics with skill redundancy and competition. Configurable via `--skills-per-person` parameter (default: 1). When set to values > 1, skills are distributed across persons using a round-robin approach, allowing multiple providers per skill and more complex market interactions.
 - **Dynamic Market:** Features a market mechanism where skill prices are adjusted based on supply (fixed per provider) and demand (generated each step).
+- **Demand Generation Strategies:** Configurable strategies for determining how many skills each person needs per step. Three strategies available:
+  - **Uniform** (default): Random 2-5 needs with equal probability, creating balanced markets
+  - **Concentrated**: Pareto-like distribution (70% low demand, 30% high demand), simulating consumption inequality
+  - **Cyclical**: Time-varying demand in cycles, simulating business cycle dynamics with expansion and contraction phases
+  
+  Controlled via `--demand-strategy` parameter. Enables studying how demand patterns affect market behavior, wealth distribution, and economic resilience. Interacts with pricing mechanisms and seasonal effects to create complex market dynamics.
 - **Trading System:** Persons attempt to buy needed skills from providers if they can afford them, leading to money exchange and transaction logging.
 - **Panic Recovery:** Robust error handling with graceful degradation - if a panic occurs during simulation step execution, it is caught and logged, allowing the simulation to continue. Failed steps are tracked and reported in the results.
 - **Reputation System:** Each person has a reputation score (starting at 1.0) that increases with successful trades. Higher reputation leads to better prices (up to 10% discount), while lower reputation results in price premiums. Reputation slowly decays toward neutral over time, encouraging ongoing positive behavior.
@@ -169,6 +175,18 @@ The simulation accepts the following CLI arguments:
         *   `DynamicPricing` - Sales-based pricing. If a skill is sold, its price increases by 5%; if not sold, it decreases by 5%. This creates rapid price adjustments based on immediate market feedback.
         *   `AdaptivePricing` - Gradual adaptive pricing using exponential moving average. Prices smoothly converge toward targets based on sales activity (±10% targets with 20% learning rate). This creates more stable price movements than DynamicPricing while still responding to market conditions.
     *   Example: `--scenario AdaptivePricing`
+*   `--demand-strategy <STRATEGY>`:
+    *   Specifies the demand generation strategy. This determines how many skills each person needs per simulation step.
+    *   Available strategies:
+        *   `Uniform` (default) - Random uniform distribution: each person needs 2-5 skills with equal probability. This is the baseline strategy that maintains current simulation behavior, creating a balanced market.
+        *   `Concentrated` - Pareto-like distribution: 70% of persons have low demand (2-3 skills), while 30% have high demand (4-5 skills). This simulates markets with unequal consumption patterns, useful for studying demand inequality alongside wealth inequality.
+        *   `Cyclical` - Time-varying cyclical demand: demand oscillates between 2 and 5 skills over a 100-step cycle, with phase offsets per person for variety. This simulates business cycles and creates periodic expansion/contraction phases in market activity.
+    *   **Use cases:**
+        *   Study how demand patterns affect market dynamics and wealth distribution
+        *   Test market resilience to concentrated vs. distributed demand
+        *   Simulate economic cycles and business cycle dynamics
+        *   Analyze the interaction between demand patterns and pricing mechanisms
+    *   Example: `--demand-strategy Concentrated`
 *   `--tech-growth-rate <RATE>`:
     *   Technology growth rate per simulation step (e.g., 0.001 = 0.1% growth per step). Simulates productivity improvements over time where skills become more efficient, effectively reducing their cost. Higher efficiency enables more trade and economic growth. Set to 0.0 to disable (default). If not specified, uses default (0.0) or preset value.
 *   `--seasonal-amplitude <AMPLITUDE>`:
@@ -348,6 +366,34 @@ This runs the simulation with seasonal demand fluctuations. The `--seasonal-ampl
 ```
 
 The price floor feature is particularly useful in crisis scenarios or with dynamic pricing that can drive prices down. By setting `--min-skill-price 3`, you ensure that no skill price falls below $3, preventing deflationary spirals and maintaining minimum market viability. This models real-world economic policies like minimum wage laws or regulatory price controls.
+
+**Example with Demand Strategies:**
+
+```bash
+# Default uniform demand (baseline)
+./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Uniform --output uniform_demand.json
+
+# Concentrated demand (inequality)
+./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Concentrated --output concentrated_demand.json
+
+# Cyclical demand (business cycles)
+./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Cyclical --output cyclical_demand.json
+
+# Compare demand strategies side-by-side
+./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Uniform --output uniform.json
+./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Concentrated --seed 42 --output concentrated.json
+./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Cyclical --seed 42 --output cyclical.json
+```
+
+Demand strategies usage:
+- **Uniform (default):** Each person randomly needs 2-5 skills with equal probability. This creates a balanced market where all demand levels are equally likely, providing a baseline for comparison.
+- **Concentrated:** 70% of persons have low demand (2-3 needs), while 30% have high demand (4-5 needs). This simulates markets with unequal consumption patterns, useful for studying how demand inequality interacts with wealth inequality and affects market dynamics.
+- **Cyclical:** Demand varies over time in a sine wave pattern with a 100-step period. Each person has a phase offset, creating diverse cyclical patterns. This simulates business cycles with expansion and contraction phases, testing how markets adapt to changing aggregate demand levels over time.
+
+The demand strategy interacts with other features:
+- Combine with `--scenario` to see how different pricing mechanisms respond to demand patterns
+- Use with `--seasonal-amplitude` to create layered demand dynamics (cyclical baseline + seasonal fluctuations)
+- Pair with wealth inequality metrics (Gini coefficient) to study demand-side vs supply-side inequality
 
 **Example with Transaction Fees:**
 
