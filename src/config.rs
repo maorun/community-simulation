@@ -393,6 +393,35 @@ pub struct SimulationConfig {
     /// Default: 0.5 (moderate severity)
     #[serde(default = "default_crisis_severity")]
     pub crisis_severity: f64,
+
+    /// Enable friendship system where persons can form social bonds.
+    ///
+    /// When enabled, persons who successfully trade together have a chance to become friends.
+    /// Friends receive price discounts when trading with each other, simulating trust and
+    /// social capital in economic transactions.
+    /// Set to false to disable friendships (default).
+    #[serde(default)]
+    pub enable_friendships: bool,
+
+    /// Probability that a successful trade leads to friendship formation (0.0-1.0).
+    ///
+    /// After each successful trade between two persons, they have this probability of
+    /// becoming friends (if they aren't already). Higher values lead to faster friend
+    /// network formation.
+    /// Only used when enable_friendships is true.
+    /// Default: 0.1 (10% chance per successful trade)
+    #[serde(default = "default_friendship_probability")]
+    pub friendship_probability: f64,
+
+    /// Price discount for trades between friends as a percentage (0.0-1.0).
+    ///
+    /// When two friends trade, the price is reduced by this percentage.
+    /// For example, 0.1 means a 10% discount for friend-to-friend trades.
+    /// This simulates trust, loyalty, and social capital reducing transaction costs.
+    /// Only used when enable_friendships is true.
+    /// Default: 0.1 (10% discount for friends)
+    #[serde(default = "default_friendship_discount")]
+    pub friendship_discount: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -471,6 +500,14 @@ fn default_crisis_severity() -> f64 {
     0.5 // Moderate severity (50% of maximum impact)
 }
 
+fn default_friendship_probability() -> f64 {
+    0.1 // 10% chance per successful trade
+}
+
+fn default_friendship_discount() -> f64 {
+    0.1 // 10% discount for friend trades
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -515,6 +552,9 @@ impl Default for SimulationConfig {
             enable_crisis_events: false,          // Disabled by default
             crisis_probability: 0.02,             // 2% chance per step
             crisis_severity: 0.5,                 // Moderate severity
+            enable_friendships: false,            // Disabled by default
+            friendship_probability: 0.1,          // 10% chance per trade
+            friendship_discount: 0.1,             // 10% discount for friends
         }
     }
 }
@@ -794,6 +834,23 @@ impl SimulationConfig {
             }
         }
 
+        // Friendship system validation
+        if self.enable_friendships {
+            if !(0.0..=1.0).contains(&self.friendship_probability) {
+                return Err(SimulationError::ValidationError(format!(
+                    "friendship_probability must be between 0.0 and 1.0, got: {}",
+                    self.friendship_probability
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.friendship_discount) {
+                return Err(SimulationError::ValidationError(format!(
+                    "friendship_discount must be between 0.0 and 1.0, got: {}",
+                    self.friendship_discount
+                )));
+            }
+        }
+
         Ok(())
     }
 
@@ -857,6 +914,9 @@ impl SimulationConfig {
                 enable_crisis_events: false,
                 crisis_probability: 0.02,
                 crisis_severity: 0.5,
+                enable_friendships: false,
+                friendship_probability: 0.1,
+                friendship_discount: 0.1,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -900,6 +960,9 @@ impl SimulationConfig {
                 enable_crisis_events: false,
                 crisis_probability: 0.02,
                 crisis_severity: 0.5,
+                enable_friendships: false,
+                friendship_probability: 0.1,
+                friendship_discount: 0.1,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -943,6 +1006,9 @@ impl SimulationConfig {
                 enable_crisis_events: true, // Enable crisis events for crisis scenario!
                 crisis_probability: 0.05,   // Higher probability (5% per step)
                 crisis_severity: 0.7,       // Higher severity for crisis scenario
+                enable_friendships: false,
+                friendship_probability: 0.1,
+                friendship_discount: 0.1,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -986,6 +1052,9 @@ impl SimulationConfig {
                 enable_crisis_events: false,
                 crisis_probability: 0.02,
                 crisis_severity: 0.5,
+                enable_friendships: false,
+                friendship_probability: 0.1,
+                friendship_discount: 0.1,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -1029,6 +1098,9 @@ impl SimulationConfig {
                 enable_crisis_events: false,
                 crisis_probability: 0.02,
                 crisis_severity: 0.5,
+                enable_friendships: false,
+                friendship_probability: 0.1,
+                friendship_discount: 0.1,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -1072,6 +1144,9 @@ impl SimulationConfig {
                 enable_crisis_events: false,
                 crisis_probability: 0.02,
                 crisis_severity: 0.5,
+                enable_friendships: false,
+                friendship_probability: 0.1,
+                friendship_discount: 0.1,
             },
         }
     }

@@ -196,6 +196,22 @@ pub struct EducationStats {
     pub total_education_spending: f64,
 }
 
+/// Statistics about the friendship system (social connections)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FriendshipStats {
+    /// Total number of friendships formed during the simulation
+    pub total_friendships: usize,
+    /// Average number of friends per person
+    pub avg_friends_per_person: f64,
+    /// Maximum number of friends any person has
+    pub max_friends: usize,
+    /// Minimum number of friends any person has
+    pub min_friends: usize,
+    /// Friend network density (actual friendships / possible friendships)
+    /// Range: 0.0 to 1.0, where 1.0 means everyone is friends with everyone
+    pub network_density: f64,
+}
+
 /// Information about a trading partner relationship
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PartnerInfo {
@@ -307,6 +323,10 @@ pub struct SimulationResult {
     /// Education system statistics (only present if education is enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub education_statistics: Option<EducationStats>,
+
+    /// Friendship system statistics (only present if friendships are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub friendship_statistics: Option<FriendshipStats>,
 
     /// Trading partner statistics showing network relationships and trading patterns
     pub trading_partner_statistics: TradingPartnerStats,
@@ -1429,6 +1449,7 @@ mod tests {
             loan_statistics: None,
             contract_statistics: None,
             education_statistics: None,
+            friendship_statistics: None,
             trading_partner_statistics: TradingPartnerStats {
                 per_person: vec![],
                 network_metrics: NetworkMetrics {

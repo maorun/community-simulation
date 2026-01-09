@@ -1,6 +1,7 @@
 use crate::loan::LoanId;
 use crate::skill::{Skill, SkillId};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 pub type PersonId = usize;
 pub type UrgencyLevel = u8; // Define UrgencyLevel (e.g., 1-3, higher is more urgent)
@@ -110,6 +111,9 @@ pub struct Person {
     /// Skills that this person has learned through education.
     /// These skills can also be provided to others in the market.
     pub learned_skills: Vec<Skill>,
+    /// Set of person IDs who are friends with this person.
+    /// Friends receive price discounts when trading with each other.
+    pub friends: HashSet<PersonId>,
 }
 
 impl Person {
@@ -139,6 +143,7 @@ impl Person {
             lent_loans: Vec::new(),
             strategy,
             learned_skills: Vec::new(), // Start with no learned skills
+            friends: HashSet::new(),    // Start with no friends
         }
     }
 
@@ -239,6 +244,22 @@ impl Person {
         self.money -= amount_to_save;
         self.savings += amount_to_save;
         amount_to_save
+    }
+
+    /// Adds a friend to this person's friend list.
+    /// Friendship is not automatically bidirectional - both persons must add each other.
+    pub fn add_friend(&mut self, friend_id: PersonId) {
+        self.friends.insert(friend_id);
+    }
+
+    /// Checks if this person is friends with another person.
+    pub fn is_friend_with(&self, other_id: PersonId) -> bool {
+        self.friends.contains(&other_id)
+    }
+
+    /// Returns the number of friends this person has.
+    pub fn friend_count(&self) -> usize {
+        self.friends.len()
     }
 
     /// Attempts to learn a new skill if the person can afford it.
