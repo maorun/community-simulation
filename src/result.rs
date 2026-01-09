@@ -50,7 +50,7 @@ pub struct WealthStatsSnapshot {
     /// 0 = perfect equality, 1 = perfect inequality
     pub gini_coefficient: f64,
     /// Herfindahl-Hirschman Index (market concentration) at this step
-    /// Values < 1500 indicate competitive distribution, 1500-2500 moderate, > 2500 high
+    /// Values < 1,500 indicate competitive distribution, 1,500-2,500 moderate, > 2,500 high
     pub herfindahl_index: f64,
     /// Share of total wealth held by top 10% at this step (0.0-1.0)
     pub top_10_percent_share: f64,
