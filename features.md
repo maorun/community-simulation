@@ -15,12 +15,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Soziale Netzwerke und Beziehungen
 
-#### 3.1 Freundschaftssystem
-- **Beschreibung**: Personen bevorzugen Handel mit Freunden (Preisrabatte)
-- **Nutzen**: Soziale Dynamiken in Wirtschaftssimulationen
-- **Implementierung**: `SocialNetwork` Modul mit Graph-Struktur
-
-#### 3.2 Kooperativen und Gilden
+#### 3.1 Kooperativen und Gilden
 - **Beschreibung**: Personen können Organisationen bilden
 - **Nutzen**: Kollektives Verhalten untersuchen
 - **Implementierung**: Neue `Organization` Struktur
