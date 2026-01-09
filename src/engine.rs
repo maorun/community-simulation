@@ -4,7 +4,7 @@ use crate::{
     loan::{Loan, LoanId},
     person::Strategy,
     result::{write_step_to_stream, StepData},
-    scenario::PriceUpdater,
+    scenario::{DemandGenerator, PriceUpdater},
     Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
 };
 use indicatif::{ProgressBar, ProgressStyle};
@@ -87,6 +87,8 @@ pub struct SimulationEngine {
     pub current_step: usize,
     rng: StdRng,
     all_skill_ids: Vec<SkillId>,
+    /// Demand generator for determining number of needed skills per person
+    demand_generator: DemandGenerator,
     // Trade volume tracking
     trades_per_step: Vec<usize>,
     volume_per_step: Vec<f64>,
@@ -123,6 +125,7 @@ impl SimulationEngine {
     pub fn new(config: SimulationConfig) -> Self {
         let mut rng = StdRng::seed_from_u64(config.seed);
         let price_updater = PriceUpdater::from(config.scenario.clone());
+        let demand_generator = DemandGenerator::from(config.demand_strategy.clone());
         let mut market = Market::new(
             config.base_skill_price,
             config.min_skill_price,
@@ -184,6 +187,7 @@ impl SimulationEngine {
             current_step: 0,
             rng,
             all_skill_ids,
+            demand_generator,
             trades_per_step: Vec::new(),
             volume_per_step: Vec::new(),
             black_market_trades_per_step: Vec::new(),
@@ -1094,8 +1098,12 @@ impl SimulationEngine {
                 continue;
             }
 
-            // Calculate base number of needs (2-5)
-            let base_num_needs = self.rng.gen_range(2..=5);
+            // Generate base number of needs using configured demand strategy
+            let base_num_needs = self.demand_generator.generate_demand_count(
+                entity.id,
+                self.current_step,
+                &mut self.rng,
+            );
 
             // Apply seasonal modulation to the number of needs
             // Use the average seasonal factor across all owned skills
@@ -2064,6 +2072,9 @@ impl SimulationEngine {
             None
         };
 
+        // Re-create demand generator from config
+        let demand_generator = DemandGenerator::from(checkpoint.config.demand_strategy.clone());
+
         Ok(Self {
             config: checkpoint.config,
             entities: checkpoint.entities,
@@ -2072,6 +2083,7 @@ impl SimulationEngine {
             current_step: checkpoint.current_step,
             rng,
             all_skill_ids: checkpoint.all_skill_ids,
+            demand_generator,
             trades_per_step: checkpoint.trades_per_step,
             volume_per_step: checkpoint.volume_per_step,
             black_market_trades_per_step: checkpoint.black_market_trades_per_step,

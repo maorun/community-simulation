@@ -55,11 +55,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Modulare Features ohne Core-Änderungen
 - **Technologie**: Dynamic loading oder Feature-Flags
 
-#### 1.3 Strategy Pattern für Marktmechanismen
-- **Beschreibung**: Austauschbare Markt-Algorithmen
-- **Nutzen**: Bereits teilweise mit `PriceUpdater` implementiert, kann erweitert werden
-- **Implementierung**: Weitere Traits für verschiedene Marktaspekte
-
 ### 2. Performance-Optimierungen
 
 #### 2.1 Bessere Parallelisierung

@@ -474,3 +474,283 @@ impl AdaptivePricingUpdater {
         }
     }
 }
+
+// ============================================================================
+// Demand Generation Strategies
+// ============================================================================
+
+/// Strategy for generating demand (number of needed skills per person).
+///
+/// Different demand generation strategies create different market dynamics:
+/// - Uniform: All persons have similar demand levels (balanced market)
+/// - Concentrated: Some persons have high demand, others low (unequal market)
+/// - Cyclical: Demand varies periodically over time (dynamic market)
+///
+/// This trait enables experimentation with different demand patterns to study
+/// their effects on market behavior, wealth distribution, and economic activity.
+pub trait DemandGeneratorTrait: Send + Sync + Debug {
+    /// Generate the number of skills a person needs in the current step.
+    ///
+    /// # Arguments
+    ///
+    /// * `person_id` - Unique identifier of the person requesting skills
+    /// * `step` - Current simulation step number
+    /// * `rng` - Random number generator for stochastic behavior
+    ///
+    /// # Returns
+    ///
+    /// Number of skills this person should need (typically 1-5)
+    fn generate_demand_count<R: Rng + ?Sized>(
+        &self,
+        person_id: usize,
+        step: usize,
+        rng: &mut R,
+    ) -> usize;
+}
+
+/// Demand generation strategy types.
+///
+/// Each variant represents a different approach to generating demand:
+/// - `Uniform`: Random uniform distribution (baseline)
+/// - `Concentrated`: Pareto-like distribution (inequality)
+/// - `Cyclical`: Time-varying cyclical demand (dynamics)
+#[derive(Debug, Clone, Serialize, Deserialize, EnumString, PartialEq, Default)]
+#[strum(serialize_all = "PascalCase")]
+pub enum DemandStrategy {
+    /// Uniform random distribution: each person has 2-5 needs with equal probability.
+    /// This is the default strategy that maintains current behavior.
+    #[default]
+    Uniform,
+    /// Concentrated distribution: Most persons have low demand (2-3), few have high (4-5).
+    /// Uses Pareto principle to simulate markets with unequal demand patterns.
+    Concentrated,
+    /// Cyclical distribution: Demand varies over time in a sine wave pattern.
+    /// Creates periodic market dynamics with expansion and contraction phases.
+    Cyclical,
+}
+
+impl std::fmt::Display for DemandStrategy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DemandStrategy::Uniform => write!(f, "Uniform"),
+            DemandStrategy::Concentrated => write!(f, "Concentrated"),
+            DemandStrategy::Cyclical => write!(f, "Cyclical"),
+        }
+    }
+}
+
+/// Enum wrapping different demand generator implementations.
+///
+/// Provides a unified interface for demand generation while allowing
+/// different strategies to be selected at runtime.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum DemandGenerator {
+    Uniform(UniformDemandGenerator),
+    Concentrated(ConcentratedDemandGenerator),
+    Cyclical(CyclicalDemandGenerator),
+}
+
+impl Default for DemandGenerator {
+    fn default() -> Self {
+        DemandGenerator::Uniform(UniformDemandGenerator)
+    }
+}
+
+impl DemandGenerator {
+    /// Generate demand count using the configured strategy.
+    pub fn generate_demand_count<R: Rng + ?Sized>(
+        &self,
+        person_id: usize,
+        step: usize,
+        rng: &mut R,
+    ) -> usize {
+        match self {
+            DemandGenerator::Uniform(gen) => gen.generate_demand_count(person_id, step, rng),
+            DemandGenerator::Concentrated(gen) => gen.generate_demand_count(person_id, step, rng),
+            DemandGenerator::Cyclical(gen) => gen.generate_demand_count(person_id, step, rng),
+        }
+    }
+}
+
+impl From<DemandStrategy> for DemandGenerator {
+    fn from(strategy: DemandStrategy) -> Self {
+        match strategy {
+            DemandStrategy::Uniform => DemandGenerator::Uniform(UniformDemandGenerator),
+            DemandStrategy::Concentrated => {
+                DemandGenerator::Concentrated(ConcentratedDemandGenerator)
+            }
+            DemandStrategy::Cyclical => DemandGenerator::Cyclical(CyclicalDemandGenerator),
+        }
+    }
+}
+
+/// Uniform demand generator - baseline strategy.
+///
+/// Generates demand uniformly distributed between 2 and 5 skills per person.
+/// This maintains the current simulation behavior and provides a balanced baseline.
+///
+/// # Characteristics
+/// - Equal probability for 2, 3, 4, or 5 needs
+/// - No variation over time or between persons
+/// - Stable, predictable market dynamics
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UniformDemandGenerator;
+
+impl DemandGeneratorTrait for UniformDemandGenerator {
+    fn generate_demand_count<R: Rng + ?Sized>(
+        &self,
+        _person_id: usize,
+        _step: usize,
+        rng: &mut R,
+    ) -> usize {
+        rng.gen_range(2..=5)
+    }
+}
+
+/// Concentrated demand generator - inequality strategy.
+///
+/// Uses a Pareto-like distribution where most persons have low demand (2-3 needs)
+/// and fewer persons have high demand (4-5 needs). This simulates markets with
+/// unequal consumption patterns.
+///
+/// # Characteristics
+/// - 70% of persons: 2-3 needs (low consumers)
+/// - 30% of persons: 4-5 needs (high consumers)
+/// - Creates demand inequality alongside wealth inequality
+/// - Tests market resilience to concentrated demand
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ConcentratedDemandGenerator;
+
+impl DemandGeneratorTrait for ConcentratedDemandGenerator {
+    fn generate_demand_count<R: Rng + ?Sized>(
+        &self,
+        _person_id: usize,
+        _step: usize,
+        rng: &mut R,
+    ) -> usize {
+        // 70% chance of low demand (2-3), 30% chance of high demand (4-5)
+        let roll: f64 = rng.gen();
+        if roll < 0.7 {
+            rng.gen_range(2..=3) // Low demand
+        } else {
+            rng.gen_range(4..=5) // High demand
+        }
+    }
+}
+
+/// Cyclical demand generator - dynamic strategy.
+///
+/// Demand varies over time in a sine wave pattern, creating periodic expansion
+/// and contraction phases. This simulates business cycles and seasonal variation
+/// at the aggregate demand level.
+///
+/// # Characteristics
+/// - Demand oscillates between 2 and 5 needs
+/// - Period of 100 steps (configurable via constant)
+/// - Phase offset per person creates variety
+/// - Tests market adaptation to changing conditions
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CyclicalDemandGenerator;
+
+impl DemandGeneratorTrait for CyclicalDemandGenerator {
+    fn generate_demand_count<R: Rng + ?Sized>(
+        &self,
+        person_id: usize,
+        step: usize,
+        _rng: &mut R,
+    ) -> usize {
+        const CYCLE_PERIOD: f64 = 100.0;
+        const MIN_DEMAND: usize = 2;
+        const MAX_DEMAND: usize = 5;
+        const PHASE_OFFSET_MULTIPLIER: f64 = 0.1;
+        const FULL_CYCLE_MULTIPLIER: f64 = 2.0; // Full sine wave cycle
+
+        // Calculate phase offset based on person_id for variety
+        let phase_offset = (person_id as f64) * PHASE_OFFSET_MULTIPLIER;
+
+        // Calculate current position in cycle
+        let cycle_position = (step as f64 + phase_offset) / CYCLE_PERIOD;
+        let sine_value = (cycle_position * FULL_CYCLE_MULTIPLIER * std::f64::consts::PI).sin();
+
+        // Map sine wave [-1, 1] to demand range [MIN_DEMAND, MAX_DEMAND]
+        let normalized = (sine_value + 1.0) / 2.0; // Map to [0, 1]
+        let demand_range = (MAX_DEMAND - MIN_DEMAND) as f64;
+        let demand = MIN_DEMAND + (normalized * demand_range).round() as usize;
+
+        demand.clamp(MIN_DEMAND, MAX_DEMAND)
+    }
+}
+
+#[cfg(test)]
+mod demand_tests {
+    use super::*;
+    use rand::rngs::mock::StepRng;
+
+    #[test]
+    fn test_uniform_demand_generator_range() {
+        let generator = UniformDemandGenerator;
+        let mut rng = StepRng::new(2, 1);
+
+        // Test that generated values are always in valid range
+        for _ in 0..100 {
+            let demand = generator.generate_demand_count(0, 0, &mut rng);
+            assert!((2..=5).contains(&demand), "Demand {} out of range", demand);
+        }
+    }
+
+    #[test]
+    fn test_concentrated_demand_generator_range() {
+        let generator = ConcentratedDemandGenerator;
+        let mut rng = StepRng::new(2, 1);
+
+        // Test that generated values are always in valid range
+        for _ in 0..100 {
+            let demand = generator.generate_demand_count(0, 0, &mut rng);
+            assert!((2..=5).contains(&demand), "Demand {} out of range", demand);
+        }
+    }
+
+    #[test]
+    fn test_cyclical_demand_generator_range() {
+        let generator = CyclicalDemandGenerator;
+        let mut rng = StepRng::new(2, 1);
+
+        // Test across multiple steps to cover full cycle
+        for step in 0..200 {
+            let demand = generator.generate_demand_count(0, step, &mut rng);
+            assert!((2..=5).contains(&demand), "Demand {} out of range", demand);
+        }
+    }
+
+    #[test]
+    fn test_cyclical_demand_generator_varies_over_time() {
+        let generator = CyclicalDemandGenerator;
+        let mut rng = StepRng::new(2, 1);
+
+        let mut demands = Vec::new();
+        for step in 0..100 {
+            demands.push(generator.generate_demand_count(0, step, &mut rng));
+        }
+
+        // Check that we see different demand values (not constant)
+        let unique_values: std::collections::HashSet<_> = demands.iter().cloned().collect();
+        assert!(
+            unique_values.len() > 1,
+            "Cyclical demand should vary over time"
+        );
+    }
+
+    #[test]
+    fn test_demand_generator_enum_conversion() {
+        let uniform_gen = DemandGenerator::from(DemandStrategy::Uniform);
+        let concentrated_gen = DemandGenerator::from(DemandStrategy::Concentrated);
+        let cyclical_gen = DemandGenerator::from(DemandStrategy::Cyclical);
+
+        let mut rng = StepRng::new(2, 1);
+
+        // Verify each generates valid values
+        assert!(uniform_gen.generate_demand_count(0, 0, &mut rng) >= 2);
+        assert!(concentrated_gen.generate_demand_count(0, 0, &mut rng) >= 2);
+        assert!(cyclical_gen.generate_demand_count(0, 0, &mut rng) >= 2);
+    }
+}
