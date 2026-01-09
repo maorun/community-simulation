@@ -27,6 +27,39 @@ pub struct StepData {
     pub top_skill_prices: Vec<SkillPriceInfo>,
 }
 
+/// Snapshot of wealth distribution statistics at a single simulation step.
+///
+/// This structure captures complete wealth inequality metrics at a specific
+/// point in time, enabling time-series analysis of how wealth distribution
+/// evolves during the simulation.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WealthStatsSnapshot {
+    /// The simulation step number for this snapshot
+    pub step: usize,
+    /// Average money across all persons at this step
+    pub average: f64,
+    /// Median money value at this step
+    pub median: f64,
+    /// Standard deviation of money distribution at this step
+    pub std_dev: f64,
+    /// Minimum money value at this step
+    pub min_money: f64,
+    /// Maximum money value at this step
+    pub max_money: f64,
+    /// Gini coefficient (wealth inequality) at this step
+    /// 0 = perfect equality, 1 = perfect inequality
+    pub gini_coefficient: f64,
+    /// Herfindahl-Hirschman Index (market concentration) at this step
+    /// Values < 1500 indicate competitive distribution, 1500-2500 moderate, > 2500 high
+    pub herfindahl_index: f64,
+    /// Share of total wealth held by top 10% at this step (0.0-1.0)
+    pub top_10_percent_share: f64,
+    /// Share of total wealth held by top 1% at this step (0.0-1.0)
+    pub top_1_percent_share: f64,
+    /// Share of total wealth held by bottom 50% at this step (0.0-1.0)
+    pub bottom_50_percent_share: f64,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MoneyStats {
     pub average: f64,
@@ -289,6 +322,11 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub skill_price_history: HashMap<SkillId, Vec<f64>>,
 
+    /// Time-series of wealth distribution statistics, one snapshot per simulation step.
+    /// Enables analysis of how wealth inequality evolves over time.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub wealth_stats_history: Vec<WealthStatsSnapshot>,
+
     // Trade volume analysis
     pub trade_volume_statistics: TradeVolumeStats,
     /// Number of trades executed at each step
@@ -376,6 +414,7 @@ impl SimulationResult {
     /// #     most_valuable_skill: None,
     /// #     least_valuable_skill: None,
     /// #     skill_price_history: std::collections::HashMap::new(),
+    /// #     wealth_stats_history: vec![],
     /// #     trade_volume_statistics: simulation_framework::result::TradeVolumeStats {
     /// #         total_trades: 0, total_volume: 0.0,
     /// #         avg_trades_per_step: 0.0, avg_volume_per_step: 0.0,
@@ -440,6 +479,7 @@ impl SimulationResult {
     /// - {path}_reputation.csv: Reputation distribution per person
     /// - {path}_skill_prices.csv: Final skill prices
     /// - {path}_price_history.csv: Skill price history over time (if available)
+    /// - {path}_wealth_stats_history.csv: Wealth distribution statistics over time (if available)
     /// - {path}_trade_volume.csv: Trade volume history over time
     ///
     /// # Returns
@@ -460,6 +500,14 @@ impl SimulationResult {
         // Save price history if available
         if !self.skill_price_history.is_empty() {
             self.save_price_history_csv(&format!("{}_price_history.csv", path_prefix))?;
+        }
+
+        // Save wealth stats history if available
+        if !self.wealth_stats_history.is_empty() {
+            self.save_wealth_stats_history_csv(&format!(
+                "{}_wealth_stats_history.csv",
+                path_prefix
+            ))?;
         }
 
         // Save trade volume history
@@ -671,6 +719,39 @@ impl SimulationResult {
             .enumerate()
         {
             writeln!(file, "{},{},{:.4}", step, trades, volume)?;
+        }
+
+        Ok(())
+    }
+
+    /// Save wealth stats history to CSV file.
+    /// Each row represents wealth distribution statistics at a specific simulation step.
+    fn save_wealth_stats_history_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        // Write CSV header
+        writeln!(
+            file,
+            "Step,Average,Median,Std_Dev,Min,Max,Gini_Coefficient,Herfindahl_Index,Top_10_Percent_Share,Top_1_Percent_Share,Bottom_50_Percent_Share"
+        )?;
+
+        // Write data rows
+        for snapshot in &self.wealth_stats_history {
+            writeln!(
+                file,
+                "{},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4}",
+                snapshot.step,
+                snapshot.average,
+                snapshot.median,
+                snapshot.std_dev,
+                snapshot.min_money,
+                snapshot.max_money,
+                snapshot.gini_coefficient,
+                snapshot.herfindahl_index,
+                snapshot.top_10_percent_share,
+                snapshot.top_1_percent_share,
+                snapshot.bottom_50_percent_share
+            )?;
         }
 
         Ok(())
@@ -1429,6 +1510,7 @@ mod tests {
             most_valuable_skill: None,
             least_valuable_skill: None,
             skill_price_history: HashMap::new(),
+            wealth_stats_history: Vec::new(),
             trade_volume_statistics: TradeVolumeStats {
                 total_trades: 100,
                 total_volume: 1000.0,
