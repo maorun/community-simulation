@@ -223,6 +223,26 @@ struct Args {
     /// Only used when --enable-crisis-events is set
     #[arg(long)]
     crisis_severity: Option<f64>,
+
+    /// Enable loan system where persons can borrow and lend money
+    /// When enabled, persons can request loans from others when they lack money for purchases
+    #[arg(long, default_value_t = false)]
+    enable_loans: bool,
+
+    /// Interest rate per step for loans (0.0-1.0, e.g., 0.01 = 1% per step)
+    /// Only used when --enable-loans is set
+    #[arg(long)]
+    loan_interest_rate: Option<f64>,
+
+    /// Repayment period for loans in simulation steps (e.g., 20 = repay over 20 steps)
+    /// Only used when --enable-loans is set
+    #[arg(long)]
+    loan_repayment_period: Option<usize>,
+
+    /// Minimum money threshold for a person to be eligible to lend
+    /// Only used when --enable-loans is set
+    #[arg(long)]
+    min_money_to_lend: Option<f64>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -360,6 +380,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(probability) = args.learning_probability {
             cfg.learning_probability = probability;
         }
+        if args.enable_loans {
+            cfg.enable_loans = true;
+        }
+        if let Some(interest_rate) = args.loan_interest_rate {
+            cfg.loan_interest_rate = interest_rate;
+        }
+        if let Some(repayment_period) = args.loan_repayment_period {
+            cfg.loan_repayment_period = repayment_period;
+        }
+        if let Some(min_money) = args.min_money_to_lend {
+            cfg.min_money_to_lend = min_money;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -455,6 +487,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(severity) = args.crisis_severity {
                 cfg.crisis_severity = severity;
             }
+            if args.enable_loans {
+                cfg.enable_loans = true;
+            }
+            if let Some(interest_rate) = args.loan_interest_rate {
+                cfg.loan_interest_rate = interest_rate;
+            }
+            if let Some(repayment_period) = args.loan_repayment_period {
+                cfg.loan_repayment_period = repayment_period;
+            }
+            if let Some(min_money) = args.min_money_to_lend {
+                cfg.min_money_to_lend = min_money;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -495,10 +539,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             savings_rate: args
                 .savings_rate
                 .unwrap_or(SimulationConfig::default().savings_rate),
-            enable_loans: SimulationConfig::default().enable_loans,
-            loan_interest_rate: SimulationConfig::default().loan_interest_rate,
-            loan_repayment_period: SimulationConfig::default().loan_repayment_period,
-            min_money_to_lend: SimulationConfig::default().min_money_to_lend,
+            enable_loans: args.enable_loans,
+            loan_interest_rate: args
+                .loan_interest_rate
+                .unwrap_or(SimulationConfig::default().loan_interest_rate),
+            loan_repayment_period: args
+                .loan_repayment_period
+                .unwrap_or(SimulationConfig::default().loan_repayment_period),
+            min_money_to_lend: args
+                .min_money_to_lend
+                .unwrap_or(SimulationConfig::default().min_money_to_lend),
             checkpoint_interval: args
                 .checkpoint_interval
                 .unwrap_or(SimulationConfig::default().checkpoint_interval),

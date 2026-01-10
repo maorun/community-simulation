@@ -1217,4 +1217,63 @@ mod integration_tests {
             "Wealth distribution should evolve over the simulation"
         );
     }
+
+    /// Test that loan system can be enabled and functions properly
+    #[test]
+    fn test_loan_system_enabled() {
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_loans: true,
+            loan_interest_rate: 0.02, // 2% per step
+            loan_repayment_period: 10,
+            min_money_to_lend: 50.0,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify simulation completed successfully with loans enabled
+        assert_eq!(result.total_steps, 100);
+        assert_eq!(result.active_persons, 20);
+
+        // Check that money distribution is still valid (may include negative values for debt)
+        for money in &result.final_money_distribution {
+            assert!(money.is_finite(), "Money should be finite");
+            // Note: With loans enabled, persons can have negative money (debt)
+        }
+
+        // Check that statistics are valid
+        assert!(result.money_statistics.average.is_finite());
+        assert!(result.money_statistics.std_dev >= 0.0);
+    }
+
+    /// Test that loan system is disabled by default
+    #[test]
+    fn test_loan_system_disabled_by_default() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            // enable_loans is false by default
+            ..Default::default()
+        };
+
+        assert!(!config.enable_loans, "Loans should be disabled by default");
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify simulation runs normally without loans
+        assert_eq!(result.total_steps, 50);
+        assert_eq!(result.active_persons, 10);
+    }
 }
