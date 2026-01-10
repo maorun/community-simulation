@@ -148,7 +148,7 @@ impl Person {
             strategy,
             learned_skills: Vec::new(), // Start with no learned skills
             friends: HashSet::new(),    // Start with no friends
-            group_id: None,              // Start with no group assignment
+            group_id: None,             // Start with no group assignment
         }
     }
 

@@ -295,7 +295,6 @@ pub struct GroupStats {
     pub groups: Vec<SingleGroupStats>,
 }
 
-
 /// Information about a trading partner relationship
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PartnerInfo {
@@ -498,6 +497,7 @@ impl SimulationResult {
     /// #     contract_statistics: None,
     /// #     education_statistics: None,
     /// #     friendship_statistics: None,
+    /// #     group_statistics: None,
     /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
     /// #         per_person: vec![],
     /// #         network_metrics: simulation_framework::result::NetworkMetrics {
@@ -1675,6 +1675,7 @@ mod tests {
             contract_statistics: None,
             education_statistics: None,
             friendship_statistics: None,
+            group_statistics: None,
             trading_partner_statistics: TradingPartnerStats {
                 per_person: vec![],
                 network_metrics: NetworkMetrics {

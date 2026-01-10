@@ -1078,14 +1078,14 @@ impl SimulationEngine {
                 // Calculate group statistics
                 let num_groups = self.config.num_groups.unwrap();
                 let mut group_data: HashMap<usize, Vec<&Entity>> = HashMap::new();
-                
+
                 // Group entities by group_id
                 for entity in self.entities.iter().filter(|e| e.active) {
                     if let Some(group_id) = entity.person_data.group_id {
-                        group_data.entry(group_id).or_insert_with(Vec::new).push(entity);
+                        group_data.entry(group_id).or_default().push(entity);
                     }
                 }
-                
+
                 // Calculate stats for each group
                 let mut groups_stats = Vec::new();
                 for group_id in 0..num_groups {
@@ -1098,11 +1098,15 @@ impl SimulationEngine {
                             0.0
                         };
                         let avg_reputation: f64 = if member_count > 0 {
-                            members.iter().map(|e| e.person_data.reputation).sum::<f64>() / member_count as f64
+                            members
+                                .iter()
+                                .map(|e| e.person_data.reputation)
+                                .sum::<f64>()
+                                / member_count as f64
                         } else {
                             0.0
                         };
-                        
+
                         groups_stats.push(crate::result::SingleGroupStats {
                             group_id,
                             member_count,
@@ -1121,7 +1125,7 @@ impl SimulationEngine {
                         });
                     }
                 }
-                
+
                 let group_sizes: Vec<usize> = groups_stats.iter().map(|g| g.member_count).collect();
                 let min_group_size = group_sizes.iter().min().copied().unwrap_or(0);
                 let max_group_size = group_sizes.iter().max().copied().unwrap_or(0);
@@ -1130,7 +1134,7 @@ impl SimulationEngine {
                 } else {
                     0.0
                 };
-                
+
                 Some(crate::result::GroupStats {
                     total_groups: num_groups,
                     avg_group_size,
