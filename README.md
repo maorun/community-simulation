@@ -58,6 +58,7 @@ This repository contains a configurable economic simulation written in Rust. It 
     - Top 10% wealthiest persons (indicates upper class concentration)
     - Top 1% wealthiest persons (indicates extreme wealth concentration)
     - Bottom 50% of persons (indicates poverty/lower class share)
+  - **ASCII Histogram Visualization:** Real-time terminal visualization of wealth distribution across 10 percentile buckets with color-coded bars (green for lower percentiles, yellow for middle, red for upper). Can be disabled with `--no-histogram` flag.
   - These metrics provide actionable insights into wealth distribution patterns and are included in all output formats (JSON, CSV, terminal summary).
 - **Market Concentration Analysis:** Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
 - **Per-Skill Trade Analytics:** Detailed trade statistics for each skill type, tracking trade count, total volume, and average price per skill. Enables identification of the most traded and valuable skills in the market. Results are sorted by total trading volume and included in JSON output for easy analysis.
@@ -267,6 +268,8 @@ The simulation accepts the following CLI arguments:
     *   Disable the progress bar during simulation. Useful for non-interactive environments or when redirecting output.
 *   `--no-color`:
     *   Disable colored terminal output. By default, the simulation uses colors to improve readability of terminal output (e.g., green for success messages, yellow for warnings, color-coded statistics). Use this flag in non-interactive environments, when redirecting output to files, or if your terminal doesn't support colors.
+*   `--no-histogram`:
+    *   Disable ASCII histogram visualization of wealth distribution in terminal output. By default, the simulation displays a color-coded histogram showing how wealth is distributed across 10 percentile buckets (deciles). The histogram uses green bars for lower percentiles (0-30%), yellow for middle (30-70%), and red for upper (70-100%), making it easy to spot inequality patterns at a glance. Use this flag when you want a more compact terminal output or when redirecting output to files.
 *   `--log-level <LOG_LEVEL>`:
     *   Set the logging level for the simulation. Valid values: `error`, `warn`, `info`, `debug`, `trace`. Default: `info`.
     *   Can also be set via the `RUST_LOG` environment variable (e.g., `RUST_LOG=debug`).
