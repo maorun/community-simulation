@@ -8,11 +8,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Erweiterte Marktmechanismen
 
-#### 2.1 Auktionssystem
-- **Beschreibung**: Fähigkeiten werden über Auktionen gehandelt (englische/holländische Auktionen)
-- **Nutzen**: Alternative Preisfindungsmechanismen testen
-- **Implementierung**: Neues `AuctionHouse` Modul
-
 ### 3. Soziale Netzwerke und Beziehungen
 
 #### 3.1 Kooperativen und Gilden

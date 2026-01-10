@@ -16,6 +16,9 @@ pub enum Scenario {
     /// A scenario where prices adapt gradually based on sales with a learning rate.
     /// Uses exponential moving average for smoother price adjustments.
     AdaptivePricing,
+    /// A scenario where prices increase when multiple buyers compete for the same skill,
+    /// simulating an auction mechanism where competitive demand drives prices up.
+    AuctionPricing,
 }
 
 impl Display for Scenario {
@@ -24,6 +27,7 @@ impl Display for Scenario {
             Scenario::Original => write!(f, "Original"),
             Scenario::DynamicPricing => write!(f, "DynamicPricing"),
             Scenario::AdaptivePricing => write!(f, "AdaptivePricing"),
+            Scenario::AuctionPricing => write!(f, "AuctionPricing"),
         }
     }
 }
@@ -195,6 +199,90 @@ mod tests {
         // Should be clamped to min_skill_price (1.0)
         assert_eq!(new_price, 1.0);
     }
+
+    #[test]
+    fn test_auction_pricing_competitive_demand() {
+        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AuctionPricing));
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // High demand (10) vs low supply (2) = competitive bidding
+        market.demand_counts.insert(skill_id.clone(), 10);
+        market.supply_counts.insert(skill_id.clone(), 2);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = AuctionPricingUpdater;
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        // Price should increase significantly due to competitive bidding
+        assert!(new_price > 50.0);
+        assert!(new_price > 55.0); // Should be at least 10% increase
+    }
+
+    #[test]
+    fn test_auction_pricing_no_demand() {
+        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AuctionPricing));
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // No demand at all
+        market.demand_counts.insert(skill_id.clone(), 0);
+        market.supply_counts.insert(skill_id.clone(), 5);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = AuctionPricingUpdater;
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        // Price should decrease faster (8%) when no demand
+        assert!(new_price < 50.0);
+        assert!(new_price < 47.0); // Should be roughly 8% decrease
+    }
+
+    #[test]
+    fn test_auction_pricing_low_demand() {
+        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AuctionPricing));
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // Low demand (2) vs supply (5) = no competition
+        market.demand_counts.insert(skill_id.clone(), 2);
+        market.supply_counts.insert(skill_id.clone(), 5);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = AuctionPricingUpdater;
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        // Price should decrease gently (3%) when demand < supply but > 0
+        // Account for 2% random volatility (max ±1.0 from 48.5)
+        assert!(new_price < 50.0);
+        assert!(new_price > 47.0); // Should be roughly 3% decrease ±2% volatility
+    }
+
+    #[test]
+    fn test_auction_pricing_price_clamp() {
+        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AuctionPricing));
+        let skill = Skill::new("Test Skill".to_string(), 1.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // No demand, should decrease but be clamped at min_skill_price
+        market.demand_counts.insert(skill_id.clone(), 0);
+        market.supply_counts.insert(skill_id.clone(), 5);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = AuctionPricingUpdater;
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        // Should be clamped to min_skill_price (1.0)
+        assert_eq!(new_price, 1.0);
+    }
 }
 
 /// Enum representing different price update strategies.
@@ -207,6 +295,7 @@ mod tests {
 /// * `Original` - Supply/demand-based pricing with random volatility
 /// * `DynamicPricing` - Sales-based pricing that increases/decreases based on purchases
 /// * `AdaptivePricing` - Gradual price adaptation using exponential moving average
+/// * `AuctionPricing` - Competitive bidding mechanism where demand intensity drives prices
 ///
 /// # Examples
 ///
@@ -220,6 +309,7 @@ pub enum PriceUpdater {
     Original(OriginalPriceUpdater),
     DynamicPricing(DynamicPricingUpdater),
     AdaptivePricing(AdaptivePricingUpdater),
+    AuctionPricing(AuctionPricingUpdater),
 }
 
 impl Default for PriceUpdater {
@@ -240,6 +330,7 @@ impl PriceUpdater {
             PriceUpdater::Original(updater) => updater.update_prices(market, rng),
             PriceUpdater::DynamicPricing(updater) => updater.update_prices(market, rng),
             PriceUpdater::AdaptivePricing(updater) => updater.update_prices(market, rng),
+            PriceUpdater::AuctionPricing(updater) => updater.update_prices(market, rng),
         }
     }
 }
@@ -250,6 +341,7 @@ impl From<Scenario> for PriceUpdater {
             Scenario::Original => PriceUpdater::Original(OriginalPriceUpdater),
             Scenario::DynamicPricing => PriceUpdater::DynamicPricing(DynamicPricingUpdater),
             Scenario::AdaptivePricing => PriceUpdater::AdaptivePricing(AdaptivePricingUpdater),
+            Scenario::AuctionPricing => PriceUpdater::AuctionPricing(AuctionPricingUpdater),
         }
     }
 }
@@ -470,6 +562,108 @@ impl AdaptivePricingUpdater {
 
             if let Some(history) = market.skill_price_history.get_mut(skill_id) {
                 history.push(clamped_price);
+            }
+        }
+    }
+}
+
+/// Price updater for the AuctionPricing scenario.
+///
+/// This updater simulates an auction mechanism where prices increase when multiple
+/// buyers compete for the same skill, creating a bidding war effect:
+/// - High demand relative to supply (many buyers): price increases significantly
+/// - Low demand: price decreases gradually
+/// - No demand: price decreases more rapidly (unsold inventory)
+/// - Includes small random volatility for realism
+/// - Enforces min/max price boundaries
+///
+/// The adjustment is more aggressive than Original scenario when demand is competitive,
+/// simulating the psychological effect of auction bidding where prices can spike
+/// when multiple parties want the same resource.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AuctionPricingUpdater;
+
+impl AuctionPricingUpdater {
+    /// Updates skill prices based on auction-style competitive demand.
+    ///
+    /// # Algorithm
+    ///
+    /// 1. Calculate demand/supply ratio for each skill
+    /// 2. If demand > supply (competitive): apply aggressive price increase
+    ///    - Use quadratic factor to simulate bidding war intensity
+    ///    - Higher competition leads to exponentially higher prices
+    /// 3. If demand <= supply: apply moderate decrease
+    /// 4. If demand == 0: apply faster decrease (no interest)
+    /// 5. Add small random volatility
+    /// 6. Clamp to min/max price boundaries
+    /// 7. Record price in history
+    ///
+    /// # Arguments
+    ///
+    /// * `market` - The market containing skills to update
+    /// * `rng` - Random number generator for volatility
+    pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
+        for (skill_id, skill) in market.skills.iter_mut() {
+            let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
+            let supply = (*market.supply_counts.get(skill_id).unwrap_or(&1)).max(1) as f64;
+
+            let old_price = skill.current_price;
+            let mut new_price = old_price;
+
+            if demand > supply {
+                // Competitive bidding: price increases based on competition intensity
+                // Use quadratic factor to simulate bidding war psychology
+                let competition_factor = demand / supply;
+                // Aggressive increase: base 10% + additional based on competition squared
+                let increase_rate = 0.10 + (competition_factor - 1.0).powi(2) * 0.05;
+                new_price *= 1.0 + increase_rate.min(0.30); // Cap at 30% increase per step
+
+                debug!(
+                    "AuctionPricing: Skill {:?} competitive bidding (demand/supply: {:.2}/{:.2}), price ${:.2} -> ${:.2} (+{:.1}%)",
+                    skill_id,
+                    demand,
+                    supply,
+                    old_price,
+                    new_price,
+                    increase_rate * 100.0
+                );
+            } else if demand == 0.0 {
+                // No demand: faster price decrease (unsold inventory)
+                new_price *= 0.92; // 8% decrease
+
+                debug!(
+                    "AuctionPricing: Skill {:?} no demand, price ${:.2} -> ${:.2} (-8.0%)",
+                    skill_id, old_price, new_price
+                );
+            } else {
+                // Low/moderate demand: gentle price decrease
+                new_price *= 0.97; // 3% decrease
+
+                debug!(
+                    "AuctionPricing: Skill {:?} low demand (demand/supply: {:.2}/{:.2}), price ${:.2} -> ${:.2} (-3.0%)",
+                    skill_id,
+                    demand,
+                    supply,
+                    old_price,
+                    new_price
+                );
+            }
+
+            // Add small random volatility (2% max fluctuation)
+            let price_range_for_volatility = new_price * 0.02;
+            let random_fluctuation =
+                rng.gen_range(-price_range_for_volatility..=price_range_for_volatility);
+            new_price += random_fluctuation;
+
+            // Clamp price to min/max boundaries
+            new_price = new_price
+                .max(market.min_skill_price)
+                .min(market.max_skill_price);
+
+            skill.current_price = new_price;
+
+            if let Some(history) = market.skill_price_history.get_mut(skill_id) {
+                history.push(new_price);
             }
         }
     }
