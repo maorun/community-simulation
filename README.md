@@ -6,6 +6,11 @@ This repository contains a configurable economic simulation written in Rust. It 
 
 - **Agent-Based Simulation:** Simulates individual persons with money, unique skills, and randomly generated needs for other skills.
 - **Multiple Skills Per Person:** Each person can possess and offer multiple skills in the market, creating more realistic labor dynamics with skill redundancy and competition. Configurable via `--skills-per-person` parameter (default: 1). When set to values > 1, skills are distributed across persons using a round-robin approach, allowing multiple providers per skill and more complex market interactions.
+- **Multiple Pricing Scenarios:** Choose from different market price mechanisms to study their effects:
+  - **Original** (default): Supply/demand-based pricing with random volatility - prices adjust based on the ratio of buyers to sellers
+  - **DynamicPricing**: Sales-based pricing - prices increase 5% when sold, decrease 5% when not sold
+  - **AdaptivePricing**: Gradual price adaptation using exponential moving average with 20% learning rate for smooth convergence
+  - **AuctionPricing**: Competitive bidding mechanism where prices increase aggressively when multiple buyers compete for the same skill (simulating auction psychology), with gentler decreases when demand is low. Uses quadratic competition factor to model bidding war intensity. Ideal for studying price spikes in competitive markets and auction-like dynamics.
 - **Dynamic Market:** Features a market mechanism where skill prices are adjusted based on supply (fixed per provider) and demand (generated each step).
 - **Demand Generation Strategies:** Configurable strategies for determining how many skills each person needs per step. Three strategies available:
   - **Uniform** (default): Random 2-5 needs with equal probability, creating balanced markets
