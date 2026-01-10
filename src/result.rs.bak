@@ -1,0 +1,2516 @@
+use crate::error::{Result, SimulationError};
+use crate::{Entity, SkillId}; // Entity now wraps Person
+use colored::Colorize;
+use flate2::write::GzEncoder;
+use flate2::Compression;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufWriter, Write};
+
+/// Data for a single simulation step, used for streaming output
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StepData {
+    /// Current step number
+    pub step: usize,
+    /// Number of trades in this step
+    pub trades: usize,
+    /// Total money exchanged in this step
+    pub volume: f64,
+    /// Average money across all persons at this step
+    pub avg_money: f64,
+    /// Gini coefficient at this step
+    pub gini_coefficient: f64,
+    /// Average reputation at this step
+    pub avg_reputation: f64,
+    /// Skill prices at this step (top 5 by price)
+    pub top_skill_prices: Vec<SkillPriceInfo>,
+}
+
+/// Snapshot of wealth distribution statistics at a single simulation step.
+///
+/// This structure captures complete wealth inequality metrics at a specific
+/// point in time, enabling time-series analysis of how wealth distribution
+/// evolves during the simulation.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WealthStatsSnapshot {
+    /// The simulation step number for this snapshot
+    pub step: usize,
+    /// Average money across all persons at this step
+    pub average: f64,
+    /// Median money value at this step
+    pub median: f64,
+    /// Standard deviation of money distribution at this step
+    pub std_dev: f64,
+    /// Minimum money value at this step
+    pub min_money: f64,
+    /// Maximum money value at this step
+    pub max_money: f64,
+    /// Gini coefficient (wealth inequality) at this step
+    /// 0 = perfect equality, 1 = perfect inequality
+    pub gini_coefficient: f64,
+    /// Herfindahl-Hirschman Index (market concentration) at this step
+    /// Values < 1,500 indicate competitive distribution, 1,500-2,500 moderate, > 2,500 high
+    pub herfindahl_index: f64,
+    /// Share of total wealth held by top 10% at this step (0.0-1.0)
+    pub top_10_percent_share: f64,
+    /// Share of total wealth held by top 1% at this step (0.0-1.0)
+    pub top_1_percent_share: f64,
+    /// Share of total wealth held by bottom 50% at this step (0.0-1.0)
+    pub bottom_50_percent_share: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MoneyStats {
+    pub average: f64,
+    pub median: f64,
+    pub std_dev: f64,
+    pub min_money: f64,
+    pub max_money: f64,
+    /// Gini coefficient: measure of wealth inequality (0 = perfect equality, 1 = perfect inequality)
+    pub gini_coefficient: f64,
+    /// Herfindahl-Hirschman Index: measure of market concentration for wealth (0 = perfect competition, 10000 = monopoly)
+    /// Values < 1500 indicate competitive distribution, 1500-2500 moderate concentration, > 2500 high concentration
+    pub herfindahl_index: f64,
+    /// Share of total wealth held by the top 10% wealthiest persons (0.0-1.0)
+    /// Values > 0.5 indicate high wealth concentration at the top
+    pub top_10_percent_share: f64,
+    /// Share of total wealth held by the top 1% wealthiest persons (0.0-1.0)
+    /// Values > 0.2 indicate extreme wealth concentration
+    pub top_1_percent_share: f64,
+    /// Share of total wealth held by the bottom 50% of persons (0.0-1.0)
+    /// Values < 0.1 indicate high inequality with poverty concentration
+    pub bottom_50_percent_share: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReputationStats {
+    pub average: f64,
+    pub median: f64,
+    pub std_dev: f64,
+    pub min_reputation: f64,
+    pub max_reputation: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SavingsStats {
+    pub total_savings: f64,
+    pub average_savings: f64,
+    pub median_savings: f64,
+    pub min_savings: f64,
+    pub max_savings: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SkillPriceInfo {
+    pub id: SkillId,
+    pub price: f64,
+}
+
+/// Statistics for a single skill's trade activity
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SkillTradeStats {
+    /// Unique identifier for the skill
+    pub skill_id: SkillId,
+    /// Total number of trades for this skill
+    pub trade_count: usize,
+    /// Total money volume exchanged for this skill
+    pub total_volume: f64,
+    /// Average price per trade for this skill
+    pub avg_price: f64,
+}
+
+/// Statistics about trade volume and economic activity
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TradeVolumeStats {
+    /// Total number of successful trades across all steps
+    pub total_trades: usize,
+    /// Total money exchanged across all trades
+    pub total_volume: f64,
+    /// Average number of trades per step
+    pub avg_trades_per_step: f64,
+    /// Average money exchanged per step
+    pub avg_volume_per_step: f64,
+    /// Average transaction value (total volume / total trades)
+    pub avg_transaction_value: f64,
+    /// Minimum trades in a single step
+    pub min_trades_per_step: usize,
+    /// Maximum trades in a single step
+    pub max_trades_per_step: usize,
+}
+
+/// Statistics about failed trade attempts (trades that failed due to insufficient funds).
+///
+/// This provides insight into unmet demand and market accessibility issues.
+/// High failure rates indicate economic stress where persons want to buy skills
+/// but cannot afford them, revealing inefficiencies in wealth distribution.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FailedTradeStats {
+    /// Total number of trade attempts that failed due to insufficient funds
+    pub total_failed_attempts: usize,
+    /// Ratio of failed attempts to total attempts (failed / (successful + failed))
+    /// Value ranges from 0.0 (no failures) to 1.0 (all attempts failed)
+    pub failure_rate: f64,
+    /// Average number of failed attempts per simulation step
+    pub avg_failed_per_step: f64,
+    /// Minimum failed attempts in a single step
+    pub min_failed_per_step: usize,
+    /// Maximum failed attempts in a single step
+    pub max_failed_per_step: usize,
+}
+
+/// Statistics about black market activity (parallel informal market)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlackMarketStats {
+    /// Total number of trades conducted on the black market
+    pub total_black_market_trades: usize,
+    /// Total money exchanged on the black market
+    pub total_black_market_volume: f64,
+    /// Average number of black market trades per step
+    pub avg_black_market_trades_per_step: f64,
+    /// Average money exchanged on black market per step
+    pub avg_black_market_volume_per_step: f64,
+    /// Percentage of all trades that used the black market
+    pub black_market_trade_percentage: f64,
+    /// Percentage of all trading volume that went through the black market
+    pub black_market_volume_percentage: f64,
+}
+
+/// Statistics about the loan system
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LoanStats {
+    /// Total number of loans issued during the simulation
+    pub total_loans_issued: usize,
+    /// Total number of loans fully repaid
+    pub total_loans_repaid: usize,
+    /// Number of active (not yet fully repaid) loans at simulation end
+    pub active_loans: usize,
+}
+
+/// Statistics about the contract system
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ContractStats {
+    /// Total number of contracts created during the simulation
+    pub total_contracts_created: usize,
+    /// Total number of contracts successfully completed
+    pub total_contracts_completed: usize,
+    /// Number of active contracts at simulation end
+    pub active_contracts: usize,
+    /// Average duration of completed contracts (in steps)
+    pub avg_contract_duration: f64,
+    /// Total value exchanged through contracts
+    pub total_contract_value: f64,
+}
+
+/// Aggregated statistics across multiple Monte Carlo runs
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MonteCarloStats {
+    /// Average value across all runs
+    pub mean: f64,
+    /// Standard deviation across all runs
+    pub std_dev: f64,
+    /// Minimum value across all runs
+    pub min: f64,
+    /// Maximum value across all runs
+    pub max: f64,
+    /// Median value across all runs
+    pub median: f64,
+}
+
+/// Result from multiple Monte Carlo simulation runs
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MonteCarloResult {
+    /// Number of simulation runs performed
+    pub num_runs: usize,
+    /// Base seed used (each run uses seed + run_index)
+    pub base_seed: u64,
+    /// Individual results from each run
+    pub runs: Vec<SimulationResult>,
+    /// Aggregated statistics for final average money
+    pub avg_money_stats: MonteCarloStats,
+    /// Aggregated statistics for Gini coefficient
+    pub gini_coefficient_stats: MonteCarloStats,
+    /// Aggregated statistics for total trades
+    pub total_trades_stats: MonteCarloStats,
+    /// Aggregated statistics for average reputation
+    pub avg_reputation_stats: MonteCarloStats,
+}
+
+/// Statistics about education system activity (skill learning)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EducationStats {
+    /// Total number of skills learned across all persons
+    pub total_skills_learned: usize,
+    /// Average number of learned skills per person
+    pub avg_learned_skills_per_person: f64,
+    /// Person with the most learned skills
+    pub max_learned_skills: usize,
+    /// Total money spent on education across all persons
+    pub total_education_spending: f64,
+}
+
+/// Statistics about the friendship system (social connections)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FriendshipStats {
+    /// Total number of friendships formed during the simulation
+    pub total_friendships: usize,
+    /// Average number of friends per person
+    pub avg_friends_per_person: f64,
+    /// Maximum number of friends any person has
+    pub max_friends: usize,
+    /// Minimum number of friends any person has
+    pub min_friends: usize,
+    /// Friend network density (actual friendships / possible friendships)
+    /// Range: 0.0 to 1.0, where 1.0 means everyone is friends with everyone
+    pub network_density: f64,
+}
+
+/// Statistics for a single group/organization
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SingleGroupStats {
+    /// Group identifier
+    pub group_id: usize,
+    /// Number of persons in this group
+    pub member_count: usize,
+    /// Average money of group members
+    pub avg_money: f64,
+    /// Total money held by group members
+    pub total_money: f64,
+    /// Average reputation of group members
+    pub avg_reputation: f64,
+}
+
+/// Statistics about group/organization system
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GroupStats {
+    /// Total number of groups in the simulation
+    pub total_groups: usize,
+    /// Average group size (members per group)
+    pub avg_group_size: f64,
+    /// Minimum group size
+    pub min_group_size: usize,
+    /// Maximum group size
+    pub max_group_size: usize,
+    /// Statistics for each individual group
+    pub groups: Vec<SingleGroupStats>,
+}
+
+/// Information about a trading partner relationship
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PartnerInfo {
+    /// ID of the trading partner
+    pub partner_id: usize,
+    /// Number of trades with this partner
+    pub trade_count: usize,
+    /// Total value exchanged with this partner
+    pub total_value: f64,
+}
+
+/// Trading statistics for an individual person
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PersonTradingStats {
+    /// ID of the person
+    pub person_id: usize,
+    /// Number of unique trading partners
+    pub unique_partners: usize,
+    /// Total trades as a buyer
+    pub total_trades_as_buyer: usize,
+    /// Total trades as a seller
+    pub total_trades_as_seller: usize,
+    /// Top trading partners (sorted by trade count, descending)
+    pub top_partners: Vec<PartnerInfo>,
+}
+
+/// Network-level trading statistics
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkMetrics {
+    /// Average number of unique partners per person
+    pub avg_unique_partners: f64,
+    /// Network density (actual connections / possible connections)
+    pub network_density: f64,
+    /// Most active trading pair
+    pub most_active_pair: Option<(usize, usize, usize)>, // (person1_id, person2_id, trade_count)
+}
+
+/// Complete trading partner statistics
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TradingPartnerStats {
+    /// Per-person trading statistics
+    pub per_person: Vec<PersonTradingStats>,
+    /// Network-level metrics
+    pub network_metrics: NetworkMetrics,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SimulationResult {
+    // Core simulation metrics
+    pub total_steps: usize,
+    pub total_duration: f64,
+    pub step_times: Vec<f64>,  // Time taken for each step
+    pub active_persons: usize, // Renamed from active_entities for clarity
+    /// Number of steps that failed due to panics but were recovered gracefully
+    pub failed_steps: usize,
+
+    // Economic output
+    pub final_money_distribution: Vec<f64>, // List of money amounts per person
+    pub money_statistics: MoneyStats,
+
+    // Reputation metrics
+    pub final_reputation_distribution: Vec<f64>, // List of reputation scores per person
+    pub reputation_statistics: ReputationStats,
+
+    // Savings metrics
+    pub final_savings_distribution: Vec<f64>, // List of savings amounts per person
+    pub savings_statistics: SavingsStats,
+
+    pub final_skill_prices: Vec<SkillPriceInfo>, // Sorted by price
+    pub most_valuable_skill: Option<SkillPriceInfo>,
+    pub least_valuable_skill: Option<SkillPriceInfo>,
+
+    // For graphical representation of price development over time
+    // Key: SkillId, Value: Vec of prices, one entry per step
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub skill_price_history: HashMap<SkillId, Vec<f64>>,
+
+    /// Time-series of wealth distribution statistics, one snapshot per simulation step.
+    /// Enables analysis of how wealth inequality evolves over time.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub wealth_stats_history: Vec<WealthStatsSnapshot>,
+
+    // Trade volume analysis
+    pub trade_volume_statistics: TradeVolumeStats,
+    /// Number of trades executed at each step
+    pub trades_per_step: Vec<usize>,
+    /// Total money volume exchanged at each step
+    pub volume_per_step: Vec<f64>,
+    /// Total transaction fees collected across all trades
+    pub total_fees_collected: f64,
+    /// Per-skill trade statistics (sorted by trade volume, highest first)
+    pub per_skill_trade_stats: Vec<SkillTradeStats>,
+
+    /// Failed trade attempt statistics (trade attempts that failed due to insufficient funds)
+    pub failed_trade_statistics: FailedTradeStats,
+    /// Number of failed trade attempts at each step
+    pub failed_attempts_per_step: Vec<usize>,
+
+    /// Black market statistics (only present if black market is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub black_market_statistics: Option<BlackMarketStats>,
+
+    /// Total taxes collected from seller proceeds (only present if tax_rate > 0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_taxes_collected: Option<f64>,
+
+    /// Total taxes redistributed to persons (only present if tax redistribution is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_taxes_redistributed: Option<f64>,
+
+    /// Loan system statistics (only present if loans are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loan_statistics: Option<LoanStats>,
+
+    /// Contract system statistics (only present if contracts are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contract_statistics: Option<ContractStats>,
+
+    /// Education system statistics (only present if education is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub education_statistics: Option<EducationStats>,
+
+    /// Friendship system statistics (only present if friendships are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub friendship_statistics: Option<FriendshipStats>,
+
+    /// Group/organization statistics (only present if groups are configured)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_statistics: Option<GroupStats>,
+
+    /// Trading partner statistics showing network relationships and trading patterns
+    pub trading_partner_statistics: TradingPartnerStats,
+
+    // final_entities might be too verbose if Person struct grows large with transaction history.
+    // Consider summarizing person data if needed, or providing it under a flag.
+    // For now, let's keep it as it contains all person data including transaction history.
+    pub final_persons_data: Vec<Entity>, // Renamed from final_entities
+}
+
+impl SimulationResult {
+    /// Save simulation results to a JSON file.
+    ///
+    /// # Arguments
+    /// * `path` - Path to the output file
+    /// * `compress` - If true, compress the output using gzip and append .gz to the filename
+    ///
+    /// # Returns
+    /// * `Result<()>` - Success or a SimulationError
+    ///
+    /// # Examples
+    /// ```no_run
+    /// # use simulation_framework::result::SimulationResult;
+    /// # let result = SimulationResult {
+    /// #     total_steps: 0,
+    /// #     total_duration: 0.0,
+    /// #     step_times: vec![],
+    /// #     active_persons: 0,
+    /// #     failed_steps: 0,
+    /// #     final_money_distribution: vec![],
+    /// #     money_statistics: simulation_framework::result::MoneyStats {
+    /// #         average: 0.0, median: 0.0, std_dev: 0.0,
+    /// #         min_money: 0.0, max_money: 0.0, gini_coefficient: 0.0, herfindahl_index: 0.0,
+    /// #         top_10_percent_share: 0.0, top_1_percent_share: 0.0, bottom_50_percent_share: 0.0,
+    /// #     },
+    /// #     final_reputation_distribution: vec![],
+    /// #     reputation_statistics: simulation_framework::result::ReputationStats {
+    /// #         average: 0.0, median: 0.0, std_dev: 0.0,
+    /// #         min_reputation: 0.0, max_reputation: 0.0,
+    /// #     },
+    /// #     final_savings_distribution: vec![],
+    /// #     savings_statistics: simulation_framework::result::SavingsStats {
+    /// #         total_savings: 0.0, average_savings: 0.0, median_savings: 0.0,
+    /// #         min_savings: 0.0, max_savings: 0.0,
+    /// #     },
+    /// #     final_skill_prices: vec![],
+    /// #     most_valuable_skill: None,
+    /// #     least_valuable_skill: None,
+    /// #     skill_price_history: std::collections::HashMap::new(),
+    /// #     wealth_stats_history: vec![],
+    /// #     trade_volume_statistics: simulation_framework::result::TradeVolumeStats {
+    /// #         total_trades: 0, total_volume: 0.0,
+    /// #         avg_trades_per_step: 0.0, avg_volume_per_step: 0.0,
+    /// #         avg_transaction_value: 0.0,
+    /// #         min_trades_per_step: 0, max_trades_per_step: 0,
+    /// #     },
+    /// #     trades_per_step: vec![],
+    /// #     volume_per_step: vec![],
+    /// #     total_fees_collected: 0.0,
+    /// #     per_skill_trade_stats: vec![],
+    /// #     failed_trade_statistics: simulation_framework::result::FailedTradeStats {
+    /// #         total_failed_attempts: 0, failure_rate: 0.0,
+    /// #         avg_failed_per_step: 0.0,
+    /// #         min_failed_per_step: 0, max_failed_per_step: 0,
+    /// #     },
+    /// #     failed_attempts_per_step: vec![],
+    /// #     black_market_statistics: None,
+    /// #     total_taxes_collected: None,
+    /// #     total_taxes_redistributed: None,
+    /// #     loan_statistics: None,
+    /// #     contract_statistics: None,
+    /// #     education_statistics: None,
+    /// #     friendship_statistics: None,
+    /// #     group_statistics: None,
+    /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
+    /// #         per_person: vec![],
+    /// #         network_metrics: simulation_framework::result::NetworkMetrics {
+    /// #             avg_unique_partners: 0.0,
+    /// #             network_density: 0.0,
+    /// #             most_active_pair: None,
+    /// #         },
+    /// #     },
+    /// #     final_persons_data: vec![],
+    /// # };
+    /// // Save uncompressed JSON
+    /// result.save_to_file("results.json", false).unwrap();
+    ///
+    /// // Save compressed JSON
+    /// result.save_to_file("results.json", true).unwrap(); // Creates results.json.gz
+    /// ```
+    pub fn save_to_file(&self, path: &str, compress: bool) -> Result<()> {
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
+
+        if compress {
+            // Add .gz extension if not already present
+            let output_path = if path.ends_with(".gz") {
+                path.to_string()
+            } else {
+                format!("{}.gz", path)
+            };
+
+            let file = File::create(&output_path)?;
+            let mut encoder = GzEncoder::new(file, Compression::default());
+            encoder.write_all(json.as_bytes())?;
+            encoder.finish()?;
+        } else {
+            let mut file = File::create(path)?;
+            file.write_all(json.as_bytes())?;
+        }
+
+        Ok(())
+    }
+
+    /// Save simulation results to CSV files.
+    /// Creates multiple CSV files with the given path as prefix:
+    /// - {path}_summary.csv: Summary statistics
+    /// - {path}_money.csv: Money distribution per person
+    /// - {path}_reputation.csv: Reputation distribution per person
+    /// - {path}_skill_prices.csv: Final skill prices
+    /// - {path}_price_history.csv: Skill price history over time (if available)
+    /// - {path}_wealth_stats_history.csv: Wealth distribution statistics over time (if available)
+    /// - {path}_trade_volume.csv: Trade volume history over time
+    ///
+    /// # Returns
+    /// * `Result<()>` - Success or a SimulationError
+    pub fn save_to_csv(&self, path_prefix: &str) -> Result<()> {
+        // Save summary statistics
+        self.save_summary_csv(&format!("{}_summary.csv", path_prefix))?;
+
+        // Save money distribution
+        self.save_money_csv(&format!("{}_money.csv", path_prefix))?;
+
+        // Save reputation distribution
+        self.save_reputation_csv(&format!("{}_reputation.csv", path_prefix))?;
+
+        // Save skill prices
+        self.save_skill_prices_csv(&format!("{}_skill_prices.csv", path_prefix))?;
+
+        // Save price history if available
+        if !self.skill_price_history.is_empty() {
+            self.save_price_history_csv(&format!("{}_price_history.csv", path_prefix))?;
+        }
+
+        // Save wealth stats history if available
+        if !self.wealth_stats_history.is_empty() {
+            self.save_wealth_stats_history_csv(&format!(
+                "{}_wealth_stats_history.csv",
+                path_prefix
+            ))?;
+        }
+
+        // Save trade volume history
+        self.save_trade_volume_csv(&format!("{}_trade_volume.csv", path_prefix))?;
+
+        Ok(())
+    }
+
+    fn save_summary_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Metric,Value")?;
+        writeln!(file, "Total Steps,{}", self.total_steps)?;
+        writeln!(file, "Total Duration (s),{:.4}", self.total_duration)?;
+        writeln!(file, "Active Persons,{}", self.active_persons)?;
+        writeln!(file, "Failed Steps,{}", self.failed_steps)?;
+
+        if !self.step_times.is_empty() {
+            let avg_step_time = self.step_times.iter().sum::<f64>() / self.step_times.len() as f64;
+            writeln!(file, "Average Step Time (s),{:.6}", avg_step_time)?;
+        }
+
+        writeln!(file)?;
+        writeln!(file, "Money Statistics")?;
+        writeln!(file, "Average Money,{:.4}", self.money_statistics.average)?;
+        writeln!(file, "Median Money,{:.4}", self.money_statistics.median)?;
+        writeln!(file, "Std Dev Money,{:.4}", self.money_statistics.std_dev)?;
+        writeln!(file, "Min Money,{:.4}", self.money_statistics.min_money)?;
+        writeln!(file, "Max Money,{:.4}", self.money_statistics.max_money)?;
+        writeln!(
+            file,
+            "Gini Coefficient,{:.6}",
+            self.money_statistics.gini_coefficient
+        )?;
+        writeln!(
+            file,
+            "Top 10%% Wealth Share (%%),{:.4}",
+            self.money_statistics.top_10_percent_share * 100.0
+        )?;
+        writeln!(
+            file,
+            "Top 1%% Wealth Share (%%),{:.4}",
+            self.money_statistics.top_1_percent_share * 100.0
+        )?;
+        writeln!(
+            file,
+            "Bottom 50%% Wealth Share (%%),{:.4}",
+            self.money_statistics.bottom_50_percent_share * 100.0
+        )?;
+        writeln!(
+            file,
+            "Herfindahl Index,{:.2}",
+            self.money_statistics.herfindahl_index
+        )?;
+
+        writeln!(file)?;
+        writeln!(file, "Reputation Statistics")?;
+        writeln!(
+            file,
+            "Average Reputation,{:.6}",
+            self.reputation_statistics.average
+        )?;
+        writeln!(
+            file,
+            "Median Reputation,{:.6}",
+            self.reputation_statistics.median
+        )?;
+        writeln!(
+            file,
+            "Std Dev Reputation,{:.6}",
+            self.reputation_statistics.std_dev
+        )?;
+        writeln!(
+            file,
+            "Min Reputation,{:.6}",
+            self.reputation_statistics.min_reputation
+        )?;
+        writeln!(
+            file,
+            "Max Reputation,{:.6}",
+            self.reputation_statistics.max_reputation
+        )?;
+
+        writeln!(file)?;
+        writeln!(file, "Trade Volume Statistics")?;
+        writeln!(
+            file,
+            "Total Trades,{}",
+            self.trade_volume_statistics.total_trades
+        )?;
+        writeln!(
+            file,
+            "Total Volume,{:.4}",
+            self.trade_volume_statistics.total_volume
+        )?;
+        writeln!(
+            file,
+            "Avg Trades Per Step,{:.4}",
+            self.trade_volume_statistics.avg_trades_per_step
+        )?;
+        writeln!(
+            file,
+            "Avg Volume Per Step,{:.4}",
+            self.trade_volume_statistics.avg_volume_per_step
+        )?;
+        writeln!(
+            file,
+            "Avg Transaction Value,{:.4}",
+            self.trade_volume_statistics.avg_transaction_value
+        )?;
+        writeln!(
+            file,
+            "Min Trades Per Step,{}",
+            self.trade_volume_statistics.min_trades_per_step
+        )?;
+        writeln!(
+            file,
+            "Max Trades Per Step,{}",
+            self.trade_volume_statistics.max_trades_per_step
+        )?;
+
+        writeln!(file)?;
+        writeln!(file, "Failed Trade Attempt Statistics")?;
+        writeln!(
+            file,
+            "Total Failed Attempts,{}",
+            self.failed_trade_statistics.total_failed_attempts
+        )?;
+        writeln!(
+            file,
+            "Failure Rate,{:.6}",
+            self.failed_trade_statistics.failure_rate
+        )?;
+        writeln!(
+            file,
+            "Avg Failed Per Step,{:.4}",
+            self.failed_trade_statistics.avg_failed_per_step
+        )?;
+        writeln!(
+            file,
+            "Min Failed Per Step,{}",
+            self.failed_trade_statistics.min_failed_per_step
+        )?;
+        writeln!(
+            file,
+            "Max Failed Per Step,{}",
+            self.failed_trade_statistics.max_failed_per_step
+        )?;
+
+        Ok(())
+    }
+
+    fn save_money_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Person_ID,Money")?;
+        for (id, money) in self.final_money_distribution.iter().enumerate() {
+            writeln!(file, "{},{:.4}", id, money)?;
+        }
+
+        Ok(())
+    }
+
+    fn save_reputation_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Person_ID,Reputation")?;
+        for (id, reputation) in self.final_reputation_distribution.iter().enumerate() {
+            writeln!(file, "{},{:.6}", id, reputation)?;
+        }
+
+        Ok(())
+    }
+
+    fn save_skill_prices_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Skill_ID,Final_Price")?;
+        for skill_info in &self.final_skill_prices {
+            writeln!(file, "{},{:.4}", skill_info.id, skill_info.price)?;
+        }
+
+        Ok(())
+    }
+
+    fn save_price_history_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        // Collect all skill IDs and sort them for consistent output
+        let mut skill_ids: Vec<_> = self.skill_price_history.keys().collect();
+        skill_ids.sort();
+
+        // Write header
+        write!(file, "Step")?;
+        for skill_id in &skill_ids {
+            write!(file, ",Skill_{}", skill_id)?;
+        }
+        writeln!(file)?;
+
+        // Determine max number of steps (should be the same for all skills)
+        let max_steps = self
+            .skill_price_history
+            .values()
+            .map(|prices| prices.len())
+            .max()
+            .unwrap_or(0);
+
+        // Write data rows
+        for step in 0..max_steps {
+            write!(file, "{}", step)?;
+            for skill_id in &skill_ids {
+                let price = self
+                    .skill_price_history
+                    .get(*skill_id)
+                    .and_then(|prices| prices.get(step));
+
+                if let Some(&price) = price {
+                    write!(file, ",{:.4}", price)?;
+                } else {
+                    write!(file, ",")?;
+                }
+            }
+            writeln!(file)?;
+        }
+
+        Ok(())
+    }
+
+    fn save_trade_volume_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        writeln!(file, "Step,Trades_Count,Volume_Exchanged")?;
+        for (step, (&trades, &volume)) in self
+            .trades_per_step
+            .iter()
+            .zip(self.volume_per_step.iter())
+            .enumerate()
+        {
+            writeln!(file, "{},{},{:.4}", step, trades, volume)?;
+        }
+
+        Ok(())
+    }
+
+    /// Save wealth stats history to CSV file.
+    /// Each row represents wealth distribution statistics at a specific simulation step.
+    fn save_wealth_stats_history_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        // Write CSV header
+        writeln!(
+            file,
+            "Step,Average,Median,Std_Dev,Min,Max,Gini_Coefficient,Herfindahl_Index,Top_10_Percent_Share,Top_1_Percent_Share,Bottom_50_Percent_Share"
+        )?;
+
+        // Write data rows
+        for snapshot in &self.wealth_stats_history {
+            writeln!(
+                file,
+                "{},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4}",
+                snapshot.step,
+                snapshot.average,
+                snapshot.median,
+                snapshot.std_dev,
+                snapshot.min_money,
+                snapshot.max_money,
+                snapshot.gini_coefficient,
+                snapshot.herfindahl_index,
+                snapshot.top_10_percent_share,
+                snapshot.top_1_percent_share,
+                snapshot.bottom_50_percent_share
+            )?;
+        }
+
+        Ok(())
+    }
+
+    /// Render an ASCII histogram of wealth distribution to the terminal.
+    ///
+    /// Groups persons into 10 percentile buckets and displays a bar chart
+    /// showing the distribution of wealth across the population.
+    fn print_wealth_histogram(&self) {
+        if self.final_money_distribution.is_empty() {
+            return;
+        }
+
+        // Sort money values to create percentile buckets
+        let mut sorted_money = self.final_money_distribution.clone();
+        sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        // Create 10 buckets (deciles)
+        let num_buckets = 10;
+        let bucket_size = sorted_money.len() / num_buckets;
+
+        // Count persons in each bucket
+        let mut buckets: Vec<(String, usize)> = Vec::new();
+        for i in 0..num_buckets {
+            let start_idx = i * bucket_size;
+            let end_idx = if i == num_buckets - 1 {
+                sorted_money.len()
+            } else {
+                (i + 1) * bucket_size
+            };
+
+            let count = end_idx - start_idx;
+            let label = format!("{:>3}-{:<3}%", i * 10, (i + 1) * 10);
+            buckets.push((label, count));
+        }
+
+        // Find max count for scaling
+        let max_count = buckets.iter().map(|(_, count)| *count).max().unwrap_or(1);
+
+        // Calculate bar width (max 50 characters)
+        let max_bar_width = 50;
+
+        // Print histogram
+        for (label, count) in &buckets {
+            let bar_length = if max_count > 0 {
+                ((*count as f64 / max_count as f64) * max_bar_width as f64).round() as usize
+            } else {
+                0
+            };
+
+            // Create bar with color gradient (green for lower percentiles, red for upper)
+            let bar = if bar_length > 0 {
+                let bar_str = "█".repeat(bar_length);
+                // Color based on percentile: lower = green, higher = yellow/red
+                let percentile_start = label
+                    .split('-')
+                    .next()
+                    .unwrap_or("0")
+                    .trim()
+                    .parse::<usize>()
+                    .unwrap_or(0);
+                if percentile_start < 30 {
+                    bar_str.bright_green()
+                } else if percentile_start < 70 {
+                    bar_str.bright_yellow()
+                } else {
+                    bar_str.bright_red()
+                }
+            } else {
+                "".normal()
+            };
+
+            println!(
+                "  {} {} {}",
+                label.dimmed(),
+                bar,
+                format!("({} persons)", count).dimmed()
+            );
+        }
+    }
+
+    /// Print a human-readable summary of the simulation results to stdout.
+    ///
+    /// # Arguments
+    /// * `show_histogram` - Whether to display the ASCII wealth distribution histogram (default: true)
+    pub fn print_summary(&self, show_histogram: bool) {
+        println!(
+            "\n{}",
+            "=== Economic Simulation Summary ===".bright_cyan().bold()
+        );
+        println!("{} {}", "Total steps:".bold(), self.total_steps);
+        println!("{} {:.2}s", "Total duration:".bold(), self.total_duration);
+        if !self.step_times.is_empty() {
+            let avg_step_time_ms =
+                self.step_times.iter().sum::<f64>() / self.step_times.len() as f64 * 1000.0;
+            println!("{} {:.4}ms", "Average step time:".bold(), avg_step_time_ms);
+        }
+        println!(
+            "{} {}",
+            "Active persons remaining:".bold(),
+            self.active_persons
+        );
+
+        // Display failed steps if any occurred
+        if self.failed_steps > 0 {
+            println!(
+                "{} {} {}",
+                "Failed steps (recovered):".bold(),
+                format!("{}", self.failed_steps).bright_red(),
+                format!(
+                    "({:.1}% of total)",
+                    self.failed_steps as f64 / self.total_steps as f64 * 100.0
+                )
+                .dimmed()
+            );
+        }
+
+        let performance = if self.total_duration > 0.0 {
+            self.total_steps as f64 / self.total_duration
+        } else {
+            0.0
+        };
+        println!(
+            "{} {}",
+            "Performance:".bold(),
+            format!("{:.0} steps/second", performance).bright_yellow()
+        );
+
+        println!("\n{}", "--- Money Distribution ---".bright_green().bold());
+        println!(
+            "{} {:.2}",
+            "Average Money:".bold(),
+            self.money_statistics.average
+        );
+        println!(
+            "{} {:.2}",
+            "Median Money:".bold(),
+            self.money_statistics.median
+        );
+        println!(
+            "{} {:.2}",
+            "Std Dev Money:".bold(),
+            self.money_statistics.std_dev
+        );
+        println!(
+            "{} {:.2} / {:.2}",
+            "Min/Max Money:".bold(),
+            self.money_statistics.min_money,
+            self.money_statistics.max_money
+        );
+
+        // Color code Gini coefficient based on inequality level
+        let gini_str = format!("{:.4}", self.money_statistics.gini_coefficient);
+        let gini_colored = if self.money_statistics.gini_coefficient < 0.3 {
+            gini_str.bright_green()
+        } else if self.money_statistics.gini_coefficient < 0.5 {
+            gini_str.bright_yellow()
+        } else {
+            gini_str.bright_red()
+        };
+        println!(
+            "  {} {} {}",
+            "Gini Coefficient:".bold(),
+            gini_colored,
+            "(0 = perfect equality, 1 = perfect inequality)".dimmed()
+        );
+
+        // Print wealth concentration ratios
+        println!(
+            "  {} {:.2}% {}",
+            "Top 10% Wealth Share:".bold(),
+            self.money_statistics.top_10_percent_share * 100.0,
+            "(of total wealth)".dimmed()
+        );
+        println!(
+            "  {} {:.2}% {}",
+            "Top 1% Wealth Share:".bold(),
+            self.money_statistics.top_1_percent_share * 100.0,
+            "(of total wealth)".dimmed()
+        );
+        println!(
+            "  {} {:.2}% {}",
+            "Bottom 50% Wealth Share:".bold(),
+            self.money_statistics.bottom_50_percent_share * 100.0,
+            "(of total wealth)".dimmed()
+        );
+
+        // Color code HHI based on concentration level
+        let hhi = self.money_statistics.herfindahl_index;
+        let hhi_str = format!("{:.2}", hhi);
+        let hhi_colored = if hhi < 1500.0 {
+            hhi_str.bright_green()
+        } else if hhi < 2500.0 {
+            hhi_str.bright_yellow()
+        } else {
+            hhi_str.bright_red()
+        };
+        println!(
+            "  {} {} {}",
+            "Herfindahl Index:".bold(),
+            hhi_colored,
+            "(< 1500 = competitive, 1500-2500 = moderate, > 2500 = high concentration)".dimmed()
+        );
+
+        // Display ASCII histogram if requested
+        if show_histogram && !self.final_money_distribution.is_empty() {
+            println!(
+                "\n{}",
+                "--- Wealth Distribution Histogram ---"
+                    .bright_green()
+                    .bold()
+            );
+            self.print_wealth_histogram();
+        }
+
+        println!(
+            "\n{}",
+            "--- Reputation Distribution ---".bright_magenta().bold()
+        );
+        println!(
+            "{} {:.4}",
+            "Average Reputation:".bold(),
+            self.reputation_statistics.average
+        );
+        println!(
+            "{} {:.4}",
+            "Median Reputation:".bold(),
+            self.reputation_statistics.median
+        );
+        println!(
+            "{} {:.4}",
+            "Std Dev Reputation:".bold(),
+            self.reputation_statistics.std_dev
+        );
+        println!(
+            "{} {:.4} / {:.4}",
+            "Min/Max Reputation:".bold(),
+            self.reputation_statistics.min_reputation,
+            self.reputation_statistics.max_reputation
+        );
+
+        println!("\n{}", "--- Skill Valuations ---".bright_blue().bold());
+        if let Some(skill) = &self.most_valuable_skill {
+            println!(
+                "{} {} {}",
+                "Most Valuable Skill:".bold(),
+                skill.id.to_string().bright_cyan(),
+                format!("(Price: {:.2})", skill.price).bright_green()
+            );
+        }
+        if let Some(skill) = &self.least_valuable_skill {
+            println!(
+                "{} {} {}",
+                "Least Valuable Skill:".bold(),
+                skill.id.to_string().bright_cyan(),
+                format!("(Price: {:.2})", skill.price).bright_red()
+            );
+        }
+
+        println!(
+            "\n{}",
+            "--- Trade Volume Statistics ---".bright_yellow().bold()
+        );
+        println!(
+            "{} {}",
+            "Total Trades:".bold(),
+            self.trade_volume_statistics.total_trades
+        );
+        println!(
+            "{} {:.2}",
+            "Total Volume Exchanged:".bold(),
+            self.trade_volume_statistics.total_volume
+        );
+        println!(
+            "{} {:.2}",
+            "Avg Trades Per Step:".bold(),
+            self.trade_volume_statistics.avg_trades_per_step
+        );
+        println!(
+            "{} {:.2}",
+            "Avg Volume Per Step:".bold(),
+            self.trade_volume_statistics.avg_volume_per_step
+        );
+        println!(
+            "{} {:.2}",
+            "Avg Transaction Value:".bold(),
+            self.trade_volume_statistics.avg_transaction_value
+        );
+        println!(
+            "{} {} / {}",
+            "Min/Max Trades Per Step:".bold(),
+            self.trade_volume_statistics.min_trades_per_step,
+            self.trade_volume_statistics.max_trades_per_step
+        );
+
+        // Display failed trade attempt statistics
+        println!(
+            "\n{}",
+            "--- Failed Trade Attempts ---".bright_magenta().bold()
+        );
+        println!(
+            "{} {}",
+            "Total Failed Attempts:".bold(),
+            self.failed_trade_statistics.total_failed_attempts
+        );
+
+        // Color code failure rate based on severity
+        let failure_rate_pct = self.failed_trade_statistics.failure_rate * 100.0;
+        let failure_rate_str = format!("{:.2}%", failure_rate_pct);
+        let failure_rate_colored = if failure_rate_pct < 10.0 {
+            failure_rate_str.bright_green()
+        } else if failure_rate_pct < 30.0 {
+            failure_rate_str.bright_yellow()
+        } else {
+            failure_rate_str.bright_red()
+        };
+        println!(
+            "{} {} {}",
+            "Failure Rate:".bold(),
+            failure_rate_colored,
+            "(failed / total attempts)".dimmed()
+        );
+
+        println!(
+            "{} {:.2}",
+            "Avg Failed Per Step:".bold(),
+            self.failed_trade_statistics.avg_failed_per_step
+        );
+        println!(
+            "{} {} / {}",
+            "Min/Max Failed Per Step:".bold(),
+            self.failed_trade_statistics.min_failed_per_step,
+            self.failed_trade_statistics.max_failed_per_step
+        );
+
+        println!("\n{}", "Top 5 Most Valuable Skills:".bright_cyan().bold());
+        for skill_info in self.final_skill_prices.iter().take(5) {
+            println!(
+                "  {} {} {:.2}",
+                "-".dimmed(),
+                format!("{}:", skill_info.id).bright_white(),
+                skill_info.price
+            );
+        }
+
+        println!(
+            "\n{}",
+            "Top 5 Least Valuable Skills (excluding those at min price if many):"
+                .bright_cyan()
+                .bold()
+        );
+        // Iterate in reverse, but skip if all are min_price
+        let mut count = 0;
+        for skill_info in self.final_skill_prices.iter().rev().take(10) {
+            // Check more than 5 to find some not at min
+            if count < 5 {
+                // Basic heuristic: if it's significantly above absolute min, show it.
+                // This needs better logic if many skills bottom out at min_skill_price.
+                // For now, just show them.
+                println!(
+                    "  {} {} {:.2}",
+                    "-".dimmed(),
+                    format!("{}:", skill_info.id).bright_white(),
+                    skill_info.price
+                );
+                count += 1;
+            }
+        }
+        if self.skill_price_history.keys().len() > 0 {
+            println!(
+                "\n{} {} {}",
+                "Skill price history for".dimmed(),
+                format!("{}", self.skill_price_history.keys().len()).bright_white(),
+                "skills available in JSON output.".dimmed()
+            );
+        }
+    }
+}
+
+/// Calculate the Gini coefficient for a given distribution of values.
+///
+/// The Gini coefficient is a measure of inequality ranging from 0 (perfect equality)
+/// to 1 (perfect inequality). Values above 1 can occur when negative values exist.
+///
+/// # Arguments
+/// * `sorted_values` - A slice of values sorted in ascending order
+/// * `sum` - The sum of all values
+///
+/// # Formula
+/// G = (2 * sum(i * x_i)) / (n * sum(x_i)) - (n + 1) / n
+/// where x_i are sorted values and i is the rank (1-indexed)
+///
+/// # Returns
+/// The Gini coefficient as f64
+pub fn calculate_gini_coefficient(sorted_values: &[f64], sum: f64) -> f64 {
+    if sorted_values.is_empty() || sum == 0.0 {
+        return 0.0;
+    }
+
+    let n = sorted_values.len();
+    let weighted_sum: f64 = sorted_values
+        .iter()
+        .enumerate()
+        .map(|(i, &value)| (i + 1) as f64 * value)
+        .sum();
+    (2.0 * weighted_sum) / (n as f64 * sum) - (n as f64 + 1.0) / n as f64
+}
+
+/// Calculate the Herfindahl-Hirschman Index (HHI) for a given distribution of values.
+///
+/// The HHI measures market concentration by summing the squared market shares.
+/// It ranges from near 0 (perfect competition with many equal participants) to 10,000 (monopoly).
+///
+/// # Interpretation
+/// * HHI < 1,500: Competitive market (low concentration)
+/// * HHI 1,500-2,500: Moderate concentration
+/// * HHI > 2,500: High concentration (potential oligopoly/monopoly concerns)
+///
+/// # Arguments
+/// * `values` - A slice of values representing shares (e.g., money, market share)
+///
+/// # Formula
+/// HHI = sum((share_i * 100)^2) for all i
+/// where share_i = value_i / total_value
+///
+/// # Returns
+/// The HHI as f64, scaled to 0-10,000 range
+///
+/// # Examples
+/// ```
+/// use simulation_framework::result::calculate_herfindahl_index;
+///
+/// // Perfect equality (4 participants with 25% each): HHI = 2,500
+/// let equal_shares = vec![25.0, 25.0, 25.0, 25.0];
+/// let hhi = calculate_herfindahl_index(&equal_shares);
+/// assert!((hhi - 2500.0).abs() < 0.1);
+///
+/// // Monopoly (1 participant with 100%): HHI = 10,000
+/// let monopoly = vec![100.0];
+/// let hhi = calculate_herfindahl_index(&monopoly);
+/// assert!((hhi - 10000.0).abs() < 0.1);
+/// ```
+pub fn calculate_herfindahl_index(values: &[f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+
+    let total: f64 = values.iter().sum();
+    if total == 0.0 {
+        return 0.0;
+    }
+
+    // Calculate HHI: sum of squared market shares (as percentages)
+    values
+        .iter()
+        .map(|&value| {
+            let share_percentage = (value / total) * 100.0;
+            share_percentage * share_percentage
+        })
+        .sum()
+}
+
+/// Calculate wealth concentration ratios for different percentile groups.
+///
+/// This function computes what share of total wealth is held by different groups:
+/// - Top 10% wealthiest persons
+/// - Top 1% wealthiest persons  
+/// - Bottom 50% of persons
+///
+/// These metrics provide intuitive measures of wealth inequality that complement
+/// the Gini coefficient. High values for top groups and low values for bottom groups
+/// indicate high inequality.
+///
+/// # Arguments
+/// * `sorted_values` - A slice of values sorted in ascending order (poorest to richest)
+/// * `sum` - The sum of all values
+///
+/// # Returns
+/// A tuple of (top_10_pct_share, top_1_pct_share, bottom_50_pct_share)
+///
+/// # Examples
+/// ```
+/// use simulation_framework::result::calculate_wealth_concentration;
+///
+/// // Perfect equality: each group holds wealth proportional to size
+/// let equal = vec![100.0; 100];
+/// let sum: f64 = equal.iter().sum();
+/// let (top10, top1, bottom50) = calculate_wealth_concentration(&equal, sum);
+/// assert!((top10 - 0.1).abs() < 0.01); // Top 10% holds 10%
+/// assert!((top1 - 0.01).abs() < 0.01); // Top 1% holds 1%
+/// assert!((bottom50 - 0.5).abs() < 0.01); // Bottom 50% holds 50%
+/// ```
+pub fn calculate_wealth_concentration(sorted_values: &[f64], sum: f64) -> (f64, f64, f64) {
+    if sorted_values.is_empty() || sum == 0.0 {
+        return (0.0, 0.0, 0.0);
+    }
+
+    let n = sorted_values.len();
+
+    // Calculate index boundaries for each group
+    // Note: sorted_values is ascending (poorest to richest)
+    // Use max(1, ...) to ensure at least one person in top groups for small populations
+    let top_10_pct_count = (n as f64 * 0.1).ceil() as usize;
+    let top_10_pct_start_idx = n.saturating_sub(top_10_pct_count);
+
+    let top_1_pct_count = ((n as f64 * 0.01).ceil() as usize).max(1);
+    let top_1_pct_start_idx = n.saturating_sub(top_1_pct_count);
+
+    let bottom_50_pct_count = (n as f64 * 0.5).ceil() as usize;
+    let bottom_50_pct_end_idx = bottom_50_pct_count.min(n);
+
+    // Sum wealth for each group
+    let top_10_pct_wealth: f64 = sorted_values[top_10_pct_start_idx..].iter().sum();
+    let top_1_pct_wealth: f64 = sorted_values[top_1_pct_start_idx..].iter().sum();
+    let bottom_50_pct_wealth: f64 = sorted_values[..bottom_50_pct_end_idx].iter().sum();
+
+    // Calculate shares as fractions of total wealth
+    let top_10_pct_share = top_10_pct_wealth / sum;
+    let top_1_pct_share = top_1_pct_wealth / sum;
+    let bottom_50_pct_share = bottom_50_pct_wealth / sum;
+
+    (top_10_pct_share, top_1_pct_share, bottom_50_pct_share)
+}
+
+/// Calculate statistics for a set of values
+///
+/// This function computes mean, standard deviation, median, min, and max
+/// for a set of values. It is used for aggregating results across multiple
+/// simulation runs (Monte Carlo or parameter sweeps).
+///
+/// # Arguments
+/// * `values` - Slice of f64 values to analyze
+///
+/// # Returns
+/// * `MonteCarloStats` - Statistics including mean, std_dev, min, max, median
+///
+/// # Examples
+/// ```
+/// use simulation_framework::result::calculate_statistics;
+///
+/// let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+/// let stats = calculate_statistics(&values);
+/// assert_eq!(stats.mean, 3.0);
+/// assert_eq!(stats.median, 3.0);
+/// ```
+pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
+    if values.is_empty() {
+        return MonteCarloStats {
+            mean: 0.0,
+            std_dev: 0.0,
+            min: 0.0,
+            max: 0.0,
+            median: 0.0,
+        };
+    }
+
+    let mean = values.iter().sum::<f64>() / values.len() as f64;
+    // Use sample standard deviation (N-1) for finite samples in Monte Carlo analysis
+    let variance = if values.len() > 1 {
+        values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (values.len() - 1) as f64
+    } else {
+        0.0
+    };
+    let std_dev = variance.sqrt();
+
+    let mut sorted = values.to_vec();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    let median = if sorted.len() % 2 == 1 {
+        sorted[sorted.len() / 2]
+    } else {
+        (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) / 2.0
+    };
+
+    let min = sorted.first().copied().unwrap_or(0.0);
+    let max = sorted.last().copied().unwrap_or(0.0);
+
+    MonteCarloStats {
+        mean,
+        std_dev,
+        min,
+        max,
+        median,
+    }
+}
+
+/// Calculate trading partner statistics from entities' transaction history
+///
+/// This function analyzes the transaction history of all persons to identify
+/// trading relationships, partner counts, and network metrics.
+///
+/// # Arguments
+/// * `entities` - Slice of all entities (persons) in the simulation
+///
+/// # Returns
+/// * `TradingPartnerStats` - Complete trading partner statistics
+pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartnerStats {
+    use std::collections::{HashMap, HashSet};
+
+    // Type alias to simplify complex nested HashMap
+    // Maps person_id to (buyer_count, seller_count, partner_map)
+    // where partner_map is partner_id -> (trade_count, total_value)
+    type PersonTradeData = (usize, usize, HashMap<usize, (usize, f64)>);
+
+    let active_entities: Vec<_> = entities.iter().filter(|e| e.active).collect();
+    let num_persons = active_entities.len();
+
+    // Track partners and trade details for each person
+    let mut person_stats: HashMap<usize, PersonTradeData> = HashMap::new();
+
+    // Track all unique pairs for network density calculation
+    let mut unique_pairs: HashSet<(usize, usize)> = HashSet::new();
+
+    // Process each entity's transaction history
+    for entity in &active_entities {
+        let person_id = entity.person_data.id;
+        let entry = person_stats
+            .entry(person_id)
+            .or_insert((0, 0, HashMap::new()));
+
+        for transaction in &entity.person_data.transaction_history {
+            if let Some(partner_id) = transaction.counterparty_id {
+                // Record trade based on type
+                match transaction.transaction_type {
+                    crate::person::TransactionType::Buy => {
+                        entry.0 += 1; // Increment buyer count
+                    }
+                    crate::person::TransactionType::Sell => {
+                        entry.1 += 1; // Increment seller count
+                    }
+                }
+
+                // Track partner relationship
+                let partner_entry = entry.2.entry(partner_id).or_insert((0, 0.0));
+                partner_entry.0 += 1; // Increment trade count with this partner
+                partner_entry.1 += transaction.amount; // Add trade value
+
+                // Add to unique pairs (normalize pair ordering)
+                let pair = if person_id < partner_id {
+                    (person_id, partner_id)
+                } else {
+                    (partner_id, person_id)
+                };
+                unique_pairs.insert(pair);
+            }
+        }
+    }
+
+    // Build per-person statistics
+    let mut per_person: Vec<PersonTradingStats> = Vec::new();
+    for entity in &active_entities {
+        let person_id = entity.person_data.id;
+        let (buyer_count, seller_count, partners) =
+            person_stats.get(&person_id).cloned().unwrap_or_default();
+
+        // Sort partners by trade count (descending) and take top 5
+        let mut partner_list: Vec<(usize, usize, f64)> = partners
+            .iter()
+            .map(|(&id, &(count, value))| (id, count, value))
+            .collect();
+        partner_list.sort_by(|a, b| b.1.cmp(&a.1));
+
+        let top_partners: Vec<PartnerInfo> = partner_list
+            .iter()
+            .take(5)
+            .map(|&(id, count, value)| PartnerInfo {
+                partner_id: id,
+                trade_count: count,
+                total_value: value,
+            })
+            .collect();
+
+        per_person.push(PersonTradingStats {
+            person_id,
+            unique_partners: partners.len(),
+            total_trades_as_buyer: buyer_count,
+            total_trades_as_seller: seller_count,
+            top_partners,
+        });
+    }
+
+    // Sort by person_id for consistent output
+    per_person.sort_by_key(|s| s.person_id);
+
+    // Calculate network metrics
+    let avg_unique_partners = if !per_person.is_empty() {
+        per_person.iter().map(|s| s.unique_partners).sum::<usize>() as f64 / per_person.len() as f64
+    } else {
+        0.0
+    };
+
+    // Network density = (actual connections) / (possible connections)
+    // Possible connections = n * (n - 1) / 2 for undirected network
+    let possible_connections = if num_persons > 1 {
+        (num_persons * (num_persons - 1)) / 2
+    } else {
+        1
+    };
+    let network_density = if possible_connections > 0 {
+        unique_pairs.len() as f64 / possible_connections as f64
+    } else {
+        0.0
+    };
+
+    // Find most active trading pair
+    let most_active_pair = if !unique_pairs.is_empty() {
+        // Count trades for each pair
+        let mut pair_trade_counts: HashMap<(usize, usize), usize> = HashMap::new();
+
+        for entity in &active_entities {
+            for transaction in &entity.person_data.transaction_history {
+                if let Some(partner_id) = transaction.counterparty_id {
+                    let person_id = entity.person_data.id;
+                    let pair = if person_id < partner_id {
+                        (person_id, partner_id)
+                    } else {
+                        (partner_id, person_id)
+                    };
+                    *pair_trade_counts.entry(pair).or_insert(0) += 1;
+                }
+            }
+        }
+
+        // Find pair with maximum trades
+        pair_trade_counts
+            .into_iter()
+            .max_by_key(|&(_, count)| count)
+            .map(|((p1, p2), count)| (p1, p2, count))
+    } else {
+        None
+    };
+
+    TradingPartnerStats {
+        per_person,
+        network_metrics: NetworkMetrics {
+            avg_unique_partners,
+            network_density,
+            most_active_pair,
+        },
+    }
+}
+
+/// Write step data to a JSONL (JSON Lines) stream file
+///
+/// This function appends a single line of JSON data to the streaming output file.
+/// Each line represents one simulation step and contains key metrics for monitoring.
+///
+/// # Arguments
+/// * `writer` - A mutable reference to the BufWriter for the output file
+/// * `step_data` - The step data to write
+///
+/// # Returns
+/// * `Result<()>` - Ok if successful, or an error if writing failed
+pub fn write_step_to_stream(writer: &mut BufWriter<File>, step_data: &StepData) -> Result<()> {
+    let json = serde_json::to_string(step_data)
+        .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
+    writeln!(writer, "{}", json).map_err(SimulationError::IoError)?;
+    writer.flush().map_err(SimulationError::IoError)?;
+    Ok(())
+}
+
+impl MonteCarloResult {
+    /// Create a new MonteCarloResult from a collection of simulation results
+    pub fn from_runs(runs: Vec<SimulationResult>, base_seed: u64) -> Self {
+        let num_runs = runs.len();
+
+        // Collect metrics from each run
+        let avg_moneys: Vec<f64> = runs.iter().map(|r| r.money_statistics.average).collect();
+        let gini_coefficients: Vec<f64> = runs
+            .iter()
+            .map(|r| r.money_statistics.gini_coefficient)
+            .collect();
+        let total_trades: Vec<f64> = runs
+            .iter()
+            .map(|r| r.trade_volume_statistics.total_trades as f64)
+            .collect();
+        let avg_reputations: Vec<f64> = runs
+            .iter()
+            .map(|r| r.reputation_statistics.average)
+            .collect();
+
+        Self {
+            num_runs,
+            base_seed,
+            runs,
+            avg_money_stats: calculate_statistics(&avg_moneys),
+            gini_coefficient_stats: calculate_statistics(&gini_coefficients),
+            total_trades_stats: calculate_statistics(&total_trades),
+            avg_reputation_stats: calculate_statistics(&avg_reputations),
+        }
+    }
+
+    /// Save Monte Carlo results to a JSON file
+    pub fn save_to_file(&self, path: &str, compress: bool) -> Result<()> {
+        let json_str = serde_json::to_string_pretty(self)
+            .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
+
+        if compress {
+            let file = File::create(format!("{path}.gz"))?;
+            let mut encoder = GzEncoder::new(file, Compression::default());
+            encoder.write_all(json_str.as_bytes())?;
+            encoder.finish()?;
+        } else {
+            let mut file = File::create(path)?;
+            file.write_all(json_str.as_bytes())?;
+        }
+
+        Ok(())
+    }
+
+    /// Print a summary of the Monte Carlo results to the console
+    pub fn print_summary(&self) {
+        println!(
+            "\n{}",
+            "=== Monte Carlo Simulation Results ==="
+                .bright_cyan()
+                .bold()
+        );
+        println!("Number of runs: {}", self.num_runs);
+        println!("Base seed: {}\n", self.base_seed);
+
+        println!("{}", "Average Money Across Runs:".bright_yellow());
+        Self::print_stat_summary(&self.avg_money_stats);
+
+        println!("\n{}", "Gini Coefficient Across Runs:".bright_yellow());
+        Self::print_stat_summary(&self.gini_coefficient_stats);
+
+        println!("\n{}", "Total Trades Across Runs:".bright_yellow());
+        Self::print_stat_summary(&self.total_trades_stats);
+
+        println!("\n{}", "Average Reputation Across Runs:".bright_yellow());
+        Self::print_stat_summary(&self.avg_reputation_stats);
+    }
+
+    fn print_stat_summary(stats: &MonteCarloStats) {
+        println!("  Mean:   {:.2}", stats.mean);
+        println!("  Median: {:.2}", stats.median);
+        println!("  StdDev: {:.2}", stats.std_dev);
+        println!("  Min:    {:.2}", stats.min);
+        println!("  Max:    {:.2}", stats.max);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Read;
+    use tempfile::NamedTempFile;
+
+    fn get_test_result() -> SimulationResult {
+        SimulationResult {
+            total_steps: 10,
+            total_duration: 1.23,
+            step_times: vec![0.1, 0.12, 0.1, 0.13, 0.1, 0.11, 0.1, 0.14, 0.1, 0.13],
+            active_persons: 5,
+            failed_steps: 0,
+            final_money_distribution: vec![50.0, 80.0, 100.0, 120.0, 150.0],
+            money_statistics: MoneyStats {
+                average: 100.0,
+                median: 100.0,
+                std_dev: 31.62,
+                min_money: 50.0,
+                max_money: 150.0,
+                gini_coefficient: 0.2,
+                herfindahl_index: 2200.0,
+                top_10_percent_share: 0.3,
+                top_1_percent_share: 0.15,
+                bottom_50_percent_share: 0.25,
+            },
+            final_reputation_distribution: vec![0.95, 1.0, 1.0, 1.05, 1.1],
+            reputation_statistics: ReputationStats {
+                average: 1.02,
+                median: 1.0,
+                std_dev: 0.05,
+                min_reputation: 0.95,
+                max_reputation: 1.1,
+            },
+            final_savings_distribution: vec![0.0, 5.0, 10.0, 15.0, 20.0],
+            savings_statistics: SavingsStats {
+                total_savings: 50.0,
+                average_savings: 10.0,
+                median_savings: 10.0,
+                min_savings: 0.0,
+                max_savings: 20.0,
+            },
+            final_skill_prices: vec![],
+            most_valuable_skill: None,
+            least_valuable_skill: None,
+            skill_price_history: HashMap::new(),
+            wealth_stats_history: Vec::new(),
+            trade_volume_statistics: TradeVolumeStats {
+                total_trades: 100,
+                total_volume: 1000.0,
+                avg_trades_per_step: 10.0,
+                avg_volume_per_step: 100.0,
+                avg_transaction_value: 10.0,
+                min_trades_per_step: 5,
+                max_trades_per_step: 15,
+            },
+            trades_per_step: vec![10, 12, 8, 10, 15, 9, 11, 10, 5, 10],
+            volume_per_step: vec![
+                100.0, 120.0, 80.0, 100.0, 150.0, 90.0, 110.0, 100.0, 50.0, 100.0,
+            ],
+            total_fees_collected: 0.0,
+            per_skill_trade_stats: vec![],
+            failed_trade_statistics: FailedTradeStats {
+                total_failed_attempts: 20,
+                failure_rate: 0.1667, // 20 / (100 + 20) = 0.1667
+                avg_failed_per_step: 2.0,
+                min_failed_per_step: 0,
+                max_failed_per_step: 5,
+            },
+            failed_attempts_per_step: vec![2, 3, 1, 2, 5, 1, 2, 2, 0, 2],
+            black_market_statistics: None,
+            total_taxes_collected: None,
+            total_taxes_redistributed: None,
+            loan_statistics: None,
+            contract_statistics: None,
+            education_statistics: None,
+            friendship_statistics: None,
+            group_statistics: None,
+            trading_partner_statistics: TradingPartnerStats {
+                per_person: vec![],
+                network_metrics: NetworkMetrics {
+                    avg_unique_partners: 0.0,
+                    network_density: 0.0,
+                    most_active_pair: None,
+                },
+            },
+            final_persons_data: vec![],
+        }
+    }
+
+    #[test]
+    fn test_print_summary() {
+        let result = get_test_result();
+        // This test just checks that print_summary doesn't panic.
+        // Test with histogram enabled
+        result.print_summary(true);
+        // Test with histogram disabled
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_save_to_file() {
+        let result = get_test_result();
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap();
+
+        result.save_to_file(path, false).unwrap();
+
+        let mut contents = String::new();
+        file.reopen()
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("\"total_steps\": 10"));
+        assert!(contents.contains("\"total_duration\": 1.23"));
+    }
+
+    #[test]
+    fn test_save_to_file_compressed() {
+        use flate2::read::GzDecoder;
+
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("test_output.json");
+        let path_str = path.to_str().unwrap();
+
+        // Save compressed file
+        result.save_to_file(path_str, true).unwrap();
+
+        // Verify .gz file was created
+        let gz_path = format!("{}.gz", path_str);
+        assert!(std::path::Path::new(&gz_path).exists());
+
+        // Decompress and verify contents
+        let file = File::open(&gz_path).unwrap();
+        let mut decoder = GzDecoder::new(file);
+        let mut contents = String::new();
+        decoder.read_to_string(&mut contents).unwrap();
+
+        assert!(contents.contains("\"total_steps\": 10"));
+        assert!(contents.contains("\"total_duration\": 1.23"));
+        assert!(contents.contains("\"active_persons\": 5"));
+    }
+
+    #[test]
+    fn test_save_to_file_compressed_with_gz_extension() {
+        use flate2::read::GzDecoder;
+
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("test_output.json.gz");
+        let path_str = path.to_str().unwrap();
+
+        // Save compressed file with .gz already in the path
+        result.save_to_file(path_str, true).unwrap();
+
+        // Verify file was created without double .gz extension
+        assert!(std::path::Path::new(path_str).exists());
+        let double_gz_path = format!("{}.gz", path_str);
+        assert!(!std::path::Path::new(&double_gz_path).exists());
+
+        // Decompress and verify contents
+        let file = File::open(path_str).unwrap();
+        let mut decoder = GzDecoder::new(file);
+        let mut contents = String::new();
+        decoder.read_to_string(&mut contents).unwrap();
+
+        assert!(contents.contains("\"total_steps\": 10"));
+        assert!(contents.contains("\"total_duration\": 1.23"));
+    }
+
+    #[test]
+    fn test_compressed_file_is_smaller() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+
+        // Save uncompressed
+        let uncompressed_path = temp_dir.path().join("uncompressed.json");
+        result
+            .save_to_file(uncompressed_path.to_str().unwrap(), false)
+            .unwrap();
+
+        // Save compressed
+        let compressed_path = temp_dir.path().join("compressed.json");
+        result
+            .save_to_file(compressed_path.to_str().unwrap(), true)
+            .unwrap();
+        let compressed_gz_path = format!("{}.gz", compressed_path.to_str().unwrap());
+
+        // Compare file sizes
+        let uncompressed_size = std::fs::metadata(&uncompressed_path).unwrap().len();
+        let compressed_size = std::fs::metadata(&compressed_gz_path).unwrap().len();
+
+        // Compressed should be smaller (for this test data)
+        assert!(
+            compressed_size < uncompressed_size,
+            "Compressed size {} should be less than uncompressed size {}",
+            compressed_size,
+            uncompressed_size
+        );
+    }
+
+    fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
+        if money_values.is_empty() {
+            return MoneyStats {
+                average: 0.0,
+                median: 0.0,
+                std_dev: 0.0,
+                min_money: 0.0,
+                max_money: 0.0,
+                gini_coefficient: 0.0,
+                herfindahl_index: 0.0,
+                top_10_percent_share: 0.0,
+                top_1_percent_share: 0.0,
+                bottom_50_percent_share: 0.0,
+            };
+        }
+
+        let mut sorted_money = money_values.to_vec();
+        sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let sum: f64 = sorted_money.iter().sum();
+        let count = sorted_money.len() as f64;
+        let average = sum / count;
+
+        let median = if count > 0.0 {
+            if count as usize % 2 == 1 {
+                sorted_money[count as usize / 2]
+            } else {
+                (sorted_money[count as usize / 2 - 1] + sorted_money[count as usize / 2]) / 2.0
+            }
+        } else {
+            0.0
+        };
+
+        let variance = sorted_money
+            .iter()
+            .map(|value| {
+                let diff = average - value;
+                diff * diff
+            })
+            .sum::<f64>()
+            / count;
+        let std_dev = variance.sqrt();
+
+        // Calculate Gini coefficient using the shared utility function
+        let gini_coefficient = calculate_gini_coefficient(&sorted_money, sum);
+
+        // Calculate Herfindahl Index using the shared utility function
+        let herfindahl_index = calculate_herfindahl_index(&sorted_money);
+
+        // Calculate wealth concentration ratios
+        let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
+            calculate_wealth_concentration(&sorted_money, sum);
+
+        MoneyStats {
+            average,
+            median,
+            std_dev,
+            min_money: *sorted_money.first().unwrap_or(&0.0),
+            max_money: *sorted_money.last().unwrap_or(&0.0),
+            gini_coefficient,
+            herfindahl_index,
+            top_10_percent_share,
+            top_1_percent_share,
+            bottom_50_percent_share,
+        }
+    }
+
+    #[test]
+    fn test_money_stats_empty() {
+        let stats = calculate_money_stats(&[]);
+        assert_eq!(stats.average, 0.0);
+        assert_eq!(stats.median, 0.0);
+        assert_eq!(stats.std_dev, 0.0);
+        assert_eq!(stats.min_money, 0.0);
+        assert_eq!(stats.max_money, 0.0);
+        assert_eq!(stats.gini_coefficient, 0.0);
+        assert_eq!(stats.herfindahl_index, 0.0);
+        assert_eq!(stats.top_10_percent_share, 0.0);
+        assert_eq!(stats.top_1_percent_share, 0.0);
+        assert_eq!(stats.bottom_50_percent_share, 0.0);
+    }
+
+    #[test]
+    fn test_money_stats_single_value() {
+        let stats = calculate_money_stats(&[100.0]);
+        assert_eq!(stats.average, 100.0);
+        assert_eq!(stats.median, 100.0);
+        assert_eq!(stats.std_dev, 0.0);
+        assert_eq!(stats.min_money, 100.0);
+        assert_eq!(stats.max_money, 100.0);
+        assert_eq!(stats.gini_coefficient, 0.0);
+        // Single person = monopoly = HHI of 10,000
+        assert!((stats.herfindahl_index - 10000.0).abs() < 0.1);
+        // Single person holds 100% of wealth
+        assert!((stats.top_10_percent_share - 1.0).abs() < 1e-10);
+        assert!((stats.top_1_percent_share - 1.0).abs() < 1e-10);
+        assert!((stats.bottom_50_percent_share - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_money_stats_multiple_values_odd() {
+        let money = [10.0, 20.0, 30.0, 40.0, 50.0];
+        let stats = calculate_money_stats(&money);
+        assert_eq!(stats.average, 30.0);
+        assert_eq!(stats.median, 30.0);
+        assert_eq!(stats.min_money, 10.0);
+        assert_eq!(stats.max_money, 50.0);
+        // Std dev for [10,20,30,40,50] is sqrt(((20^2 + 10^2 + 0^2 + 10^2 + 20^2)/5)) = sqrt((400+100+0+100+400)/5) = sqrt(1000/5) = sqrt(200) = 14.1421356
+        assert!((stats.std_dev - 14.1421356).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_money_stats_multiple_values_even() {
+        let money = [10.0, 20.0, 30.0, 60.0]; // Avg = 30, Median = 25
+        let stats = calculate_money_stats(&money);
+        assert_eq!(stats.average, 30.0);
+        assert_eq!(stats.median, 25.0); // (20+30)/2
+        assert_eq!(stats.min_money, 10.0);
+        assert_eq!(stats.max_money, 60.0);
+        // Std dev for [10,20,30,60] (avg 30) is sqrt(((20^2 + 10^2 + 0^2 + 30^2)/4)) = sqrt((400+100+0+900)/4) = sqrt(1400/4) = sqrt(350) = 18.7082869
+        assert!((stats.std_dev - 18.7082869).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_gini_coefficient_perfect_equality() {
+        // All persons have equal money - should be 0 (perfect equality)
+        let money = [100.0, 100.0, 100.0, 100.0];
+        let stats = calculate_money_stats(&money);
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_gini_coefficient_perfect_inequality() {
+        // One person has all money, others have nothing - should be close to 1
+        let money = [0.0, 0.0, 0.0, 100.0];
+        let stats = calculate_money_stats(&money);
+        // For n=4, perfect inequality Gini = (n-1)/n = 3/4 = 0.75
+        assert!((stats.gini_coefficient - 0.75).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_gini_coefficient_moderate_inequality() {
+        // Some inequality but not extreme
+        let money = [10.0, 20.0, 30.0, 40.0, 50.0];
+        let stats = calculate_money_stats(&money);
+        // For linearly increasing values, Gini should be around 0.2667
+        // G = (2 * sum(i * x_i)) / (n * sum(x_i)) - (n + 1) / n
+        // sum(i * x_i) = 1*10 + 2*20 + 3*30 + 4*40 + 5*50 = 10 + 40 + 90 + 160 + 250 = 550
+        // sum(x_i) = 150, n = 5
+        // G = (2 * 550) / (5 * 150) - 6 / 5 = 1100 / 750 - 1.2 = 1.4667 - 1.2 = 0.2667
+        assert!((stats.gini_coefficient - 0.26666667).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_gini_coefficient_empty_distribution() {
+        let money: Vec<f64> = vec![];
+        let stats = calculate_money_stats(&money);
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_gini_coefficient_single_person() {
+        let money = [100.0];
+        let stats = calculate_money_stats(&money);
+        // Single person: Gini should be 0 (no inequality possible)
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_gini_coefficient_two_persons_equal() {
+        let money = [50.0, 50.0];
+        let stats = calculate_money_stats(&money);
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_gini_coefficient_two_persons_unequal() {
+        let money = [25.0, 75.0];
+        let stats = calculate_money_stats(&money);
+        // For n=2: G = (2 * (1*25 + 2*75)) / (2 * 100) - 3/2
+        // = (2 * (25 + 150)) / 200 - 1.5 = 350 / 200 - 1.5 = 1.75 - 1.5 = 0.25
+        assert!((stats.gini_coefficient - 0.25).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_wealth_concentration_perfect_equality() {
+        // 100 persons with equal wealth
+        let equal = vec![100.0; 100];
+        let sum: f64 = equal.iter().sum();
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&equal, sum);
+
+        // With perfect equality, each group holds wealth proportional to its size
+        assert!((top10 - 0.1).abs() < 0.01); // Top 10% holds ~10%
+        assert!((top1 - 0.01).abs() < 0.01); // Top 1% holds ~1%
+        assert!((bottom50 - 0.5).abs() < 0.01); // Bottom 50% holds ~50%
+    }
+
+    #[test]
+    fn test_wealth_concentration_high_inequality() {
+        // High inequality: top person has much more
+        let mut values = vec![10.0; 99]; // 99 persons with 10 each
+        values.push(1000.0); // 1 person with 1000
+        values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let sum: f64 = values.iter().sum();
+
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&values, sum);
+
+        // Top 1% (1 person) should hold significant wealth
+        // Total wealth = 99*10 + 1000 = 1990
+        // Top 1% wealth = 1000, share = 1000/1990 ≈ 0.503
+        assert!((top1 - 0.5025).abs() < 0.01);
+
+        // Top 10% (10 persons including the richest)
+        // Top 10% wealth = 9*10 + 1000 = 1090, share = 1090/1990 ≈ 0.548
+        assert!((top10 - 0.5477).abs() < 0.01);
+
+        // Bottom 50% (50 persons with 10 each)
+        // Bottom 50% wealth = 50*10 = 500, share = 500/1990 ≈ 0.251
+        assert!((bottom50 - 0.2513).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_wealth_concentration_empty() {
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&[], 0.0);
+        assert_eq!(top10, 0.0);
+        assert_eq!(top1, 0.0);
+        assert_eq!(bottom50, 0.0);
+    }
+
+    #[test]
+    fn test_wealth_concentration_single_person() {
+        let values = vec![100.0];
+        let sum: f64 = values.iter().sum();
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&values, sum);
+
+        // Single person is in all groups
+        assert!((top10 - 1.0).abs() < 1e-10);
+        assert!((top1 - 1.0).abs() < 1e-10);
+        assert!((bottom50 - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_wealth_concentration_small_population() {
+        // 10 persons with ascending wealth
+        let values: Vec<f64> = (1..=10).map(|x| x as f64 * 10.0).collect();
+        let sum: f64 = values.iter().sum(); // 550
+
+        let (top10, top1, bottom50) = calculate_wealth_concentration(&values, sum);
+
+        // Top 10% = top 1 person = 100, share = 100/550 ≈ 0.182
+        assert!((top10 - 0.1818).abs() < 0.01);
+
+        // Top 1% = top 1 person (ceil(10 * 0.01) = 1) = 100, share = 100/550 ≈ 0.182
+        assert!((top1 - 0.1818).abs() < 0.01);
+
+        // Bottom 50% = bottom 5 persons = 10+20+30+40+50 = 150, share = 150/550 ≈ 0.273
+        assert!((bottom50 - 0.2727).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_save_to_csv_summary() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check that summary file was created and contains expected content
+        let summary_path = format!("{}_summary.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&summary_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Metric,Value"));
+        assert!(contents.contains("Total Steps,10"));
+        assert!(contents.contains("Active Persons,5"));
+        assert!(contents.contains("Average Money,100"));
+        assert!(contents.contains("Gini Coefficient,0.2"));
+    }
+
+    #[test]
+    fn test_save_to_csv_money_distribution() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check money distribution file
+        let money_path = format!("{}_money.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&money_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Person_ID,Money"));
+        assert!(contents.contains("0,50."));
+        assert!(contents.contains("1,80."));
+        assert!(contents.contains("2,100."));
+        assert!(contents.contains("3,120."));
+        assert!(contents.contains("4,150."));
+    }
+
+    #[test]
+    fn test_save_to_csv_reputation_distribution() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check reputation distribution file
+        let reputation_path = format!("{}_reputation.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&reputation_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Person_ID,Reputation"));
+        assert!(contents.contains("0,0.95"));
+        assert!(contents.contains("2,1.0"));
+        assert!(contents.contains("4,1.1"));
+    }
+
+    #[test]
+    fn test_save_to_csv_price_history() {
+        let mut result = get_test_result();
+
+        // Add price history data (SkillId is String type)
+        let mut price_history = HashMap::new();
+        price_history.insert("Skill_0".to_string(), vec![10.0, 11.0, 12.0]);
+        price_history.insert("Skill_1".to_string(), vec![15.0, 14.5, 14.0]);
+        result.skill_price_history = price_history;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check price history file
+        let history_path = format!("{}_price_history.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&history_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Step,Skill_"));
+        assert!(contents.contains("0,10."));
+        assert!(contents.contains("1,11."));
+        assert!(contents.contains("2,12."));
+    }
+
+    #[test]
+    fn test_trade_volume_statistics() {
+        let result = get_test_result();
+
+        // Verify trade volume statistics are calculated correctly
+        assert_eq!(result.trade_volume_statistics.total_trades, 100);
+        assert_eq!(result.trade_volume_statistics.total_volume, 1000.0);
+        assert_eq!(result.trade_volume_statistics.avg_trades_per_step, 10.0);
+        assert_eq!(result.trade_volume_statistics.avg_volume_per_step, 100.0);
+        assert_eq!(result.trade_volume_statistics.avg_transaction_value, 10.0);
+        assert_eq!(result.trade_volume_statistics.min_trades_per_step, 5);
+        assert_eq!(result.trade_volume_statistics.max_trades_per_step, 15);
+    }
+
+    #[test]
+    fn test_save_to_csv_trade_volume() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Check trade volume file
+        let volume_path = format!("{}_trade_volume.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&volume_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("Step,Trades_Count,Volume_Exchanged"));
+        assert!(contents.contains("0,10,100."));
+        assert!(contents.contains("4,15,150."));
+        assert!(contents.contains("8,5,50."));
+    }
+
+    #[test]
+    fn test_herfindahl_index_empty() {
+        let values: Vec<f64> = vec![];
+        let hhi = calculate_herfindahl_index(&values);
+        assert_eq!(hhi, 0.0);
+    }
+
+    #[test]
+    fn test_herfindahl_index_monopoly() {
+        // One participant with everything = HHI of 10,000
+        let values = vec![100.0];
+        let hhi = calculate_herfindahl_index(&values);
+        assert!((hhi - 10000.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_perfect_equality() {
+        // 4 participants with 25% each = HHI of 2,500
+        let values = vec![25.0, 25.0, 25.0, 25.0];
+        let hhi = calculate_herfindahl_index(&values);
+        assert!((hhi - 2500.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_ten_equal() {
+        // 10 participants with 10% each = HHI of 1,000
+        let values = vec![10.0; 10];
+        let hhi = calculate_herfindahl_index(&values);
+        assert!((hhi - 1000.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_high_concentration() {
+        // One large player (60%) and 4 small players (10% each) = HHI of 4,000
+        let values = vec![60.0, 10.0, 10.0, 10.0, 10.0];
+        let hhi = calculate_herfindahl_index(&values);
+        // HHI = 60^2 + 10^2 + 10^2 + 10^2 + 10^2 = 3600 + 100 + 100 + 100 + 100 = 4000
+        assert!((hhi - 4000.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_moderate_concentration() {
+        // Moderate concentration
+        let values = vec![30.0, 25.0, 20.0, 15.0, 10.0];
+        let hhi = calculate_herfindahl_index(&values);
+        // HHI = 30^2 + 25^2 + 20^2 + 15^2 + 10^2 = 900 + 625 + 400 + 225 + 100 = 2250
+        assert!((hhi - 2250.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_low_concentration() {
+        // Many small players = low HHI
+        let values = vec![5.0; 20];
+        let hhi = calculate_herfindahl_index(&values);
+        // 20 participants with 5% each = HHI of 500
+        assert!((hhi - 500.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_herfindahl_index_zero_sum() {
+        // Zero total should return 0
+        let values = vec![0.0, 0.0, 0.0];
+        let hhi = calculate_herfindahl_index(&values);
+        assert_eq!(hhi, 0.0);
+    }
+
+    #[test]
+    fn test_money_stats_includes_hhi() {
+        // Test that calculate_money_stats includes HHI
+        let money = vec![25.0, 25.0, 25.0, 25.0];
+        let stats = calculate_money_stats(&money);
+        // Perfect equality: HHI should be 2500
+        assert!((stats.herfindahl_index - 2500.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_money_stats_hhi_monopoly() {
+        // One person has all money
+        let money = vec![0.0, 0.0, 0.0, 100.0];
+        let stats = calculate_money_stats(&money);
+        // Monopoly: HHI should be 10000
+        assert!((stats.herfindahl_index - 10000.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_trading_partner_statistics() {
+        use crate::person::{Strategy, Transaction, TransactionType};
+        use crate::skill::Skill;
+        use crate::Entity;
+
+        // Create test entities with transaction histories
+        let mut entities = vec![];
+
+        // Create persons with skills
+        for i in 0..5 {
+            let skill = Skill::new(format!("Skill{}", i), 10.0);
+            let location = crate::person::Location::new(50.0, 50.0);
+            entities.push(Entity::new(
+                i,
+                100.0,
+                vec![skill],
+                Strategy::Balanced,
+                location,
+            ));
+        }
+
+        // Add transactions to simulate trades
+        // Person 0 buys from Person 1 three times
+        for _ in 0..3 {
+            entities[0]
+                .person_data
+                .transaction_history
+                .push(Transaction {
+                    step: 1,
+                    skill_id: "Skill1".to_string(),
+                    transaction_type: TransactionType::Buy,
+                    amount: 10.0,
+                    counterparty_id: Some(1),
+                });
+        }
+
+        // Person 1 sells to Person 0 three times
+        for _ in 0..3 {
+            entities[1]
+                .person_data
+                .transaction_history
+                .push(Transaction {
+                    step: 1,
+                    skill_id: "Skill0".to_string(),
+                    transaction_type: TransactionType::Sell,
+                    amount: 10.0,
+                    counterparty_id: Some(0),
+                });
+        }
+
+        // Person 2 buys from Person 3 once
+        entities[2]
+            .person_data
+            .transaction_history
+            .push(Transaction {
+                step: 1,
+                skill_id: "Skill3".to_string(),
+                transaction_type: TransactionType::Buy,
+                amount: 15.0,
+                counterparty_id: Some(3),
+            });
+
+        // Person 3 sells to Person 2 once
+        entities[3]
+            .person_data
+            .transaction_history
+            .push(Transaction {
+                step: 1,
+                skill_id: "Skill2".to_string(),
+                transaction_type: TransactionType::Sell,
+                amount: 15.0,
+                counterparty_id: Some(2),
+            });
+
+        // Calculate trading partner statistics
+        let stats = calculate_trading_partner_statistics(&entities);
+
+        // Verify per-person statistics
+        assert_eq!(stats.per_person.len(), 5);
+
+        // Person 0: 1 unique partner, 3 trades as buyer, 0 as seller
+        let person0_stats = stats.per_person.iter().find(|s| s.person_id == 0).unwrap();
+        assert_eq!(person0_stats.unique_partners, 1);
+        assert_eq!(person0_stats.total_trades_as_buyer, 3);
+        assert_eq!(person0_stats.total_trades_as_seller, 0);
+        assert_eq!(person0_stats.top_partners.len(), 1);
+        assert_eq!(person0_stats.top_partners[0].partner_id, 1);
+        assert_eq!(person0_stats.top_partners[0].trade_count, 3);
+        assert!((person0_stats.top_partners[0].total_value - 30.0).abs() < 0.01);
+
+        // Person 1: 1 unique partner, 0 trades as buyer, 3 as seller
+        let person1_stats = stats.per_person.iter().find(|s| s.person_id == 1).unwrap();
+        assert_eq!(person1_stats.unique_partners, 1);
+        assert_eq!(person1_stats.total_trades_as_buyer, 0);
+        assert_eq!(person1_stats.total_trades_as_seller, 3);
+
+        // Person 4: no trades
+        let person4_stats = stats.per_person.iter().find(|s| s.person_id == 4).unwrap();
+        assert_eq!(person4_stats.unique_partners, 0);
+        assert_eq!(person4_stats.total_trades_as_buyer, 0);
+        assert_eq!(person4_stats.total_trades_as_seller, 0);
+
+        // Verify network metrics
+        // Average unique partners = (1 + 1 + 1 + 1 + 0) / 5 = 0.8
+        assert!((stats.network_metrics.avg_unique_partners - 0.8).abs() < 0.01);
+
+        // Network density = 2 unique pairs / 10 possible pairs = 0.2
+        // Possible pairs for 5 persons = 5 * 4 / 2 = 10
+        // Unique pairs: (0,1) and (2,3)
+        assert!((stats.network_metrics.network_density - 0.2).abs() < 0.01);
+
+        // Most active pair should be (0, 1) with 6 trades (3 buy + 3 sell)
+        let most_active = stats.network_metrics.most_active_pair.unwrap();
+        assert_eq!(most_active.0, 0);
+        assert_eq!(most_active.1, 1);
+        assert_eq!(most_active.2, 6); // 3 from person 0 + 3 from person 1
+    }
+}
