@@ -243,6 +243,12 @@ struct Args {
     /// Only used when --enable-loans is set
     #[arg(long)]
     min_money_to_lend: Option<f64>,
+
+    /// Number of groups/organizations to create in the simulation
+    /// When set, persons are assigned to groups for collective behavior analysis
+    /// Valid range: 1 to number of persons
+    #[arg(long)]
+    num_groups: Option<usize>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -392,6 +398,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(min_money) = args.min_money_to_lend {
             cfg.min_money_to_lend = min_money;
         }
+        if let Some(num_groups) = args.num_groups {
+            cfg.num_groups = Some(num_groups);
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -499,6 +508,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(min_money) = args.min_money_to_lend {
                 cfg.min_money_to_lend = min_money;
             }
+            if let Some(num_groups) = args.num_groups {
+                cfg.num_groups = Some(num_groups);
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -599,6 +611,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             enable_friendships: SimulationConfig::default().enable_friendships,
             friendship_probability: SimulationConfig::default().friendship_probability,
             friendship_discount: SimulationConfig::default().friendship_discount,
+            num_groups: args.num_groups,
         }
     };
 

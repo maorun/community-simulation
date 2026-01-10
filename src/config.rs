@@ -436,6 +436,15 @@ pub struct SimulationConfig {
     /// Default: 0.1 (10% discount for friends)
     #[serde(default = "default_friendship_discount")]
     pub friendship_discount: f64,
+
+    /// Number of groups/organizations to create in the simulation.
+    ///
+    /// When set, persons are assigned to groups in a round-robin fashion at initialization.
+    /// Groups enable analysis of collective behavior and group-based economic dynamics.
+    /// Set to None to disable group assignment (default).
+    /// Valid range: 1 to entity_count
+    #[serde(default)]
+    pub num_groups: Option<usize>,
 }
 
 fn default_seasonal_period() -> usize {
@@ -570,6 +579,7 @@ impl Default for SimulationConfig {
             enable_friendships: false,            // Disabled by default
             friendship_probability: 0.1,          // 10% chance per trade
             friendship_discount: 0.1,             // 10% discount for friends
+            num_groups: None,                     // No groups by default
         }
     }
 }
@@ -866,6 +876,22 @@ impl SimulationConfig {
             }
         }
 
+        // Group system validation
+        if let Some(num_groups) = self.num_groups {
+            if num_groups == 0 {
+                return Err(SimulationError::ValidationError(
+                    "num_groups must be at least 1 when specified".to_string(),
+                ));
+            }
+
+            if num_groups > self.entity_count {
+                return Err(SimulationError::ValidationError(format!(
+                    "num_groups ({}) cannot exceed entity_count ({})",
+                    num_groups, self.entity_count
+                )));
+            }
+        }
+
         Ok(())
     }
 
@@ -933,6 +959,7 @@ impl SimulationConfig {
                 enable_friendships: false,
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
+                num_groups: None,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -980,6 +1007,7 @@ impl SimulationConfig {
                 enable_friendships: false,
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
+                num_groups: None,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -1027,6 +1055,7 @@ impl SimulationConfig {
                 enable_friendships: false,
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
+                num_groups: None,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -1074,6 +1103,7 @@ impl SimulationConfig {
                 enable_friendships: false,
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
+                num_groups: None,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -1121,6 +1151,7 @@ impl SimulationConfig {
                 enable_friendships: false,
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
+                num_groups: None,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -1168,6 +1199,7 @@ impl SimulationConfig {
                 enable_friendships: false,
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
+                num_groups: None,
             },
         }
     }

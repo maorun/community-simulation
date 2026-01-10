@@ -255,6 +255,14 @@ impl SimulationEngine {
             entities.push(entity);
         }
 
+        // Assign groups if configured
+        if let Some(num_groups) = config.num_groups {
+            for (i, entity) in entities.iter_mut().enumerate() {
+                // Round-robin group assignment
+                entity.person_data.group_id = Some(i % num_groups);
+            }
+        }
+
         entities
     }
 
@@ -1062,6 +1070,77 @@ impl SimulationEngine {
                     max_friends,
                     min_friends,
                     network_density,
+                })
+            } else {
+                None
+            },
+            group_statistics: if self.config.num_groups.is_some() {
+                // Calculate group statistics
+                let num_groups = self.config.num_groups.unwrap();
+                let mut group_data: HashMap<usize, Vec<&Entity>> = HashMap::new();
+
+                // Group entities by group_id
+                for entity in self.entities.iter().filter(|e| e.active) {
+                    if let Some(group_id) = entity.person_data.group_id {
+                        group_data.entry(group_id).or_default().push(entity);
+                    }
+                }
+
+                // Calculate stats for each group
+                let mut groups_stats = Vec::new();
+                for group_id in 0..num_groups {
+                    if let Some(members) = group_data.get(&group_id) {
+                        let member_count = members.len();
+                        let total_money: f64 = members.iter().map(|e| e.person_data.money).sum();
+                        let avg_money = if member_count > 0 {
+                            total_money / member_count as f64
+                        } else {
+                            0.0
+                        };
+                        let avg_reputation: f64 = if member_count > 0 {
+                            members
+                                .iter()
+                                .map(|e| e.person_data.reputation)
+                                .sum::<f64>()
+                                / member_count as f64
+                        } else {
+                            0.0
+                        };
+
+                        groups_stats.push(crate::result::SingleGroupStats {
+                            group_id,
+                            member_count,
+                            avg_money,
+                            total_money,
+                            avg_reputation,
+                        });
+                    } else {
+                        // Empty group
+                        groups_stats.push(crate::result::SingleGroupStats {
+                            group_id,
+                            member_count: 0,
+                            avg_money: 0.0,
+                            total_money: 0.0,
+                            avg_reputation: 0.0,
+                        });
+                    }
+                }
+
+                let group_sizes: Vec<usize> = groups_stats.iter().map(|g| g.member_count).collect();
+                let min_group_size = group_sizes.iter().min().copied().unwrap_or(0);
+                let max_group_size = group_sizes.iter().max().copied().unwrap_or(0);
+                let avg_group_size = if num_groups > 0 {
+                    group_sizes.iter().sum::<usize>() as f64 / num_groups as f64
+                } else {
+                    0.0
+                };
+
+                Some(crate::result::GroupStats {
+                    total_groups: num_groups,
+                    avg_group_size,
+                    min_group_size,
+                    max_group_size,
+                    groups: groups_stats,
                 })
             } else {
                 None

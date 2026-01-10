@@ -1276,4 +1276,248 @@ mod integration_tests {
         assert_eq!(result.total_steps, 50);
         assert_eq!(result.active_persons, 10);
     }
+
+    /// Test group assignment and statistics
+    #[test]
+    fn test_group_assignment_and_statistics() {
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            num_groups: Some(5), // 5 groups with 20 persons = 4 persons per group
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify group statistics are present
+        assert!(
+            result.group_statistics.is_some(),
+            "Group statistics should be present when groups are configured"
+        );
+
+        let group_stats = result.group_statistics.unwrap();
+
+        // Verify total groups
+        assert_eq!(
+            group_stats.total_groups, 5,
+            "Should have 5 groups as configured"
+        );
+
+        // Verify average group size
+        assert_eq!(
+            group_stats.avg_group_size, 4.0,
+            "Average group size should be 4 (20 persons / 5 groups)"
+        );
+
+        // Verify individual group data
+        assert_eq!(
+            group_stats.groups.len(),
+            5,
+            "Should have stats for 5 groups"
+        );
+
+        // Check that all groups have the expected number of members (round-robin distribution)
+        for (i, group) in group_stats.groups.iter().enumerate() {
+            assert_eq!(group.group_id, i, "Group {} should have correct ID", i);
+            assert_eq!(group.member_count, 4, "Group {} should have 4 members", i);
+            // Money can be negative in simulations with aggressive strategies/loans
+            // so we just check that stats are calculated (not NaN)
+            assert!(
+                !group.avg_money.is_nan(),
+                "Group {} should have valid average money",
+                i
+            );
+            assert!(
+                !group.total_money.is_nan(),
+                "Group {} should have valid total money",
+                i
+            );
+            assert!(
+                group.avg_reputation > 0.0,
+                "Group {} should have positive average reputation",
+                i
+            );
+        }
+
+        // Verify group sizes
+        assert_eq!(group_stats.min_group_size, 4);
+        assert_eq!(group_stats.max_group_size, 4);
+    }
+
+    /// Test that groups are disabled by default
+    #[test]
+    fn test_groups_disabled_by_default() {
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 50,
+            ..Default::default()
+        };
+
+        assert!(
+            config.num_groups.is_none(),
+            "Groups should be disabled by default"
+        );
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify no group statistics when groups are not configured
+        assert!(
+            result.group_statistics.is_none(),
+            "Group statistics should not be present when groups are not configured"
+        );
+    }
+
+    /// Test group assignment with uneven distribution
+    #[test]
+    fn test_group_uneven_distribution() {
+        let config = SimulationConfig {
+            entity_count: 23,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            num_groups: Some(5), // 5 groups with 23 persons = uneven distribution
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        let group_stats = result
+            .group_statistics
+            .expect("Group statistics should be present");
+
+        // With 23 persons and 5 groups, using round-robin:
+        // Groups 0, 1, 2 get 5 members each (first 3 groups get extra person)
+        // Groups 3, 4 get 4 members each
+        // Total: 5 + 5 + 5 + 4 + 4 = 23 ✓
+
+        let member_counts: Vec<usize> = group_stats.groups.iter().map(|g| g.member_count).collect();
+
+        // Verify total member count is correct
+        let total_members: usize = member_counts.iter().sum();
+        assert_eq!(
+            total_members, 23,
+            "Total members across all groups should be 23"
+        );
+
+        // Verify min and max group sizes
+        assert_eq!(
+            group_stats.min_group_size, 4,
+            "Minimum group size should be 4"
+        );
+        assert_eq!(
+            group_stats.max_group_size, 5,
+            "Maximum group size should be 5"
+        );
+
+        // Verify average group size
+        let expected_avg = 23.0 / 5.0; // 4.6
+        assert!(
+            (group_stats.avg_group_size - expected_avg).abs() < 0.01,
+            "Average group size should be close to 4.6"
+        );
+    }
+
+    /// Test validation: num_groups cannot be zero
+    #[test]
+    fn test_group_validation_zero() {
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 50,
+            num_groups: Some(0), // Invalid: zero groups
+            ..Default::default()
+        };
+
+        let result = config.validate();
+        assert!(result.is_err(), "Validation should fail for zero groups");
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("num_groups must be at least 1"),
+            "Error message should mention minimum groups"
+        );
+    }
+
+    /// Test validation: num_groups cannot exceed entity_count
+    #[test]
+    fn test_group_validation_exceeds_persons() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            num_groups: Some(15), // Invalid: more groups than persons
+            ..Default::default()
+        };
+
+        let result = config.validate();
+        assert!(
+            result.is_err(),
+            "Validation should fail when groups exceed persons"
+        );
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("num_groups (15) cannot exceed entity_count (10)"),
+            "Error message should mention the constraint"
+        );
+    }
+
+    /// Test single group (all persons in one group)
+    #[test]
+    fn test_single_group() {
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 50,
+            num_groups: Some(1), // Single group
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        let group_stats = result
+            .group_statistics
+            .expect("Group statistics should be present");
+
+        assert_eq!(group_stats.total_groups, 1);
+        assert_eq!(group_stats.groups[0].member_count, 20);
+        assert_eq!(group_stats.min_group_size, 20);
+        assert_eq!(group_stats.max_group_size, 20);
+        assert_eq!(group_stats.avg_group_size, 20.0);
+    }
+
+    /// Test one group per person (maximum granularity)
+    #[test]
+    fn test_one_group_per_person() {
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            num_groups: Some(10), // One group per person
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        let group_stats = result
+            .group_statistics
+            .expect("Group statistics should be present");
+
+        assert_eq!(group_stats.total_groups, 10);
+        assert_eq!(group_stats.avg_group_size, 1.0);
+        assert_eq!(group_stats.min_group_size, 1);
+        assert_eq!(group_stats.max_group_size, 1);
+
+        // Each group should have exactly 1 member
+        for group in &group_stats.groups {
+            assert_eq!(group.member_count, 1);
+        }
+    }
 }
