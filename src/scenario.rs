@@ -41,7 +41,7 @@ mod tests {
 
     #[test]
     fn test_original_price_updater_price_increase() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::Original));
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, PriceUpdater::from(Scenario::Original));
         market.price_elasticity_factor = 0.1;
         market.volatility_percentage = 0.0; // Disable volatility for predictable test
 
@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_original_price_updater_price_decrease() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::Original));
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, PriceUpdater::from(Scenario::Original));
         market.price_elasticity_factor = 0.1;
         market.volatility_percentage = 0.0; // Disable volatility for predictable test
 
@@ -83,7 +83,13 @@ mod tests {
 
     #[test]
     fn test_dynamic_pricing_updater_price_increase() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::DynamicPricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::DynamicPricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 50.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -99,7 +105,13 @@ mod tests {
 
     #[test]
     fn test_dynamic_pricing_updater_price_decrease() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::DynamicPricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::DynamicPricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 50.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -114,7 +126,13 @@ mod tests {
 
     #[test]
     fn test_dynamic_pricing_updater_price_clamp() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::DynamicPricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::DynamicPricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 1.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -129,7 +147,13 @@ mod tests {
 
     #[test]
     fn test_adaptive_pricing_updater_price_increase() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AdaptivePricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::AdaptivePricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 50.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -147,7 +171,13 @@ mod tests {
 
     #[test]
     fn test_adaptive_pricing_updater_price_decrease() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AdaptivePricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::AdaptivePricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 50.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -164,7 +194,13 @@ mod tests {
 
     #[test]
     fn test_adaptive_pricing_updater_smooth_adjustment() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AdaptivePricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::AdaptivePricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 50.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -186,7 +222,13 @@ mod tests {
 
     #[test]
     fn test_adaptive_pricing_updater_price_clamp() {
-        let mut market = Market::new(1.0, 1.0, PriceUpdater::from(Scenario::AdaptivePricing));
+        let mut market = Market::new(
+            1.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::AdaptivePricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 1.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -202,7 +244,13 @@ mod tests {
 
     #[test]
     fn test_auction_pricing_competitive_demand() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AuctionPricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::AuctionPricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 50.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -223,7 +271,13 @@ mod tests {
 
     #[test]
     fn test_auction_pricing_no_demand() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AuctionPricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::AuctionPricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 50.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -244,7 +298,13 @@ mod tests {
 
     #[test]
     fn test_auction_pricing_low_demand() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AuctionPricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::AuctionPricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 50.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);
@@ -266,7 +326,13 @@ mod tests {
 
     #[test]
     fn test_auction_pricing_price_clamp() {
-        let mut market = Market::new(10.0, 1.0, PriceUpdater::from(Scenario::AuctionPricing));
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.02,
+            PriceUpdater::from(Scenario::AuctionPricing),
+        );
         let skill = Skill::new("Test Skill".to_string(), 1.0);
         let skill_id = skill.id.clone();
         market.add_skill(skill);

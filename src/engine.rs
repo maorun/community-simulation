@@ -129,6 +129,8 @@ impl SimulationEngine {
         let mut market = Market::new(
             config.base_skill_price,
             config.min_skill_price,
+            config.price_elasticity_factor,
+            config.volatility_percentage,
             price_updater.clone(),
         );
 
@@ -142,6 +144,8 @@ impl SimulationEngine {
             let mut bm = Market::new(
                 config.base_skill_price * config.black_market_price_multiplier,
                 config.min_skill_price * config.black_market_price_multiplier,
+                config.price_elasticity_factor,
+                config.volatility_percentage,
                 price_updater,
             );
             // Add all skills to black market with adjusted prices
