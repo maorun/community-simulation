@@ -6,6 +6,37 @@ use std::collections::HashSet;
 pub type PersonId = usize;
 pub type UrgencyLevel = u8; // Define UrgencyLevel (e.g., 1-3, higher is more urgent)
 
+/// Represents a 2D location in the economic simulation.
+///
+/// Locations are used to model geographic distance between persons,
+/// which can affect trade costs. Coordinates are in arbitrary units
+/// (typically 0.0-100.0 range).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Location {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Location {
+    /// Creates a new location at the given coordinates.
+    pub fn new(x: f64, y: f64) -> Self {
+        Location { x, y }
+    }
+
+    /// Calculates the Euclidean distance to another location.
+    ///
+    /// # Arguments
+    /// * `other` - The other location to calculate distance to
+    ///
+    /// # Returns
+    /// The Euclidean distance as a non-negative float
+    pub fn distance_to(&self, other: &Location) -> f64 {
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
+        (dx * dx + dy * dy).sqrt()
+    }
+}
+
 /// Defines different behavioral strategies for agents in the simulation.
 /// Each strategy affects how aggressively a person spends money on needed skills.
 ///
@@ -118,6 +149,9 @@ pub struct Person {
     /// Enables analysis of collective behavior and group-based statistics.
     /// None indicates no group membership.
     pub group_id: Option<usize>,
+    /// Geographic location of this person in 2D space.
+    /// Used for calculating distance-based trade costs when enabled.
+    pub location: Location,
 }
 
 impl Person {
@@ -128,11 +162,13 @@ impl Person {
     /// * `initial_money` - Starting money amount
     /// * `own_skills` - Vector of skills this person can provide
     /// * `strategy` - Behavioral strategy for spending decisions
+    /// * `location` - Geographic location of this person
     pub fn new(
         id: PersonId,
         initial_money: f64,
         own_skills: Vec<Skill>,
         strategy: Strategy,
+        location: Location,
     ) -> Self {
         Person {
             id,
@@ -149,6 +185,7 @@ impl Person {
             learned_skills: Vec::new(), // Start with no learned skills
             friends: HashSet::new(),    // Start with no friends
             group_id: None,             // Start with no group assignment
+            location,
         }
     }
 
@@ -322,17 +359,22 @@ mod tests {
     use super::*;
     use crate::skill::Skill;
 
+    // Helper function for tests - creates a default test location
+    fn test_location() -> Location {
+        Location::new(50.0, 50.0)
+    }
+
     #[test]
     fn test_person_reputation_initialization() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
         assert_eq!(person.reputation, 1.0, "Reputation should start at 1.0");
     }
 
     #[test]
     fn test_increase_reputation_as_seller() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
 
         person.increase_reputation_as_seller();
         assert_eq!(
@@ -350,7 +392,7 @@ mod tests {
     #[test]
     fn test_increase_reputation_as_buyer() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
 
         person.increase_reputation_as_buyer();
         assert_eq!(
@@ -368,7 +410,7 @@ mod tests {
     #[test]
     fn test_reputation_decay_above_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
         person.reputation = 1.5;
 
         person.apply_reputation_decay();
@@ -389,7 +431,7 @@ mod tests {
     #[test]
     fn test_reputation_decay_below_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
         person.reputation = 0.5;
 
         person.apply_reputation_decay();
@@ -410,7 +452,7 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
         let multiplier = person.reputation_price_multiplier();
         assert_eq!(
             multiplier, 1.0,
@@ -421,7 +463,7 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_high() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
         person.reputation = 2.0; // Maximum reputation
 
         let multiplier = person.reputation_price_multiplier();
@@ -431,7 +473,7 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_low() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
         person.reputation = 0.5;
 
         let multiplier = person.reputation_price_multiplier();
@@ -447,7 +489,7 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_clamping() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
 
         // Test extreme high reputation
         person.reputation = 10.0;
@@ -463,7 +505,7 @@ mod tests {
     #[test]
     fn test_savings_basic() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
 
         // Test 10% savings rate
         let saved = person.apply_savings(0.1);
@@ -487,7 +529,7 @@ mod tests {
     #[test]
     fn test_savings_zero_rate() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
 
         let saved = person.apply_savings(0.0);
         assert_eq!(saved, 0.0, "Should save nothing with 0% rate");
@@ -498,7 +540,7 @@ mod tests {
     #[test]
     fn test_savings_negative_money() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, -10.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, -10.0, vec![skill], Strategy::default(), test_location());
 
         let saved = person.apply_savings(0.1);
         assert_eq!(saved, 0.0, "Should not save with negative money");
@@ -509,7 +551,7 @@ mod tests {
     #[test]
     fn test_savings_full_amount() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default());
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
 
         let saved = person.apply_savings(1.0);
         assert_eq!(saved, 100.0, "Should save 100% (all money)");
@@ -533,7 +575,13 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_conservative() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Conservative);
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Conservative,
+            test_location(),
+        );
 
         // Conservative has 0.7x multiplier, so with $100 can afford up to $70
         assert!(person.can_afford_with_strategy(70.0));
@@ -545,7 +593,7 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_balanced() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Balanced);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
 
         // Balanced has 1.0x multiplier, so with $100 can afford up to $100
         assert!(person.can_afford_with_strategy(100.0));
@@ -556,7 +604,7 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_aggressive() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive, test_location());
 
         // Aggressive has 1.3x multiplier, so with $100 can afford up to $130
         assert!(person.can_afford_with_strategy(130.0));
@@ -567,7 +615,7 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_frugal() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Frugal);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::Frugal, test_location());
 
         // Frugal has 0.5x multiplier, so with $100 can afford up to $50
         assert!(person.can_afford_with_strategy(50.0));
@@ -579,7 +627,7 @@ mod tests {
     #[test]
     fn test_person_has_strategy_field() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive, test_location());
 
         assert_eq!(person.strategy, Strategy::Aggressive);
     }
@@ -587,7 +635,13 @@ mod tests {
     #[test]
     fn test_learn_skill_success() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+        );
 
         let new_skill = Skill::new("NewSkill".to_string(), 15.0);
         let learning_cost = 30.0;
@@ -610,7 +664,13 @@ mod tests {
     #[test]
     fn test_learn_skill_cannot_afford() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 50.0, vec![own_skill], Strategy::default());
+        let mut person = Person::new(
+            1,
+            50.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+        );
 
         let new_skill = Skill::new("ExpensiveSkill".to_string(), 15.0);
         let learning_cost = 100.0; // More than person has
@@ -629,7 +689,13 @@ mod tests {
     #[test]
     fn test_learn_skill_already_has_as_own_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![own_skill.clone()], Strategy::default());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill.clone()],
+            Strategy::default(),
+            test_location(),
+        );
 
         let learning_cost = 30.0;
         let result = person.learn_skill(own_skill, learning_cost);
@@ -649,7 +715,13 @@ mod tests {
     #[test]
     fn test_learn_skill_already_learned() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+        );
 
         let new_skill = Skill::new("NewSkill".to_string(), 15.0);
         let learning_cost = 20.0;
@@ -676,7 +748,13 @@ mod tests {
     #[test]
     fn test_has_skill_with_own_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+        );
 
         assert!(
             person.has_skill(&"OwnSkill".to_string()),
@@ -691,7 +769,13 @@ mod tests {
     #[test]
     fn test_has_skill_with_learned_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+        );
 
         let learned_skill = Skill::new("LearnedSkill".to_string(), 15.0);
         person.learn_skill(learned_skill, 30.0);
@@ -709,7 +793,13 @@ mod tests {
     #[test]
     fn test_all_skills() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![own_skill], Strategy::default());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+        );
 
         let learned_skill1 = Skill::new("LearnedSkill1".to_string(), 15.0);
         let learned_skill2 = Skill::new("LearnedSkill2".to_string(), 20.0);

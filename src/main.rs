@@ -250,6 +250,13 @@ struct Args {
     #[arg(long)]
     num_groups: Option<usize>,
 
+    /// Distance cost multiplier for geographic trade costs (0.0-1.0, e.g., 0.01 = 1% cost per distance unit)
+    /// Controls the impact of geographic distance on trade costs
+    /// final_cost = base_cost * (1 + distance * distance_cost_factor)
+    /// Set to 0.0 to disable distance-based costs (default)
+    #[arg(long)]
+    distance_cost_factor: Option<f64>,
+
     /// Price elasticity factor (0.0-1.0) controlling sensitivity to supply/demand imbalances
     /// Higher values = more volatile prices, Lower values = more stable prices
     /// Default: 0.1 (10% price adjustment per unit imbalance)
@@ -529,6 +536,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(num_groups) = args.num_groups {
                 cfg.num_groups = Some(num_groups);
             }
+            if let Some(distance_cost_factor) = args.distance_cost_factor {
+                cfg.distance_cost_factor = distance_cost_factor;
+            }
             if let Some(price_elasticity) = args.price_elasticity {
                 cfg.price_elasticity_factor = price_elasticity;
             }
@@ -636,6 +646,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             friendship_probability: SimulationConfig::default().friendship_probability,
             friendship_discount: SimulationConfig::default().friendship_discount,
             num_groups: args.num_groups,
+            distance_cost_factor: args
+                .distance_cost_factor
+                .unwrap_or(SimulationConfig::default().distance_cost_factor),
             price_elasticity_factor: args
                 .price_elasticity
                 .unwrap_or(SimulationConfig::default().price_elasticity_factor),
