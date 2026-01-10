@@ -10,11 +10,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Soziale Netzwerke und Beziehungen
 
-#### 3.1 Kooperativen und Gilden
-- **Beschreibung**: Personen können Organisationen bilden
-- **Nutzen**: Kollektives Verhalten untersuchen
-- **Implementierung**: Neue `Organization` Struktur
-
 ### 4. Erweiterte Szenarien
 
 #### 4.1 Geografische Komponente
