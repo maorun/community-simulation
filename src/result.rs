@@ -265,6 +265,37 @@ pub struct FriendshipStats {
     pub network_density: f64,
 }
 
+/// Statistics for a single group/organization
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SingleGroupStats {
+    /// Group identifier
+    pub group_id: usize,
+    /// Number of persons in this group
+    pub member_count: usize,
+    /// Average money of group members
+    pub avg_money: f64,
+    /// Total money held by group members
+    pub total_money: f64,
+    /// Average reputation of group members
+    pub avg_reputation: f64,
+}
+
+/// Statistics about group/organization system
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GroupStats {
+    /// Total number of groups in the simulation
+    pub total_groups: usize,
+    /// Average group size (members per group)
+    pub avg_group_size: f64,
+    /// Minimum group size
+    pub min_group_size: usize,
+    /// Maximum group size
+    pub max_group_size: usize,
+    /// Statistics for each individual group
+    pub groups: Vec<SingleGroupStats>,
+}
+
+
 /// Information about a trading partner relationship
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PartnerInfo {
@@ -390,6 +421,10 @@ pub struct SimulationResult {
     /// Friendship system statistics (only present if friendships are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub friendship_statistics: Option<FriendshipStats>,
+
+    /// Group/organization statistics (only present if groups are configured)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_statistics: Option<GroupStats>,
 
     /// Trading partner statistics showing network relationships and trading patterns
     pub trading_partner_statistics: TradingPartnerStats,

@@ -114,6 +114,10 @@ pub struct Person {
     /// Set of person IDs who are friends with this person.
     /// Friends receive price discounts when trading with each other.
     pub friends: HashSet<PersonId>,
+    /// Optional group/organization ID this person belongs to.
+    /// Enables analysis of collective behavior and group-based statistics.
+    /// None indicates no group membership.
+    pub group_id: Option<usize>,
 }
 
 impl Person {
@@ -144,6 +148,7 @@ impl Person {
             strategy,
             learned_skills: Vec::new(), // Start with no learned skills
             friends: HashSet::new(),    // Start with no friends
+            group_id: None,              // Start with no group assignment
         }
     }
 
