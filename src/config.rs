@@ -950,6 +950,21 @@ impl SimulationConfig {
             }
         }
 
+        // Distance cost factor validation
+        if self.distance_cost_factor.is_sign_negative() {
+            return Err(SimulationError::ValidationError(format!(
+                "distance_cost_factor must be non-negative, got: {}",
+                self.distance_cost_factor
+            )));
+        }
+
+        if self.distance_cost_factor >= 1.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "distance_cost_factor must be less than 1.0 ({}), values >= 1.0 (100%+ cost increase per distance unit) are unrealistic. Recommended range: 0.0-0.1",
+                self.distance_cost_factor
+            )));
+        }
+
         // Market dynamics parameter validation
         if self.price_elasticity_factor.is_sign_negative() {
             return Err(SimulationError::ValidationError(format!(

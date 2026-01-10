@@ -1554,12 +1554,6 @@ mod integration_tests {
         assert_eq!(result_with.total_steps, 50);
         assert_eq!(result_without.total_steps, 50);
 
-        // With distance costs, trade volume might be lower due to higher costs
-        // This is probabilistic but should generally hold with the same seed
-        // We just verify both produce valid results
-        assert!(result_with.trade_volume_statistics.total_trades >= 0);
-        assert!(result_without.trade_volume_statistics.total_trades >= 0);
-
         // Money should be conserved in both (minus any transaction fees/taxes)
         let total_with: f64 = result_with.final_money_distribution.iter().sum();
         let total_without: f64 = result_without.final_money_distribution.iter().sum();
@@ -1588,5 +1582,37 @@ mod integration_tests {
         // Simulation should complete normally
         assert_eq!(result.total_steps, 10);
         assert_eq!(result.active_persons, 5);
+    }
+
+    /// Test validation of distance_cost_factor parameter
+    #[test]
+    fn test_distance_cost_factor_validation() {
+        // Valid values should pass
+        let valid_config = SimulationConfig {
+            distance_cost_factor: 0.05,
+            ..Default::default()
+        };
+        assert!(valid_config.validate().is_ok());
+
+        // Negative values should fail
+        let negative_config = SimulationConfig {
+            distance_cost_factor: -0.1,
+            ..Default::default()
+        };
+        assert!(negative_config.validate().is_err());
+
+        // Values above 1.0 should fail
+        let too_large_config = SimulationConfig {
+            distance_cost_factor: 1.5,
+            ..Default::default()
+        };
+        assert!(too_large_config.validate().is_err());
+
+        // Exactly 1.0 should fail (unrealistic)
+        let max_config = SimulationConfig {
+            distance_cost_factor: 1.0,
+            ..Default::default()
+        };
+        assert!(max_config.validate().is_err());
     }
 }
