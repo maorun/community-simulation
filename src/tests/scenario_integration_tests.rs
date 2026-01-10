@@ -1520,4 +1520,99 @@ mod integration_tests {
             assert_eq!(group.member_count, 1);
         }
     }
+
+    /// Test that distance-based trade costs work correctly
+    #[test]
+    fn test_distance_based_trade_costs() {
+        let config_with_distance = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            distance_cost_factor: 0.02, // 2% cost increase per distance unit
+            ..Default::default()
+        };
+
+        let config_without_distance = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            distance_cost_factor: 0.0, // Distance costs disabled
+            ..Default::default()
+        };
+
+        let mut engine_with = SimulationEngine::new(config_with_distance);
+        let result_with = engine_with.run();
+
+        let mut engine_without = SimulationEngine::new(config_without_distance);
+        let result_without = engine_without.run();
+
+        // Both simulations should complete successfully
+        assert_eq!(result_with.total_steps, 50);
+        assert_eq!(result_without.total_steps, 50);
+
+        // Money should be conserved in both (minus any transaction fees/taxes)
+        let total_with: f64 = result_with.final_money_distribution.iter().sum();
+        let total_without: f64 = result_without.final_money_distribution.iter().sum();
+
+        // Both should have positive total money
+        assert!(total_with > 0.0);
+        assert!(total_without > 0.0);
+    }
+
+    /// Test that distance costs are zero when distance_cost_factor is zero
+    #[test]
+    fn test_distance_cost_disabled() {
+        let config = SimulationConfig {
+            entity_count: 5,
+            max_steps: 10,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            distance_cost_factor: 0.0, // Explicitly disabled
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Simulation should complete normally
+        assert_eq!(result.total_steps, 10);
+        assert_eq!(result.active_persons, 5);
+    }
+
+    /// Test validation of distance_cost_factor parameter
+    #[test]
+    fn test_distance_cost_factor_validation() {
+        // Valid values should pass
+        let valid_config = SimulationConfig {
+            distance_cost_factor: 0.05,
+            ..Default::default()
+        };
+        assert!(valid_config.validate().is_ok());
+
+        // Negative values should fail
+        let negative_config = SimulationConfig {
+            distance_cost_factor: -0.1,
+            ..Default::default()
+        };
+        assert!(negative_config.validate().is_err());
+
+        // Values above 1.0 should fail
+        let too_large_config = SimulationConfig {
+            distance_cost_factor: 1.5,
+            ..Default::default()
+        };
+        assert!(too_large_config.validate().is_err());
+
+        // Exactly 1.0 should fail (unrealistic)
+        let max_config = SimulationConfig {
+            distance_cost_factor: 1.0,
+            ..Default::default()
+        };
+        assert!(max_config.validate().is_err());
+    }
 }

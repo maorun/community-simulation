@@ -5,6 +5,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 ## Features
 
 - **Agent-Based Simulation:** Simulates individual persons with money, unique skills, and randomly generated needs for other skills.
+- **Geographic Locations:** Each person has a 2D location (x, y coordinates) in a virtual space. When enabled via `--distance-cost-factor`, trade costs increase based on the Euclidean distance between buyer and seller, simulating transportation costs and geographic barriers to trade. The distance multiplier is applied as: `final_cost = base_cost * (1 + distance * distance_cost_factor)`. For example, with a factor of 0.01 and a distance of 50 units, costs increase by 50%. Location data is included in JSON output for spatial economic analysis.
 - **Multiple Skills Per Person:** Each person can possess and offer multiple skills in the market, creating more realistic labor dynamics with skill redundancy and competition. Configurable via `--skills-per-person` parameter (default: 1). When set to values > 1, skills are distributed across persons using a round-robin approach, allowing multiple providers per skill and more complex market interactions.
 - **Multiple Pricing Scenarios:** Choose from different market price mechanisms to study their effects:
   - **Original** (default): Supply/demand-based pricing with random volatility - prices adjust based on the ratio of buyers to sellers

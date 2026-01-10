@@ -12,11 +12,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Erweiterte Szenarien
 
-#### 4.1 Geografische Komponente
-- **Beschreibung**: Personen haben Standorte, Handel kostet je nach Entfernung
-- **Nutzen**: Räumliche Wirtschaftsdynamiken
-- **Implementierung**: `Location` Struktur und Distanzberechnung
-
 ### 5. Visualisierung und Analyse
 
 #### 5.1 Interaktive Grafiken

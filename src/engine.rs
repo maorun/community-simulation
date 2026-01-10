@@ -217,7 +217,7 @@ impl SimulationEngine {
     // This is the version from feat/economic-simulation-model
     fn initialize_entities(
         config: &SimulationConfig,
-        _rng: &mut StdRng,
+        rng: &mut StdRng,
         market: &mut Market,
     ) -> Vec<Entity> {
         // Create all unique skills for the market (one per person)
@@ -255,7 +255,19 @@ impl SimulationEngine {
             let all_strategies = Strategy::all_variants();
             let strategy = all_strategies[i % all_strategies.len()];
 
-            let entity = Entity::new(i, config.initial_money_per_person, person_skills, strategy);
+            // Generate random location in 0.0-100.0 range for both x and y
+            let location = crate::person::Location::new(
+                rng.random_range(0.0..=100.0),
+                rng.random_range(0.0..=100.0),
+            );
+
+            let entity = Entity::new(
+                i,
+                config.initial_money_per_person,
+                person_skills,
+                strategy,
+                location,
+            );
             entities.push(entity);
         }
 
@@ -1422,6 +1434,26 @@ impl SimulationEngine {
                                     self.config.friendship_discount * 100.0
                                 );
                             }
+                        }
+                    }
+
+                    // Apply distance-based cost multiplier if enabled
+                    if self.config.distance_cost_factor > 0.0 {
+                        if let Some(seller_id) = seller_id_opt {
+                            let buyer_location = &self.entities[buyer_idx].person_data.location;
+                            let seller_location = &self.entities[seller_id].person_data.location;
+                            let distance = buyer_location.distance_to(seller_location);
+                            let distance_multiplier =
+                                1.0 + (distance * self.config.distance_cost_factor);
+                            final_price *= distance_multiplier;
+                            trace!(
+                                "Distance cost applied: Person {} to Person {} distance {:.2}, price increased by {:.1}% to ${:.2}",
+                                self.entities[buyer_idx].id,
+                                self.entities[seller_id].id,
+                                distance,
+                                (distance_multiplier - 1.0) * 100.0,
+                                final_price
+                            );
                         }
                     }
 

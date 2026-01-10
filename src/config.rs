@@ -446,6 +446,18 @@ pub struct SimulationConfig {
     #[serde(default)]
     pub num_groups: Option<usize>,
 
+    /// Distance cost multiplier for geographic trade costs (0.0 = disabled).
+    ///
+    /// Controls the impact of geographic distance on trade costs.
+    /// When set to a positive value, trade costs increase based on the Euclidean distance
+    /// between buyer and seller locations: final_cost = base_cost * (1 + distance * distance_cost_factor)
+    /// For example, with distance_cost_factor = 0.01 and distance = 50 units,
+    /// the cost increases by 50% (1 + 50 * 0.01 = 1.5).
+    /// Set to 0.0 to disable distance-based costs (default).
+    /// Valid range: 0.0 to 1.0 (0% to 100% per distance unit)
+    #[serde(default)]
+    pub distance_cost_factor: f64,
+
     /// Price elasticity factor controlling sensitivity to supply/demand imbalances.
     ///
     /// This factor determines how dramatically prices change when supply doesn't match demand.
@@ -623,6 +635,7 @@ impl Default for SimulationConfig {
             friendship_probability: 0.1,          // 10% chance per trade
             friendship_discount: 0.1,             // 10% discount for friends
             num_groups: None,                     // No groups by default
+            distance_cost_factor: 0.0,            // Disabled by default
             price_elasticity_factor: 0.1,         // 10% price adjustment per unit imbalance
             volatility_percentage: 0.02,          // ±2% random price variation
         }
@@ -937,6 +950,21 @@ impl SimulationConfig {
             }
         }
 
+        // Distance cost factor validation
+        if self.distance_cost_factor.is_sign_negative() {
+            return Err(SimulationError::ValidationError(format!(
+                "distance_cost_factor must be non-negative, got: {}",
+                self.distance_cost_factor
+            )));
+        }
+
+        if self.distance_cost_factor >= 1.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "distance_cost_factor must be less than 1.0 ({}), values >= 1.0 (100%+ cost increase per distance unit) are unrealistic. Recommended range: 0.0-0.1",
+                self.distance_cost_factor
+            )));
+        }
+
         // Market dynamics parameter validation
         if self.price_elasticity_factor.is_sign_negative() {
             return Err(SimulationError::ValidationError(format!(
@@ -1034,6 +1062,7 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
             },
@@ -1084,6 +1113,7 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
             },
@@ -1134,6 +1164,7 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.15, // Higher volatility for crisis scenario
                 volatility_percentage: 0.05,   // More chaotic market
             },
@@ -1184,6 +1215,7 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.15, // More responsive for inflation
                 volatility_percentage: 0.04,   // Higher volatility for inflation
             },
@@ -1234,6 +1266,7 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.08, // Lower elasticity for stable tech growth
                 volatility_percentage: 0.01,   // Lower volatility for stable growth
             },
@@ -1284,6 +1317,7 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
             },

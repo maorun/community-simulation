@@ -22,10 +22,11 @@ pub type EntityId = usize;
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::{Entity, Skill, Strategy};
+/// use simulation_framework::{Entity, Skill, Strategy, Location};
 ///
 /// let skill = Skill::new("Programming".to_string(), 50.0);
-/// let entity = Entity::new(0, 100.0, vec![skill], Strategy::Balanced);
+/// let location = Location::new(25.0, 75.0);
+/// let entity = Entity::new(0, 100.0, vec![skill], Strategy::Balanced, location);
 ///
 /// assert_eq!(entity.id, 0);
 /// assert_eq!(entity.get_money(), 100.0);
@@ -54,14 +55,16 @@ impl Entity {
     /// * `initial_money` - Starting money amount for the person
     /// * `own_skills` - The skills this person can provide to others
     /// * `strategy` - Behavioral strategy for spending decisions
+    /// * `location` - Geographic location of this entity
     ///
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::{Entity, Skill, Strategy};
+    /// use simulation_framework::{Entity, Skill, Strategy, Location};
     ///
     /// let skill = Skill::new("Accounting".to_string(), 45.0);
-    /// let entity = Entity::new(1, 200.0, vec![skill], Strategy::Balanced);
+    /// let location = Location::new(50.0, 50.0);
+    /// let entity = Entity::new(1, 200.0, vec![skill], Strategy::Balanced, location);
     ///
     /// assert_eq!(entity.id, 1);
     /// assert_eq!(entity.person_data.money, 200.0);
@@ -71,8 +74,15 @@ impl Entity {
         initial_money: f64,
         own_skills: Vec<Skill>,
         strategy: Strategy,
+        location: crate::person::Location,
     ) -> Self {
-        let person = Person::new(id as InnerPersonId, initial_money, own_skills, strategy);
+        let person = Person::new(
+            id as InnerPersonId,
+            initial_money,
+            own_skills,
+            strategy,
+            location,
+        );
         Self {
             id,
             person_data: person,
@@ -89,10 +99,11 @@ impl Entity {
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::{Entity, Skill, Strategy};
+    /// use simulation_framework::{Entity, Skill, Strategy, Location};
     ///
     /// let skill = Skill::new("Writing".to_string(), 30.0);
-    /// let entity = Entity::new(0, 150.0, vec![skill], Strategy::Balanced);
+    /// let location = Location::new(10.0, 20.0);
+    /// let entity = Entity::new(0, 150.0, vec![skill], Strategy::Balanced, location);
     ///
     /// assert_eq!(entity.get_money(), 150.0);
     /// ```
