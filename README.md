@@ -181,6 +181,31 @@ The simulation accepts the following CLI arguments:
         *   `DynamicPricing` - Sales-based pricing. If a skill is sold, its price increases by 5%; if not sold, it decreases by 5%. This creates rapid price adjustments based on immediate market feedback.
         *   `AdaptivePricing` - Gradual adaptive pricing using exponential moving average. Prices smoothly converge toward targets based on sales activity (±10% targets with 20% learning rate). This creates more stable price movements than DynamicPricing while still responding to market conditions.
     *   Example: `--scenario AdaptivePricing`
+*   `--price-elasticity <FACTOR>`:
+    *   Price elasticity factor controlling sensitivity to supply/demand imbalances (0.0-1.0, default: 0.1). This determines how dramatically prices change when supply doesn't match demand. Higher values create more volatile markets with rapid price swings, while lower values create more price stability but slower market adjustment.
+    *   **Interpretation:**
+        *   `0.05` - Very inelastic, stable prices (similar to utilities, healthcare, essentials)
+        *   `0.1` - Moderate elasticity (default, balanced markets)
+        *   `0.2` - High elasticity, volatile prices (similar to fashion, tech products, luxury goods)
+    *   **Use cases:**
+        *   Model different types of markets with varying price responsiveness
+        *   Study how elasticity affects market convergence and stability
+        *   Compare outcomes between rigid (regulated) and flexible (free) markets
+        *   Test economic resilience to supply/demand shocks
+    *   Example: `--price-elasticity 0.15` for moderately responsive markets
+*   `--volatility <PERCENTAGE>`:
+    *   Volatility percentage for random price fluctuations (0.0-0.5, default: 0.02). Adds random noise to prices each simulation step to model unpredictable market forces, news events, sentiment changes, and other real-world uncertainties. The value represents the range of random variation as a percentage of the current price.
+    *   **Interpretation:**
+        *   `0.0` - No volatility, completely deterministic price evolution
+        *   `0.02` - Low volatility (default, stable markets like bonds, blue-chip stocks)
+        *   `0.05` - Moderate volatility (typical commodities, mid-cap stocks)
+        *   `0.1` - High volatility (cryptocurrency, speculative assets, emerging markets)
+    *   **Use cases:**
+        *   Simulate different levels of market uncertainty and risk
+        *   Study how volatility affects wealth distribution and economic stability
+        *   Model crisis scenarios with high market chaos
+        *   Test the robustness of economic policies under uncertain conditions
+    *   Example: `--volatility 0.08` for a highly volatile market environment
 *   `--demand-strategy <STRATEGY>`:
     *   Specifies the demand generation strategy. This determines how many skills each person needs per simulation step.
     *   Available strategies:
