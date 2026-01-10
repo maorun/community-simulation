@@ -1,0 +1,37 @@
+[package]
+name = "simulation-framework-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serde_yaml = "0.9"
+toml = "0.9"
+
+[dependencies.simulation-framework]
+path = ".."
+
+[[bin]]
+name = "fuzz_config_yaml"
+path = "fuzz_targets/fuzz_config_yaml.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_config_toml"
+path = "fuzz_targets/fuzz_config_toml.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_simulation_init"
+path = "fuzz_targets/fuzz_simulation_init.rs"
+test = false
+doc = false
+bench = false

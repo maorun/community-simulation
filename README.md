@@ -902,6 +902,44 @@ The CI pipeline enforces code quality through:
 
 All PRs must pass these checks before merging, ensuring consistent code style and quality across the project.
 
+### Fuzz Testing
+
+The project includes fuzz testing to find edge cases, crashes, and security vulnerabilities through automated random input generation. Fuzz tests use `cargo-fuzz` and require the Rust nightly toolchain.
+
+**Quick Start:**
+
+```bash
+# Install nightly toolchain (if not already installed)
+rustup toolchain install nightly
+
+# Install cargo-fuzz
+cargo install cargo-fuzz
+
+# Run a fuzz target for 60 seconds
+cargo +nightly fuzz run fuzz_config_yaml -- -max_total_time=60
+```
+
+**Available Fuzz Targets:**
+
+1. **fuzz_config_yaml**: Tests YAML configuration parsing robustness
+2. **fuzz_config_toml**: Tests TOML configuration parsing robustness  
+3. **fuzz_simulation_init**: Tests simulation engine initialization with arbitrary numeric inputs
+
+**Documentation:**
+
+For detailed information on running fuzz tests, interpreting results, and adding new fuzz targets, see [`fuzz/FUZZ_TESTING.md`](fuzz/FUZZ_TESTING.md).
+
+**Why Fuzz Testing?**
+
+Fuzz testing automatically discovers:
+- Crashes and panics from unexpected inputs
+- Edge cases not covered by traditional tests
+- Security vulnerabilities (buffer overflows, integer overflows, etc.)
+- Input validation issues
+- Robustness problems with malformed configuration files
+
+Run fuzzing regularly (especially before releases) to catch potential issues early.
+
 ## Output Format (`results.json`)
 
 The JSON output file contains a comprehensive summary of the simulation, including:

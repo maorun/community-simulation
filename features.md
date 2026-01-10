@@ -118,13 +118,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Governance-Mechanismen testen
 - **Implementierung**: `VotingSystem` Modul
 
-## 🔐 Sicherheit und Stabilität
-
-### 1. Fuzz Testing
-- **Beschreibung**: Automatisches Testen mit zufälligen Inputs
-- **Nutzen**: Edge-Cases finden
-- **Technologie**: `cargo-fuzz`
-
 ## 🎯 Priorisierung
 
 ### Mittlere Priorität (Mehrwert)
