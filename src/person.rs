@@ -365,6 +365,48 @@ mod tests {
     }
 
     #[test]
+    fn test_location_creation() {
+        let loc = Location::new(10.0, 20.0);
+        assert_eq!(loc.x, 10.0);
+        assert_eq!(loc.y, 20.0);
+    }
+
+    #[test]
+    fn test_location_distance_same_location() {
+        let loc1 = Location::new(50.0, 50.0);
+        let loc2 = Location::new(50.0, 50.0);
+        assert_eq!(loc1.distance_to(&loc2), 0.0);
+    }
+
+    #[test]
+    fn test_location_distance_horizontal() {
+        let loc1 = Location::new(0.0, 0.0);
+        let loc2 = Location::new(3.0, 0.0);
+        assert_eq!(loc1.distance_to(&loc2), 3.0);
+    }
+
+    #[test]
+    fn test_location_distance_vertical() {
+        let loc1 = Location::new(0.0, 0.0);
+        let loc2 = Location::new(0.0, 4.0);
+        assert_eq!(loc1.distance_to(&loc2), 4.0);
+    }
+
+    #[test]
+    fn test_location_distance_diagonal() {
+        let loc1 = Location::new(0.0, 0.0);
+        let loc2 = Location::new(3.0, 4.0);
+        assert_eq!(loc1.distance_to(&loc2), 5.0); // 3-4-5 triangle
+    }
+
+    #[test]
+    fn test_location_distance_symmetric() {
+        let loc1 = Location::new(10.0, 20.0);
+        let loc2 = Location::new(30.0, 40.0);
+        assert_eq!(loc1.distance_to(&loc2), loc2.distance_to(&loc1));
+    }
+
+    #[test]
     fn test_person_reputation_initialization() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
