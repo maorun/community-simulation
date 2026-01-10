@@ -249,6 +249,18 @@ struct Args {
     /// Valid range: 1 to number of persons
     #[arg(long)]
     num_groups: Option<usize>,
+
+    /// Price elasticity factor (0.0-1.0) controlling sensitivity to supply/demand imbalances
+    /// Higher values = more volatile prices, Lower values = more stable prices
+    /// Default: 0.1 (10% price adjustment per unit imbalance)
+    #[arg(long)]
+    price_elasticity: Option<f64>,
+
+    /// Volatility percentage (0.0-0.5) for random price fluctuations each step
+    /// Simulates unpredictable market forces and sentiment changes
+    /// Default: 0.02 (±2% random variation)
+    #[arg(long)]
+    volatility: Option<f64>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -401,6 +413,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(num_groups) = args.num_groups {
             cfg.num_groups = Some(num_groups);
         }
+        if let Some(price_elasticity) = args.price_elasticity {
+            cfg.price_elasticity_factor = price_elasticity;
+        }
+        if let Some(volatility) = args.volatility {
+            cfg.volatility_percentage = volatility;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -511,6 +529,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(num_groups) = args.num_groups {
                 cfg.num_groups = Some(num_groups);
             }
+            if let Some(price_elasticity) = args.price_elasticity {
+                cfg.price_elasticity_factor = price_elasticity;
+            }
+            if let Some(volatility) = args.volatility {
+                cfg.volatility_percentage = volatility;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -612,6 +636,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             friendship_probability: SimulationConfig::default().friendship_probability,
             friendship_discount: SimulationConfig::default().friendship_discount,
             num_groups: args.num_groups,
+            price_elasticity_factor: args
+                .price_elasticity
+                .unwrap_or(SimulationConfig::default().price_elasticity_factor),
+            volatility_percentage: args
+                .volatility
+                .unwrap_or(SimulationConfig::default().volatility_percentage),
         }
     };
 

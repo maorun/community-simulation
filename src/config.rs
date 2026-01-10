@@ -445,6 +445,41 @@ pub struct SimulationConfig {
     /// Valid range: 1 to entity_count
     #[serde(default)]
     pub num_groups: Option<usize>,
+
+    /// Price elasticity factor controlling sensitivity to supply/demand imbalances.
+    ///
+    /// This factor determines how dramatically prices change when supply doesn't match demand.
+    /// Higher values mean prices are more responsive to market forces, potentially leading to
+    /// more volatile markets. Lower values create more price stability but slower market adjustment.
+    ///
+    /// Typical range: 0.05-0.2
+    /// - 0.05: Very inelastic, stable prices (like utilities, healthcare)
+    /// - 0.1: Moderate elasticity (default, balanced markets)
+    /// - 0.2: High elasticity, volatile prices (like fashion, tech)
+    ///
+    /// Default: 0.1 (10% price adjustment per unit supply/demand imbalance)
+    /// Valid range: 0.0-1.0
+    #[serde(default = "default_price_elasticity_factor")]
+    pub price_elasticity_factor: f64,
+
+    /// Volatility percentage for random price fluctuations.
+    ///
+    /// Adds random noise to prices each simulation step to model unpredictable market forces,
+    /// news events, sentiment changes, and other real-world uncertainties. The value represents
+    /// the range of random variation as a percentage of the current price.
+    ///
+    /// For example, 0.02 means prices can randomly vary by ±2% each step.
+    ///
+    /// Typical range: 0.0-0.1
+    /// - 0.0: No volatility, deterministic price evolution
+    /// - 0.02: Low volatility (default, stable markets)
+    /// - 0.05: Moderate volatility (normal commodities)
+    /// - 0.1: High volatility (cryptocurrency, speculative assets)
+    ///
+    /// Default: 0.02 (±2% random variation)
+    /// Valid range: 0.0-0.5
+    #[serde(default = "default_volatility_percentage")]
+    pub volatility_percentage: f64,
 }
 
 fn default_seasonal_period() -> usize {
@@ -493,6 +528,14 @@ fn default_black_market_price_multiplier() -> f64 {
 
 fn default_black_market_participation_rate() -> f64 {
     0.2 // 20% of trades use black market
+}
+
+fn default_price_elasticity_factor() -> f64 {
+    0.1 // 10% price adjustment per unit supply/demand imbalance
+}
+
+fn default_volatility_percentage() -> f64 {
+    0.02 // ±2% random price variation per step
 }
 
 fn default_max_contract_duration() -> usize {
@@ -580,6 +623,8 @@ impl Default for SimulationConfig {
             friendship_probability: 0.1,          // 10% chance per trade
             friendship_discount: 0.1,             // 10% discount for friends
             num_groups: None,                     // No groups by default
+            price_elasticity_factor: 0.1,         // 10% price adjustment per unit imbalance
+            volatility_percentage: 0.02,          // ±2% random price variation
         }
     }
 }
@@ -892,6 +937,35 @@ impl SimulationConfig {
             }
         }
 
+        // Market dynamics parameter validation
+        if self.price_elasticity_factor.is_sign_negative() {
+            return Err(SimulationError::ValidationError(format!(
+                "price_elasticity_factor must be non-negative, got: {}",
+                self.price_elasticity_factor
+            )));
+        }
+
+        if self.price_elasticity_factor > 1.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "price_elasticity_factor should not exceed 1.0 (100% adjustment), got: {}",
+                self.price_elasticity_factor
+            )));
+        }
+
+        if self.volatility_percentage.is_sign_negative() {
+            return Err(SimulationError::ValidationError(format!(
+                "volatility_percentage must be non-negative, got: {}",
+                self.volatility_percentage
+            )));
+        }
+
+        if self.volatility_percentage > 0.5 {
+            return Err(SimulationError::ValidationError(format!(
+                "volatility_percentage should not exceed 0.5 (50% variation), got: {}",
+                self.volatility_percentage
+            )));
+        }
+
         Ok(())
     }
 
@@ -960,6 +1034,8 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                price_elasticity_factor: 0.1,
+                volatility_percentage: 0.02,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -1008,6 +1084,8 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                price_elasticity_factor: 0.1,
+                volatility_percentage: 0.02,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -1056,6 +1134,8 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                price_elasticity_factor: 0.15, // Higher volatility for crisis scenario
+                volatility_percentage: 0.05,   // More chaotic market
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -1104,6 +1184,8 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                price_elasticity_factor: 0.15, // More responsive for inflation
+                volatility_percentage: 0.04,   // Higher volatility for inflation
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -1152,6 +1234,8 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                price_elasticity_factor: 0.08, // Lower elasticity for stable tech growth
+                volatility_percentage: 0.01,   // Lower volatility for stable growth
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -1200,6 +1284,8 @@ impl SimulationConfig {
                 friendship_probability: 0.1,
                 friendship_discount: 0.1,
                 num_groups: None,
+                price_elasticity_factor: 0.1,
+                volatility_percentage: 0.02,
             },
         }
     }
@@ -1743,5 +1829,111 @@ scenario: Original
             ..Default::default()
         };
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_price_elasticity_negative() {
+        let config = SimulationConfig {
+            price_elasticity_factor: -0.1,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("price_elasticity_factor must be non-negative"));
+    }
+
+    #[test]
+    fn test_validate_price_elasticity_too_high() {
+        let config = SimulationConfig {
+            price_elasticity_factor: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("price_elasticity_factor should not exceed 1.0"));
+    }
+
+    #[test]
+    fn test_validate_price_elasticity_valid_range() {
+        // Test various valid values
+        let test_values = vec![0.0, 0.05, 0.1, 0.2, 0.5, 1.0];
+        for value in test_values {
+            let config = SimulationConfig {
+                price_elasticity_factor: value,
+                ..Default::default()
+            };
+            assert!(
+                config.validate().is_ok(),
+                "Failed for elasticity value: {}",
+                value
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_volatility_negative() {
+        let config = SimulationConfig {
+            volatility_percentage: -0.01,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("volatility_percentage must be non-negative"));
+    }
+
+    #[test]
+    fn test_validate_volatility_too_high() {
+        let config = SimulationConfig {
+            volatility_percentage: 0.6,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("volatility_percentage should not exceed 0.5"));
+    }
+
+    #[test]
+    fn test_validate_volatility_valid_range() {
+        // Test various valid values
+        let test_values = vec![0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5];
+        for value in test_values {
+            let config = SimulationConfig {
+                volatility_percentage: value,
+                ..Default::default()
+            };
+            assert!(
+                config.validate().is_ok(),
+                "Failed for volatility value: {}",
+                value
+            );
+        }
+    }
+
+    #[test]
+    fn test_market_dynamics_defaults() {
+        let config = SimulationConfig::default();
+        assert_eq!(config.price_elasticity_factor, 0.1);
+        assert_eq!(config.volatility_percentage, 0.02);
+    }
+
+    #[test]
+    fn test_market_dynamics_in_presets() {
+        // Test that crisis scenario has higher volatility
+        let crisis_config = SimulationConfig::from_preset(PresetName::CrisisScenario);
+        assert_eq!(crisis_config.price_elasticity_factor, 0.15);
+        assert_eq!(crisis_config.volatility_percentage, 0.05);
+
+        // Test that tech growth has lower volatility
+        let tech_config = SimulationConfig::from_preset(PresetName::TechGrowth);
+        assert_eq!(tech_config.price_elasticity_factor, 0.08);
+        assert_eq!(tech_config.volatility_percentage, 0.01);
     }
 }

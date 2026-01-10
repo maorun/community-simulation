@@ -45,7 +45,7 @@ struct MarketStatsCache {
 /// use simulation_framework::scenario::{PriceUpdater, Scenario};
 ///
 /// let price_updater = PriceUpdater::from(Scenario::Original);
-/// let mut market = Market::new(10.0, 1.0, price_updater);
+/// let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
 ///
 /// let skill = Skill::new("Programming".to_string(), 50.0);
 /// market.add_skill(skill);
@@ -118,6 +118,8 @@ impl Market {
     ///
     /// * `base_skill_price` - Initial/reference price for skills
     /// * `min_skill_price` - Minimum allowed price floor for skills
+    /// * `price_elasticity_factor` - Sensitivity to supply/demand imbalances (0.0-1.0)
+    /// * `volatility_percentage` - Random price fluctuation percentage (0.0-0.5)
     /// * `price_updater` - Strategy to use for updating prices
     ///
     /// # Examples
@@ -127,16 +129,22 @@ impl Market {
     /// use simulation_framework::scenario::{PriceUpdater, Scenario};
     ///
     /// let updater = PriceUpdater::from(Scenario::Original);
-    /// let market = Market::new(10.0, 1.0, updater);
+    /// let market = Market::new(10.0, 1.0, 0.1, 0.02, updater);
     /// ```
-    pub fn new(base_skill_price: f64, min_skill_price: f64, price_updater: PriceUpdater) -> Self {
+    pub fn new(
+        base_skill_price: f64,
+        min_skill_price: f64,
+        price_elasticity_factor: f64,
+        volatility_percentage: f64,
+        price_updater: PriceUpdater,
+    ) -> Self {
         Market {
             skills: HashMap::new(),
             demand_counts: HashMap::new(),
             supply_counts: HashMap::new(),
             base_skill_price,
-            price_elasticity_factor: 0.1,
-            volatility_percentage: 0.02,
+            price_elasticity_factor,
+            volatility_percentage,
             min_skill_price,
             max_skill_price: 1000.0,
             skill_price_history: HashMap::new(),
@@ -351,7 +359,7 @@ mod tests {
     #[test]
     fn test_cache_average_price() {
         let price_updater = PriceUpdater::from(Scenario::Original);
-        let mut market = Market::new(10.0, 1.0, price_updater);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
 
         // Add some skills with different prices
         let skill1 = Skill::new("Programming".to_string(), 50.0);
@@ -377,7 +385,7 @@ mod tests {
     #[test]
     fn test_cache_invalidation_on_price_update() {
         let price_updater = PriceUpdater::from(Scenario::Original);
-        let mut market = Market::new(10.0, 1.0, price_updater);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
 
         // Add skills
         let skill = Skill::new("Programming".to_string(), 50.0);
@@ -398,7 +406,7 @@ mod tests {
     #[test]
     fn test_cache_total_market_value() {
         let price_updater = PriceUpdater::from(Scenario::Original);
-        let mut market = Market::new(10.0, 1.0, price_updater);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
 
         // Add skills
         let skill1 = Skill::new("Skill1".to_string(), 15.0);
@@ -421,7 +429,7 @@ mod tests {
     #[test]
     fn test_cache_price_range() {
         let price_updater = PriceUpdater::from(Scenario::Original);
-        let mut market = Market::new(10.0, 1.0, price_updater);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
 
         // Add skills with different prices
         let skill1 = Skill::new("Expensive".to_string(), 100.0);
@@ -450,7 +458,7 @@ mod tests {
     #[test]
     fn test_empty_market_statistics() {
         let price_updater = PriceUpdater::from(Scenario::Original);
-        let mut market = Market::new(10.0, 1.0, price_updater);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
 
         // Test empty market
         let avg = market.get_average_price();
@@ -467,7 +475,7 @@ mod tests {
     #[test]
     fn test_cache_consistency_after_multiple_invalidations() {
         let price_updater = PriceUpdater::from(Scenario::Original);
-        let mut market = Market::new(10.0, 1.0, price_updater);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
 
         let skill = Skill::new("TestSkill".to_string(), 30.0);
         market.add_skill(skill);
