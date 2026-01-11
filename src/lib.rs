@@ -68,6 +68,7 @@
 //! - [`loan`] - Loan system for credit between persons
 //! - [`market`] - Market mechanisms and price dynamics
 //! - [`person`] - Person agents, transactions, and behavior
+//! - [`replay`] - Action logging and simulation replay for debugging
 //! - [`result`] - Simulation results, statistics, and output formatting
 //! - [`scenario`] - Price update strategies for different simulation scenarios
 //! - [`skill`] - Skill definitions and generation
@@ -83,6 +84,7 @@ pub mod market;
 pub mod parameter_sweep;
 pub mod person;
 // pub mod physics; // Removed
+pub mod replay;
 pub mod result;
 pub mod scenario;
 pub mod scenario_comparison;
@@ -98,6 +100,7 @@ pub use loan::{Loan, LoanId};
 pub use market::Market;
 pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
 pub use person::{Location, Person, PersonId, Strategy, Transaction, TransactionType};
+pub use replay::{ActionLog, SimulationAction};
 pub use result::{
     calculate_statistics, calculate_wealth_concentration, write_step_to_stream, ContractStats,
     MonteCarloResult, MonteCarloStats, SimulationResult, StepData,

@@ -50,6 +50,18 @@ pub enum SimulationError {
 
     /// Error occurred while serializing JSON output
     JsonSerialize(String),
+
+    /// Error occurred while writing action log file
+    ActionLogWrite(io::Error),
+
+    /// Error occurred while reading action log file
+    ActionLogRead(io::Error),
+
+    /// Error occurred while serializing action log
+    ActionLogSerialize(serde_json::Error),
+
+    /// Error occurred while deserializing action log
+    ActionLogDeserialize(serde_json::Error),
 }
 
 impl fmt::Display for SimulationError {
@@ -80,6 +92,18 @@ impl fmt::Display for SimulationError {
             SimulationError::JsonSerialize(msg) => {
                 write!(f, "Failed to serialize JSON: {}", msg)
             }
+            SimulationError::ActionLogWrite(e) => {
+                write!(f, "Failed to write action log file: {}", e)
+            }
+            SimulationError::ActionLogRead(e) => {
+                write!(f, "Failed to read action log file: {}", e)
+            }
+            SimulationError::ActionLogSerialize(e) => {
+                write!(f, "Failed to serialize action log: {}", e)
+            }
+            SimulationError::ActionLogDeserialize(e) => {
+                write!(f, "Failed to deserialize action log: {}", e)
+            }
         }
     }
 }
@@ -87,7 +111,13 @@ impl fmt::Display for SimulationError {
 impl StdError for SimulationError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            SimulationError::ConfigFileRead(e) | SimulationError::IoError(e) => Some(e),
+            SimulationError::ConfigFileRead(e)
+            | SimulationError::IoError(e)
+            | SimulationError::ActionLogWrite(e)
+            | SimulationError::ActionLogRead(e) => Some(e),
+            SimulationError::ActionLogSerialize(e) | SimulationError::ActionLogDeserialize(e) => {
+                Some(e)
+            }
             _ => None,
         }
     }
