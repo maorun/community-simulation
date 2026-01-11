@@ -341,6 +341,44 @@ pub struct TradingPartnerStats {
     pub network_metrics: NetworkMetrics,
 }
 
+/// Node (person) in the trading network graph
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkNode {
+    /// Unique identifier for the person
+    pub id: String,
+    /// Current money balance
+    pub money: f64,
+    /// Reputation score
+    pub reputation: f64,
+    /// Total number of trades (as buyer + seller)
+    pub trade_count: usize,
+    /// Number of unique trading partners
+    pub unique_partners: usize,
+}
+
+/// Edge (trading relationship) in the trading network graph
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkEdge {
+    /// Source person ID
+    pub source: String,
+    /// Target person ID
+    pub target: String,
+    /// Number of trades between these persons
+    pub weight: usize,
+    /// Total money exchanged between these persons
+    pub total_value: f64,
+}
+
+/// Complete trading network in graph format for visualization
+/// Compatible with vis.js, D3.js, NetworkX, Gephi, Cytoscape
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TradingNetworkData {
+    /// List of nodes (persons) in the network
+    pub nodes: Vec<NetworkNode>,
+    /// List of edges (trading relationships) in the network
+    pub edges: Vec<NetworkEdge>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     // Core simulation metrics
@@ -547,6 +585,8 @@ impl SimulationResult {
     /// - {path}_price_history.csv: Skill price history over time (if available)
     /// - {path}_wealth_stats_history.csv: Wealth distribution statistics over time (if available)
     /// - {path}_trade_volume.csv: Trade volume history over time
+    /// - {path}_network_nodes.csv: Trading network nodes (persons)
+    /// - {path}_network_edges.csv: Trading network edges (relationships)
     ///
     /// # Returns
     /// * `Result<()>` - Success or a SimulationError
@@ -578,6 +618,9 @@ impl SimulationResult {
 
         // Save trade volume history
         self.save_trade_volume_csv(&format!("{}_trade_volume.csv", path_prefix))?;
+
+        // Save trading network
+        self.save_trading_network_csv(path_prefix)?;
 
         Ok(())
     }
@@ -1223,6 +1266,193 @@ impl SimulationResult {
                 "skills available in JSON output.".dimmed()
             );
         }
+    }
+
+    /// Export the trading network as a graph structure suitable for visualization.
+    ///
+    /// Converts trading partner statistics into a graph format compatible with
+    /// popular visualization tools like vis.js, D3.js, NetworkX, Gephi, and Cytoscape.
+    ///
+    /// # Returns
+    /// * `TradingNetworkData` - Graph structure with nodes (persons) and edges (trading relationships)
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use simulation_framework::{SimulationEngine, SimulationConfig};
+    /// # let config = SimulationConfig::default();
+    /// # let mut engine = SimulationEngine::new(config);
+    /// # engine.run();
+    /// # let result = engine.build_result();
+    /// let network = result.export_trading_network();
+    /// // Network can now be serialized to JSON for visualization
+    /// let json = serde_json::to_string_pretty(&network).unwrap();
+    /// ```
+    pub fn export_trading_network(&self) -> TradingNetworkData {
+        use std::collections::HashMap;
+
+        // Build nodes from persons
+        let nodes: Vec<NetworkNode> = self
+            .trading_partner_statistics
+            .per_person
+            .iter()
+            .enumerate()
+            .map(|(idx, person_stats)| {
+                let person_id = person_stats.person_id;
+                let money = self
+                    .final_money_distribution
+                    .get(idx)
+                    .copied()
+                    .unwrap_or(0.0);
+                let reputation = self
+                    .final_reputation_distribution
+                    .get(idx)
+                    .copied()
+                    .unwrap_or(1.0);
+                let trade_count =
+                    person_stats.total_trades_as_buyer + person_stats.total_trades_as_seller;
+
+                NetworkNode {
+                    id: format!("Person{}", person_id),
+                    money,
+                    reputation,
+                    trade_count,
+                    unique_partners: person_stats.unique_partners,
+                }
+            })
+            .collect();
+
+        // Build edges from trading relationships
+        // Use a map to aggregate bidirectional trades into undirected edges
+        let mut edge_map: HashMap<(usize, usize), (usize, f64)> = HashMap::new();
+
+        for person_stats in &self.trading_partner_statistics.per_person {
+            let person_id = person_stats.person_id;
+            for partner in &person_stats.top_partners {
+                let partner_id = partner.partner_id;
+                // Create normalized pair (smaller ID first) for undirected edge
+                let edge_key = if person_id < partner_id {
+                    (person_id, partner_id)
+                } else {
+                    (partner_id, person_id)
+                };
+
+                // Aggregate trade count and value
+                let entry = edge_map.entry(edge_key).or_insert((0, 0.0));
+                entry.0 += partner.trade_count;
+                entry.1 += partner.total_value;
+            }
+        }
+
+        // Convert edge map to edge list
+        let edges: Vec<NetworkEdge> = edge_map
+            .into_iter()
+            .map(
+                |((source_id, target_id), (weight, total_value))| NetworkEdge {
+                    source: format!("Person{}", source_id),
+                    target: format!("Person{}", target_id),
+                    weight,
+                    total_value,
+                },
+            )
+            .collect();
+
+        TradingNetworkData { nodes, edges }
+    }
+
+    /// Save trading network to a JSON file in graph format.
+    ///
+    /// The exported JSON is compatible with visualization libraries like:
+    /// - vis.js (JavaScript network visualization)
+    /// - D3.js (force-directed graphs)
+    /// - NetworkX (Python network analysis) - use json.load()
+    /// - Gephi (import as JSON)
+    /// - Cytoscape (with appropriate plugins)
+    ///
+    /// # Arguments
+    /// * `path` - File path for the JSON output
+    ///
+    /// # Returns
+    /// * `Result<()>` - Success or error
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use simulation_framework::{SimulationEngine, SimulationConfig};
+    /// # let config = SimulationConfig::default();
+    /// # let mut engine = SimulationEngine::new(config);
+    /// # engine.run();
+    /// # let result = engine.build_result();
+    /// result.save_trading_network_json("network.json").unwrap();
+    /// ```
+    pub fn save_trading_network_json(&self, path: &str) -> Result<()> {
+        let network = self.export_trading_network();
+        let json = serde_json::to_string_pretty(&network)
+            .map_err(|e| SimulationError::JsonSerialize(e.to_string()))?;
+
+        let mut file = File::create(path)?;
+        file.write_all(json.as_bytes())?;
+        Ok(())
+    }
+
+    /// Save trading network to CSV files (nodes and edges).
+    ///
+    /// Creates two CSV files:
+    /// - {prefix}_network_nodes.csv: Person attributes (id, money, reputation, trade_count, unique_partners)
+    /// - {prefix}_network_edges.csv: Trading relationships (source, target, weight, total_value)
+    ///
+    /// These files are compatible with:
+    /// - Gephi (import nodes and edges separately)
+    /// - Cytoscape (import as network)
+    /// - NetworkX (read with nx.read_edgelist())
+    /// - igraph (read with read_graph())
+    /// - pandas/R (data frame analysis)
+    ///
+    /// # Arguments
+    /// * `path_prefix` - File path prefix (e.g., "output/network" creates "output/network_network_nodes.csv")
+    ///
+    /// # Returns
+    /// * `Result<()>` - Success or error
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use simulation_framework::{SimulationEngine, SimulationConfig};
+    /// # let config = SimulationConfig::default();
+    /// # let mut engine = SimulationEngine::new(config);
+    /// # engine.run();
+    /// # let result = engine.build_result();
+    /// result.save_trading_network_csv("results").unwrap();
+    /// // Creates: results_network_nodes.csv and results_network_edges.csv
+    /// ```
+    pub fn save_trading_network_csv(&self, path_prefix: &str) -> Result<()> {
+        let network = self.export_trading_network();
+
+        // Save nodes
+        let nodes_path = format!("{}_network_nodes.csv", path_prefix);
+        let mut nodes_file = File::create(&nodes_path)?;
+        writeln!(
+            nodes_file,
+            "id,money,reputation,trade_count,unique_partners"
+        )?;
+        for node in &network.nodes {
+            writeln!(
+                nodes_file,
+                "{},{:.4},{:.6},{},{}",
+                node.id, node.money, node.reputation, node.trade_count, node.unique_partners
+            )?;
+        }
+
+        // Save edges
+        let edges_path = format!("{}_network_edges.csv", path_prefix);
+        let mut edges_file = File::create(&edges_path)?;
+        writeln!(edges_file, "source,target,weight,total_value")?;
+        for edge in &network.edges {
+            writeln!(
+                edges_file,
+                "{},{},{},{:.4}",
+                edge.source, edge.target, edge.weight, edge.total_value
+            )?;
+        }
+
+        Ok(())
     }
 }
 
@@ -2512,5 +2742,186 @@ mod tests {
         assert_eq!(most_active.0, 0);
         assert_eq!(most_active.1, 1);
         assert_eq!(most_active.2, 6); // 3 from person 0 + 3 from person 1
+    }
+
+    #[test]
+    fn test_export_trading_network() {
+        // Create a test result with trading partner statistics
+        let mut result = get_test_result();
+
+        // Add some trading partner statistics
+        result.trading_partner_statistics = TradingPartnerStats {
+            per_person: vec![
+                PersonTradingStats {
+                    person_id: 0,
+                    unique_partners: 2,
+                    total_trades_as_buyer: 3,
+                    total_trades_as_seller: 1,
+                    top_partners: vec![
+                        PartnerInfo {
+                            partner_id: 1,
+                            trade_count: 2,
+                            total_value: 50.0,
+                        },
+                        PartnerInfo {
+                            partner_id: 2,
+                            trade_count: 2,
+                            total_value: 30.0,
+                        },
+                    ],
+                },
+                PersonTradingStats {
+                    person_id: 1,
+                    unique_partners: 1,
+                    total_trades_as_buyer: 1,
+                    total_trades_as_seller: 2,
+                    top_partners: vec![PartnerInfo {
+                        partner_id: 0,
+                        trade_count: 2,
+                        total_value: 50.0,
+                    }],
+                },
+                PersonTradingStats {
+                    person_id: 2,
+                    unique_partners: 1,
+                    total_trades_as_buyer: 2,
+                    total_trades_as_seller: 0,
+                    top_partners: vec![PartnerInfo {
+                        partner_id: 0,
+                        trade_count: 2,
+                        total_value: 30.0,
+                    }],
+                },
+            ],
+            network_metrics: NetworkMetrics {
+                avg_unique_partners: 1.33,
+                network_density: 0.3,
+                most_active_pair: Some((0, 1, 4)),
+            },
+        };
+
+        // Export the trading network
+        let network = result.export_trading_network();
+
+        // Verify nodes
+        assert_eq!(network.nodes.len(), 3);
+        assert_eq!(network.nodes[0].id, "Person0");
+        assert_eq!(network.nodes[0].money, 50.0);
+        assert_eq!(network.nodes[0].reputation, 0.95);
+        assert_eq!(network.nodes[0].trade_count, 4); // 3 as buyer + 1 as seller
+        assert_eq!(network.nodes[0].unique_partners, 2);
+
+        // Verify edges
+        assert_eq!(network.edges.len(), 2);
+
+        // Find edge between Person0 and Person1
+        let edge_0_1 = network
+            .edges
+            .iter()
+            .find(|e| {
+                (e.source == "Person0" && e.target == "Person1")
+                    || (e.source == "Person1" && e.target == "Person0")
+            })
+            .unwrap();
+        assert_eq!(edge_0_1.weight, 4); // 2 from each side
+        assert!((edge_0_1.total_value - 100.0).abs() < 0.01); // 50 + 50
+
+        // Find edge between Person0 and Person2
+        let edge_0_2 = network
+            .edges
+            .iter()
+            .find(|e| {
+                (e.source == "Person0" && e.target == "Person2")
+                    || (e.source == "Person2" && e.target == "Person0")
+            })
+            .unwrap();
+        assert_eq!(edge_0_2.weight, 4); // 2 from each side
+        assert!((edge_0_2.total_value - 60.0).abs() < 0.01); // 30 + 30
+    }
+
+    #[test]
+    fn test_save_trading_network_json() {
+        let mut result = get_test_result();
+        result.trading_partner_statistics = TradingPartnerStats {
+            per_person: vec![PersonTradingStats {
+                person_id: 0,
+                unique_partners: 1,
+                total_trades_as_buyer: 2,
+                total_trades_as_seller: 1,
+                top_partners: vec![PartnerInfo {
+                    partner_id: 1,
+                    trade_count: 3,
+                    total_value: 45.0,
+                }],
+            }],
+            network_metrics: NetworkMetrics {
+                avg_unique_partners: 1.0,
+                network_density: 0.5,
+                most_active_pair: Some((0, 1, 3)),
+            },
+        };
+
+        let file = NamedTempFile::new().unwrap();
+        let path = file.path().to_str().unwrap();
+
+        result.save_trading_network_json(path).unwrap();
+
+        let mut contents = String::new();
+        file.reopen()
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        assert!(contents.contains("\"nodes\""));
+        assert!(contents.contains("\"edges\""));
+        assert!(contents.contains("Person0"));
+    }
+
+    #[test]
+    fn test_save_trading_network_csv() {
+        let mut result = get_test_result();
+        result.trading_partner_statistics = TradingPartnerStats {
+            per_person: vec![PersonTradingStats {
+                person_id: 0,
+                unique_partners: 1,
+                total_trades_as_buyer: 2,
+                total_trades_as_seller: 1,
+                top_partners: vec![PartnerInfo {
+                    partner_id: 1,
+                    trade_count: 3,
+                    total_value: 45.0,
+                }],
+            }],
+            network_metrics: NetworkMetrics {
+                avg_unique_partners: 1.0,
+                network_density: 0.5,
+                most_active_pair: Some((0, 1, 3)),
+            },
+        };
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let prefix = temp_dir.path().join("test_network");
+        let prefix_str = prefix.to_str().unwrap();
+
+        result.save_trading_network_csv(prefix_str).unwrap();
+
+        // Verify nodes CSV
+        let nodes_path = format!("{}_network_nodes.csv", prefix_str);
+        let mut nodes_contents = String::new();
+        File::open(&nodes_path)
+            .unwrap()
+            .read_to_string(&mut nodes_contents)
+            .unwrap();
+        assert!(nodes_contents.contains("id,money,reputation,trade_count,unique_partners"));
+        assert!(nodes_contents.contains("Person0"));
+
+        // Verify edges CSV
+        let edges_path = format!("{}_network_edges.csv", prefix_str);
+        let mut edges_contents = String::new();
+        File::open(&edges_path)
+            .unwrap()
+            .read_to_string(&mut edges_contents)
+            .unwrap();
+        assert!(edges_contents.contains("source,target,weight,total_value"));
     }
 }
