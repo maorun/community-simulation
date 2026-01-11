@@ -1288,24 +1288,22 @@ impl SimulationResult {
     /// let json = serde_json::to_string_pretty(&network).unwrap();
     /// ```
     pub fn export_trading_network(&self) -> TradingNetworkData {
-        use std::collections::HashMap;
-
         // Build nodes from persons
         let nodes: Vec<NetworkNode> = self
             .trading_partner_statistics
             .per_person
             .iter()
-            .enumerate()
-            .map(|(idx, person_stats)| {
+            .map(|person_stats| {
                 let person_id = person_stats.person_id;
+                // Use person_id to look up data in distributions (arrays are indexed by person_id)
                 let money = self
                     .final_money_distribution
-                    .get(idx)
+                    .get(person_id)
                     .copied()
                     .unwrap_or(0.0);
                 let reputation = self
                     .final_reputation_distribution
-                    .get(idx)
+                    .get(person_id)
                     .copied()
                     .unwrap_or(1.0);
                 let trade_count =
@@ -1323,7 +1321,8 @@ impl SimulationResult {
 
         // Build edges from trading relationships
         // Use a map to aggregate bidirectional trades into undirected edges
-        let mut edge_map: HashMap<(usize, usize), (usize, f64)> = HashMap::new();
+        let mut edge_map: std::collections::HashMap<(usize, usize), (usize, f64)> =
+            std::collections::HashMap::new();
 
         for person_stats in &self.trading_partner_statistics.per_person {
             let person_id = person_stats.person_id;
