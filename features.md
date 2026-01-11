@@ -14,11 +14,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 5. Erweiterte Analyse
 
-#### 5.2 Heatmaps und Netzwerkgraphen
-- **Beschreibung**: Visualisierung von Handelsbeziehungen
-- **Nutzen**: Strukturen im Handelsnetzwerk erkennen
-- **Technologie**: NetworkX oder Cytoscape
-
 ### 6. Verschiedene Agentenstrategien
 
 ## 🔧 Code-Verbesserungen
