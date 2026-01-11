@@ -343,8 +343,14 @@ codeql_checker
 When implementing a feature from the `features.md` file as part of autonomous feature development:
 
 1. **Feature Selection:**
-   - Select ONE feature from `features.md` based on simplicity and minimal changes required
+   - **Primary Strategy:** Select ONE feature from `features.md` based on simplicity and minimal changes required
+   - **Fallback Strategy:** If no feature meets the simplicity criteria, select the next feature in priority order from `features.md`
+   - Priority order is determined by:
+     1. Features listed under "Mittlere Priorität" (Medium Priority) in the order they appear
+     2. Features listed under "Niedrige Priorität" (Low Priority) in the order they appear
+     3. Any other features listed in the document in the order they appear
    - Document your selection clearly in the PR description with Feature ID and rationale
+   - **IMPORTANT:** Do NOT add new features to `features.md` - only implement existing ones
 
 2. **During Implementation:**
    - Follow all guidelines in this document
