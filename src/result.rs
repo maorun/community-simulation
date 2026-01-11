@@ -851,7 +851,88 @@ impl SimulationResult {
         Ok(())
     }
 
-    pub fn print_summary(&self) {
+    /// Render an ASCII histogram of wealth distribution to the terminal.
+    ///
+    /// Groups persons into 10 percentile buckets and displays a bar chart
+    /// showing the distribution of wealth across the population.
+    fn print_wealth_histogram(&self) {
+        if self.final_money_distribution.is_empty() {
+            return;
+        }
+
+        // Sort money values to create percentile buckets
+        let mut sorted_money = self.final_money_distribution.clone();
+        sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+        // Create 10 buckets (deciles)
+        let num_buckets = 10;
+        let bucket_size = sorted_money.len() / num_buckets;
+
+        // Count persons in each bucket
+        let mut buckets: Vec<(String, usize)> = Vec::new();
+        for i in 0..num_buckets {
+            let start_idx = i * bucket_size;
+            let end_idx = if i == num_buckets - 1 {
+                sorted_money.len()
+            } else {
+                (i + 1) * bucket_size
+            };
+
+            let count = end_idx - start_idx;
+            let label = format!("{:>3}-{:<3}%", i * 10, (i + 1) * 10);
+            buckets.push((label, count));
+        }
+
+        // Find max count for scaling
+        let max_count = buckets.iter().map(|(_, count)| *count).max().unwrap_or(1);
+
+        // Calculate bar width (max 50 characters)
+        let max_bar_width = 50;
+
+        // Print histogram
+        for (label, count) in &buckets {
+            let bar_length = if max_count > 0 {
+                ((*count as f64 / max_count as f64) * max_bar_width as f64).round() as usize
+            } else {
+                0
+            };
+
+            // Create bar with color gradient (green for lower percentiles, red for upper)
+            let bar = if bar_length > 0 {
+                let bar_str = "█".repeat(bar_length);
+                // Color based on percentile: lower = green, higher = yellow/red
+                let percentile_start = label
+                    .split('-')
+                    .next()
+                    .unwrap_or("0")
+                    .trim()
+                    .parse::<usize>()
+                    .unwrap_or(0);
+                if percentile_start < 30 {
+                    bar_str.bright_green()
+                } else if percentile_start < 70 {
+                    bar_str.bright_yellow()
+                } else {
+                    bar_str.bright_red()
+                }
+            } else {
+                "".normal()
+            };
+
+            println!(
+                "  {} {} {}",
+                label.dimmed(),
+                bar,
+                format!("({} persons)", count).dimmed()
+            );
+        }
+    }
+
+    /// Print a human-readable summary of the simulation results to stdout.
+    ///
+    /// # Arguments
+    /// * `show_histogram` - Whether to display the ASCII wealth distribution histogram (default: true)
+    pub fn print_summary(&self, show_histogram: bool) {
         println!(
             "\n{}",
             "=== Economic Simulation Summary ===".bright_cyan().bold()
@@ -969,6 +1050,17 @@ impl SimulationResult {
             hhi_colored,
             "(< 1500 = competitive, 1500-2500 = moderate, > 2500 = high concentration)".dimmed()
         );
+
+        // Display ASCII histogram if requested
+        if show_histogram && !self.final_money_distribution.is_empty() {
+            println!(
+                "\n{}",
+                "--- Wealth Distribution Histogram ---"
+                    .bright_green()
+                    .bold()
+            );
+            self.print_wealth_histogram();
+        }
 
         println!(
             "\n{}",
@@ -1692,7 +1784,10 @@ mod tests {
     fn test_print_summary() {
         let result = get_test_result();
         // This test just checks that print_summary doesn't panic.
-        result.print_summary();
+        // Test with histogram enabled
+        result.print_summary(true);
+        // Test with histogram disabled
+        result.print_summary(false);
     }
 
     #[test]

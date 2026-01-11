@@ -12,12 +12,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Erweiterte Szenarien
 
-### 5. Visualisierung und Analyse
-
-#### 5.1 Interaktive Grafiken
-- **Beschreibung**: Bessere Visualisierung der JSON-Ausgabe
-- **Nutzen**: Schnellere Analyse
-- **Technologie**: Python-Skripte mit matplotlib/plotly oder D3.js
+### 5. Erweiterte Analyse
 
 #### 5.2 Heatmaps und Netzwerkgraphen
 - **Beschreibung**: Visualisierung von Handelsbeziehungen

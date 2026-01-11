@@ -198,6 +198,10 @@ struct Args {
     #[arg(long, default_value_t = false)]
     enable_education: bool,
 
+    /// Disable ASCII histogram visualization of wealth distribution in terminal output
+    #[arg(long, default_value_t = false)]
+    no_histogram: bool,
+
     /// Cost multiplier for learning a skill based on market price (e.g., 3.0 = 3x market price)
     /// Only used when --enable-education is set
     #[arg(long)]
@@ -774,7 +778,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        result.print_summary();
+        result.print_summary(!args.no_histogram);
     }
 
     Ok(())
