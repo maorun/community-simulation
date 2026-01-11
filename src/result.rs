@@ -1281,8 +1281,7 @@ impl SimulationResult {
     /// # use simulation_framework::{SimulationEngine, SimulationConfig};
     /// # let config = SimulationConfig::default();
     /// # let mut engine = SimulationEngine::new(config);
-    /// # engine.run();
-    /// # let result = engine.build_result();
+    /// let result = engine.run();
     /// let network = result.export_trading_network();
     /// // Network can now be serialized to JSON for visualization
     /// let json = serde_json::to_string_pretty(&network).unwrap();
@@ -1378,8 +1377,7 @@ impl SimulationResult {
     /// # use simulation_framework::{SimulationEngine, SimulationConfig};
     /// # let config = SimulationConfig::default();
     /// # let mut engine = SimulationEngine::new(config);
-    /// # engine.run();
-    /// # let result = engine.build_result();
+    /// let result = engine.run();
     /// result.save_trading_network_json("network.json").unwrap();
     /// ```
     pub fn save_trading_network_json(&self, path: &str) -> Result<()> {
@@ -1416,8 +1414,7 @@ impl SimulationResult {
     /// # use simulation_framework::{SimulationEngine, SimulationConfig};
     /// # let config = SimulationConfig::default();
     /// # let mut engine = SimulationEngine::new(config);
-    /// # engine.run();
-    /// # let result = engine.build_result();
+    /// let result = engine.run();
     /// result.save_trading_network_csv("results").unwrap();
     /// // Creates: results_network_nodes.csv and results_network_edges.csv
     /// ```
