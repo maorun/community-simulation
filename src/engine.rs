@@ -1234,7 +1234,7 @@ impl SimulationEngine {
                         .iter()
                         .any(|item| item.id == needed_skill_id)
                     {
-                        let urgency = self.rng.gen_range(1..=3);
+                        let urgency = self.rng.random_range(1..=3);
                         entity
                             .person_data
                             .needed_skills
@@ -1679,7 +1679,7 @@ impl SimulationEngine {
                     .is_friend_with(seller_id)
                 {
                     // Roll for friendship formation
-                    let friendship_roll: f64 = self.rng.gen();
+                    let friendship_roll: f64 = self.rng.random();
                     if friendship_roll < self.config.friendship_probability {
                         // Form bidirectional friendship
                         self.entities[buyer_idx].person_data.add_friend(seller_id);
@@ -1752,7 +1752,7 @@ impl SimulationEngine {
                 }
 
                 // Check if this person attempts to learn a skill this step
-                let attempt_learning: f64 = self.rng.gen();
+                let attempt_learning: f64 = self.rng.random();
                 if attempt_learning >= self.config.learning_probability {
                     continue;
                 }
