@@ -25,11 +25,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Nutzen**: Einfachere Erweiterung und Testing
 - **Implementierung**: `Event` Enum und `EventBus`
 
-#### 1.2 Plugin-System
-- **Beschreibung**: Dynamisches Laden von Erweiterungen
-- **Nutzen**: Modulare Features ohne Core-Änderungen
-- **Technologie**: Dynamic loading oder Feature-Flags
-
 ### 2. Performance-Optimierungen
 
 #### 2.1 Bessere Parallelisierung

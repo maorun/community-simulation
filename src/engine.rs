@@ -509,14 +509,18 @@ impl SimulationEngine {
         );
 
         // Create plugin context for simulation start
-        let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
+        let persons: Vec<_> = self
+            .entities
+            .iter()
+            .map(|e| e.person_data.clone())
+            .collect();
         let start_context = PluginContext {
             config: &self.config,
             current_step: 0,
             total_steps: self.config.max_steps,
             persons: &persons,
         };
-        
+
         // Notify plugins that simulation is starting
         self.plugin_registry.on_simulation_start(&start_context);
 
@@ -551,7 +555,11 @@ impl SimulationEngine {
             let step_start = Instant::now();
 
             // Create plugin context and notify plugins before step starts
-            let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
+            let persons: Vec<_> = self
+                .entities
+                .iter()
+                .map(|e| e.person_data.clone())
+                .collect();
             let step_context = PluginContext {
                 config: &self.config,
                 current_step: self.current_step,
@@ -604,7 +612,11 @@ impl SimulationEngine {
             step_times.push(step_duration.as_secs_f64());
 
             // Notify plugins after step completes
-            let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
+            let persons: Vec<_> = self
+                .entities
+                .iter()
+                .map(|e| e.person_data.clone())
+                .collect();
             let step_end_context = PluginContext {
                 config: &self.config,
                 current_step: self.current_step,
@@ -1244,14 +1256,19 @@ impl SimulationEngine {
         };
 
         // Notify plugins that simulation has ended, allowing them to modify the result
-        let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
+        let persons: Vec<_> = self
+            .entities
+            .iter()
+            .map(|e| e.person_data.clone())
+            .collect();
         let end_context = PluginContext {
             config: &self.config,
             current_step: self.current_step,
             total_steps: self.config.max_steps,
             persons: &persons,
         };
-        self.plugin_registry.on_simulation_end(&end_context, &mut result);
+        self.plugin_registry
+            .on_simulation_end(&end_context, &mut result);
 
         result
     }

@@ -79,6 +79,13 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
 - **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, time-series price history, and trading network data (nodes and edges).
 - **Performance:** Leverages Rust and Rayon for potential parallelism in parts of the simulation (though current critical paths like trading are largely sequential for N=100).
+- **Plugin System:** Extensible trait-based plugin architecture for custom simulation extensions without modifying core code. Plugins can hook into simulation lifecycle events (start, step start/end, completion) to:
+  - Collect custom metrics and statistics
+  - Monitor and log simulation behavior
+  - Modify simulation results with additional data
+  - Implement custom algorithms and analysis
+  
+  The plugin system uses a feature-flags approach for compile-time plugin selection, ensuring zero runtime overhead for unused plugins. Plugins are type-safe, thread-safe (`Send + Sync`), and support downcasting for accessing plugin-specific methods. Perfect for research extensions, custom metrics collection, and experimental features without forking the codebase. See the `plugin` module documentation for implementation details and the `Plugin` trait for available lifecycle hooks.
 
 ## Getting Started
 

@@ -287,7 +287,7 @@ mod tests {
 
         // Test lifecycle hooks
         registry.on_simulation_start(&context);
-        
+
         for _ in 0..5 {
             registry.on_step_start(&context);
             registry.on_step_end(&context);
@@ -296,7 +296,7 @@ mod tests {
         // Verify calls without needing SimulationResult
         let plugin = registry.get_mut("test").unwrap();
         let test_plugin = plugin.as_any_mut().downcast_mut::<TestPlugin>().unwrap();
-        
+
         assert!(test_plugin.start_called);
         assert_eq!(test_plugin.step_start_called, 5);
         assert_eq!(test_plugin.step_end_called, 5);
