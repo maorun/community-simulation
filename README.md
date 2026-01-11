@@ -73,9 +73,10 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Crisis Events:** Random economic shocks that test the resilience of the simulated economy. When enabled, crisis events can occur randomly during the simulation, creating unexpected challenges such as market crashes (price drops), demand shocks (reduced consumption), supply shocks (reduced availability), or currency devaluations (wealth destruction). Each crisis type has distinct effects on the economy with configurable severity levels. Enable via `--enable-crisis-events` flag with parameters `--crisis-probability` (frequency, default: 2% per step) and `--crisis-severity` (impact level 0.0-1.0, default: 0.5). The crisis scenario preset (`--preset crisis_scenario`) demonstrates this feature with higher crisis probability (5%) and severity (0.7) to create a challenging economic environment. Ideal for studying economic resilience, shock recovery, and the effectiveness of stabilization mechanisms like price floors and redistribution policies.
 - **Group/Organization System:** Persons can be assigned to groups or organizations for collective behavior analysis. When enabled via `--num-groups` parameter (or configuration file), persons are distributed across groups using round-robin assignment at simulation start. Each group tracks member count, average/total money, and average reputation. Overall statistics include total groups, average/min/max group size, and per-group breakdowns. Groups remain static during simulation but enable studying economic dynamics at the collective level, such as wealth distribution between organizations, group-based inequality, and comparative performance. Statistics are included in JSON output under `group_statistics`. Useful for analyzing team dynamics, organizational economics, and group-level wealth accumulation patterns. Valid range: 1 to number of persons.
 - **Streaming Output (JSONL):** Real-time streaming of step-by-step simulation data to a JSON Lines (JSONL) file. Each simulation step appends one JSON object containing key metrics (trades, volume, money statistics, Gini coefficient, reputation) to the output file. Enables real-time monitoring of long-running simulations, reduces memory footprint by not storing all step data in memory, and allows progressive analysis. Each line is a complete JSON object that can be parsed independently, making it ideal for streaming analysis tools and real-time dashboards.
+- **Trading Network Export:** Export the trading network graph for visualization and analysis. The simulation automatically exports trading relationships as a network graph in both JSON and CSV formats. JSON output is compatible with vis.js, D3.js, NetworkX (Python), Gephi, and Cytoscape for creating interactive network visualizations. CSV export provides separate node and edge files for import into spreadsheet tools, network analysis packages (igraph, NetworkX), or graph databases. Network nodes include person attributes (money, reputation, trade count, unique partners) and edges capture relationship strength (number of trades, total value exchanged). Exported automatically when using `--csv-output` flag, or programmatically via `save_trading_network_json()` and `save_trading_network_csv()` methods. Ideal for social network analysis, identifying trading hubs, visualizing market structure, and studying economic relationships without complex graph libraries.
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
-- **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, and time-series price history.
+- **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, time-series price history, and trading network data (nodes and edges).
 - **Performance:** Leverages Rust and Rayon for potential parallelism in parts of the simulation (though current critical paths like trading are largely sequential for N=100).
 
 ## Getting Started
@@ -703,6 +704,79 @@ Example JSONL line (one per step):
 {"step":42,"trades":18,"volume":234.56,"avg_money":102.34,"gini_coefficient":0.15,"avg_reputation":1.23,"top_skill_prices":[{"id":"Skill5","price":25.67},...]}
 ```
 
+**Example with Trading Network Export:**
+
+The simulation automatically exports trading network data when using the `--csv-output` flag, creating files for network visualization and analysis.
+
+```bash
+# Export simulation results including trading network
+./target/release/economic_simulation --steps 500 --persons 100 --csv-output results
+# Creates network files:
+#   results_network_nodes.csv (person attributes: id, money, reputation, trade_count, unique_partners)
+#   results_network_edges.csv (trading relationships: source, target, weight, total_value)
+```
+
+Network visualization examples:
+
+```bash
+# Small network for visualization
+./target/release/economic_simulation --steps 200 --persons 20 --csv-output network_small -o network.json
+
+# Large network for analysis
+./target/release/economic_simulation --steps 1000 --persons 200 --csv-output network_large --compress
+```
+
+**Using the Network Data:**
+
+The exported network can be visualized using various tools:
+
+- **Python (NetworkX):**
+  ```python
+  import pandas as pd
+  import networkx as nx
+  import matplotlib.pyplot as plt
+  
+  # Load network data
+  nodes = pd.read_csv('results_network_nodes.csv')
+  edges = pd.read_csv('results_network_edges.csv')
+  
+  # Create graph
+  G = nx.from_pandas_edgelist(edges, source='source', target='target', 
+                                edge_attr=['weight', 'total_value'])
+  
+  # Add node attributes
+  nx.set_node_attributes(G, nodes.set_index('id')['money'].to_dict(), 'money')
+  nx.set_node_attributes(G, nodes.set_index('id')['reputation'].to_dict(), 'reputation')
+  
+  # Visualize
+  pos = nx.spring_layout(G)
+  nx.draw(G, pos, node_color=[G.nodes[n]['money'] for n in G.nodes()], 
+          with_labels=True, cmap='coolwarm')
+  plt.show()
+  ```
+
+- **Gephi:** Import `results_network_nodes.csv` as nodes table and `results_network_edges.csv` as edges table
+
+- **D3.js/vis.js:** Use the JSON format (programmatic export via `result.save_trading_network_json("network.json")`)
+
+- **R (igraph):**
+  ```r
+  library(igraph)
+  library(readr)
+  
+  nodes <- read_csv("results_network_nodes.csv")
+  edges <- read_csv("results_network_edges.csv")
+  
+  g <- graph_from_data_frame(edges, directed=FALSE, vertices=nodes)
+  plot(g, vertex.size=V(g)$trade_count/5, vertex.color=V(g)$money)
+  ```
+
+The network data reveals:
+- **Trading hubs:** Persons with many unique partners (high degree centrality)
+- **Market structure:** Density and clustering patterns
+- **Economic relationships:** Strong ties (high trade volume) vs. weak ties
+- **Wealth distribution:** Correlation between network position and money
+
 **Using Configuration Files:**
 
 Configuration files provide an easier way to manage complex simulation scenarios without lengthy command lines. Both YAML and TOML formats are supported.
@@ -1036,8 +1110,10 @@ When using the `--csv-output` flag, the simulation generates multiple CSV files 
 *   `{prefix}_price_history.csv`: Skill price history over time (if available)
 *   `{prefix}_wealth_stats_history.csv`: **Wealth distribution statistics over time** (if available)
 *   `{prefix}_trade_volume.csv`: **Trade volume history showing trades count and money exchanged per step**
+*   `{prefix}_network_nodes.csv`: **Trading network nodes** (persons with money, reputation, trade count, unique partners)
+*   `{prefix}_network_edges.csv`: **Trading network edges** (trading relationships with weight and total value)
 
-The trade volume CSV provides time-series data perfect for analyzing market activity and economic vitality trends. The wealth stats history CSV contains comprehensive inequality metrics at each step, ideal for studying how wealth distribution evolves over the course of the simulation.
+The trade volume CSV provides time-series data perfect for analyzing market activity and economic vitality trends. The wealth stats history CSV contains comprehensive inequality metrics at each step, ideal for studying how wealth distribution evolves over the course of the simulation. The network CSVs enable graph analysis and visualization of trading relationships using tools like NetworkX, igraph, Gephi, or Cytoscape.
 
 ## License
 
