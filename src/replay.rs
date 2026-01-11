@@ -1,7 +1,7 @@
 use crate::error::{Result, SimulationError};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::Path;
 
 /// Represents a single action in the simulation that can be logged and replayed.
@@ -83,8 +83,11 @@ impl ActionLog {
     /// * `Err(SimulationError)` if file I/O fails
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let file = File::create(path).map_err(SimulationError::ActionLogWrite)?;
-        let writer = BufWriter::new(file);
-        serde_json::to_writer_pretty(writer, self).map_err(SimulationError::ActionLogSerialize)?;
+        let mut writer = BufWriter::new(file);
+        serde_json::to_writer_pretty(&mut writer, self)
+            .map_err(SimulationError::ActionLogSerialize)?;
+        // Explicitly flush to ensure all data is written to disk
+        writer.flush().map_err(SimulationError::ActionLogWrite)?;
         Ok(())
     }
 
@@ -98,6 +101,7 @@ impl ActionLog {
     /// * `Err(SimulationError)` if file I/O or parsing fails
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let file = File::open(path).map_err(SimulationError::ActionLogRead)?;
+        // Use BufReader for efficient reading of potentially large action logs
         let reader = BufReader::new(file);
         let log = serde_json::from_reader(reader).map_err(SimulationError::ActionLogDeserialize)?;
         Ok(log)
@@ -117,7 +121,6 @@ impl ActionLog {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_action_log_creation() {
@@ -160,7 +163,7 @@ mod tests {
             price: 15.0,
         });
 
-        let temp_file = NamedTempFile::new().unwrap();
+        let temp_file = tempfile::NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
         // Save the log
