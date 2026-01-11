@@ -456,7 +456,7 @@ impl OriginalPriceUpdater {
 
             let price_range_for_volatility = new_price * market.volatility_percentage;
             let random_fluctuation =
-                rng.gen_range(-price_range_for_volatility..=price_range_for_volatility);
+                rng.random_range(-price_range_for_volatility..=price_range_for_volatility);
             new_price += random_fluctuation;
 
             let old_price = skill.current_price;
@@ -718,7 +718,7 @@ impl AuctionPricingUpdater {
             // Add small random volatility (2% max fluctuation)
             let price_range_for_volatility = new_price * 0.02;
             let random_fluctuation =
-                rng.gen_range(-price_range_for_volatility..=price_range_for_volatility);
+                rng.random_range(-price_range_for_volatility..=price_range_for_volatility);
             new_price += random_fluctuation;
 
             // Clamp price to min/max boundaries
@@ -863,7 +863,7 @@ impl DemandGeneratorTrait for UniformDemandGenerator {
         _step: usize,
         rng: &mut R,
     ) -> usize {
-        rng.gen_range(2..=5)
+        rng.random_range(2..=5)
     }
 }
 
@@ -889,11 +889,11 @@ impl DemandGeneratorTrait for ConcentratedDemandGenerator {
         rng: &mut R,
     ) -> usize {
         // 70% chance of low demand (2-3), 30% chance of high demand (4-5)
-        let roll: f64 = rng.gen();
+        let roll: f64 = rng.random();
         if roll < 0.7 {
-            rng.gen_range(2..=3) // Low demand
+            rng.random_range(2..=3) // Low demand
         } else {
-            rng.gen_range(4..=5) // High demand
+            rng.random_range(4..=5) // High demand
         }
     }
 }
