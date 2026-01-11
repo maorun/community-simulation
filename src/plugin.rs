@@ -144,7 +144,7 @@ impl PluginRegistry {
     }
 
     /// Gets a mutable reference to a plugin by name.
-    pub fn get_mut<'a>(&'a mut self, name: &str) -> Option<&'a mut dyn Plugin> {
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut dyn Plugin> {
         for plugin in &mut self.plugins {
             if plugin.name() == name {
                 return Some(plugin.as_mut());

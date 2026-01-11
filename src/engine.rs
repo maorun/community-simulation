@@ -2233,6 +2233,10 @@ impl SimulationEngine {
     /// the checkpoint. The RNG is reseeded based on the checkpoint's current step
     /// to ensure reproducible behavior.
     ///
+    /// **Note:** Plugins are not persisted in checkpoints. After loading a checkpoint,
+    /// you must re-register any plugins that were previously registered before
+    /// continuing the simulation. This ensures plugin state is properly initialized.
+    ///
     /// # Arguments
     ///
     /// * `path` - Path to the checkpoint file to load
