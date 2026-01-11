@@ -69,6 +69,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Parameter Sweep Analysis:** Automated sensitivity analysis through systematic parameter sweeps (grid search). Test a parameter across a range of values with multiple runs per value to understand how parameter choices affect simulation outcomes. Supports sweeping initial_money, base_price, savings_rate, and transaction_fee. Results include aggregated statistics and identification of optimal parameter values for different objectives. Perfect for research, parameter tuning, and understanding system robustness.
 - **Scenario Comparison:** Compare multiple simulation scenarios side-by-side to analyze the effects of different economic policies. Run A/B testing on pricing mechanisms (Original, DynamicPricing, AdaptivePricing) with multiple runs per scenario for statistical robustness. Automatically determines winners based on different criteria: highest average wealth, lowest inequality, highest trade volume, and highest reputation. Results are saved in JSON format with detailed statistics and winner analysis. Ideal for policy evaluation, economic research, and understanding the impact of different market mechanisms on outcomes.
 - **Checkpoint System:** Save and resume simulation state at any point. Automatically save checkpoints at regular intervals during long simulations. Resume from saved checkpoints to continue interrupted simulations without starting from scratch. Useful for multi-hour simulations, distributed computing, incremental analysis, and crash recovery. Checkpoints are stored in JSON format with complete simulation state including entities, market data, loans, and statistics.
+- **Replay and Debugging System:** Comprehensive debugging capabilities for bug reproduction and deterministic testing. Combines checkpoints, streaming output, and detailed logging to enable exact reproduction of simulation behavior. Fixed seeds ensure identical results across runs, enabling regression testing and bug investigation. Load checkpoints to inspect exact simulation state at any point, use streaming output to identify problematic steps, and leverage trace-level logging to understand decision-making. The system provides action log infrastructure for detailed event tracking when needed. Perfect for troubleshooting, validating changes, and understanding complex simulation dynamics without specialized replay tools.
 - **Education System:** Persons can learn new skills over time by investing money in education. Each simulation step, persons have a configurable probability of attempting to learn a skill they don't currently possess. The cost to learn a skill is based on the current market price multiplied by a learning cost multiplier (default: 3x). This simulates human capital formation and skill development, allowing persons to become more versatile and participate in multiple markets. Education statistics (total skills learned, average per person, total spending) are tracked and reported. Enable via `--enable-education` flag or configuration file with parameters `learning_cost_multiplier` and `learning_probability`. Learned skills allow persons to provide those services in the market, increasing their earning potential.
 - **Crisis Events:** Random economic shocks that test the resilience of the simulated economy. When enabled, crisis events can occur randomly during the simulation, creating unexpected challenges such as market crashes (price drops), demand shocks (reduced consumption), supply shocks (reduced availability), or currency devaluations (wealth destruction). Each crisis type has distinct effects on the economy with configurable severity levels. Enable via `--enable-crisis-events` flag with parameters `--crisis-probability` (frequency, default: 2% per step) and `--crisis-severity` (impact level 0.0-1.0, default: 0.5). The crisis scenario preset (`--preset crisis_scenario`) demonstrates this feature with higher crisis probability (5%) and severity (0.7) to create a challenging economic environment. Ideal for studying economic resilience, shock recovery, and the effectiveness of stabilization mechanisms like price floors and redistribution policies.
 - **Group/Organization System:** Persons can be assigned to groups or organizations for collective behavior analysis. When enabled via `--num-groups` parameter (or configuration file), persons are distributed across groups using round-robin assignment at simulation start. Each group tracks member count, average/total money, and average reputation. Overall statistics include total groups, average/min/max group size, and per-group breakdowns. Groups remain static during simulation but enable studying economic dynamics at the collective level, such as wealth distribution between organizations, group-based inequality, and comparative performance. Statistics are included in JSON output under `group_statistics`. Useful for analyzing team dynamics, organizational economics, and group-level wealth accumulation patterns. Valid range: 1 to number of persons.
@@ -703,6 +704,79 @@ Example JSONL line (one per step):
 ```json
 {"step":42,"trades":18,"volume":234.56,"avg_money":102.34,"gini_coefficient":0.15,"avg_reputation":1.23,"top_skill_prices":[{"id":"Skill5","price":25.67},...]}
 ```
+
+**Debugging and Replay System:**
+
+The simulation framework includes a comprehensive debugging and replay capability built on checkpoints and streaming output. This system enables bug reproduction, deterministic testing, and detailed analysis of simulation behavior.
+
+**Replay System Features:**
+
+1. **Deterministic Execution**: Using fixed seeds ensures identical results across runs
+2. **State Checkpointing**: Save complete simulation state at any point for later inspection
+3. **Step-by-Step Logs**: Stream output provides detailed progression data
+4. **Action Logging**: The framework includes action log infrastructure for detailed event tracking
+
+**Reproducing Bugs:**
+
+```bash
+# Step 1: Record the problematic simulation with detailed logging
+RUST_LOG=debug ./target/release/economic_simulation \
+  --steps 1000 --persons 100 --seed 42 \
+  --stream-output debug_stream.jsonl \
+  --checkpoint-interval 100 \
+  --checkpoint-file debug_checkpoint.json \
+  --output debug_results.json 2> debug.log
+
+# Step 2: Replay from checkpoint to investigate specific state
+./target/release/economic_simulation --resume \
+  --checkpoint-file debug_checkpoint.json \
+  --steps 50 \
+  --output replay_results.json
+
+# Step 3: Compare results for reproducibility
+# The same seed ensures deterministic behavior
+./target/release/economic_simulation \
+  --steps 1000 --persons 100 --seed 42 \
+  --output verify_results.json
+
+# Use diff or jq to compare JSON outputs
+jq -S '.money_statistics' debug_results.json > stats1.json
+jq -S '.money_statistics' verify_results.json > stats2.json
+diff stats1.json stats2.json
+```
+
+**Replay System Benefits:**
+
+- **Bug Reproduction**: Fixed seeds and checkpoints enable exact reproduction of issues
+- **Deterministic Testing**: Verify that changes don't alter simulation outcomes
+- **State Inspection**: Load checkpoints to examine exact simulation state at failure points
+- **Progressive Debugging**: Use streaming output to identify the step where issues occur
+- **Regression Testing**: Compare output files to detect unintended behavior changes
+
+**Advanced Debugging Workflow:**
+
+```bash
+# 1. Run with detailed logging to capture all events
+RUST_LOG=trace ./target/release/economic_simulation \
+  --steps 500 --persons 50 --seed 123 \
+  --stream-output trace_stream.jsonl \
+  --checkpoint-interval 50 \
+  --output trace_results.json 2> trace.log
+
+# 2. Analyze the stream to find problematic steps
+grep "step.*25[0-9]" trace_stream.jsonl
+
+# 3. Resume from checkpoint just before the problem
+./target/release/economic_simulation --resume \
+  --checkpoint-file debug_checkpoint.json \
+  --steps 10 \
+  --no-progress 2> detailed_debug.log
+
+# 4. Extract specific step data for analysis
+jq 'select(.step == 255)' trace_stream.jsonl
+```
+
+The replay system leverages existing infrastructure (checkpoints, streaming, logging) to provide powerful debugging capabilities without requiring specialized replay tools.
 
 **Example with Trading Network Export:**
 

@@ -71,11 +71,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Debugging-Tools
 
-#### 2.1 Replay-System
-- **Beschreibung**: Simulationen aus Logs nachspielen
-- **Nutzen**: Bug-Reproduktion
-- **Implementierung**: Action-Log und Replay-Engine
-
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
 ### 1. Produktionssimulation
