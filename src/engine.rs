@@ -2195,13 +2195,20 @@ impl SimulationEngine {
             let sum: f64 = final_money_distribution.iter().sum();
             let count = final_money_distribution.len() as f64;
             let average = sum / count;
-            crate::result::MoneyStats {
-                average,
-                median: if count as usize > 0 {
+            let median = if count as usize > 0 {
+                if count as usize % 2 == 1 {
                     final_money_distribution[count as usize / 2]
                 } else {
-                    0.0
-                },
+                    (final_money_distribution[count as usize / 2 - 1]
+                        + final_money_distribution[count as usize / 2])
+                        / 2.0
+                }
+            } else {
+                0.0
+            };
+            crate::result::MoneyStats {
+                average,
+                median,
                 std_dev: 0.0, // Simplified
                 min_money: *final_money_distribution.first().unwrap_or(&0.0),
                 max_money: *final_money_distribution.last().unwrap_or(&0.0),
@@ -2244,13 +2251,21 @@ impl SimulationEngine {
         let reputation_stats = if !final_reputation_distribution.is_empty() {
             let sum: f64 = final_reputation_distribution.iter().sum();
             let count = final_reputation_distribution.len() as f64;
-            crate::result::ReputationStats {
-                average: sum / count,
-                median: if count as usize > 0 {
+            let average = sum / count;
+            let median = if count as usize > 0 {
+                if count as usize % 2 == 1 {
                     final_reputation_distribution[count as usize / 2]
                 } else {
-                    1.0
-                },
+                    (final_reputation_distribution[count as usize / 2 - 1]
+                        + final_reputation_distribution[count as usize / 2])
+                        / 2.0
+                }
+            } else {
+                1.0
+            };
+            crate::result::ReputationStats {
+                average,
+                median,
                 std_dev: 0.0, // Simplified
                 min_reputation: *final_reputation_distribution.first().unwrap_or(&1.0),
                 max_reputation: *final_reputation_distribution.last().unwrap_or(&1.0),
@@ -2277,18 +2292,22 @@ impl SimulationEngine {
 
         let savings_stats = if !final_savings_distribution.is_empty() {
             let sum: f64 = final_savings_distribution.iter().sum();
+            let count = final_savings_distribution.len();
+            let median = if count > 0 {
+                if count % 2 == 1 {
+                    final_savings_distribution[count / 2]
+                } else {
+                    (final_savings_distribution[count / 2 - 1]
+                        + final_savings_distribution[count / 2])
+                        / 2.0
+                }
+            } else {
+                0.0
+            };
             crate::result::SavingsStats {
                 total_savings: sum,
-                average_savings: if !final_savings_distribution.is_empty() {
-                    sum / final_savings_distribution.len() as f64
-                } else {
-                    0.0
-                },
-                median_savings: if !final_savings_distribution.is_empty() {
-                    final_savings_distribution[final_savings_distribution.len() / 2]
-                } else {
-                    0.0
-                },
+                average_savings: if count > 0 { sum / count as f64 } else { 0.0 },
+                median_savings: median,
                 min_savings: *final_savings_distribution.first().unwrap_or(&0.0),
                 max_savings: *final_savings_distribution.last().unwrap_or(&0.0),
             }

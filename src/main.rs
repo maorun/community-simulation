@@ -983,7 +983,11 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 "Executed {} steps in {:.3}s ({:.1} steps/s)",
                                 steps_to_run,
                                 duration.as_secs_f64(),
-                                steps_to_run as f64 / duration.as_secs_f64()
+                                if duration.as_secs_f64() > 0.0 {
+                                    steps_to_run as f64 / duration.as_secs_f64()
+                                } else {
+                                    0.0
+                                }
                             )
                             .bright_green()
                         );
