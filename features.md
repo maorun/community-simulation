@@ -20,11 +20,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Architektur und Design
 
-#### 1.1 Event-System
-- **Beschreibung**: Event-basierte Architektur für bessere Entkopplung
-- **Nutzen**: Einfachere Erweiterung und Testing
-- **Implementierung**: `Event` Enum und `EventBus`
-
 ### 2. Performance-Optimierungen
 
 #### 2.1 Bessere Parallelisierung
@@ -86,10 +81,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ## 🎯 Priorisierung
 
 ### Mittlere Priorität (Mehrwert)
-1. Event-System einführen
-2. Mehrere Fähigkeiten pro Person
-3. Reputation-System
-4. Checkpoint-System
+1. Mehrere Fähigkeiten pro Person
+2. Reputation-System
+3. Checkpoint-System
 
 ### Niedrige Priorität (Langfristig)
 1. Geografische Komponente
