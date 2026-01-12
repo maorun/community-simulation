@@ -49,11 +49,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. CLI-Verbesserungen
 
-#### 1.1 Interaktiver Modus
-- **Beschreibung**: REPL für schrittweise Simulation
-- **Nutzen**: Debugging und Exploration
-- **Technologie**: `rustyline` Crate
-
 ### 2. Debugging-Tools
 
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle

@@ -51,6 +51,16 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **Trace Mode:** Comprehensive debug logging for problem diagnosis. Enable detailed logging of all simulation actions including trade attempts, price updates, reputation changes, loan payments, and tax redistribution. Use environment variable `RUST_LOG=debug` for detailed logs or `RUST_LOG=trace` for extremely detailed output. Ideal for debugging simulation behavior, understanding agent decision-making, and diagnosing unexpected results.
+- **Interactive Mode (REPL):** Step-by-step simulation control through an interactive command-line interface. Enable with `--interactive` flag to enter a read-eval-print loop (REPL) where you can execute individual simulation steps, inspect current state, and save checkpoints on demand. Available commands:
+  - `step` - Execute one simulation step
+  - `run N` - Execute N simulation steps
+  - `status` - Show current step, progress, active persons, and scenario
+  - `stats` - Display comprehensive statistics snapshot (money, reputation, savings, trade volume, etc.)
+  - `save <path>` - Save current state to checkpoint file
+  - `help` - Show all available commands
+  - `exit`/`quit` - Exit interactive mode
+  
+  Features include command history (navigate with arrow keys), graceful handling of Ctrl+C and Ctrl+D, color-coded output, and real-time performance metrics. Perfect for debugging, exploring simulation behavior, teaching, demonstrations, and iterative testing of parameter changes. Example: `./simulation-framework --interactive -s 100 -p 10`
 - **Colored Terminal Output:** Enhanced terminal output with color-coded statistics and messages for improved readability. Automatically detects terminal capabilities and can be disabled with `--no-color` flag.
 - **Wealth Inequality Analysis:** Comprehensive wealth distribution analysis including:
   - **Gini Coefficient:** Measures overall inequality (0 = perfect equality, 1 = perfect inequality)
