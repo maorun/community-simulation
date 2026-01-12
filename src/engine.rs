@@ -3,6 +3,7 @@ use crate::{
     crisis::CrisisEvent,
     loan::{Loan, LoanId},
     person::Strategy,
+    plugin::{PluginContext, PluginRegistry},
     result::{write_step_to_stream, StepData},
     scenario::{DemandGenerator, PriceUpdater},
     Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
@@ -119,6 +120,8 @@ pub struct SimulationEngine {
     total_contracts_completed: usize,
     // Wealth statistics history tracking
     wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
+    // Plugin system for extending simulation
+    plugin_registry: PluginRegistry,
 }
 
 impl SimulationEngine {
@@ -211,7 +214,48 @@ impl SimulationEngine {
             total_contracts_created: 0,
             total_contracts_completed: 0,
             wealth_stats_history: Vec::new(),
+            plugin_registry: PluginRegistry::new(),
         }
+    }
+
+    /// Register a plugin with the simulation engine.
+    ///
+    /// Plugins can hook into various points in the simulation lifecycle
+    /// to extend functionality without modifying core code.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use simulation_framework::{SimulationEngine, SimulationConfig, Plugin, PluginContext};
+    /// use std::any::Any;
+    ///
+    /// struct MyPlugin;
+    /// impl Plugin for MyPlugin {
+    ///     fn name(&self) -> &str { "MyPlugin" }
+    ///     fn as_any(&self) -> &dyn Any { self }
+    ///     fn as_any_mut(&mut self) -> &mut dyn Any { self }
+    /// }
+    ///
+    /// let config = SimulationConfig::default();
+    /// let mut engine = SimulationEngine::new(config);
+    /// engine.register_plugin(Box::new(MyPlugin));
+    /// ```
+    pub fn register_plugin(&mut self, plugin: Box<dyn crate::plugin::Plugin>) {
+        self.plugin_registry.register(plugin);
+    }
+
+    /// Get a reference to the plugin registry.
+    ///
+    /// This allows external code to query registered plugins.
+    pub fn plugin_registry(&self) -> &PluginRegistry {
+        &self.plugin_registry
+    }
+
+    /// Get a mutable reference to the plugin registry.
+    ///
+    /// This allows external code to interact with plugins.
+    pub fn plugin_registry_mut(&mut self) -> &mut PluginRegistry {
+        &mut self.plugin_registry
     }
 
     // This is the version from feat/economic-simulation-model
@@ -464,6 +508,22 @@ impl SimulationEngine {
             self.config.max_steps, self.config.scenario
         );
 
+        // Create plugin context for simulation start
+        let persons: Vec<_> = self
+            .entities
+            .iter()
+            .map(|e| e.person_data.clone())
+            .collect();
+        let start_context = PluginContext {
+            config: &self.config,
+            current_step: 0,
+            total_steps: self.config.max_steps,
+            persons: &persons,
+        };
+
+        // Notify plugins that simulation is starting
+        self.plugin_registry.on_simulation_start(&start_context);
+
         // Constants for progress bar configuration
         const PROGRESS_BAR_WIDTH: usize = 40;
         const PROGRESS_UPDATE_INTERVAL_STEPS: usize = 10;
@@ -493,6 +553,20 @@ impl SimulationEngine {
 
         for step in 0..self.config.max_steps {
             let step_start = Instant::now();
+
+            // Create plugin context and notify plugins before step starts
+            let persons: Vec<_> = self
+                .entities
+                .iter()
+                .map(|e| e.person_data.clone())
+                .collect();
+            let step_context = PluginContext {
+                config: &self.config,
+                current_step: self.current_step,
+                total_steps: self.config.max_steps,
+                persons: &persons,
+            };
+            self.plugin_registry.on_step_start(&step_context);
 
             // Catch panics during step execution for graceful degradation
             // Safety: We use AssertUnwindSafe here because:
@@ -536,6 +610,20 @@ impl SimulationEngine {
 
             let step_duration = step_start.elapsed();
             step_times.push(step_duration.as_secs_f64());
+
+            // Notify plugins after step completes
+            let persons: Vec<_> = self
+                .entities
+                .iter()
+                .map(|e| e.person_data.clone())
+                .collect();
+            let step_end_context = PluginContext {
+                config: &self.config,
+                current_step: self.current_step,
+                total_steps: self.config.max_steps,
+                persons: &persons,
+            };
+            self.plugin_registry.on_step_end(&step_end_context);
 
             // Auto-checkpoint if enabled and at checkpoint interval
             #[allow(clippy::manual_is_multiple_of)] // is_multiple_of is not stable yet
@@ -881,7 +969,7 @@ impl SimulationEngine {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        SimulationResult {
+        let mut result = SimulationResult {
             total_steps: self.config.max_steps,
             total_duration: total_duration.as_secs_f64(),
             step_times,
@@ -1165,7 +1253,24 @@ impl SimulationEngine {
                 &self.entities,
             ),
             final_persons_data: self.entities.clone(),
-        }
+        };
+
+        // Notify plugins that simulation has ended, allowing them to modify the result
+        let persons: Vec<_> = self
+            .entities
+            .iter()
+            .map(|e| e.person_data.clone())
+            .collect();
+        let end_context = PluginContext {
+            config: &self.config,
+            current_step: self.current_step,
+            total_steps: self.config.max_steps,
+            persons: &persons,
+        };
+        self.plugin_registry
+            .on_simulation_end(&end_context, &mut result);
+
+        result
     }
 
     pub fn step(&mut self) {
@@ -2128,6 +2233,10 @@ impl SimulationEngine {
     /// the checkpoint. The RNG is reseeded based on the checkpoint's current step
     /// to ensure reproducible behavior.
     ///
+    /// **Note:** Plugins are not persisted in checkpoints. After loading a checkpoint,
+    /// you must re-register any plugins that were previously registered before
+    /// continuing the simulation. This ensures plugin state is properly initialized.
+    ///
     /// # Arguments
     ///
     /// * `path` - Path to the checkpoint file to load
@@ -2218,6 +2327,7 @@ impl SimulationEngine {
             total_contracts_created: checkpoint.total_contracts_created,
             total_contracts_completed: checkpoint.total_contracts_completed,
             wealth_stats_history: checkpoint.wealth_stats_history,
+            plugin_registry: PluginRegistry::new(),
         })
     }
 }
