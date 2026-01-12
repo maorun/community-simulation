@@ -50,6 +50,10 @@ struct Args {
     #[arg(long)]
     csv_output: Option<String>,
 
+    /// Path to SQLite database file for exporting simulation results
+    #[arg(long)]
+    sqlite_output: Option<String>,
+
     /// Compress JSON output using gzip (.gz extension will be added automatically)
     #[arg(long, default_value_t = false)]
     compress: bool,
@@ -807,6 +811,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!(
                 "{}",
                 format!("CSV results saved with prefix: {}", csv_prefix).bright_blue()
+            );
+        }
+
+        if let Some(sqlite_path) = args.sqlite_output {
+            simulation_framework::database::export_to_sqlite(&result, &sqlite_path)?;
+            info!(
+                "{}",
+                format!("SQLite database saved to: {}", sqlite_path).bright_blue()
             );
         }
 
