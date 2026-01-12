@@ -22,11 +22,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Performance-Optimierungen
 
-#### 2.1 Bessere Parallelisierung
-- **Beschreibung**: Mehr Rayon-Nutzung für parallele Verarbeitung
-- **Nutzen**: Schnellere Simulationen
-- **Bereiche**: Transaktionsverarbeitung, Marktaktualisierungen
-
 #### 2.2 Memory Pooling
 - **Beschreibung**: Objekt-Pools für häufig allokierte Strukturen
 - **Nutzen**: Reduzierte Allokationskosten
@@ -80,17 +75,10 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🎯 Priorisierung
 
-### Mittlere Priorität (Mehrwert)
-1. Mehrere Fähigkeiten pro Person
-2. Reputation-System
-3. Checkpoint-System
-
 ### Niedrige Priorität (Langfristig)
-1. Geografische Komponente
-2. Datenbank-Integration
-3. Plugin-System
-4. Produktionssimulation mit Rezepten
-5. Politische Simulation
+1. Datenbank-Integration
+2. Produktionssimulation mit Rezepten
+3. Politische Simulation
 
 ## 📝 Notizen
 

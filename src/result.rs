@@ -3,6 +3,7 @@ use crate::{Entity, SkillId}; // Entity now wraps Person
 use colored::Colorize;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
@@ -1482,11 +1483,23 @@ pub fn calculate_gini_coefficient(sorted_values: &[f64], sum: f64) -> f64 {
     }
 
     let n = sorted_values.len();
-    let weighted_sum: f64 = sorted_values
-        .iter()
-        .enumerate()
-        .map(|(i, &value)| (i + 1) as f64 * value)
-        .sum();
+
+    // Parallelize the weighted sum calculation for large datasets
+    // Use parallel iterator when we have enough data to benefit from parallelization
+    let weighted_sum: f64 = if n > 1000 {
+        sorted_values
+            .par_iter()
+            .enumerate()
+            .map(|(i, &value)| (i + 1) as f64 * value)
+            .sum()
+    } else {
+        sorted_values
+            .iter()
+            .enumerate()
+            .map(|(i, &value)| (i + 1) as f64 * value)
+            .sum()
+    };
+
     (2.0 * weighted_sum) / (n as f64 * sum) - (n as f64 + 1.0) / n as f64
 }
 
@@ -1535,13 +1548,24 @@ pub fn calculate_herfindahl_index(values: &[f64]) -> f64 {
     }
 
     // Calculate HHI: sum of squared market shares (as percentages)
-    values
-        .iter()
-        .map(|&value| {
-            let share_percentage = (value / total) * 100.0;
-            share_percentage * share_percentage
-        })
-        .sum()
+    // Parallelize for large datasets to improve performance
+    if values.len() > 1000 {
+        values
+            .par_iter()
+            .map(|&value| {
+                let share_percentage = (value / total) * 100.0;
+                share_percentage * share_percentage
+            })
+            .sum()
+    } else {
+        values
+            .iter()
+            .map(|&value| {
+                let share_percentage = (value / total) * 100.0;
+                share_percentage * share_percentage
+            })
+            .sum()
+    }
 }
 
 /// Calculate wealth concentration ratios for different percentile groups.
@@ -1594,9 +1618,20 @@ pub fn calculate_wealth_concentration(sorted_values: &[f64], sum: f64) -> (f64, 
     let bottom_50_pct_end_idx = bottom_50_pct_count.min(n);
 
     // Sum wealth for each group
-    let top_10_pct_wealth: f64 = sorted_values[top_10_pct_start_idx..].iter().sum();
-    let top_1_pct_wealth: f64 = sorted_values[top_1_pct_start_idx..].iter().sum();
-    let bottom_50_pct_wealth: f64 = sorted_values[..bottom_50_pct_end_idx].iter().sum();
+    // Parallelize summing for large datasets
+    let (top_10_pct_wealth, top_1_pct_wealth, bottom_50_pct_wealth): (f64, f64, f64) = if n > 1000 {
+        (
+            sorted_values[top_10_pct_start_idx..].par_iter().sum(),
+            sorted_values[top_1_pct_start_idx..].par_iter().sum(),
+            sorted_values[..bottom_50_pct_end_idx].par_iter().sum(),
+        )
+    } else {
+        (
+            sorted_values[top_10_pct_start_idx..].iter().sum(),
+            sorted_values[top_1_pct_start_idx..].iter().sum(),
+            sorted_values[..bottom_50_pct_end_idx].iter().sum(),
+        )
+    };
 
     // Calculate shares as fractions of total wealth
     let top_10_pct_share = top_10_pct_wealth / sum;
@@ -1641,7 +1676,13 @@ pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
     let mean = values.iter().sum::<f64>() / values.len() as f64;
     // Use sample standard deviation (N-1) for finite samples in Monte Carlo analysis
     let variance = if values.len() > 1 {
-        values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (values.len() - 1) as f64
+        // Parallelize variance calculation for large datasets
+        let variance_sum = if values.len() > 1000 {
+            values.par_iter().map(|v| (v - mean).powi(2)).sum::<f64>()
+        } else {
+            values.iter().map(|v| (v - mean).powi(2)).sum::<f64>()
+        };
+        variance_sum / (values.len() - 1) as f64
     } else {
         0.0
     };
@@ -1731,40 +1772,80 @@ pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartn
     }
 
     // Build per-person statistics
-    let mut per_person: Vec<PersonTradingStats> = Vec::new();
-    for entity in &active_entities {
-        let person_id = entity.person_data.id;
-        let (buyer_count, seller_count, partners) =
-            person_stats.get(&person_id).cloned().unwrap_or_default();
+    // Parallelize computation when we have many entities (>100) for better performance
+    let per_person: Vec<PersonTradingStats> = if active_entities.len() > 100 {
+        let mut stats: Vec<PersonTradingStats> = active_entities
+            .par_iter()
+            .map(|entity| {
+                let person_id = entity.person_data.id;
+                let (buyer_count, seller_count, partners) =
+                    person_stats.get(&person_id).cloned().unwrap_or_default();
 
-        // Sort partners by trade count (descending) and take top 5
-        let mut partner_list: Vec<(usize, usize, f64)> = partners
-            .iter()
-            .map(|(&id, &(count, value))| (id, count, value))
-            .collect();
-        partner_list.sort_by(|a, b| b.1.cmp(&a.1));
+                // Sort partners by trade count (descending) and take top 5
+                let mut partner_list: Vec<(usize, usize, f64)> = partners
+                    .iter()
+                    .map(|(&id, &(count, value))| (id, count, value))
+                    .collect();
+                partner_list.sort_by(|a, b| b.1.cmp(&a.1));
 
-        let top_partners: Vec<PartnerInfo> = partner_list
-            .iter()
-            .take(5)
-            .map(|&(id, count, value)| PartnerInfo {
-                partner_id: id,
-                trade_count: count,
-                total_value: value,
+                let top_partners: Vec<PartnerInfo> = partner_list
+                    .iter()
+                    .take(5)
+                    .map(|&(id, count, value)| PartnerInfo {
+                        partner_id: id,
+                        trade_count: count,
+                        total_value: value,
+                    })
+                    .collect();
+
+                PersonTradingStats {
+                    person_id,
+                    unique_partners: partners.len(),
+                    total_trades_as_buyer: buyer_count,
+                    total_trades_as_seller: seller_count,
+                    top_partners,
+                }
             })
             .collect();
+        // Sort by person_id for consistent, deterministic output
+        stats.sort_by_key(|s| s.person_id);
+        stats
+    } else {
+        let mut stats = Vec::new();
+        for entity in &active_entities {
+            let person_id = entity.person_data.id;
+            let (buyer_count, seller_count, partners) =
+                person_stats.get(&person_id).cloned().unwrap_or_default();
 
-        per_person.push(PersonTradingStats {
-            person_id,
-            unique_partners: partners.len(),
-            total_trades_as_buyer: buyer_count,
-            total_trades_as_seller: seller_count,
-            top_partners,
-        });
-    }
+            // Sort partners by trade count (descending) and take top 5
+            let mut partner_list: Vec<(usize, usize, f64)> = partners
+                .iter()
+                .map(|(&id, &(count, value))| (id, count, value))
+                .collect();
+            partner_list.sort_by(|a, b| b.1.cmp(&a.1));
 
-    // Sort by person_id for consistent output
-    per_person.sort_by_key(|s| s.person_id);
+            let top_partners: Vec<PartnerInfo> = partner_list
+                .iter()
+                .take(5)
+                .map(|&(id, count, value)| PartnerInfo {
+                    partner_id: id,
+                    trade_count: count,
+                    total_value: value,
+                })
+                .collect();
+
+            stats.push(PersonTradingStats {
+                person_id,
+                unique_partners: partners.len(),
+                total_trades_as_buyer: buyer_count,
+                total_trades_as_seller: seller_count,
+                top_partners,
+            });
+        }
+        // Sort by person_id for consistent output
+        stats.sort_by_key(|s| s.person_id);
+        stats
+    };
 
     // Calculate network metrics
     let avg_unique_partners = if !per_person.is_empty() {
