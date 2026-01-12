@@ -122,7 +122,7 @@ impl EventBus {
     ///   operations are no-ops for zero performance overhead.
     pub fn new(enabled: bool) -> Self {
         Self {
-            events: if enabled { Vec::new() } else { Vec::new() },
+            events: Vec::new(),
             enabled,
         }
     }
@@ -235,7 +235,12 @@ impl EventBus {
     /// * `step_number` - Step that completed
     /// * `trades_count` - Number of trades in this step
     /// * `trade_volume` - Total money exchanged in this step
-    pub fn emit_step_completed(&mut self, step_number: usize, trades_count: usize, trade_volume: f64) {
+    pub fn emit_step_completed(
+        &mut self,
+        step_number: usize,
+        trades_count: usize,
+        trade_volume: f64,
+    ) {
         if !self.enabled {
             return;
         }
@@ -316,9 +321,9 @@ mod tests {
     #[test]
     fn test_emit_trade_event() {
         let mut bus = EventBus::new(true);
-        let buyer = 1;  // PersonId is usize
+        let buyer = 1; // PersonId is usize
         let seller = 2;
-        let skill = "Skill5".to_string();  // SkillId is String
+        let skill = "Skill5".to_string(); // SkillId is String
 
         bus.emit_trade(10, buyer, seller, skill.clone(), 15.0);
 
@@ -344,7 +349,7 @@ mod tests {
     #[test]
     fn test_emit_price_update_event() {
         let mut bus = EventBus::new(true);
-        let skill = "Skill3".to_string();  // SkillId is String
+        let skill = "Skill3".to_string(); // SkillId is String
 
         bus.emit_price_update(5, skill.clone(), 10.0, 12.0);
 
@@ -367,7 +372,7 @@ mod tests {
     #[test]
     fn test_emit_reputation_change_event() {
         let mut bus = EventBus::new(true);
-        let person = 7;  // PersonId is usize
+        let person = 7; // PersonId is usize
 
         bus.emit_reputation_change(20, person, 1.0, 1.05);
 

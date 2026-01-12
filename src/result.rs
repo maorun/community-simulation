@@ -466,6 +466,14 @@ pub struct SimulationResult {
     /// Trading partner statistics showing network relationships and trading patterns
     pub trading_partner_statistics: TradingPartnerStats,
 
+    /// Event log (only present if event tracking is enabled).
+    ///
+    /// Contains timestamped events for trades, price updates, reputation changes,
+    /// and step completions. Useful for detailed analysis and debugging.
+    /// This field will be populated in future versions when event emission is fully integrated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub events: Option<Vec<crate::event::SimulationEvent>>,
+
     // final_entities might be too verbose if Person struct grows large with transaction history.
     // Consider summarizing person data if needed, or providing it under a flag.
     // For now, let's keep it as it contains all person data including transaction history.
@@ -544,6 +552,7 @@ impl SimulationResult {
     /// #             most_active_pair: None,
     /// #         },
     /// #     },
+    /// #     events: None,
     /// #     final_persons_data: vec![],
     /// # };
     /// // Save uncompressed JSON
@@ -2002,6 +2011,7 @@ mod tests {
                     most_active_pair: None,
                 },
             },
+            events: None,
             final_persons_data: vec![],
         }
     }
