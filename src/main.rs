@@ -272,6 +272,13 @@ struct Args {
     /// Default: 0.02 (±2% random variation)
     #[arg(long)]
     volatility: Option<f64>,
+
+    /// Enable event tracking during simulation
+    /// When enabled, collects events for trades, price updates, reputation changes, and step completions
+    /// Events are included in simulation results for detailed analysis and debugging
+    /// Minimal performance overhead when disabled (default)
+    #[arg(long, default_value_t = false)]
+    enable_events: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -659,6 +666,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             volatility_percentage: args
                 .volatility
                 .unwrap_or(SimulationConfig::default().volatility_percentage),
+            enable_events: args.enable_events,
         }
     };
 
