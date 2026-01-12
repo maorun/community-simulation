@@ -88,6 +88,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **JSON Output:** Outputs detailed simulation results, including final wealth distribution, reputation statistics, skill valuations, and skill price history over time (suitable for graphing), to a JSON file.
 - **Compressed Output:** Optional gzip compression for JSON output files, reducing file sizes by 10-20x while maintaining full data fidelity. Ideal for large-scale simulations and batch processing.
 - **CSV Export:** Export simulation results to multiple CSV files for easy analysis in Excel, pandas, R, or other data analysis tools. Includes summary statistics, per-person distributions, skill prices, time-series price history, and trading network data (nodes and edges).
+- **SQLite Database Export:** Export simulation results to a SQLite database for long-term storage, querying, and analysis. Creates tables for money distribution, reputation distribution, skill prices, and summary statistics. Ideal for integration with data analysis tools, business intelligence platforms, and automated reporting systems.
 - **Performance:** Leverages Rust and Rayon for potential parallelism in parts of the simulation (though current critical paths like trading are largely sequential for N=100).
 - **Plugin System:** Extensible trait-based plugin architecture for custom simulation extensions without modifying core code. Plugins can hook into simulation lifecycle events (start, step start/end, completion) to:
   - Collect custom metrics and statistics
@@ -186,6 +187,20 @@ The simulation accepts the following CLI arguments:
         *   `{prefix}_skill_prices.csv` - Final skill prices
         *   `{prefix}_price_history.csv` - Skill price history over time
     *   Example: `--csv-output results` creates `results_summary.csv`, `results_money.csv`, etc.
+*   `--sqlite-output <PATH>`:
+    *   Path to SQLite database file for exporting simulation results.
+    *   When enabled, the simulation exports final results to a SQLite database with the following tables:
+        *   `summary_statistics` - Overall simulation statistics (steps, duration, money stats, Gini coefficient, trade volumes)
+        *   `money_distribution` - Final money distribution per person
+        *   `reputation_distribution` - Final reputation distribution per person
+        *   `skill_prices` - Final skill prices for all skills
+    *   **Use cases:**
+        *   Long-term storage and historical analysis of simulation results
+        *   Integration with business intelligence tools and reporting systems
+        *   SQL-based querying and analysis of simulation data
+        *   Combining results from multiple simulation runs for comparative analysis
+    *   Example: `--sqlite-output results.db`
+    *   The database file is created or overwritten if it exists
 *   `--stream-output <FILEPATH>`:
     *   Path to stream step-by-step simulation data in JSONL (JSON Lines) format.
     *   When enabled, the simulation appends one JSON object per line to this file after each step.
@@ -525,6 +540,30 @@ Education system usage:
 ./target/release/economic_simulation --steps 500 --persons 100 --csv-output ./output/analysis
 ```
 This runs the simulation and creates CSV files (`analysis_summary.csv`, `analysis_money.csv`, etc.) in the `./output/` directory for easy data analysis.
+
+**Example with SQLite Database Export:**
+
+```bash
+# Export to SQLite database
+./target/release/economic_simulation --steps 500 --persons 100 --sqlite-output results.db
+
+# Query the database using sqlite3 command-line tool
+sqlite3 results.db "SELECT * FROM summary_statistics;"
+sqlite3 results.db "SELECT AVG(money) FROM money_distribution;"
+sqlite3 results.db "SELECT skill_id, price FROM skill_prices ORDER BY price DESC LIMIT 5;"
+
+# Use with multiple output formats simultaneously
+./target/release/economic_simulation --steps 1000 --persons 100 \
+  --output results.json \
+  --csv-output ./analysis \
+  --sqlite-output results.db
+```
+
+The SQLite database export provides:
+- **Structured storage** for long-term archival of simulation results
+- **SQL querying** for flexible data analysis and reporting
+- **Integration** with business intelligence tools (Tableau, Power BI, Metabase)
+- **Combination** of results from multiple simulation runs for comparative analysis
 
 **Example with Compressed Output:**
 

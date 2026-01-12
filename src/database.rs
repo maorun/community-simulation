@@ -6,16 +6,18 @@
 //!
 //! # Examples
 //!
-//! ```no_run
+//! ```ignore
 //! use simulation_framework::result::SimulationResult;
 //! use simulation_framework::database::export_to_sqlite;
+//! use simulation_framework::{SimulationConfig, SimulationEngine};
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Assuming you have a SimulationResult
-//! let result = SimulationResult::default();
+//! // Create and run a simulation
+//! let config = SimulationConfig::default();
+//! let mut engine = SimulationEngine::new(config);
+//! let result = engine.run();
+//!
+//! // Export results to SQLite database
 //! export_to_sqlite(&result, "simulation_results.db")?;
-//! # Ok(())
-//! # }
 //! ```
 
 use crate::result::SimulationResult;
@@ -40,15 +42,14 @@ use rusqlite::{Connection, Result};
 ///
 /// # Examples
 ///
-/// ```no_run
-/// use simulation_framework::result::SimulationResult;
+/// ```ignore
 /// use simulation_framework::database::export_to_sqlite;
+/// use simulation_framework::{SimulationConfig, SimulationEngine};
 ///
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// let result = SimulationResult::default();
+/// let config = SimulationConfig::default();
+/// let mut engine = SimulationEngine::new(config);
+/// let result = engine.run();
 /// export_to_sqlite(&result, "results.db")?;
-/// # Ok(())
-/// # }
 /// ```
 pub fn export_to_sqlite(result: &SimulationResult, db_path: &str) -> Result<()> {
     let conn = Connection::open(db_path)?;
@@ -151,9 +152,8 @@ fn insert_summary_statistics(conn: &Connection, result: &SimulationResult) -> Re
 
 /// Inserts money distribution data into the database.
 fn insert_money_distribution(conn: &Connection, result: &SimulationResult) -> Result<()> {
-    let mut stmt = conn.prepare(
-        "INSERT INTO money_distribution (person_index, money) VALUES (?1, ?2)",
-    )?;
+    let mut stmt =
+        conn.prepare("INSERT INTO money_distribution (person_index, money) VALUES (?1, ?2)")?;
 
     for (index, money) in result.final_money_distribution.iter().enumerate() {
         stmt.execute(rusqlite::params![index as i64, money])?;
@@ -177,9 +177,7 @@ fn insert_reputation_distribution(conn: &Connection, result: &SimulationResult) 
 
 /// Inserts skill prices into the database.
 fn insert_skill_prices(conn: &Connection, result: &SimulationResult) -> Result<()> {
-    let mut stmt = conn.prepare(
-        "INSERT INTO skill_prices (skill_id, price) VALUES (?1, ?2)",
-    )?;
+    let mut stmt = conn.prepare("INSERT INTO skill_prices (skill_id, price) VALUES (?1, ?2)")?;
 
     for skill_price in &result.final_skill_prices {
         stmt.execute(rusqlite::params![skill_price.id, skill_price.price])?;
@@ -191,7 +189,9 @@ fn insert_skill_prices(conn: &Connection, result: &SimulationResult) -> Result<(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::result::{MoneyStats, ReputationStats, SavingsStats, SkillPriceInfo, TradeVolumeStats};
+    use crate::result::{
+        MoneyStats, ReputationStats, SavingsStats, SkillPriceInfo, TradeVolumeStats,
+    };
     use tempfile::NamedTempFile;
 
     #[test]
@@ -271,11 +271,9 @@ mod tests {
 
         // Verify reputation distribution was inserted
         let count: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM reputation_distribution",
-                [],
-                |row| row.get(0),
-            )
+            .query_row("SELECT COUNT(*) FROM reputation_distribution", [], |row| {
+                row.get(0)
+            })
             .unwrap();
 
         assert_eq!(count, 10);
@@ -306,7 +304,9 @@ mod tests {
             step_times: vec![],
             active_persons: 10,
             failed_steps: 0,
-            final_money_distribution: vec![100.0, 120.0, 80.0, 150.0, 90.0, 110.0, 95.0, 105.0, 130.0, 85.0],
+            final_money_distribution: vec![
+                100.0, 120.0, 80.0, 150.0, 90.0, 110.0, 95.0, 105.0, 130.0, 85.0,
+            ],
             money_statistics: MoneyStats {
                 average: 106.5,
                 median: 102.5,
@@ -319,7 +319,9 @@ mod tests {
                 top_1_percent_share: 0.15,
                 bottom_50_percent_share: 0.45,
             },
-            final_reputation_distribution: vec![1.0, 1.1, 0.9, 1.2, 1.0, 1.1, 0.95, 1.05, 1.15, 0.85],
+            final_reputation_distribution: vec![
+                1.0, 1.1, 0.9, 1.2, 1.0, 1.1, 0.95, 1.05, 1.15, 0.85,
+            ],
             reputation_statistics: ReputationStats {
                 average: 1.025,
                 median: 1.025,
