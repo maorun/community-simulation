@@ -1252,6 +1252,7 @@ impl SimulationEngine {
             trading_partner_statistics: crate::result::calculate_trading_partner_statistics(
                 &self.entities,
             ),
+            events: None, // Event system infrastructure ready, full integration pending
             final_persons_data: self.entities.clone(),
         };
 

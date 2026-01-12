@@ -492,6 +492,24 @@ pub struct SimulationConfig {
     /// Valid range: 0.0-0.5
     #[serde(default = "default_volatility_percentage")]
     pub volatility_percentage: f64,
+
+    /// Enable event tracking during simulation.
+    ///
+    /// When enabled, the simulation collects events for key occurrences:
+    /// - Trade executions (buyer, seller, skill, price)
+    /// - Price updates (skill, old price, new price)
+    /// - Reputation changes (person, old reputation, new reputation)
+    /// - Step completions (step number, trades count, volume)
+    ///
+    /// Events are collected in memory and can be accessed in the simulation results
+    /// for detailed analysis, debugging, or exporting timelines.
+    ///
+    /// **Performance**: When disabled (default), event emission is a no-op with zero overhead.
+    /// When enabled, there's a small memory cost proportional to the number of events.
+    ///
+    /// Set to false to disable event tracking (default).
+    #[serde(default)]
+    pub enable_events: bool,
 }
 
 fn default_seasonal_period() -> usize {
@@ -638,6 +656,7 @@ impl Default for SimulationConfig {
             distance_cost_factor: 0.0,            // Disabled by default
             price_elasticity_factor: 0.1,         // 10% price adjustment per unit imbalance
             volatility_percentage: 0.02,          // ±2% random price variation
+            enable_events: false,                 // Disabled by default
         }
     }
 }
@@ -1065,6 +1084,7 @@ impl SimulationConfig {
                 distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
+                enable_events: false,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -1116,6 +1136,7 @@ impl SimulationConfig {
                 distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
+                enable_events: false,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -1167,6 +1188,7 @@ impl SimulationConfig {
                 distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.15, // Higher volatility for crisis scenario
                 volatility_percentage: 0.05,   // More chaotic market
+                enable_events: false,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -1218,6 +1240,7 @@ impl SimulationConfig {
                 distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.15, // More responsive for inflation
                 volatility_percentage: 0.04,   // Higher volatility for inflation
+                enable_events: false,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -1269,6 +1292,7 @@ impl SimulationConfig {
                 distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.08, // Lower elasticity for stable tech growth
                 volatility_percentage: 0.01,   // Lower volatility for stable growth
+                enable_events: false,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -1320,6 +1344,7 @@ impl SimulationConfig {
                 distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
+                enable_events: false,
             },
         }
     }

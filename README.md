@@ -86,6 +86,13 @@ This repository contains a configurable economic simulation written in Rust. It 
   - Implement custom algorithms and analysis
   
   The plugin system uses a feature-flags approach for compile-time plugin selection, ensuring zero runtime overhead for unused plugins. Plugins are type-safe, thread-safe (`Send + Sync`), and support downcasting for accessing plugin-specific methods. Perfect for research extensions, custom metrics collection, and experimental features without forking the codebase. See the `plugin` module documentation for implementation details and the `Plugin` trait for available lifecycle hooks.
+- **Event System:** Foundational infrastructure for tracking simulation events with zero overhead when disabled. The event system provides:
+  - Event types for key occurrences: TradeExecuted, PriceUpdated, ReputationChanged, StepCompleted
+  - EventBus for collecting and managing events
+  - Optional event tracking via `--enable-events` flag or configuration
+  - Full serialization support for event logs in JSON output
+  
+  The event system infrastructure is complete and tested, ready for future integration into simulation logic. When fully integrated, events will enable detailed timeline analysis, debugging, and research into market dynamics. Currently provides the foundation without modifying existing simulation behavior.
 
 ## Getting Started
 
