@@ -2156,6 +2156,271 @@ impl SimulationEngine {
         self.entities.iter().filter(|e| e.active).count()
     }
 
+    /// Get the current simulation step number
+    pub fn get_current_step(&self) -> usize {
+        self.current_step
+    }
+
+    /// Get the maximum number of steps configured for this simulation
+    pub fn get_max_steps(&self) -> usize {
+        self.config.max_steps
+    }
+
+    /// Get the current scenario being used
+    pub fn get_scenario(&self) -> &crate::scenario::Scenario {
+        &self.config.scenario
+    }
+
+    /// Get the number of active persons in the simulation
+    pub fn get_active_persons(&self) -> usize {
+        self.get_active_entity_count()
+    }
+
+    /// Get the current simulation result snapshot
+    /// This creates a simplified SimulationResult for display in interactive mode
+    /// Note: Some complex statistics are omitted for simplicity
+    pub fn get_current_result(&self) -> SimulationResult {
+        // Collect money distribution
+        let mut final_money_distribution: Vec<f64> = self
+            .entities
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| e.person_data.money)
+            .collect();
+        final_money_distribution
+            .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Calculate money statistics
+        let money_stats = if !final_money_distribution.is_empty() {
+            let sum: f64 = final_money_distribution.iter().sum();
+            let count = final_money_distribution.len() as f64;
+            let average = sum / count;
+            let median = if count as usize > 0 {
+                if count as usize % 2 == 1 {
+                    final_money_distribution[count as usize / 2]
+                } else {
+                    (final_money_distribution[count as usize / 2 - 1]
+                        + final_money_distribution[count as usize / 2])
+                        / 2.0
+                }
+            } else {
+                0.0
+            };
+            crate::result::MoneyStats {
+                average,
+                median,
+                std_dev: 0.0, // Simplified
+                min_money: *final_money_distribution.first().unwrap_or(&0.0),
+                max_money: *final_money_distribution.last().unwrap_or(&0.0),
+                gini_coefficient: crate::result::calculate_gini_coefficient(
+                    &final_money_distribution,
+                    sum,
+                ),
+                herfindahl_index: crate::result::calculate_herfindahl_index(
+                    &final_money_distribution,
+                ),
+                top_10_percent_share: 0.0,    // Simplified
+                top_1_percent_share: 0.0,     // Simplified
+                bottom_50_percent_share: 0.0, // Simplified
+            }
+        } else {
+            crate::result::MoneyStats {
+                average: 0.0,
+                median: 0.0,
+                std_dev: 0.0,
+                min_money: 0.0,
+                max_money: 0.0,
+                gini_coefficient: 0.0,
+                herfindahl_index: 0.0,
+                top_10_percent_share: 0.0,
+                top_1_percent_share: 0.0,
+                bottom_50_percent_share: 0.0,
+            }
+        };
+
+        // Collect reputation distribution
+        let mut final_reputation_distribution: Vec<f64> = self
+            .entities
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| e.person_data.reputation)
+            .collect();
+        final_reputation_distribution
+            .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let reputation_stats = if !final_reputation_distribution.is_empty() {
+            let sum: f64 = final_reputation_distribution.iter().sum();
+            let count = final_reputation_distribution.len() as f64;
+            let average = sum / count;
+            let median = if count as usize > 0 {
+                if count as usize % 2 == 1 {
+                    final_reputation_distribution[count as usize / 2]
+                } else {
+                    (final_reputation_distribution[count as usize / 2 - 1]
+                        + final_reputation_distribution[count as usize / 2])
+                        / 2.0
+                }
+            } else {
+                1.0
+            };
+            crate::result::ReputationStats {
+                average,
+                median,
+                std_dev: 0.0, // Simplified
+                min_reputation: *final_reputation_distribution.first().unwrap_or(&1.0),
+                max_reputation: *final_reputation_distribution.last().unwrap_or(&1.0),
+            }
+        } else {
+            crate::result::ReputationStats {
+                average: 1.0,
+                median: 1.0,
+                std_dev: 0.0,
+                min_reputation: 1.0,
+                max_reputation: 1.0,
+            }
+        };
+
+        // Collect savings distribution
+        let mut final_savings_distribution: Vec<f64> = self
+            .entities
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| e.person_data.savings)
+            .collect();
+        final_savings_distribution
+            .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let savings_stats = if !final_savings_distribution.is_empty() {
+            let sum: f64 = final_savings_distribution.iter().sum();
+            let count = final_savings_distribution.len();
+            let median = if count > 0 {
+                if count % 2 == 1 {
+                    final_savings_distribution[count / 2]
+                } else {
+                    (final_savings_distribution[count / 2 - 1]
+                        + final_savings_distribution[count / 2])
+                        / 2.0
+                }
+            } else {
+                0.0
+            };
+            crate::result::SavingsStats {
+                total_savings: sum,
+                average_savings: if count > 0 { sum / count as f64 } else { 0.0 },
+                median_savings: median,
+                min_savings: *final_savings_distribution.first().unwrap_or(&0.0),
+                max_savings: *final_savings_distribution.last().unwrap_or(&0.0),
+            }
+        } else {
+            crate::result::SavingsStats {
+                total_savings: 0.0,
+                average_savings: 0.0,
+                median_savings: 0.0,
+                min_savings: 0.0,
+                max_savings: 0.0,
+            }
+        };
+
+        // Get skill prices from market
+        let skill_prices_map = self.market.get_all_skill_prices();
+        let final_skill_prices: Vec<crate::result::SkillPriceInfo> = skill_prices_map
+            .into_iter()
+            .map(|(id, price)| crate::result::SkillPriceInfo { id, price })
+            .collect();
+
+        let most_valuable_skill = final_skill_prices
+            .iter()
+            .max_by(|a, b| {
+                a.price
+                    .partial_cmp(&b.price)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|info| crate::result::SkillPriceInfo {
+                id: info.id.clone(),
+                price: info.price,
+            });
+
+        let least_valuable_skill = final_skill_prices
+            .iter()
+            .min_by(|a, b| {
+                a.price
+                    .partial_cmp(&b.price)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|info| crate::result::SkillPriceInfo {
+                id: info.id.clone(),
+                price: info.price,
+            });
+
+        SimulationResult {
+            total_steps: self.current_step,
+            total_duration: 0.0, // Not meaningful in interactive mode
+            step_times: vec![],  // Not tracked in interactive mode
+            active_persons: self.entities.iter().filter(|e| e.active).count(),
+            failed_steps: self.failed_steps,
+            final_money_distribution,
+            money_statistics: money_stats,
+            final_reputation_distribution,
+            reputation_statistics: reputation_stats,
+            final_savings_distribution,
+            savings_statistics: savings_stats,
+            final_skill_prices,
+            most_valuable_skill,
+            least_valuable_skill,
+            skill_price_history: self.market.skill_price_history.clone(),
+            wealth_stats_history: self.wealth_stats_history.clone(),
+            trade_volume_statistics: crate::result::TradeVolumeStats {
+                total_trades: 0,
+                total_volume: 0.0,
+                avg_trades_per_step: 0.0,
+                avg_volume_per_step: 0.0,
+                avg_transaction_value: 0.0,
+                min_trades_per_step: 0,
+                max_trades_per_step: 0,
+            },
+            trades_per_step: self.trades_per_step.clone(),
+            volume_per_step: self.volume_per_step.clone(),
+            total_fees_collected: self.total_fees_collected,
+            per_skill_trade_stats: vec![], // Simplified
+            failed_trade_statistics: crate::result::FailedTradeStats {
+                total_failed_attempts: 0,
+                failure_rate: 0.0,
+                avg_failed_per_step: 0.0,
+                min_failed_per_step: 0,
+                max_failed_per_step: 0,
+            },
+            failed_attempts_per_step: self.failed_attempts_per_step.clone(),
+            black_market_statistics: None,
+            total_taxes_collected: if self.config.tax_rate > 0.0 {
+                Some(self.total_taxes_collected)
+            } else {
+                None
+            },
+            total_taxes_redistributed: if self.config.enable_tax_redistribution
+                && self.config.tax_rate > 0.0
+            {
+                Some(self.total_taxes_redistributed)
+            } else {
+                None
+            },
+            loan_statistics: None, // Simplified
+            contract_statistics: None,
+            education_statistics: None,
+            group_statistics: None,
+            trading_partner_statistics: crate::result::TradingPartnerStats {
+                per_person: vec![],
+                network_metrics: crate::result::NetworkMetrics {
+                    avg_unique_partners: 0.0,
+                    network_density: 0.0,
+                    most_active_pair: None,
+                },
+            },
+            friendship_statistics: None, // Simplified
+            events: None,
+            final_persons_data: self.entities.clone(),
+        }
+    }
+
     /// Saves the current simulation state to a checkpoint file.
     ///
     /// The checkpoint includes all stateful information needed to resume the simulation
