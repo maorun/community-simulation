@@ -1,6 +1,8 @@
 use clap::Parser;
 use colored::Colorize;
 use log::{debug, info, warn};
+use rustyline::error::ReadlineError;
+use rustyline::DefaultEditor;
 use simulation_framework::{PresetName, SimulationConfig, SimulationEngine};
 use std::str::FromStr;
 use std::time::Instant;
@@ -279,6 +281,12 @@ struct Args {
     /// Minimal performance overhead when disabled (default)
     #[arg(long, default_value_t = false)]
     enable_events: bool,
+
+    /// Run simulation in interactive mode (REPL)
+    /// Allows step-by-step execution with commands for debugging and exploration
+    /// Available commands: step, run N, stats, save <path>, help, exit
+    #[arg(long, default_value_t = false)]
+    interactive: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -673,6 +681,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Validate configuration before proceeding
     config.validate()?;
 
+    // Check if interactive mode is enabled
+    if args.interactive {
+        // Interactive mode is incompatible with batch modes
+        if args.monte_carlo_runs.is_some() {
+            return Err("Interactive mode cannot be combined with Monte Carlo runs".into());
+        }
+        if args.parameter_sweep.is_some() {
+            return Err("Interactive mode cannot be combined with parameter sweep".into());
+        }
+        if args.compare_scenarios.is_some() {
+            return Err("Interactive mode cannot be combined with scenario comparison".into());
+        }
+
+        return run_interactive_mode(config);
+    }
+
     // Check if scenario comparison mode is enabled
     if let Some(scenario_spec) = args.compare_scenarios {
         let comparison_runs = args.comparison_runs.unwrap_or(3);
@@ -789,6 +813,254 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         result.print_summary(!args.no_histogram);
     }
 
+    Ok(())
+}
+
+/// Run simulation in interactive mode (REPL) for step-by-step execution
+fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::error::Error>> {
+    info!(
+        "{}",
+        "Starting interactive mode. Type 'help' for available commands.".bright_cyan()
+    );
+    info!(
+        "{}",
+        format!(
+            "Simulation configured with {} persons for up to {} steps",
+            config.entity_count, config.max_steps
+        )
+        .bright_blue()
+    );
+
+    // Initialize the simulation engine
+    let mut engine = if config.resume_from_checkpoint {
+        let checkpoint_path = config
+            .checkpoint_file
+            .clone()
+            .unwrap_or_else(|| "checkpoint.json".to_string());
+
+        info!(
+            "{}",
+            format!("Resuming from checkpoint: {}", checkpoint_path).bright_cyan()
+        );
+
+        SimulationEngine::load_checkpoint(&checkpoint_path)
+            .map_err(|e| format!("Failed to load checkpoint from {}: {}", checkpoint_path, e))?
+    } else {
+        SimulationEngine::new(config.clone())
+    };
+
+    // Create readline editor for interactive input
+    let mut rl = DefaultEditor::new()?;
+
+    // REPL loop
+    loop {
+        let current_step = engine.get_current_step();
+        let max_steps = engine.get_max_steps();
+
+        let prompt = format!("sim[{}/{}]> ", current_step, max_steps);
+        let readline = rl.readline(&prompt);
+
+        match readline {
+            Ok(line) => {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
+
+                // Add command to history
+                let _ = rl.add_history_entry(line);
+
+                // Parse and execute command
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.is_empty() {
+                    continue;
+                }
+
+                let command = parts[0].to_lowercase();
+                match command.as_str() {
+                    "help" | "?" => {
+                        println!("{}", "Available commands:".bright_yellow());
+                        println!("  {}  - Execute one simulation step", "step".bright_green());
+                        println!(
+                            "  {} - Execute N simulation steps",
+                            "run <N>".bright_green()
+                        );
+                        println!(
+                            "  {}  - Show current simulation statistics",
+                            "stats".bright_green()
+                        );
+                        println!(
+                            "  {} - Save current state to checkpoint file",
+                            "save <path>".bright_green()
+                        );
+                        println!(
+                            "  {} - Show current simulation status",
+                            "status".bright_green()
+                        );
+                        println!("  {}  - Show this help message", "help".bright_green());
+                        println!("  {}  - Exit interactive mode", "exit/quit".bright_green());
+                    }
+                    "step" => {
+                        if current_step >= max_steps {
+                            println!(
+                                "{}",
+                                "Simulation has reached max steps. Cannot execute more steps."
+                                    .bright_red()
+                            );
+                            continue;
+                        }
+
+                        let start = Instant::now();
+                        engine.step();
+                        let duration = start.elapsed();
+                        println!(
+                            "{}",
+                            format!(
+                                "Executed step {} in {:.3}s",
+                                current_step + 1,
+                                duration.as_secs_f64()
+                            )
+                            .bright_green()
+                        );
+                    }
+                    "run" => {
+                        if parts.len() < 2 {
+                            println!("{}", "Usage: run <N>".bright_red());
+                            continue;
+                        }
+
+                        let num_steps: usize = match parts[1].parse() {
+                            Ok(n) => n,
+                            Err(_) => {
+                                println!("{}", "Invalid number of steps".bright_red());
+                                continue;
+                            }
+                        };
+
+                        if num_steps == 0 {
+                            println!("{}", "Number of steps must be greater than 0".bright_red());
+                            continue;
+                        }
+
+                        let remaining_steps = max_steps.saturating_sub(current_step);
+                        let steps_to_run = num_steps.min(remaining_steps);
+
+                        if steps_to_run == 0 {
+                            println!(
+                                "{}",
+                                "Simulation has reached max steps. Cannot execute more steps."
+                                    .bright_red()
+                            );
+                            continue;
+                        }
+
+                        if steps_to_run < num_steps {
+                            println!(
+                                "{}",
+                                format!(
+                                    "Warning: Only {} steps remaining, running {} steps",
+                                    remaining_steps, steps_to_run
+                                )
+                                .bright_yellow()
+                            );
+                        }
+
+                        let start = Instant::now();
+                        for i in 0..steps_to_run {
+                            engine.step();
+                            if (i + 1) % 10 == 0 || (i + 1) == steps_to_run {
+                                println!(
+                                    "{}",
+                                    format!("  Progress: {}/{} steps", i + 1, steps_to_run)
+                                        .bright_blue()
+                                );
+                            }
+                        }
+                        let duration = start.elapsed();
+                        println!(
+                            "{}",
+                            format!(
+                                "Executed {} steps in {:.3}s ({:.1} steps/s)",
+                                steps_to_run,
+                                duration.as_secs_f64(),
+                                steps_to_run as f64 / duration.as_secs_f64()
+                            )
+                            .bright_green()
+                        );
+                    }
+                    "stats" => {
+                        let result = engine.get_current_result();
+                        println!("\n{}", "=== Current Statistics ===".bright_yellow());
+                        result.print_summary(false); // Disable histogram in interactive mode
+                    }
+                    "status" => {
+                        println!("\n{}", "=== Simulation Status ===".bright_yellow());
+                        println!("  Current Step: {}/{}", current_step, max_steps);
+                        println!(
+                            "  Progress: {:.1}%",
+                            (current_step as f64 / max_steps as f64) * 100.0
+                        );
+                        println!("  Active Persons: {}", engine.get_active_persons());
+                        println!("  Scenario: {:?}", engine.get_scenario());
+                    }
+                    "save" => {
+                        if parts.len() < 2 {
+                            println!("{}", "Usage: save <path>".bright_red());
+                            continue;
+                        }
+
+                        let save_path = parts[1];
+                        match engine.save_checkpoint(save_path) {
+                            Ok(_) => {
+                                println!(
+                                    "{}",
+                                    format!("Checkpoint saved to {}", save_path).bright_green()
+                                );
+                            }
+                            Err(e) => {
+                                println!(
+                                    "{}",
+                                    format!("Error saving checkpoint: {}", e).bright_red()
+                                );
+                            }
+                        }
+                    }
+                    "exit" | "quit" => {
+                        println!("{}", "Exiting interactive mode...".bright_yellow());
+                        break;
+                    }
+                    _ => {
+                        println!(
+                            "{}",
+                            format!(
+                                "Unknown command: '{}'. Type 'help' for available commands.",
+                                command
+                            )
+                            .bright_red()
+                        );
+                    }
+                }
+            }
+            Err(ReadlineError::Interrupted) => {
+                // Ctrl+C pressed
+                println!(
+                    "{}",
+                    "\nInterrupted. Type 'exit' or 'quit' to exit.".bright_yellow()
+                );
+            }
+            Err(ReadlineError::Eof) => {
+                // Ctrl+D pressed
+                println!("{}", "\nEOF received. Exiting...".bright_yellow());
+                break;
+            }
+            Err(err) => {
+                println!("{}", format!("Error: {:?}", err).bright_red());
+                break;
+            }
+        }
+    }
+
+    println!("{}", "Interactive mode ended.".bright_green());
     Ok(())
 }
 
