@@ -1486,6 +1486,9 @@ pub fn calculate_gini_coefficient(sorted_values: &[f64], sum: f64) -> f64 {
 
     // Parallelize the weighted sum calculation for large datasets
     // Use parallel iterator when we have enough data to benefit from parallelization
+    // Note: Code duplication between parallel/sequential branches is intentional for performance.
+    // Extracting to a helper would require dynamic dispatch or trait objects, adding overhead.
+    // This pattern is idiomatic for conditional parallelization with Rayon.
     let weighted_sum: f64 = if n > 1000 {
         sorted_values
             .par_iter()
@@ -1773,11 +1776,13 @@ pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartn
 
     // Build per-person statistics
     // Parallelize computation when we have many entities (>100) for better performance
+    // Note: person_stats HashMap is read-only here (no writes), so .get().cloned() is thread-safe
     let per_person: Vec<PersonTradingStats> = if active_entities.len() > 100 {
         let mut stats: Vec<PersonTradingStats> = active_entities
             .par_iter()
             .map(|entity| {
                 let person_id = entity.person_data.id;
+                // Thread-safe read-only access to HashMap via .get().cloned()
                 let (buyer_count, seller_count, partners) =
                     person_stats.get(&person_id).cloned().unwrap_or_default();
 
