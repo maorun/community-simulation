@@ -62,6 +62,7 @@
 //!
 //! - [`config`] - Simulation configuration parameters
 //! - [`contract`] - Contract system for long-term agreements
+//! - [`database`] - SQLite database export functionality
 //! - [`engine`] - Main simulation engine and execution loop
 //! - [`entity`] - Entity wrapper around Person for simulation framework
 //! - [`error`] - Custom error types for robust error handling
@@ -78,6 +79,7 @@
 pub mod config;
 pub mod contract;
 pub mod crisis;
+pub mod database;
 pub mod engine;
 pub mod entity; // Represents a Person in the simulation
 pub mod error;

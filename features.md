@@ -36,11 +36,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 5. Datenmanagement
 
-#### 5.1 Datenbank-Integration
-- **Beschreibung**: Persistierung von Simulationsergebnissen
-- **Nutzen**: Langfristige Speicherung und Abfragen
-- **Technologie**: SQLite für lokale Speicherung 
-
 ## 📊 Analyse und Forschung
 
 ### 1. Wirtschaftliche Analysen
@@ -71,9 +66,8 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ## 🎯 Priorisierung
 
 ### Niedrige Priorität (Langfristig)
-1. Datenbank-Integration
-2. Produktionssimulation mit Rezepten
-3. Politische Simulation
+1. Produktionssimulation mit Rezepten
+2. Politische Simulation
 
 ## 📝 Notizen
 
