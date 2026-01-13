@@ -134,11 +134,15 @@ impl Environment {
                 .resource_reserves
                 .get(&resource)
                 .copied()
-                .unwrap_or(1.0);
+                .unwrap_or(0.0); // Missing reserves treated as 0.0 (no reserves available)
 
             let score = if reserves > 0.0 {
                 1.0 - (consumed / reserves)
+            } else if consumed > 0.0 {
+                // No reserves but consumption occurred = unsustainable
+                -consumed // Negative score proportional to overconsumption
             } else {
+                // No reserves and no consumption = neutral (0.0)
                 0.0
             };
 

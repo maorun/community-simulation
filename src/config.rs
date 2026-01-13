@@ -1099,6 +1099,27 @@ impl SimulationConfig {
             )));
         }
 
+        // Environment system validation
+        // Validate resource_cost_per_transaction range unconditionally
+        if !(0.0..=10.0).contains(&self.resource_cost_per_transaction) {
+            return Err(SimulationError::ValidationError(format!(
+                "resource_cost_per_transaction must be between 0.0 and 10.0, got: {}",
+                self.resource_cost_per_transaction
+            )));
+        }
+
+        // Validate custom resource reserves if provided
+        if let Some(ref reserves) = self.custom_resource_reserves {
+            for (resource_name, &amount) in reserves {
+                if amount < 0.0 {
+                    return Err(SimulationError::ValidationError(format!(
+                        "custom_resource_reserves for '{}' must be non-negative, got: {}",
+                        resource_name, amount
+                    )));
+                }
+            }
+        }
+
         Ok(())
     }
 
