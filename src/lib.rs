@@ -72,6 +72,7 @@
 //! - [`person`] - Person agents, transactions, and behavior
 //! - [`plugin`] - Plugin system for extending simulation functionality
 //! - [`pool`] - Memory pooling for reusing allocations and reducing overhead
+//! - [`production`] - Production system for combining skills to create new skills
 //! - [`replay`] - Action logging and simulation replay for debugging
 //! - [`result`] - Simulation results, statistics, and output formatting
 //! - [`scenario`] - Price update strategies for different simulation scenarios
@@ -92,6 +93,7 @@ pub mod person;
 // pub mod physics; // Removed
 pub mod plugin;
 pub mod pool;
+pub mod production;
 pub mod replay;
 pub mod result;
 pub mod scenario;
@@ -111,6 +113,7 @@ pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
 pub use person::{Location, Person, PersonId, Strategy, Transaction, TransactionType};
 pub use plugin::{Plugin, PluginContext, PluginRegistry};
 pub use pool::VecPool;
+pub use production::{generate_default_recipes, Recipe};
 pub use replay::{ActionLog, SimulationAction};
 pub use result::{
     calculate_statistics, calculate_wealth_concentration, write_step_to_stream, ContractStats,

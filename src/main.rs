@@ -286,6 +286,17 @@ struct Args {
     #[arg(long, default_value_t = false)]
     enable_events: bool,
 
+    /// Enable production system where persons can combine skills to create new skills
+    /// When enabled, persons use recipes to combine two input skills into more valuable output skills
+    /// Simulates supply chains, skill composition, and economic specialization
+    #[arg(long, default_value_t = false)]
+    enable_production: bool,
+
+    /// Probability per step that a person attempts production (0.0-1.0, e.g., 0.05 = 5%)
+    /// Only used when --enable-production is set. Higher values = more active production
+    #[arg(long)]
+    production_probability: Option<f64>,
+
     /// Run simulation in interactive mode (REPL)
     /// Allows step-by-step execution with commands for debugging and exploration
     /// Available commands: step, run N, stats, save <path>, help, exit
@@ -449,6 +460,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(volatility) = args.volatility {
             cfg.volatility_percentage = volatility;
         }
+        if args.enable_production {
+            cfg.enable_production = true;
+        }
+        if let Some(production_prob) = args.production_probability {
+            cfg.production_probability = production_prob;
+        }
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -568,6 +585,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(volatility) = args.volatility {
                 cfg.volatility_percentage = volatility;
             }
+            if args.enable_production {
+                cfg.enable_production = true;
+            }
+            if let Some(production_prob) = args.production_probability {
+                cfg.production_probability = production_prob;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -679,6 +702,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .volatility
                 .unwrap_or(SimulationConfig::default().volatility_percentage),
             enable_events: args.enable_events,
+            enable_production: args.enable_production,
+            production_probability: args
+                .production_probability
+                .unwrap_or(SimulationConfig::default().production_probability),
         }
     };
 
