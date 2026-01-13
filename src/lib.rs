@@ -65,6 +65,7 @@
 //! - [`database`] - SQLite database export functionality
 //! - [`engine`] - Main simulation engine and execution loop
 //! - [`entity`] - Entity wrapper around Person for simulation framework
+//! - [`environment`] - Environmental resource tracking and sustainability metrics
 //! - [`error`] - Custom error types for robust error handling
 //! - [`event`] - Event system for tracking simulation events
 //! - [`loan`] - Loan system for credit between persons
@@ -84,6 +85,7 @@ pub mod crisis;
 pub mod database;
 pub mod engine;
 pub mod entity; // Represents a Person in the simulation
+pub mod environment;
 pub mod error;
 pub mod event;
 pub mod loan;
@@ -105,6 +107,7 @@ pub use contract::{Contract, ContractId};
 pub use crisis::CrisisEvent;
 pub use engine::{SimulationCheckpoint, SimulationEngine};
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
+pub use environment::{Environment, Resource};
 pub use error::{Result, SimulationError};
 pub use event::{EventBus, EventType, SimulationEvent};
 pub use loan::{Loan, LoanId};
