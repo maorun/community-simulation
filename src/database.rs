@@ -130,9 +130,9 @@ fn insert_summary_statistics(conn: &Connection, result: &SimulationResult) -> Re
             total_trades, total_volume
         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
         rusqlite::params![
-            result.total_steps,
+            result.total_steps as i64,
             result.total_duration,
-            result.active_persons,
+            result.active_persons as i64,
             result.money_statistics.average,
             result.money_statistics.median,
             result.money_statistics.std_dev,
@@ -142,7 +142,7 @@ fn insert_summary_statistics(conn: &Connection, result: &SimulationResult) -> Re
             result.money_statistics.herfindahl_index,
             result.reputation_statistics.average,
             result.reputation_statistics.median,
-            result.trade_volume_statistics.total_trades,
+            result.trade_volume_statistics.total_trades as i64,
             result.trade_volume_statistics.total_volume,
         ],
     )?;
@@ -227,7 +227,7 @@ mod tests {
         let conn = Connection::open(db_path).unwrap();
 
         // Verify summary statistics were inserted
-        let (total_steps, active_persons): (usize, usize) = conn
+        let (total_steps, active_persons): (i64, i64) = conn
             .query_row(
                 "SELECT total_steps, active_persons FROM summary_statistics WHERE id = 1",
                 [],
@@ -235,8 +235,8 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(total_steps, 100);
-        assert_eq!(active_persons, 10);
+        assert_eq!(total_steps as usize, 100);
+        assert_eq!(active_persons as usize, 10);
     }
 
     #[test]
