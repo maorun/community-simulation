@@ -397,6 +397,7 @@ mod tests {
             loan_statistics: None,
             contract_statistics: None,
             education_statistics: None,
+            environment_statistics: None,
             friendship_statistics: None,
             group_statistics: None,
             events: None,

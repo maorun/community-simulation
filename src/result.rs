@@ -237,6 +237,23 @@ pub struct MonteCarloResult {
     pub avg_reputation_stats: MonteCarloStats,
 }
 
+/// Statistics about environmental resource consumption and sustainability
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EnvironmentStats {
+    /// Total resource consumption by resource type
+    pub total_consumption: HashMap<String, f64>,
+    /// Initial resource reserves by resource type
+    pub initial_reserves: HashMap<String, f64>,
+    /// Remaining reserves by resource type (can be negative if overconsumed)
+    pub remaining_reserves: HashMap<String, f64>,
+    /// Sustainability score per resource type (1.0 = sustainable, 0.0 = depleted, < 0 = overconsumed)
+    pub sustainability_scores: HashMap<String, f64>,
+    /// Overall sustainability score (average across all resources)
+    pub overall_sustainability_score: f64,
+    /// Whether the environment is sustainable (all resources >= 0)
+    pub is_sustainable: bool,
+}
+
 /// Statistics about education system activity (skill learning)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EducationStats {
@@ -456,6 +473,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub education_statistics: Option<EducationStats>,
 
+    /// Environmental resource consumption and sustainability statistics (only present if environment tracking is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environment_statistics: Option<EnvironmentStats>,
+
     /// Friendship system statistics (only present if friendships are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub friendship_statistics: Option<FriendshipStats>,
@@ -543,6 +564,7 @@ impl SimulationResult {
     /// #     loan_statistics: None,
     /// #     contract_statistics: None,
     /// #     education_statistics: None,
+    /// #     environment_statistics: None,
     /// #     friendship_statistics: None,
     /// #     group_statistics: None,
     /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
@@ -2087,6 +2109,7 @@ mod tests {
             loan_statistics: None,
             contract_statistics: None,
             education_statistics: None,
+            environment_statistics: None,
             friendship_statistics: None,
             group_statistics: None,
             trading_partner_statistics: TradingPartnerStats {

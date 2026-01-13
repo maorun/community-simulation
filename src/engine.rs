@@ -1,6 +1,7 @@
 use crate::{
     contract::{Contract, ContractId},
     crisis::CrisisEvent,
+    environment::Environment,
     loan::{Loan, LoanId},
     person::Strategy,
     plugin::{PluginContext, PluginRegistry},
@@ -77,6 +78,8 @@ pub struct SimulationCheckpoint {
     pub total_contracts_completed: usize,
     /// Time-series of wealth distribution statistics
     pub wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
+    /// Environmental resource tracking (if enabled)
+    pub environment: Option<Environment>,
 }
 
 pub struct SimulationEngine {
@@ -124,6 +127,8 @@ pub struct SimulationEngine {
     plugin_registry: PluginRegistry,
     // Production system recipes (cached for performance)
     production_recipes: Option<Vec<crate::production::Recipe>>,
+    // Environmental resource tracking (if enabled)
+    environment: Option<Environment>,
 }
 
 impl SimulationEngine {
@@ -195,6 +200,36 @@ impl SimulationEngine {
             None
         };
 
+        // Initialize environment if enabled
+        let environment = if config.enable_environment {
+            use crate::environment::Resource;
+            use std::collections::HashMap as StdHashMap;
+
+            let env = if let Some(custom_reserves) = &config.custom_resource_reserves {
+                // Parse custom reserves from string keys to Resource enum
+                let mut reserves = StdHashMap::new();
+                for (resource_name, amount) in custom_reserves {
+                    match resource_name.to_lowercase().as_str() {
+                        "energy" => reserves.insert(Resource::Energy, *amount),
+                        "water" => reserves.insert(Resource::Water, *amount),
+                        "materials" => reserves.insert(Resource::Materials, *amount),
+                        "land" => reserves.insert(Resource::Land, *amount),
+                        _ => {
+                            warn!("Unknown resource type: {}, ignoring", resource_name);
+                            continue;
+                        }
+                    };
+                }
+                Environment::new(reserves)
+            } else {
+                Environment::with_default_reserves()
+            };
+            debug!("Environment tracking initialized");
+            Some(env)
+        } else {
+            None
+        };
+
         Self {
             config,
             entities,
@@ -225,6 +260,7 @@ impl SimulationEngine {
             wealth_stats_history: Vec::new(),
             plugin_registry: PluginRegistry::new(),
             production_recipes,
+            environment,
         }
     }
 
@@ -1130,6 +1166,56 @@ impl SimulationEngine {
             } else {
                 None
             },
+            environment_statistics: if self.config.enable_environment {
+                if let Some(ref environment) = self.environment {
+                    use crate::environment::Resource;
+
+                    // Convert Resource enum keys to String keys for JSON serialization
+                    let total_consumption: HashMap<String, f64> = environment
+                        .total_consumption
+                        .iter()
+                        .map(|(resource, &amount)| (resource.name().to_string(), amount))
+                        .collect();
+
+                    let initial_reserves: HashMap<String, f64> = environment
+                        .resource_reserves
+                        .iter()
+                        .map(|(resource, &amount)| (resource.name().to_string(), amount))
+                        .collect();
+
+                    let remaining_reserves: HashMap<String, f64> = Resource::all()
+                        .iter()
+                        .map(|resource| {
+                            (
+                                resource.name().to_string(),
+                                environment.remaining_reserves(*resource),
+                            )
+                        })
+                        .collect();
+
+                    let sustainability_scores_raw = environment.sustainability_scores();
+                    let sustainability_scores: HashMap<String, f64> = sustainability_scores_raw
+                        .iter()
+                        .map(|(resource, &score)| (resource.name().to_string(), score))
+                        .collect();
+
+                    let overall_sustainability_score = environment.overall_sustainability_score();
+                    let is_sustainable = environment.is_sustainable();
+
+                    Some(crate::result::EnvironmentStats {
+                        total_consumption,
+                        initial_reserves,
+                        remaining_reserves,
+                        sustainability_scores,
+                        overall_sustainability_score,
+                        is_sustainable,
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
             friendship_statistics: if self.config.enable_friendships {
                 // Calculate friendship statistics
                 let total_friendships: usize = self
@@ -1938,6 +2024,31 @@ impl SimulationEngine {
                 }
             }
 
+            // Track environmental resource consumption (if enabled)
+            if let Some(ref mut environment) = self.environment {
+                use crate::environment::Resource;
+                use std::collections::HashMap as StdHashMap;
+
+                // Calculate resource consumption based on transaction value
+                let base_consumption = price * self.config.resource_cost_per_transaction;
+                
+                // Distribute consumption evenly across resource types
+                let mut resource_costs = StdHashMap::new();
+                let num_resources = Resource::all().len() as f64;
+                for resource in Resource::all() {
+                    resource_costs.insert(resource, base_consumption / num_resources);
+                }
+
+                environment.consume_resources(&resource_costs);
+                
+                trace!(
+                    "Transaction consumed resources: {:.2} units (price: ${:.2}, multiplier: {:.2})",
+                    base_consumption,
+                    price,
+                    self.config.resource_cost_per_transaction
+                );
+            }
+
             // Update per-skill trade statistics
             let skill_stats = self
                 .per_skill_trades
@@ -2212,6 +2323,11 @@ impl SimulationEngine {
             };
 
             self.wealth_stats_history.push(snapshot);
+        }
+
+        // Update environment step counter (if enabled)
+        if let Some(ref mut environment) = self.environment {
+            environment.step();
         }
 
         self.current_step += 1;
@@ -2555,6 +2671,8 @@ impl SimulationEngine {
             loan_statistics: None, // Simplified
             contract_statistics: None,
             education_statistics: None,
+            environment_statistics: None, // Simplified for interactive mode
+            friendship_statistics: None, // Simplified
             group_statistics: None,
             trading_partner_statistics: crate::result::TradingPartnerStats {
                 per_person: vec![],
@@ -2564,7 +2682,6 @@ impl SimulationEngine {
                     most_active_pair: None,
                 },
             },
-            friendship_statistics: None, // Simplified
             events: None,
             final_persons_data: self.entities.clone(),
         }
@@ -2632,6 +2749,7 @@ impl SimulationEngine {
             total_contracts_created: self.total_contracts_created,
             total_contracts_completed: self.total_contracts_completed,
             wealth_stats_history: self.wealth_stats_history.clone(),
+            environment: self.environment.clone(),
         };
 
         let file = File::create(path)?;
@@ -2751,6 +2869,7 @@ impl SimulationEngine {
             wealth_stats_history: checkpoint.wealth_stats_history,
             plugin_registry: PluginRegistry::new(),
             production_recipes,
+            environment: checkpoint.environment,
         })
     }
 }
