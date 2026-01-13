@@ -35,6 +35,9 @@ use std::collections::VecDeque;
 #[derive(Debug)]
 pub struct VecPool<T> {
     pool: VecDeque<Vec<T>>,
+    /// Maximum number of vectors to store in the pool.
+    /// When this limit is reached, additional vectors returned via `release()`
+    /// will be dropped instead of stored, preventing unbounded memory growth.
     max_capacity: usize,
 }
 
