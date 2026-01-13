@@ -1274,6 +1274,134 @@ impl SimulationEngine {
         result
     }
 
+    /// Attempts production for all active persons in the simulation.
+    ///
+    /// Each person has a chance (based on config.production_probability) to try producing
+    /// a new skill by combining two skills they already have. If they have the required inputs
+    /// and can afford the production cost, a new skill is learned.
+    ///
+    /// # Returns
+    /// The number of successful productions this step
+    fn attempt_production(&mut self) -> usize {
+        use crate::production::generate_default_recipes;
+
+        if !self.config.enable_production {
+            return 0;
+        }
+
+        let recipes = generate_default_recipes();
+        let mut productions_count = 0;
+
+        // Collect entity indices to avoid borrow checker issues
+        let entity_indices: Vec<usize> = self
+            .entities
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.active)
+            .map(|(i, _)| i)
+            .collect();
+
+        for idx in entity_indices {
+            // Check if this person attempts production this step
+            if self.rng.random_range(0.0..1.0) > self.config.production_probability {
+                continue;
+            }
+
+            // Get person's available skill IDs
+            let available_skill_ids: Vec<SkillId> = self.entities[idx]
+                .person_data
+                .all_skills()
+                .iter()
+                .map(|s| s.id.clone())
+                .collect();
+
+            // Find recipes that can be crafted with available skills
+            let craftable_recipes: Vec<&crate::production::Recipe> = recipes
+                .iter()
+                .filter(|recipe| recipe.can_craft(&available_skill_ids))
+                .collect();
+
+            if craftable_recipes.is_empty() {
+                continue;
+            }
+
+            // Pick a random craftable recipe
+            if let Some(recipe) = craftable_recipes.choose(&mut self.rng) {
+                // Check if person already has the output skill
+                if self.entities[idx]
+                    .person_data
+                    .has_skill(&recipe.output_skill)
+                {
+                    continue;
+                }
+
+                // Calculate production cost based on current market prices
+                let input1_price = self
+                    .market
+                    .skills
+                    .get(&recipe.input_skill_1)
+                    .map(|s| s.current_price)
+                    .unwrap_or(self.config.base_skill_price);
+                let input2_price = self
+                    .market
+                    .skills
+                    .get(&recipe.input_skill_2)
+                    .map(|s| s.current_price)
+                    .unwrap_or(self.config.base_skill_price);
+
+                let production_cost = recipe.calculate_cost(input1_price, input2_price);
+
+                // Check if person can afford production
+                if !self.entities[idx].person_data.can_afford(production_cost) {
+                    continue;
+                }
+
+                // Deduct production cost
+                self.entities[idx].person_data.money -= production_cost;
+
+                // Create new skill at higher price (reflects value added)
+                let output_price = (input1_price + input2_price) * recipe.cost_multiplier;
+                let new_skill = Skill::new(recipe.output_skill.clone(), output_price);
+
+                // Add skill to person's learned skills
+                self.entities[idx]
+                    .person_data
+                    .learned_skills
+                    .push(new_skill.clone());
+
+                // Add skill to market if it doesn't exist yet
+                if !self.market.skills.contains_key(&new_skill.id) {
+                    self.market
+                        .skills
+                        .insert(new_skill.id.clone(), new_skill.clone());
+                    self.all_skill_ids.push(new_skill.id.clone());
+
+                    // Also add to black market if enabled
+                    if let Some(ref mut bm) = self.black_market {
+                        let bm_skill = Skill::new(
+                            new_skill.id.clone(),
+                            new_skill.current_price * self.config.black_market_price_multiplier,
+                        );
+                        bm.skills.insert(bm_skill.id.clone(), bm_skill);
+                    }
+                }
+
+                debug!(
+                    "Person {} produced {} from {} + {} for ${:.2}",
+                    self.entities[idx].id,
+                    recipe.output_skill,
+                    recipe.input_skill_1,
+                    recipe.input_skill_2,
+                    production_cost
+                );
+
+                productions_count += 1;
+            }
+        }
+
+        productions_count
+    }
+
     pub fn step(&mut self) {
         self.market.reset_demand_counts();
         for entity in self.entities.iter_mut() {
@@ -1913,6 +2041,15 @@ impl SimulationEngine {
                     skill.efficiency_multiplier *= 1.0 + self.config.tech_growth_rate;
                 }
             }
+        }
+
+        // Attempt production - persons combine skills to create new ones
+        if self.config.enable_production {
+            let _productions_count = self.attempt_production();
+            debug!(
+                "Production: {} persons successfully produced new skills",
+                _productions_count
+            );
         }
 
         // Tax redistribution - distribute collected taxes equally among all persons

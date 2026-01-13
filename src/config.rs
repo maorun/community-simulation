@@ -1045,13 +1045,11 @@ impl SimulationConfig {
         }
 
         // Production system validation
-        if self.enable_production {
-            if !(0.0..=1.0).contains(&self.production_probability) {
-                return Err(SimulationError::ValidationError(format!(
-                    "production_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
-                    self.production_probability
-                )));
-            }
+        if self.enable_production && !(0.0..=1.0).contains(&self.production_probability) {
+            return Err(SimulationError::ValidationError(format!(
+                "production_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                self.production_probability
+            )));
         }
 
         Ok(())
