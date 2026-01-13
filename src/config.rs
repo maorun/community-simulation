@@ -1136,12 +1136,12 @@ impl SimulationConfig {
                 entity_count: 100,
                 initial_money_per_person: 50.0,
                 base_skill_price: 25.0,
-                min_skill_price: 2.0, // Higher floor for crisis scenario
+                min_skill_price: 2.0,       // Higher floor for crisis scenario
                 enable_crisis_events: true, // Enable crisis events for crisis scenario!
                 crisis_probability: 0.05,   // Higher probability (5% per step)
                 crisis_severity: 0.7,       // Higher severity for crisis scenario
                 price_elasticity_factor: 0.15, // Higher volatility for crisis scenario
-                volatility_percentage: 0.05,   // More chaotic market
+                volatility_percentage: 0.05, // More chaotic market
                 ..Self::default()
             },
             PresetName::HighInflation => Self {
@@ -1158,10 +1158,10 @@ impl SimulationConfig {
                 entity_count: 150,
                 initial_money_per_person: 250.0,
                 base_skill_price: 8.0,
-                min_skill_price: 0.5, // Lower floor for tech growth scenario
+                min_skill_price: 0.5,    // Lower floor for tech growth scenario
                 tech_growth_rate: 0.001, // 0.1% growth per step - significant over 1500 steps
                 price_elasticity_factor: 0.08, // Lower elasticity for stable tech growth
-                volatility_percentage: 0.01,   // Lower volatility for stable growth
+                volatility_percentage: 0.01, // Lower volatility for stable growth
                 ..Self::default()
             },
             PresetName::QuickTest => Self {

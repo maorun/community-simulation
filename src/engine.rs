@@ -2031,7 +2031,7 @@ impl SimulationEngine {
 
                 // Calculate resource consumption based on transaction value
                 let base_consumption = price * self.config.resource_cost_per_transaction;
-                
+
                 // Distribute consumption evenly across resource types
                 let mut resource_costs = StdHashMap::new();
                 let num_resources = Resource::all().len() as f64;
@@ -2040,7 +2040,7 @@ impl SimulationEngine {
                 }
 
                 environment.consume_resources(&resource_costs);
-                
+
                 trace!(
                     "Transaction consumed resources: {:.2} units (price: ${:.2}, multiplier: {:.2})",
                     base_consumption,
@@ -2672,7 +2672,7 @@ impl SimulationEngine {
             contract_statistics: None,
             education_statistics: None,
             environment_statistics: None, // Simplified for interactive mode
-            friendship_statistics: None, // Simplified
+            friendship_statistics: None,  // Simplified
             group_statistics: None,
             trading_partner_statistics: crate::result::TradingPartnerStats {
                 per_person: vec![],

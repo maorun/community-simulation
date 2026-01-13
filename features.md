@@ -43,12 +43,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
-### 1. Umweltsimulation
-- **Beschreibung**: Ressourcenverbrauch und Nachhaltigkeit
-- **Nutzen**: Ökologische Ökonomie
-- **Implementierung**: `Environment` und `Resource` Strukturen
-
-### 2. Politische Simulation
+### 1. Politische Simulation
 - **Beschreibung**: Abstimmungen und kollektive Entscheidungsfindung
 - **Nutzen**: Governance-Mechanismen testen
 - **Implementierung**: `VotingSystem` Modul
@@ -56,8 +51,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ## 🎯 Priorisierung
 
 ### Niedrige Priorität (Langfristig)
-1. Umweltsimulation
-2. Politische Simulation
+1. Politische Simulation
 
 ## 📝 Notizen
 
