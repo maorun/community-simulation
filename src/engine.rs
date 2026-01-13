@@ -122,6 +122,8 @@ pub struct SimulationEngine {
     wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
     // Plugin system for extending simulation
     plugin_registry: PluginRegistry,
+    // Production system recipes (cached for performance)
+    production_recipes: Option<Vec<crate::production::Recipe>>,
 }
 
 impl SimulationEngine {
@@ -186,6 +188,13 @@ impl SimulationEngine {
             None
         };
 
+        // Cache production recipes if production is enabled
+        let production_recipes = if config.enable_production {
+            Some(crate::production::generate_default_recipes())
+        } else {
+            None
+        };
+
         Self {
             config,
             entities,
@@ -215,6 +224,7 @@ impl SimulationEngine {
             total_contracts_completed: 0,
             wealth_stats_history: Vec::new(),
             plugin_registry: PluginRegistry::new(),
+            production_recipes,
         }
     }
 
@@ -1283,13 +1293,15 @@ impl SimulationEngine {
     /// # Returns
     /// The number of successful productions this step
     fn attempt_production(&mut self) -> usize {
-        use crate::production::generate_default_recipes;
-
         if !self.config.enable_production {
             return 0;
         }
 
-        let recipes = generate_default_recipes();
+        // Use cached recipes (already validated to exist when enable_production is true)
+        let recipes = self
+            .production_recipes
+            .as_ref()
+            .expect("production_recipes should be initialized when enable_production is true");
         let mut productions_count = 0;
 
         // Collect entity indices to avoid borrow checker issues
@@ -2702,6 +2714,13 @@ impl SimulationEngine {
         // Re-create demand generator from config
         let demand_generator = DemandGenerator::from(checkpoint.config.demand_strategy.clone());
 
+        // Cache production recipes if production is enabled
+        let production_recipes = if checkpoint.config.enable_production {
+            Some(crate::production::generate_default_recipes())
+        } else {
+            None
+        };
+
         Ok(Self {
             config: checkpoint.config,
             entities: checkpoint.entities,
@@ -2731,6 +2750,7 @@ impl SimulationEngine {
             total_contracts_completed: checkpoint.total_contracts_completed,
             wealth_stats_history: checkpoint.wealth_stats_history,
             plugin_registry: PluginRegistry::new(),
+            production_recipes,
         })
     }
 }
