@@ -706,6 +706,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             production_probability: args
                 .production_probability
                 .unwrap_or(SimulationConfig::default().production_probability),
+            enable_environment: SimulationConfig::default().enable_environment,
+            resource_cost_per_transaction: SimulationConfig::default()
+                .resource_cost_per_transaction,
+            custom_resource_reserves: None,
         }
     };
 

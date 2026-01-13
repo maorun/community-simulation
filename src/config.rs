@@ -535,10 +535,52 @@ pub struct SimulationConfig {
     /// Default: 0.05 (5% chance per step)
     #[serde(default = "default_production_probability")]
     pub production_probability: f64,
+
+    /// Enable environmental resource tracking and sustainability metrics.
+    ///
+    /// When enabled, the simulation tracks resource consumption (Energy, Water, Materials, Land)
+    /// for each transaction and calculates sustainability scores. Resources have finite reserves,
+    /// and overconsumption can be detected and analyzed.
+    ///
+    /// This enables modeling ecological economics and studying the environmental impact
+    /// of different economic behaviors and policies.
+    ///
+    /// Set to false to disable environmental tracking (default).
+    #[serde(default)]
+    pub enable_environment: bool,
+
+    /// Resource cost per transaction as a multiplier of the transaction value.
+    ///
+    /// Each transaction consumes resources proportional to its value.
+    /// A value of 1.0 means a $10 transaction consumes 10 units of resources.
+    /// Resources are distributed evenly across all resource types (Energy, Water, Materials, Land).
+    ///
+    /// Only used when enable_environment is true.
+    /// Default: 1.0 (resource consumption matches transaction value)
+    /// Valid range: 0.0 to 10.0
+    #[serde(default = "default_resource_cost_per_transaction")]
+    pub resource_cost_per_transaction: f64,
+
+    /// Initial resource reserves for environmental tracking.
+    ///
+    /// When enable_environment is true and this is None, default reserves are used:
+    /// - Energy: 100,000 units
+    /// - Water: 100,000 units
+    /// - Materials: 100,000 units
+    /// - Land: 10,000 units
+    ///
+    /// Custom reserves can be specified as a map from resource name to amount.
+    /// Only used when enable_environment is true.
+    #[serde(default)]
+    pub custom_resource_reserves: Option<std::collections::HashMap<String, f64>>,
 }
 
 fn default_production_probability() -> f64 {
     0.05 // 5% chance per step to attempt production
+}
+
+fn default_resource_cost_per_transaction() -> f64 {
+    1.0 // Resource consumption matches transaction value
 }
 
 fn default_seasonal_period() -> usize {
@@ -688,6 +730,9 @@ impl Default for SimulationConfig {
             enable_events: false,                 // Disabled by default
             enable_production: false,             // Disabled by default
             production_probability: 0.05,         // 5% chance per step
+            enable_environment: false,            // Disabled by default
+            resource_cost_per_transaction: 1.0,   // Resource consumption matches transaction value
+            custom_resource_reserves: None,       // Use default reserves
         }
     }
 }
@@ -1054,6 +1099,27 @@ impl SimulationConfig {
             )));
         }
 
+        // Environment system validation
+        // Validate resource_cost_per_transaction range unconditionally
+        if !(0.0..=10.0).contains(&self.resource_cost_per_transaction) {
+            return Err(SimulationError::ValidationError(format!(
+                "resource_cost_per_transaction must be between 0.0 and 10.0, got: {}",
+                self.resource_cost_per_transaction
+            )));
+        }
+
+        // Validate custom resource reserves if provided
+        if let Some(ref reserves) = self.custom_resource_reserves {
+            for (resource_name, &amount) in reserves {
+                if amount < 0.0 {
+                    return Err(SimulationError::ValidationError(format!(
+                        "custom_resource_reserves for '{}' must be non-negative, got: {}",
+                        resource_name, amount
+                    )));
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -1078,326 +1144,51 @@ impl SimulationConfig {
             PresetName::SmallEconomy => Self {
                 max_steps: 100,
                 entity_count: 20,
-                seed: 42,
-                initial_money_per_person: 100.0,
-                base_skill_price: 10.0,
-                min_skill_price: 1.0,
-                time_step: 1.0,
-                scenario: Scenario::Original,
-                demand_strategy: DemandStrategy::default(),
-                tech_growth_rate: 0.0,
-                seasonal_amplitude: 0.0,
-                seasonal_period: 100,
-                transaction_fee: 0.0,
-                savings_rate: 0.0,
-                enable_loans: false,
-                loan_interest_rate: 0.01,
-                loan_repayment_period: 20,
-                min_money_to_lend: 50.0,
-                checkpoint_interval: 0,
-                checkpoint_file: None,
-                resume_from_checkpoint: false,
-                tax_rate: 0.0,
-                enable_tax_redistribution: false,
-                skills_per_person: 1,
-                stream_output_path: None,
-                priority_urgency_weight: 0.5,
-                priority_affordability_weight: 0.3,
-                priority_efficiency_weight: 0.1,
-                priority_reputation_weight: 0.1,
-                enable_black_market: false,
-                black_market_price_multiplier: 0.8,
-                black_market_participation_rate: 0.2,
-                enable_contracts: false,
-                max_contract_duration: 50,
-                min_contract_duration: 10,
-                contract_price_discount: 0.05,
-                enable_education: false,
-                learning_cost_multiplier: 3.0,
-                learning_probability: 0.1,
-                enable_crisis_events: false,
-                crisis_probability: 0.02,
-                crisis_severity: 0.5,
-                enable_friendships: false,
-                friendship_probability: 0.1,
-                friendship_discount: 0.1,
-                num_groups: None,
-                distance_cost_factor: 0.0,
-                price_elasticity_factor: 0.1,
-                volatility_percentage: 0.02,
-                enable_events: false,
-                enable_production: false,
-                production_probability: 0.05,
+                ..Self::default()
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
                 entity_count: 500,
-                seed: 42,
                 initial_money_per_person: 200.0,
-                base_skill_price: 10.0,
-                min_skill_price: 1.0,
-                time_step: 1.0,
-                scenario: Scenario::Original,
-                demand_strategy: DemandStrategy::default(),
-                tech_growth_rate: 0.0,
-                seasonal_amplitude: 0.0,
-                seasonal_period: 100,
-                transaction_fee: 0.0,
-                savings_rate: 0.0,
-                enable_loans: false,
-                loan_interest_rate: 0.01,
-                loan_repayment_period: 20,
-                min_money_to_lend: 50.0,
-                checkpoint_interval: 0,
-                checkpoint_file: None,
-                resume_from_checkpoint: false,
-                tax_rate: 0.0,
-                enable_tax_redistribution: false,
-                skills_per_person: 1,
-                stream_output_path: None,
-                priority_urgency_weight: 0.5,
-                priority_affordability_weight: 0.3,
-                priority_efficiency_weight: 0.1,
-                priority_reputation_weight: 0.1,
-                enable_black_market: false,
-                black_market_price_multiplier: 0.8,
-                black_market_participation_rate: 0.2,
-                enable_contracts: false,
-                max_contract_duration: 50,
-                min_contract_duration: 10,
-                contract_price_discount: 0.05,
-                enable_education: false,
-                learning_cost_multiplier: 3.0,
-                learning_probability: 0.1,
-                enable_crisis_events: false,
-                crisis_probability: 0.02,
-                crisis_severity: 0.5,
-                enable_friendships: false,
-                friendship_probability: 0.1,
-                friendship_discount: 0.1,
-                num_groups: None,
-                distance_cost_factor: 0.0,
-                price_elasticity_factor: 0.1,
-                volatility_percentage: 0.02,
-                enable_events: false,
-                enable_production: false,
-                production_probability: 0.05,
+                ..Self::default()
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
                 entity_count: 100,
-                seed: 42,
                 initial_money_per_person: 50.0,
                 base_skill_price: 25.0,
-                min_skill_price: 2.0, // Higher floor for crisis scenario
-                time_step: 1.0,
-                scenario: Scenario::Original,
-                demand_strategy: DemandStrategy::default(),
-                tech_growth_rate: 0.0,
-                seasonal_amplitude: 0.0,
-                seasonal_period: 100,
-                transaction_fee: 0.0,
-                savings_rate: 0.0,
-                enable_loans: false,
-                loan_interest_rate: 0.01,
-                loan_repayment_period: 20,
-                min_money_to_lend: 50.0,
-                checkpoint_interval: 0,
-                checkpoint_file: None,
-                resume_from_checkpoint: false,
-                tax_rate: 0.0,
-                enable_tax_redistribution: false,
-                skills_per_person: 1,
-                stream_output_path: None,
-                priority_urgency_weight: 0.5,
-                priority_affordability_weight: 0.3,
-                priority_efficiency_weight: 0.1,
-                priority_reputation_weight: 0.1,
-                enable_black_market: false,
-                black_market_price_multiplier: 0.8,
-                black_market_participation_rate: 0.2,
-                enable_contracts: false,
-                max_contract_duration: 50,
-                min_contract_duration: 10,
-                contract_price_discount: 0.05,
-                enable_education: false,
-                learning_cost_multiplier: 3.0,
-                learning_probability: 0.1,
+                min_skill_price: 2.0,       // Higher floor for crisis scenario
                 enable_crisis_events: true, // Enable crisis events for crisis scenario!
                 crisis_probability: 0.05,   // Higher probability (5% per step)
                 crisis_severity: 0.7,       // Higher severity for crisis scenario
-                enable_friendships: false,
-                friendship_probability: 0.1,
-                friendship_discount: 0.1,
-                num_groups: None,
-                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.15, // Higher volatility for crisis scenario
-                volatility_percentage: 0.05,   // More chaotic market
-                enable_events: false,
-                enable_production: false,
-                production_probability: 0.05,
+                volatility_percentage: 0.05, // More chaotic market
+                ..Self::default()
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
                 entity_count: 100,
-                seed: 42,
-                initial_money_per_person: 100.0,
                 base_skill_price: 15.0,
-                min_skill_price: 1.0,
-                time_step: 1.0,
                 scenario: Scenario::DynamicPricing,
-                demand_strategy: DemandStrategy::default(),
-                tech_growth_rate: 0.0,
-                seasonal_amplitude: 0.0,
-                seasonal_period: 100,
-                transaction_fee: 0.0,
-                savings_rate: 0.0,
-                enable_loans: false,
-                loan_interest_rate: 0.01,
-                loan_repayment_period: 20,
-                min_money_to_lend: 50.0,
-                checkpoint_interval: 0,
-                checkpoint_file: None,
-                resume_from_checkpoint: false,
-                tax_rate: 0.0,
-                enable_tax_redistribution: false,
-                skills_per_person: 1,
-                stream_output_path: None,
-                priority_urgency_weight: 0.5,
-                priority_affordability_weight: 0.3,
-                priority_efficiency_weight: 0.1,
-                priority_reputation_weight: 0.1,
-                enable_black_market: false,
-                black_market_price_multiplier: 0.8,
-                black_market_participation_rate: 0.2,
-                enable_contracts: false,
-                max_contract_duration: 50,
-                min_contract_duration: 10,
-                contract_price_discount: 0.05,
-                enable_education: false,
-                learning_cost_multiplier: 3.0,
-                learning_probability: 0.1,
-                enable_crisis_events: false,
-                crisis_probability: 0.02,
-                crisis_severity: 0.5,
-                enable_friendships: false,
-                friendship_probability: 0.1,
-                friendship_discount: 0.1,
-                num_groups: None,
-                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.15, // More responsive for inflation
                 volatility_percentage: 0.04,   // Higher volatility for inflation
-                enable_events: false,
-                enable_production: false,
-                production_probability: 0.05,
+                ..Self::default()
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
                 entity_count: 150,
-                seed: 42,
                 initial_money_per_person: 250.0,
                 base_skill_price: 8.0,
-                min_skill_price: 0.5, // Lower floor for tech growth scenario
-                time_step: 1.0,
-                scenario: Scenario::Original,
-                demand_strategy: DemandStrategy::default(),
+                min_skill_price: 0.5,    // Lower floor for tech growth scenario
                 tech_growth_rate: 0.001, // 0.1% growth per step - significant over 1500 steps
-                seasonal_amplitude: 0.0,
-                seasonal_period: 100,
-                transaction_fee: 0.0,
-                savings_rate: 0.0,
-                enable_loans: false,
-                loan_interest_rate: 0.01,
-                loan_repayment_period: 20,
-                min_money_to_lend: 50.0,
-                checkpoint_interval: 0,
-                checkpoint_file: None,
-                resume_from_checkpoint: false,
-                tax_rate: 0.0,
-                enable_tax_redistribution: false,
-                skills_per_person: 1,
-                stream_output_path: None,
-                priority_urgency_weight: 0.5,
-                priority_affordability_weight: 0.3,
-                priority_efficiency_weight: 0.1,
-                priority_reputation_weight: 0.1,
-                enable_black_market: false,
-                black_market_price_multiplier: 0.8,
-                black_market_participation_rate: 0.2,
-                enable_contracts: false,
-                max_contract_duration: 50,
-                min_contract_duration: 10,
-                contract_price_discount: 0.05,
-                enable_education: false,
-                learning_cost_multiplier: 3.0,
-                learning_probability: 0.1,
-                enable_crisis_events: false,
-                crisis_probability: 0.02,
-                crisis_severity: 0.5,
-                enable_friendships: false,
-                friendship_probability: 0.1,
-                friendship_discount: 0.1,
-                num_groups: None,
-                distance_cost_factor: 0.0,
                 price_elasticity_factor: 0.08, // Lower elasticity for stable tech growth
-                volatility_percentage: 0.01,   // Lower volatility for stable growth
-                enable_events: false,
-                enable_production: false,
-                production_probability: 0.05,
+                volatility_percentage: 0.01, // Lower volatility for stable growth
+                ..Self::default()
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
                 entity_count: 10,
-                seed: 42,
-                initial_money_per_person: 100.0,
-                base_skill_price: 10.0,
-                min_skill_price: 1.0,
-                time_step: 1.0,
-                scenario: Scenario::Original,
-                demand_strategy: DemandStrategy::default(),
-                tech_growth_rate: 0.0,
-                seasonal_amplitude: 0.0,
-                seasonal_period: 100,
-                transaction_fee: 0.0,
-                savings_rate: 0.0,
-                enable_loans: false,
-                loan_interest_rate: 0.01,
-                loan_repayment_period: 20,
-                min_money_to_lend: 50.0,
-                checkpoint_interval: 0,
-                checkpoint_file: None,
-                resume_from_checkpoint: false,
-                tax_rate: 0.0,
-                enable_tax_redistribution: false,
-                skills_per_person: 1,
-                stream_output_path: None,
-                priority_urgency_weight: 0.5,
-                priority_affordability_weight: 0.3,
-                priority_efficiency_weight: 0.1,
-                priority_reputation_weight: 0.1,
-                enable_black_market: false,
-                black_market_price_multiplier: 0.8,
-                black_market_participation_rate: 0.2,
-                enable_contracts: false,
-                max_contract_duration: 50,
-                min_contract_duration: 10,
-                contract_price_discount: 0.05,
-                enable_education: false,
-                learning_cost_multiplier: 3.0,
-                learning_probability: 0.1,
-                enable_crisis_events: false,
-                crisis_probability: 0.02,
-                crisis_severity: 0.5,
-                enable_friendships: false,
-                friendship_probability: 0.1,
-                friendship_discount: 0.1,
-                num_groups: None,
-                distance_cost_factor: 0.0,
-                price_elasticity_factor: 0.1,
-                volatility_percentage: 0.02,
-                enable_events: false,
-                enable_production: false,
-                production_probability: 0.05,
+                ..Self::default()
             },
         }
     }
