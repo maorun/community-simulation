@@ -510,6 +510,35 @@ pub struct SimulationConfig {
     /// Set to false to disable event tracking (default).
     #[serde(default)]
     pub enable_events: bool,
+
+    /// Enable production system where persons can combine skills to create new skills.
+    ///
+    /// When enabled, persons can use recipes to combine two skills they possess into
+    /// a new, more valuable skill. This simulates supply chains, skill composition,
+    /// and economic specialization.
+    ///
+    /// Production requires:
+    /// - Person must have both input skills required by a recipe
+    /// - Person must have enough money to cover production costs
+    /// - Production costs are based on input skill prices and recipe multipliers
+    ///
+    /// Set to false to disable production system (default).
+    #[serde(default)]
+    pub enable_production: bool,
+
+    /// Probability per step that a person will attempt production (0.0-1.0).
+    ///
+    /// Each simulation step, persons have this probability of attempting to produce
+    /// a new skill if they have the required inputs and money.
+    /// Higher values lead to more active production and faster skill evolution.
+    /// Only used when enable_production is true.
+    /// Default: 0.05 (5% chance per step)
+    #[serde(default = "default_production_probability")]
+    pub production_probability: f64,
+}
+
+fn default_production_probability() -> f64 {
+    0.05 // 5% chance per step to attempt production
 }
 
 fn default_seasonal_period() -> usize {
@@ -657,6 +686,8 @@ impl Default for SimulationConfig {
             price_elasticity_factor: 0.1,         // 10% price adjustment per unit imbalance
             volatility_percentage: 0.02,          // ±2% random price variation
             enable_events: false,                 // Disabled by default
+            enable_production: false,             // Disabled by default
+            production_probability: 0.05,         // 5% chance per step
         }
     }
 }
@@ -1013,6 +1044,16 @@ impl SimulationConfig {
             )));
         }
 
+        // Production system validation
+        // Validate production_probability range unconditionally to prevent configuration issues
+        // when toggling production on/off
+        if !(0.0..=1.0).contains(&self.production_probability) {
+            return Err(SimulationError::ValidationError(format!(
+                "production_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                self.production_probability
+            )));
+        }
+
         Ok(())
     }
 
@@ -1085,6 +1126,8 @@ impl SimulationConfig {
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
                 enable_events: false,
+                enable_production: false,
+                production_probability: 0.05,
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -1137,6 +1180,8 @@ impl SimulationConfig {
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
                 enable_events: false,
+                enable_production: false,
+                production_probability: 0.05,
             },
             PresetName::CrisisScenario => Self {
                 max_steps: 1000,
@@ -1189,6 +1234,8 @@ impl SimulationConfig {
                 price_elasticity_factor: 0.15, // Higher volatility for crisis scenario
                 volatility_percentage: 0.05,   // More chaotic market
                 enable_events: false,
+                enable_production: false,
+                production_probability: 0.05,
             },
             PresetName::HighInflation => Self {
                 max_steps: 1000,
@@ -1241,6 +1288,8 @@ impl SimulationConfig {
                 price_elasticity_factor: 0.15, // More responsive for inflation
                 volatility_percentage: 0.04,   // Higher volatility for inflation
                 enable_events: false,
+                enable_production: false,
+                production_probability: 0.05,
             },
             PresetName::TechGrowth => Self {
                 max_steps: 1500,
@@ -1293,6 +1342,8 @@ impl SimulationConfig {
                 price_elasticity_factor: 0.08, // Lower elasticity for stable tech growth
                 volatility_percentage: 0.01,   // Lower volatility for stable growth
                 enable_events: false,
+                enable_production: false,
+                production_probability: 0.05,
             },
             PresetName::QuickTest => Self {
                 max_steps: 50,
@@ -1345,6 +1396,8 @@ impl SimulationConfig {
                 price_elasticity_factor: 0.1,
                 volatility_percentage: 0.02,
                 enable_events: false,
+                enable_production: false,
+                production_probability: 0.05,
             },
         }
     }

@@ -43,17 +43,12 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
-### 1. Produktionssimulation
-- **Beschreibung**: Fähigkeiten können kombiniert werden, um neue zu erstellen
-- **Nutzen**: Supply-Chain-Dynamiken
-- **Implementierung**: `Production` Modul mit Rezepten
-
-### 2. Umweltsimulation
+### 1. Umweltsimulation
 - **Beschreibung**: Ressourcenverbrauch und Nachhaltigkeit
 - **Nutzen**: Ökologische Ökonomie
 - **Implementierung**: `Environment` und `Resource` Strukturen
 
-### 3. Politische Simulation
+### 2. Politische Simulation
 - **Beschreibung**: Abstimmungen und kollektive Entscheidungsfindung
 - **Nutzen**: Governance-Mechanismen testen
 - **Implementierung**: `VotingSystem` Modul
@@ -61,7 +56,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ## 🎯 Priorisierung
 
 ### Niedrige Priorität (Langfristig)
-1. Produktionssimulation mit Rezepten
+1. Umweltsimulation
 2. Politische Simulation
 
 ## 📝 Notizen
