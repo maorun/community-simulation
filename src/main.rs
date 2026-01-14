@@ -710,6 +710,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             resource_cost_per_transaction: SimulationConfig::default()
                 .resource_cost_per_transaction,
             custom_resource_reserves: None,
+            enable_voting: SimulationConfig::default().enable_voting,
+            voting_method: SimulationConfig::default().voting_method,
+            proposal_duration: SimulationConfig::default().proposal_duration,
+            proposal_probability: SimulationConfig::default().proposal_probability,
+            voting_participation_rate: SimulationConfig::default().voting_participation_rate,
         }
     };
 

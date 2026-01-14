@@ -78,6 +78,7 @@
 //! - [`result`] - Simulation results, statistics, and output formatting
 //! - [`scenario`] - Price update strategies for different simulation scenarios
 //! - [`skill`] - Skill definitions and generation
+//! - [`voting`] - Voting system for governance and collective decision-making
 
 pub mod config;
 pub mod contract;
@@ -101,6 +102,7 @@ pub mod result;
 pub mod scenario;
 pub mod scenario_comparison;
 pub mod skill;
+pub mod voting;
 
 pub use config::{PresetName, SimulationConfig};
 pub use contract::{Contract, ContractId};
@@ -125,6 +127,10 @@ pub use result::{
 pub use scenario::{PriceUpdater, Scenario};
 pub use scenario_comparison::ScenarioComparisonResult;
 pub use skill::{Skill, SkillId};
+pub use voting::{
+    Proposal, ProposalId, ProposalType, Vote, VotingMethod, VotingResult, VotingStatistics,
+    VotingSystem,
+};
 
 #[cfg(test)]
 mod tests;
