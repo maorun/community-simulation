@@ -22,11 +22,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Performance-Optimierungen
 
-#### 2.2 SIMD-Optimierungen
-- **Beschreibung**: Vektorisierte Operationen für Berechnungen
-- **Nutzen**: Schnellere numerische Berechnungen
-- **Technologie**: `std::simd` oder externe Crates
-
 ### 3. Code-Qualität
 
 ### 5. Datenmanagement
