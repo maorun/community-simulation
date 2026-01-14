@@ -136,27 +136,33 @@ This repository contains a configurable economic simulation written in Rust. It 
 
 - Rust Toolchain (see [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install) for installation instructions)
 
-### Building the Project
+### Quick Start
 
 1.  Clone the repository:
     ```bash
     git clone <repository-url>
-    cd economic-simulation-framework
+    cd community-simulation
     ```
-    (Replace `<repository-url>` and `economic-simulation-framework` with actual values)
+    (Replace `<repository-url>` with the actual repository URL)
+
 2.  Build the project in release mode for optimal performance:
     ```bash
     cargo build --release
     ```
 
+3.  Run a basic simulation:
+    ```bash
+    ./target/release/simulation-framework -o results.json
+    ```
+
 ### Running the Simulation
 
-After building, the executable will be located at `target/release/economic_simulation` (the exact name depends on your `Cargo.toml` package name, assuming it's `economic_simulation`).
+After building, the executable will be located at `target/release/simulation-framework`.
 
 **Basic Execution (using default parameters):**
 
 ```bash
-./target/release/economic_simulation -o results.json
+./target/release/simulation-framework -o results.json
 ```
 This runs the simulation with default settings (e.g., 100 persons, 500 steps, 100 initial money, 10 base skill price) and saves the output to `results.json`.
 
@@ -432,26 +438,26 @@ The simulation accepts the following CLI arguments:
 
 ```bash
 # List all available presets
-./target/release/economic_simulation --list-presets
+./target/release/simulation-framework --list-presets
 
 # Use a preset for quick testing
-./target/release/economic_simulation --preset quick_test -o quick_results.json
+./target/release/simulation-framework --preset quick_test -o quick_results.json
 
 # Use a preset and override some parameters
-./target/release/economic_simulation --preset crisis_scenario --steps 2000 --seed 999 -o crisis_results.json
+./target/release/simulation-framework --preset crisis_scenario --steps 2000 --seed 999 -o crisis_results.json
 ```
 
 **Example with Custom Parameters:**
 
 ```bash
-./target/release/economic_simulation --steps 1000 --persons 50 --initial-money 200 --base-price 15 --output custom_results.json --seed 123
+./target/release/simulation-framework --steps 1000 --persons 50 --initial-money 200 --base-price 15 --output custom_results.json --seed 123
 ```
 This runs the simulation for 1000 steps with 50 persons, each starting with 200 money, skills having a base price of 15, and saves results to `custom_results.json` using RNG seed 123.
 
 **Example with Seasonal Effects:**
 
 ```bash
-./target/release/economic_simulation --steps 500 --persons 100 --seasonal-amplitude 0.3 --seasonal-period 50 --output seasonal_results.json
+./target/release/simulation-framework --steps 500 --persons 100 --seasonal-amplitude 0.3 --seasonal-period 50 --output seasonal_results.json
 ```
 This runs the simulation with seasonal demand fluctuations. The `--seasonal-amplitude 0.3` parameter creates ±30% variation in demand, and `--seasonal-period 50` means the seasonal cycle repeats every 50 steps. Different skills will have their peak demand at different times due to phase offsets, creating realistic market dynamics.
 
@@ -459,11 +465,11 @@ This runs the simulation with seasonal demand fluctuations. The `--seasonal-ampl
 
 ```bash
 # Crisis scenario with price floor to prevent market collapse
-./target/release/economic_simulation --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 3 --scenario DynamicPricing --output price_floor_results.json
+./target/release/simulation-framework --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 3 --scenario DynamicPricing --output price_floor_results.json
 
 # Compare with and without price floor
-./target/release/economic_simulation --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 1 --scenario DynamicPricing --output no_floor.json
-./target/release/economic_simulation --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 5 --scenario DynamicPricing --output with_floor.json
+./target/release/simulation-framework --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 1 --scenario DynamicPricing --output no_floor.json
+./target/release/simulation-framework --steps 500 --persons 100 --initial-money 50 --base-price 15 --min-skill-price 5 --scenario DynamicPricing --output with_floor.json
 ```
 
 The price floor feature is particularly useful in crisis scenarios or with dynamic pricing that can drive prices down. By setting `--min-skill-price 3`, you ensure that no skill price falls below $3, preventing deflationary spirals and maintaining minimum market viability. This models real-world economic policies like minimum wage laws or regulatory price controls.
@@ -472,18 +478,18 @@ The price floor feature is particularly useful in crisis scenarios or with dynam
 
 ```bash
 # Default uniform demand (baseline)
-./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Uniform --output uniform_demand.json
+./target/release/simulation-framework --steps 500 --persons 100 --demand-strategy Uniform --output uniform_demand.json
 
 # Concentrated demand (inequality)
-./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Concentrated --output concentrated_demand.json
+./target/release/simulation-framework --steps 500 --persons 100 --demand-strategy Concentrated --output concentrated_demand.json
 
 # Cyclical demand (business cycles)
-./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Cyclical --output cyclical_demand.json
+./target/release/simulation-framework --steps 500 --persons 100 --demand-strategy Cyclical --output cyclical_demand.json
 
 # Compare demand strategies side-by-side
-./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Uniform --output uniform.json
-./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Concentrated --seed 42 --output concentrated.json
-./target/release/economic_simulation --steps 500 --persons 100 --demand-strategy Cyclical --seed 42 --output cyclical.json
+./target/release/simulation-framework --steps 500 --persons 100 --demand-strategy Uniform --output uniform.json
+./target/release/simulation-framework --steps 500 --persons 100 --demand-strategy Concentrated --seed 42 --output concentrated.json
+./target/release/simulation-framework --steps 500 --persons 100 --demand-strategy Cyclical --seed 42 --output cyclical.json
 ```
 
 Demand strategies usage:
@@ -499,7 +505,7 @@ The demand strategy interacts with other features:
 **Example with Transaction Fees:**
 
 ```bash
-./target/release/economic_simulation --steps 500 --persons 100 --transaction-fee 0.05 --output fees_results.json
+./target/release/simulation-framework --steps 500 --persons 100 --transaction-fee 0.05 --output fees_results.json
 ```
 This runs the simulation with a 5% transaction fee on all trades. The fee is deducted from the seller's proceeds (e.g., if a skill sells for $100, the buyer pays $100 but the seller receives $95, with $5 collected as fees). This simulates realistic marketplace costs and allows studying the impact of trading fees on market liquidity, wealth distribution, and economic activity. The total fees collected are reported in the JSON output.
 
@@ -507,13 +513,13 @@ This runs the simulation with a 5% transaction fee on all trades. The fee is ded
 
 ```bash
 # Simulation with 10% income tax (no redistribution)
-./target/release/economic_simulation --steps 500 --persons 100 --tax-rate 0.10 --output tax_results.json
+./target/release/simulation-framework --steps 500 --persons 100 --tax-rate 0.10 --output tax_results.json
 
 # Simulation with 15% income tax and redistribution
-./target/release/economic_simulation --steps 500 --persons 100 --tax-rate 0.15 --enable-tax-redistribution --output tax_redistribution_results.json
+./target/release/simulation-framework --steps 500 --persons 100 --tax-rate 0.15 --enable-tax-redistribution --output tax_redistribution_results.json
 
 # Combined: transaction fees + taxes + redistribution
-./target/release/economic_simulation --steps 500 --persons 100 \
+./target/release/simulation-framework --steps 500 --persons 100 \
   --transaction-fee 0.05 --tax-rate 0.20 --enable-tax-redistribution \
   --output combined_policy.json
 ```
@@ -528,15 +534,15 @@ Tax system usage:
 
 ```bash
 # Enable education with default parameters (3x market price, 10% learning probability per step)
-./target/release/economic_simulation --steps 500 --persons 100 --enable-education --output education_results.json
+./target/release/simulation-framework --steps 500 --persons 100 --enable-education --output education_results.json
 
 # Custom education parameters: cheaper learning (2x price) and higher probability (50%)
-./target/release/economic_simulation --steps 1000 --persons 50 \
+./target/release/simulation-framework --steps 1000 --persons 50 \
   --enable-education --learning-cost-multiplier 2.0 --learning-probability 0.5 \
   --initial-money 500 --output education_custom.json
 
 # Study skill acquisition in a wealthy economy
-./target/release/economic_simulation --steps 1500 --persons 100 \
+./target/release/simulation-framework --steps 1500 --persons 100 \
   --enable-education --learning-cost-multiplier 1.5 --learning-probability 0.3 \
   --initial-money 1000 --output wealthy_education.json
 ```
@@ -562,7 +568,7 @@ Education system usage:
 **Example with CSV Export:**
 
 ```bash
-./target/release/economic_simulation --steps 500 --persons 100 --csv-output ./output/analysis
+./target/release/simulation-framework --steps 500 --persons 100 --csv-output ./output/analysis
 ```
 This runs the simulation and creates CSV files (`analysis_summary.csv`, `analysis_money.csv`, etc.) in the `./output/` directory for easy data analysis.
 
@@ -570,7 +576,7 @@ This runs the simulation and creates CSV files (`analysis_summary.csv`, `analysi
 
 ```bash
 # Export to SQLite database
-./target/release/economic_simulation --steps 500 --persons 100 --sqlite-output results.db
+./target/release/simulation-framework --steps 500 --persons 100 --sqlite-output results.db
 
 # Query the database using sqlite3 command-line tool
 sqlite3 results.db "SELECT * FROM summary_statistics;"
@@ -578,7 +584,7 @@ sqlite3 results.db "SELECT AVG(money) FROM money_distribution;"
 sqlite3 results.db "SELECT skill_id, price FROM skill_prices ORDER BY price DESC LIMIT 5;"
 
 # Use with multiple output formats simultaneously
-./target/release/economic_simulation --steps 1000 --persons 100 \
+./target/release/simulation-framework --steps 1000 --persons 100 \
   --output results.json \
   --csv-output ./analysis \
   --sqlite-output results.db
@@ -593,7 +599,7 @@ The SQLite database export provides:
 **Example with Compressed Output:**
 
 ```bash
-./target/release/economic_simulation --steps 1000 --persons 100 --output results.json --compress
+./target/release/simulation-framework --steps 1000 --persons 100 --output results.json --compress
 ```
 This runs the simulation and saves compressed results to `results.json.gz`, achieving significant space savings (typically 10-20x smaller file size) while preserving all simulation data. The compressed file can be decompressed with `gunzip results.json.gz` or opened directly by many data analysis tools.
 
@@ -601,13 +607,13 @@ This runs the simulation and saves compressed results to `results.json.gz`, achi
 
 ```bash
 # Run 10 parallel simulations for statistical significance
-./target/release/economic_simulation --monte-carlo-runs 10 -s 500 -p 100 -o mc_results.json
+./target/release/simulation-framework --monte-carlo-runs 10 -s 500 -p 100 -o mc_results.json
 
 # With custom seed for reproducibility
-./target/release/economic_simulation --monte-carlo-runs 5 -s 1000 -p 50 --seed 12345 -o mc_analysis.json
+./target/release/simulation-framework --monte-carlo-runs 5 -s 1000 -p 50 --seed 12345 -o mc_analysis.json
 
 # Combine with other features (compressed output, custom parameters)
-./target/release/economic_simulation --monte-carlo-runs 20 -s 500 -p 100 \
+./target/release/simulation-framework --monte-carlo-runs 20 -s 500 -p 100 \
   --seasonal-amplitude 0.3 --transaction-fee 0.05 \
   -o mc_seasonal_fees.json --compress
 ```
@@ -630,20 +636,20 @@ This is ideal for:
 
 ```bash
 # Compare Original and DynamicPricing scenarios with 5 runs each
-./target/release/economic_simulation -s 500 -p 100 \
+./target/release/simulation-framework -s 500 -p 100 \
   --compare-scenarios "Original,DynamicPricing" \
   --comparison-runs 5 \
   -o comparison_results.json
 
 # Compare all three available scenarios with custom parameters
-./target/release/economic_simulation -s 1000 -p 50 \
+./target/release/simulation-framework -s 1000 -p 50 \
   --compare-scenarios "Original,DynamicPricing,AdaptivePricing" \
   --comparison-runs 10 \
   --initial-money 150 --base-price 12 \
   -o full_comparison.json
 
 # Scenario comparison with economic features enabled
-./target/release/economic_simulation -s 500 -p 100 \
+./target/release/simulation-framework -s 500 -p 100 \
   --compare-scenarios "Original,DynamicPricing" \
   --comparison-runs 5 \
   --transaction-fee 0.05 --tax-rate 0.1 --enable-tax-redistribution \
@@ -673,25 +679,25 @@ This is ideal for:
 
 ```bash
 # Sweep initial money from 50 to 200 with 7 test points, 5 runs each
-./target/release/economic_simulation -s 500 -p 100 \
+./target/release/simulation-framework -s 500 -p 100 \
   --parameter-sweep "initial_money:50:200:7" \
   --sweep-runs 5 \
   -o sweep_initial_money.json
 
 # Test the impact of transaction fees on market activity
-./target/release/economic_simulation -s 500 -p 100 \
+./target/release/simulation-framework -s 500 -p 100 \
   --parameter-sweep "transaction_fee:0.0:0.15:6" \
   --sweep-runs 3 \
   -o sweep_transaction_fee.json
 
 # Analyze savings rate effects on wealth distribution
-./target/release/economic_simulation -s 500 -p 100 \
+./target/release/simulation-framework -s 500 -p 100 \
   --parameter-sweep "savings_rate:0.0:0.2:5" \
   --sweep-runs 4 \
   -o sweep_savings_rate.json
 
 # Test base price sensitivity
-./target/release/economic_simulation -s 500 -p 100 \
+./target/release/simulation-framework -s 500 -p 100 \
   --parameter-sweep "base_price:5:25:5" \
   --sweep-runs 3 \
   -o sweep_base_price.json
@@ -721,24 +727,24 @@ This is ideal for:
 
 ```bash
 # Run a long simulation with automatic checkpoints every 500 steps
-./target/release/economic_simulation --steps 5000 --persons 100 \
+./target/release/simulation-framework --steps 5000 --persons 100 \
   --checkpoint-interval 500 \
   --checkpoint-file ./checkpoints/long_run.json \
   --output results.json
 
 # If the simulation is interrupted, resume from the last checkpoint
-./target/release/economic_simulation --resume \
+./target/release/simulation-framework --resume \
   --checkpoint-file ./checkpoints/long_run.json \
   --output continued_results.json
 
 # You can also manually save checkpoints at specific intervals
 # Run first 1000 steps with checkpoint every 250 steps
-./target/release/economic_simulation --steps 1000 --persons 50 \
+./target/release/simulation-framework --steps 1000 --persons 50 \
   --checkpoint-interval 250 \
   --checkpoint-file ./step1.json
 
 # Resume and run another 1000 steps
-./target/release/economic_simulation --resume \
+./target/release/simulation-framework --resume \
   --checkpoint-file ./step1.json \
   --steps 1000 \
   --checkpoint-interval 250 \
@@ -761,7 +767,7 @@ The checkpoint file stores:
 
 ```bash
 # Stream step-by-step data to a JSONL file for real-time monitoring
-./target/release/economic_simulation --steps 1000 --persons 100 \
+./target/release/simulation-framework --steps 1000 --persons 100 \
   --stream-output ./stream/simulation.jsonl \
   --output results.json
 
@@ -769,11 +775,11 @@ The checkpoint file stores:
 tail -f ./stream/simulation.jsonl | jq '.step, .trades, .avg_money'
 
 # Stream without final output (for pure streaming mode)
-./target/release/economic_simulation --steps 5000 --persons 200 \
+./target/release/simulation-framework --steps 5000 --persons 200 \
   --stream-output simulation_progress.jsonl
 
 # Combine streaming with other features
-./target/release/economic_simulation --steps 2000 --persons 150 \
+./target/release/simulation-framework --steps 2000 --persons 150 \
   --stream-output stream.jsonl \
   --output final.json \
   --compress \
@@ -808,7 +814,7 @@ The simulation framework includes a comprehensive debugging and replay capabilit
 
 ```bash
 # Step 1: Record the problematic simulation with detailed logging
-RUST_LOG=debug ./target/release/economic_simulation \
+RUST_LOG=debug ./target/release/simulation-framework \
   --steps 1000 --persons 100 --seed 42 \
   --stream-output debug_stream.jsonl \
   --checkpoint-interval 100 \
@@ -816,14 +822,14 @@ RUST_LOG=debug ./target/release/economic_simulation \
   --output debug_results.json 2> debug.log
 
 # Step 2: Replay from checkpoint to investigate specific state
-./target/release/economic_simulation --resume \
+./target/release/simulation-framework --resume \
   --checkpoint-file debug_checkpoint.json \
   --steps 50 \
   --output replay_results.json
 
 # Step 3: Compare results for reproducibility
 # The same seed ensures deterministic behavior
-./target/release/economic_simulation \
+./target/release/simulation-framework \
   --steps 1000 --persons 100 --seed 42 \
   --output verify_results.json
 
@@ -845,7 +851,7 @@ diff stats1.json stats2.json
 
 ```bash
 # 1. Run with detailed logging to capture all events
-RUST_LOG=trace ./target/release/economic_simulation \
+RUST_LOG=trace ./target/release/simulation-framework \
   --steps 500 --persons 50 --seed 123 \
   --stream-output trace_stream.jsonl \
   --checkpoint-interval 50 \
@@ -855,7 +861,7 @@ RUST_LOG=trace ./target/release/economic_simulation \
 grep "step.*25[0-9]" trace_stream.jsonl
 
 # 3. Resume from checkpoint just before the problem
-./target/release/economic_simulation --resume \
+./target/release/simulation-framework --resume \
   --checkpoint-file debug_checkpoint.json \
   --steps 10 \
   --no-progress 2> detailed_debug.log
@@ -872,7 +878,7 @@ The simulation automatically exports trading network data when using the `--csv-
 
 ```bash
 # Export simulation results including trading network
-./target/release/economic_simulation --steps 500 --persons 100 --csv-output results
+./target/release/simulation-framework --steps 500 --persons 100 --csv-output results
 # Creates network files:
 #   results_network_nodes.csv (person attributes: id, money, reputation, trade_count, unique_partners)
 #   results_network_edges.csv (trading relationships: source, target, weight, total_value)
@@ -882,10 +888,10 @@ Network visualization examples:
 
 ```bash
 # Small network for visualization
-./target/release/economic_simulation --steps 200 --persons 20 --csv-output network_small -o network.json
+./target/release/simulation-framework --steps 200 --persons 20 --csv-output network_small -o network.json
 
 # Large network for analysis
-./target/release/economic_simulation --steps 1000 --persons 200 --csv-output network_large --compress
+./target/release/simulation-framework --steps 1000 --persons 200 --csv-output network_large --compress
 ```
 
 **Using the Network Data:**
@@ -967,13 +973,13 @@ scenario = "Original"
 
 Run with a configuration file:
 ```bash
-./target/release/economic_simulation --config my_config.yaml -o results.json
+./target/release/simulation-framework --config my_config.yaml -o results.json
 ```
 
 CLI arguments override config file values:
 ```bash
 # Use config file but override steps and persons
-./target/release/economic_simulation --config my_config.yaml --steps 2000 --persons 100 -o results.json
+./target/release/simulation-framework --config my_config.yaml --steps 2000 --persons 100 -o results.json
 ```
 
 See `config.example.yaml` and `config.example.toml` in the repository for complete examples with all available options and comments.
@@ -985,25 +991,25 @@ The simulation uses structured logging to provide insights into its operation. T
 **Basic Logging via Environment Variable:**
 ```bash
 # Default (info level) - High-level progress
-./target/release/economic_simulation -s 100 -p 10 -o results.json
+./target/release/simulation-framework -s 100 -p 10 -o results.json
 
 # Debug level - Detailed execution information
-RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
+RUST_LOG=debug ./target/release/simulation-framework -s 100 -p 10 -o results.json
 
 # Trace level - Extremely detailed output
-RUST_LOG=trace ./target/release/economic_simulation -s 100 -p 10 -o results.json
+RUST_LOG=trace ./target/release/simulation-framework -s 100 -p 10 -o results.json
 ```
 
 **Module-Specific Logging:**
 ```bash
 # Only debug engine operations
-RUST_LOG=simulation_framework::engine=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
+RUST_LOG=simulation_framework::engine=debug ./target/release/simulation-framework -s 100 -p 10 -o results.json
 
 # Only debug scenario/pricing
-RUST_LOG=simulation_framework::scenario=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json
+RUST_LOG=simulation_framework::scenario=debug ./target/release/simulation-framework -s 100 -p 10 -o results.json
 
 # Multiple modules
-RUST_LOG=simulation_framework::engine=debug,simulation_framework::scenario=trace ./target/release/economic_simulation -s 100 -p 10 -o results.json
+RUST_LOG=simulation_framework::engine=debug,simulation_framework::scenario=trace ./target/release/simulation-framework -s 100 -p 10 -o results.json
 ```
 
 **Log Levels:**
@@ -1027,19 +1033,19 @@ RUST_LOG=simulation_framework::engine=debug,simulation_framework::scenario=trace
 Debug a specific simulation issue:
 ```bash
 # See all trades and price updates
-RUST_LOG=debug ./target/release/economic_simulation -s 50 -p 5 -o debug.json --no-progress
+RUST_LOG=debug ./target/release/simulation-framework -s 50 -p 5 -o debug.json --no-progress
 
 # Trace all affordability decisions
-RUST_LOG=trace ./target/release/economic_simulation -s 10 -p 5 -o trace.json --no-progress 2>&1 | grep "cannot afford"
+RUST_LOG=trace ./target/release/simulation-framework -s 10 -p 5 -o trace.json --no-progress 2>&1 | grep "cannot afford"
 ```
 
 Analyze economic behavior:
 ```bash
 # Watch reputation changes
-RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 -o results.json 2>&1 | grep "reputation"
+RUST_LOG=debug ./target/release/simulation-framework -s 100 -p 10 -o results.json 2>&1 | grep "reputation"
 
 # Track tax redistribution
-RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 --tax-rate 0.15 --enable-tax-redistribution -o results.json 2>&1 | grep "Redistributing"
+RUST_LOG=debug ./target/release/simulation-framework -s 100 -p 10 --tax-rate 0.15 --enable-tax-redistribution -o results.json 2>&1 | grep "Redistributing"
 ```
 
 **Tips:**
@@ -1048,168 +1054,7 @@ RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 --tax-rate 0.15
 - Use `trace` for deep analysis of individual agent decisions
 - Use `warn` or `error` for minimal output in production/batch scenarios
 - Combine with `--no-progress` flag to disable the progress bar when using debug/trace logging
-- Redirect stderr to a file for large logs: `RUST_LOG=debug ./target/release/economic_simulation ... 2> debug.log`
-
-## Code Structure
-
-*   `src/main.rs`: Handles command-line arguments and initializes the simulation.
-*   `src/lib.rs`: Main library crate, exporting core modules.
-*   `src/config.rs`: Defines `SimulationConfig` for simulation parameters.
-*   `src/engine.rs`: Contains `SimulationEngine` which runs the main simulation loop and step-by-step logic.
-*   `src/person.rs`: Defines the `Person` struct, `Transaction`, `NeededSkillItem`, `Strategy` enum, and related types. The `Strategy` enum defines four behavioral strategies (Conservative, Balanced, Aggressive, Frugal) that affect how persons make spending decisions.
-*   `src/skill.rs`: Defines the `Skill` struct.
-*   `src/market.rs`: Defines the `Market` struct and its logic for price adjustments and history.
-*   `src/entity.rs`: Defines the `Entity` struct which wraps a `Person` for compatibility with the engine structure.
-*   `src/result.rs`: Defines `SimulationResult` and helper structs (`MoneyStats`, `SkillPriceInfo`) for structuring and outputting simulation results. It also includes `print_summary` and `save_to_file` methods.
-*   `src/physics.rs`: (Removed) This module from the original framework is no longer used.
-*   `src/tests/mod.rs`: Contains integration tests for the simulation engine.
-
-## Testing
-
-The project includes a comprehensive test suite to ensure code quality and correctness.
-
-### Running Tests
-
-Run all tests with:
-```bash
-cargo test
-```
-
-For verbose output with detailed test information:
-```bash
-cargo test --verbose
-```
-
-Run tests for a specific module:
-```bash
-cargo test result
-cargo test scenario
-cargo test engine
-```
-
-### Test Structure
-
-The test suite includes:
-
-1. **Unit Tests** (`src/tests/mod.rs`): Core simulation engine tests
-   - `test_simulation_engine_new()`: Verifies engine initialization
-   - `test_simulation_engine_step()`: Tests single simulation step execution
-   - `test_simulation_engine_run()`: Tests complete simulation runs
-
-2. **Property-Based Tests** (`src/tests/proptest_tests.rs`): Uses `proptest` to verify invariants across random inputs
-   - Person reputation bounds (always 0.0 to 2.0)
-   - Market price bounds enforcement
-   - Gini coefficient correctness
-   - Transaction recording integrity
-   - Skill price non-negativity
-
-3. **Integration Tests** (`src/tests/scenario_integration_tests.rs`): Complete simulation scenarios
-   - Different scenarios (Original, DynamicPricing)
-   - Various population sizes (5 to 100 persons)
-   - Extreme conditions testing
-   - Reputation and trade volume tracking
-   - Result statistics validation
-
-4. **Module Tests** (inline in source files):
-   - `src/result.rs`: Tests for result calculation, statistics, and JSON/CSV output
-   - `src/scenario.rs`: Tests for price update mechanisms in different scenarios
-   - `src/config.rs`: Tests for configuration file loading (YAML/TOML)
-   - `src/person.rs`: Tests for person behavior and reputation system
-   - `src/skill.rs`: Tests for skill generation and management
-
-### Benchmarks
-
-The project includes performance benchmarks using `criterion`:
-
-```bash
-cargo bench
-```
-
-Benchmarks cover:
-- Engine initialization with different population sizes
-- Single step execution performance
-- Full simulation runs
-- Scenario comparison (Original vs DynamicPricing)
-
-Results are saved in `target/criterion/` with detailed HTML reports.
-
-### Writing New Tests
-
-Tests follow Rust's standard testing conventions. Here's an example:
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_example() {
-        // Arrange
-        let config = SimulationConfig {
-            entity_count: 10,
-            max_steps: 100,
-            // ... other config
-        };
-        
-        // Act
-        let engine = SimulationEngine::new(config);
-        
-        // Assert
-        assert_eq!(engine.get_active_entity_count(), 10);
-    }
-}
-```
-
-### Continuous Integration
-
-The project uses GitHub Actions for continuous integration, automatically running on every push and pull request to the `master` branch. The workflow configuration is located at `.github/workflows/rust.yml`.
-
-The CI pipeline enforces code quality through:
-1. **Code Formatting**: Checks that all code follows Rust formatting standards with `cargo fmt --all -- --check`
-2. **Linting**: Runs Clippy to catch common mistakes and enforce best practices with `cargo clippy --all-targets --all-features -- -D warnings -A deprecated`
-3. **Build**: Compiles the project with `cargo build --verbose`
-4. **Tests**: Runs all tests with `cargo test --verbose`
-5. **Release Build**: Verifies that release builds succeed with `cargo build --release --verbose`
-
-All PRs must pass these checks before merging, ensuring consistent code style and quality across the project.
-
-### Fuzz Testing
-
-The project includes fuzz testing to find edge cases, crashes, and security vulnerabilities through automated random input generation. Fuzz tests use `cargo-fuzz` and require the Rust nightly toolchain.
-
-**Quick Start:**
-
-```bash
-# Install nightly toolchain (if not already installed)
-rustup toolchain install nightly
-
-# Install cargo-fuzz
-cargo install cargo-fuzz
-
-# Run a fuzz target for 60 seconds
-cargo +nightly fuzz run fuzz_config_yaml -- -max_total_time=60
-```
-
-**Available Fuzz Targets:**
-
-1. **fuzz_config_yaml**: Tests YAML configuration parsing robustness
-2. **fuzz_config_toml**: Tests TOML configuration parsing robustness  
-3. **fuzz_simulation_init**: Tests simulation engine initialization with arbitrary numeric inputs
-
-**Documentation:**
-
-For detailed information on running fuzz tests, interpreting results, and adding new fuzz targets, see [`fuzz/FUZZ_TESTING.md`](fuzz/FUZZ_TESTING.md).
-
-**Why Fuzz Testing?**
-
-Fuzz testing automatically discovers:
-- Crashes and panics from unexpected inputs
-- Edge cases not covered by traditional tests
-- Security vulnerabilities (buffer overflows, integer overflows, etc.)
-- Input validation issues
-- Robustness problems with malformed configuration files
-
-Run fuzzing regularly (especially before releases) to catch potential issues early.
+- Redirect stderr to a file for large logs: `RUST_LOG=debug ./target/release/simulation-framework ... 2> debug.log`
 
 ## Output Format (`results.json`)
 
@@ -1276,6 +1121,17 @@ When using the `--csv-output` flag, the simulation generates multiple CSV files 
 *   `{prefix}_network_edges.csv`: **Trading network edges** (trading relationships with weight and total value)
 
 The trade volume CSV provides time-series data perfect for analyzing market activity and economic vitality trends. The wealth stats history CSV contains comprehensive inequality metrics at each step, ideal for studying how wealth distribution evolves over the course of the simulation. The network CSVs enable graph analysis and visualization of trading relationships using tools like NetworkX, igraph, Gephi, or Cytoscape.
+
+## Development
+
+For information about developing, testing, and contributing to this project, please see the [Development Guide](DEVELOPMENT.md).
+
+### Quick Links for Developers
+
+- [Building the Project](DEVELOPMENT.md#building-the-project)
+- [Code Structure](DEVELOPMENT.md#code-structure)
+- [Testing](DEVELOPMENT.md#testing)
+- [Contributing Guidelines](DEVELOPMENT.md#contributing)
 
 ## License
 
