@@ -1666,14 +1666,13 @@ pub fn calculate_wealth_concentration(sorted_values: &[f64], sum: f64) -> (f64, 
     (top_10_pct_share, top_1_pct_share, bottom_50_pct_share)
 }
 
-/// Calculate statistics for a set of values
-///
-/// This function computes mean, standard deviation, median, min, and max
-/// for a set of values. It is used for aggregating results across multiple
 /// SIMD-optimized sum calculation using chunked processing.
 ///
-/// This function processes the array in chunks of 4 elements, enabling the compiler
-/// to auto-vectorize the loop using SIMD instructions (SSE/AVX on x86-64, NEON on ARM).
+/// This function processes the array in chunks of 4 f64 elements (256 bits total),
+/// enabling the compiler to auto-vectorize the loop using SIMD instructions:
+/// - x86-64: SSE (128-bit) or AVX (256-bit) instructions
+/// - ARM: NEON (128-bit) instructions
+///
 /// The chunked approach improves cache locality and instruction-level parallelism.
 ///
 /// # Arguments
@@ -1688,7 +1687,7 @@ pub fn calculate_wealth_concentration(sorted_values: &[f64], sum: f64) -> (f64, 
 #[inline]
 fn simd_optimized_sum(values: &[f64]) -> f64 {
     // Use 4-way accumulation to enable SIMD auto-vectorization
-    // Modern compilers can vectorize this into 256-bit AVX operations
+    // 4 f64 elements = 256 bits, suitable for AVX or two SSE operations
     let (chunks, remainder) = values.as_chunks::<4>();
 
     // Process 4 elements at a time - enables AVX/SSE vectorization
@@ -1731,6 +1730,11 @@ fn simd_optimized_variance_sum(values: &[f64], mean: f64) -> f64 {
 
     chunk_var + remainder_var
 }
+
+/// Optimal chunk size for parallel processing with SIMD.
+/// This value balances SIMD efficiency (4-element chunks) with parallelization overhead.
+/// Each chunk of 256 elements provides good work distribution across threads.
+const PARALLEL_SIMD_CHUNK_SIZE: usize = 256;
 
 /// Calculate basic statistics (mean, std_dev, min, max, median) for Monte Carlo
 /// simulation runs (Monte Carlo or parameter sweeps).
@@ -1780,7 +1784,7 @@ pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
             // For large datasets: combine Rayon parallelization with SIMD
             // Each parallel chunk uses SIMD-optimized variance calculation
             values
-                .par_chunks(256) // Process in SIMD-friendly chunks
+                .par_chunks(PARALLEL_SIMD_CHUNK_SIZE)
                 .map(|chunk| simd_optimized_variance_sum(chunk, mean))
                 .sum::<f64>()
         } else {
@@ -3224,7 +3228,7 @@ mod tests {
 
         // Generate random test data
         for size in [0, 1, 3, 4, 5, 7, 8, 15, 16, 17, 100, 257, 1000, 2048] {
-            let values: Vec<f64> = (0..size).map(|_| rng.random_range(-100.0..100.0)).collect();
+            let values: Vec<f64> = (0..size).map(|_| rng.gen_range(-100.0..100.0)).collect();
 
             if values.is_empty() {
                 continue;
