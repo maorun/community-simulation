@@ -107,18 +107,28 @@ This repository contains a configurable economic simulation written in Rust. It 
   - Full serialization support for event logs in JSON output
   
   The event system infrastructure is complete and tested, ready for future integration into simulation logic. When fully integrated, events will enable detailed timeline analysis, debugging, and research into market dynamics. Currently provides the foundation without modifying existing simulation behavior.
-- **Voting System (Political Simulation):** Democratic governance and collective decision-making system for studying how different voting mechanisms affect economic outcomes. When enabled, persons can create and vote on proposals that affect simulation parameters. The system supports three voting methods:
+- **Voting System (Political Simulation):** Democratic governance and collective decision-making system for studying how different voting mechanisms affect economic outcomes. When enabled, persons can create and vote on proposals that affect simulation parameters. 
+  
+  The system supports **three voting methods**:
   - **SimpleMajority**: One person, one vote (pure democracy) - equal voting power for all participants
   - **WeightedByWealth**: Voting power proportional to wealth (plutocracy) - wealthier persons have more influence
   - **QuadraticVoting**: Square root of wealth (balanced influence) - reduces wealth's impact while still considering it
   
-  Proposals can modify key economic parameters:
+  **Proposal types** include:
   - **TaxRateChange**: Adjust the tax rate through democratic vote
   - **BasePriceChange**: Change base skill prices collectively  
   - **TransactionFeeChange**: Modify marketplace transaction fees
   - **Generic**: Custom proposals for governance experiments
   
-  Features include automatic proposal expiration, duplicate vote prevention, and comprehensive voting statistics (participation rates, pass/fail ratios, voter turnout). Enable via configuration file with `enable_voting: true`, then configure `voting_method` (SimpleMajority/WeightedByWealth/QuadraticVoting), `proposal_duration` (voting period in steps, default: 20), `proposal_probability` (chance of random proposal per step, default: 0.05), and `voting_participation_rate` (voter turnout probability, default: 0.3). Voting results and statistics are included in JSON output. Ideal for studying democratic governance, policy formation, wealth-based political influence, and the interaction between economic and political systems. Perfect for research on voting theory, collective choice, and institutional economics.
+  Features include automatic proposal expiration, duplicate vote prevention, and comprehensive voting statistics (participation rates, pass/fail ratios, voter turnout). 
+  
+  **Configuration**: Enable via configuration file with `enable_voting: true`, then configure:
+  - `voting_method`: SimpleMajority/WeightedByWealth/QuadraticVoting
+  - `proposal_duration`: Voting period in steps (default: 20)
+  - `proposal_probability`: Chance of random proposal per step (default: 0.05)
+  - `voting_participation_rate`: Voter turnout probability (default: 0.3)
+  
+  Voting results and statistics are included in JSON output. Ideal for studying democratic governance, policy formation, wealth-based political influence, and the interaction between economic and political systems. Perfect for research on voting theory, collective choice, and institutional economics.
 
 ## Getting Started
 
