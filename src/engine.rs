@@ -80,6 +80,8 @@ pub struct SimulationCheckpoint {
     pub wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
     /// Environmental resource tracking (if enabled)
     pub environment: Option<Environment>,
+    /// Voting system state (if enabled)
+    pub voting_system: Option<crate::voting::VotingSystem>,
 }
 
 pub struct SimulationEngine {
@@ -129,6 +131,8 @@ pub struct SimulationEngine {
     production_recipes: Option<Vec<crate::production::Recipe>>,
     // Environmental resource tracking (if enabled)
     environment: Option<Environment>,
+    // Voting system for governance and collective decision-making (if enabled)
+    voting_system: Option<crate::voting::VotingSystem>,
 }
 
 impl SimulationEngine {
@@ -230,6 +234,17 @@ impl SimulationEngine {
             None
         };
 
+        // Initialize voting system if enabled
+        let voting_system = if config.enable_voting {
+            debug!(
+                "Voting system initialized with method: {:?}",
+                config.voting_method
+            );
+            Some(crate::voting::VotingSystem::new(config.voting_method))
+        } else {
+            None
+        };
+
         Self {
             config,
             entities,
@@ -261,6 +276,7 @@ impl SimulationEngine {
             plugin_registry: PluginRegistry::new(),
             production_recipes,
             environment,
+            voting_system,
         }
     }
 
@@ -2750,6 +2766,7 @@ impl SimulationEngine {
             total_contracts_completed: self.total_contracts_completed,
             wealth_stats_history: self.wealth_stats_history.clone(),
             environment: self.environment.clone(),
+            voting_system: self.voting_system.clone(),
         };
 
         let file = File::create(path)?;
@@ -2870,6 +2887,7 @@ impl SimulationEngine {
             plugin_registry: PluginRegistry::new(),
             production_recipes,
             environment: checkpoint.environment,
+            voting_system: checkpoint.voting_system,
         })
     }
 }

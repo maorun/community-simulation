@@ -45,20 +45,15 @@ use std::collections::HashMap;
 pub type ProposalId = usize;
 
 /// Type of voting method to use
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum VotingMethod {
     /// One person, one vote - pure democracy
+    #[default]
     SimpleMajority,
     /// Voting power proportional to wealth - plutocracy
     WeightedByWealth,
     /// Square root of wealth for balanced influence - quadratic voting
     QuadraticVoting,
-}
-
-impl Default for VotingMethod {
-    fn default() -> Self {
-        VotingMethod::SimpleMajority
-    }
 }
 
 /// Type of proposal that can be voted on
@@ -124,7 +119,7 @@ pub struct VotingResult {
 }
 
 /// Main voting system managing all proposals and votes
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VotingSystem {
     /// Voting method to use for all proposals
     method: VotingMethod,
