@@ -43,15 +43,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
-### 1. Politische Simulation
-- **Beschreibung**: Abstimmungen und kollektive Entscheidungsfindung
-- **Nutzen**: Governance-Mechanismen testen
-- **Implementierung**: `VotingSystem` Modul
-
 ## 🎯 Priorisierung
 
 ### Niedrige Priorität (Langfristig)
-1. Politische Simulation
 
 ## 📝 Notizen
 
