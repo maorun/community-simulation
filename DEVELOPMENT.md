@@ -41,7 +41,7 @@ cargo build --release
 
 ### Known Build Warnings
 
-The build currently produces 3 deprecation warnings about `rand::Rng::gen_range` (renamed to `random_range` in rand 0.9). These warnings do not prevent compilation and can be safely ignored OR fixed by replacing `gen_range` with `random_range`. Warnings appear in:
+The build may produce deprecation warnings about `rand::Rng::gen_range` depending on the version of the rand crate used. These warnings do not prevent compilation and can be safely ignored. The warnings typically appear in:
 - `src/engine.rs` (lines ~172, ~185)
 - `src/scenario.rs` (line ~171)
 
