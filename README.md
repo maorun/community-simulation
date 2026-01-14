@@ -136,7 +136,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 
 - Rust Toolchain (see [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install) for installation instructions)
 
-### Building the Project
+### Quick Start
 
 1.  Clone the repository:
     ```bash
@@ -144,9 +144,15 @@ This repository contains a configurable economic simulation written in Rust. It 
     cd economic-simulation-framework
     ```
     (Replace `<repository-url>` and `economic-simulation-framework` with actual values)
+
 2.  Build the project in release mode for optimal performance:
     ```bash
     cargo build --release
+    ```
+
+3.  Run a basic simulation:
+    ```bash
+    ./target/release/economic_simulation -o results.json
     ```
 
 ### Running the Simulation
@@ -1050,167 +1056,6 @@ RUST_LOG=debug ./target/release/economic_simulation -s 100 -p 10 --tax-rate 0.15
 - Combine with `--no-progress` flag to disable the progress bar when using debug/trace logging
 - Redirect stderr to a file for large logs: `RUST_LOG=debug ./target/release/economic_simulation ... 2> debug.log`
 
-## Code Structure
-
-*   `src/main.rs`: Handles command-line arguments and initializes the simulation.
-*   `src/lib.rs`: Main library crate, exporting core modules.
-*   `src/config.rs`: Defines `SimulationConfig` for simulation parameters.
-*   `src/engine.rs`: Contains `SimulationEngine` which runs the main simulation loop and step-by-step logic.
-*   `src/person.rs`: Defines the `Person` struct, `Transaction`, `NeededSkillItem`, `Strategy` enum, and related types. The `Strategy` enum defines four behavioral strategies (Conservative, Balanced, Aggressive, Frugal) that affect how persons make spending decisions.
-*   `src/skill.rs`: Defines the `Skill` struct.
-*   `src/market.rs`: Defines the `Market` struct and its logic for price adjustments and history.
-*   `src/entity.rs`: Defines the `Entity` struct which wraps a `Person` for compatibility with the engine structure.
-*   `src/result.rs`: Defines `SimulationResult` and helper structs (`MoneyStats`, `SkillPriceInfo`) for structuring and outputting simulation results. It also includes `print_summary` and `save_to_file` methods.
-*   `src/physics.rs`: (Removed) This module from the original framework is no longer used.
-*   `src/tests/mod.rs`: Contains integration tests for the simulation engine.
-
-## Testing
-
-The project includes a comprehensive test suite to ensure code quality and correctness.
-
-### Running Tests
-
-Run all tests with:
-```bash
-cargo test
-```
-
-For verbose output with detailed test information:
-```bash
-cargo test --verbose
-```
-
-Run tests for a specific module:
-```bash
-cargo test result
-cargo test scenario
-cargo test engine
-```
-
-### Test Structure
-
-The test suite includes:
-
-1. **Unit Tests** (`src/tests/mod.rs`): Core simulation engine tests
-   - `test_simulation_engine_new()`: Verifies engine initialization
-   - `test_simulation_engine_step()`: Tests single simulation step execution
-   - `test_simulation_engine_run()`: Tests complete simulation runs
-
-2. **Property-Based Tests** (`src/tests/proptest_tests.rs`): Uses `proptest` to verify invariants across random inputs
-   - Person reputation bounds (always 0.0 to 2.0)
-   - Market price bounds enforcement
-   - Gini coefficient correctness
-   - Transaction recording integrity
-   - Skill price non-negativity
-
-3. **Integration Tests** (`src/tests/scenario_integration_tests.rs`): Complete simulation scenarios
-   - Different scenarios (Original, DynamicPricing)
-   - Various population sizes (5 to 100 persons)
-   - Extreme conditions testing
-   - Reputation and trade volume tracking
-   - Result statistics validation
-
-4. **Module Tests** (inline in source files):
-   - `src/result.rs`: Tests for result calculation, statistics, and JSON/CSV output
-   - `src/scenario.rs`: Tests for price update mechanisms in different scenarios
-   - `src/config.rs`: Tests for configuration file loading (YAML/TOML)
-   - `src/person.rs`: Tests for person behavior and reputation system
-   - `src/skill.rs`: Tests for skill generation and management
-
-### Benchmarks
-
-The project includes performance benchmarks using `criterion`:
-
-```bash
-cargo bench
-```
-
-Benchmarks cover:
-- Engine initialization with different population sizes
-- Single step execution performance
-- Full simulation runs
-- Scenario comparison (Original vs DynamicPricing)
-
-Results are saved in `target/criterion/` with detailed HTML reports.
-
-### Writing New Tests
-
-Tests follow Rust's standard testing conventions. Here's an example:
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_example() {
-        // Arrange
-        let config = SimulationConfig {
-            entity_count: 10,
-            max_steps: 100,
-            // ... other config
-        };
-        
-        // Act
-        let engine = SimulationEngine::new(config);
-        
-        // Assert
-        assert_eq!(engine.get_active_entity_count(), 10);
-    }
-}
-```
-
-### Continuous Integration
-
-The project uses GitHub Actions for continuous integration, automatically running on every push and pull request to the `master` branch. The workflow configuration is located at `.github/workflows/rust.yml`.
-
-The CI pipeline enforces code quality through:
-1. **Code Formatting**: Checks that all code follows Rust formatting standards with `cargo fmt --all -- --check`
-2. **Linting**: Runs Clippy to catch common mistakes and enforce best practices with `cargo clippy --all-targets --all-features -- -D warnings -A deprecated`
-3. **Build**: Compiles the project with `cargo build --verbose`
-4. **Tests**: Runs all tests with `cargo test --verbose`
-5. **Release Build**: Verifies that release builds succeed with `cargo build --release --verbose`
-
-All PRs must pass these checks before merging, ensuring consistent code style and quality across the project.
-
-### Fuzz Testing
-
-The project includes fuzz testing to find edge cases, crashes, and security vulnerabilities through automated random input generation. Fuzz tests use `cargo-fuzz` and require the Rust nightly toolchain.
-
-**Quick Start:**
-
-```bash
-# Install nightly toolchain (if not already installed)
-rustup toolchain install nightly
-
-# Install cargo-fuzz
-cargo install cargo-fuzz
-
-# Run a fuzz target for 60 seconds
-cargo +nightly fuzz run fuzz_config_yaml -- -max_total_time=60
-```
-
-**Available Fuzz Targets:**
-
-1. **fuzz_config_yaml**: Tests YAML configuration parsing robustness
-2. **fuzz_config_toml**: Tests TOML configuration parsing robustness  
-3. **fuzz_simulation_init**: Tests simulation engine initialization with arbitrary numeric inputs
-
-**Documentation:**
-
-For detailed information on running fuzz tests, interpreting results, and adding new fuzz targets, see [`fuzz/FUZZ_TESTING.md`](fuzz/FUZZ_TESTING.md).
-
-**Why Fuzz Testing?**
-
-Fuzz testing automatically discovers:
-- Crashes and panics from unexpected inputs
-- Edge cases not covered by traditional tests
-- Security vulnerabilities (buffer overflows, integer overflows, etc.)
-- Input validation issues
-- Robustness problems with malformed configuration files
-
-Run fuzzing regularly (especially before releases) to catch potential issues early.
-
 ## Output Format (`results.json`)
 
 The JSON output file contains a comprehensive summary of the simulation, including:
@@ -1276,6 +1121,17 @@ When using the `--csv-output` flag, the simulation generates multiple CSV files 
 *   `{prefix}_network_edges.csv`: **Trading network edges** (trading relationships with weight and total value)
 
 The trade volume CSV provides time-series data perfect for analyzing market activity and economic vitality trends. The wealth stats history CSV contains comprehensive inequality metrics at each step, ideal for studying how wealth distribution evolves over the course of the simulation. The network CSVs enable graph analysis and visualization of trading relationships using tools like NetworkX, igraph, Gephi, or Cytoscape.
+
+## Development
+
+For information about developing, testing, and contributing to this project, please see the [Development Guide](DEVELOPMENT.md).
+
+### Quick Links for Developers
+
+- [Building the Project](DEVELOPMENT.md#building-the-project)
+- [Code Structure](DEVELOPMENT.md#code-structure)
+- [Testing](DEVELOPMENT.md#testing)
+- [Contributing Guidelines](DEVELOPMENT.md#contributing)
 
 ## License
 
