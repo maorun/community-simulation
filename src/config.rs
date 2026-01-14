@@ -573,6 +573,57 @@ pub struct SimulationConfig {
     /// Only used when enable_environment is true.
     #[serde(default)]
     pub custom_resource_reserves: Option<std::collections::HashMap<String, f64>>,
+
+    /// Enable voting system for governance and collective decision-making.
+    ///
+    /// When enabled, persons can create proposals and vote on them using the specified voting method.
+    /// Proposals can affect simulation parameters like tax rates, base prices, or transaction fees.
+    /// Voting enables studying democratic governance mechanisms and their effects on economic outcomes.
+    ///
+    /// Set to false to disable voting system (default).
+    #[serde(default)]
+    pub enable_voting: bool,
+
+    /// Voting method to use for all proposals.
+    ///
+    /// Determines how voting power is calculated for each person:
+    /// - SimpleMajority: One person, one vote (pure democracy)
+    /// - WeightedByWealth: Voting power proportional to wealth (plutocracy)
+    /// - QuadraticVoting: Square root of wealth for balanced influence
+    ///
+    /// Only used when enable_voting is true.
+    /// Default: SimpleMajority
+    #[serde(default)]
+    pub voting_method: crate::voting::VotingMethod,
+
+    /// Default proposal duration in simulation steps.
+    ///
+    /// New proposals expire after this many steps, at which point they are tallied.
+    /// This represents the voting period for each proposal.
+    /// Only used when enable_voting is true.
+    /// Default: 20 steps (voting period)
+    #[serde(default = "default_proposal_duration")]
+    pub proposal_duration: usize,
+
+    /// Probability per step that a random proposal will be created (0.0-1.0).
+    ///
+    /// Each simulation step, there is this probability of creating a new random proposal
+    /// (tax rate change, price change, fee change, or generic) for persons to vote on.
+    /// Higher values lead to more frequent voting activity.
+    /// Only used when enable_voting is true.
+    /// Default: 0.05 (5% chance per step, approximately one proposal every 20 steps)
+    #[serde(default = "default_proposal_probability")]
+    pub proposal_probability: f64,
+
+    /// Probability per step that each person will vote on active proposals (0.0-1.0).
+    ///
+    /// Each simulation step, each person has this probability of casting a vote on
+    /// one of the currently active proposals. This represents voter participation/turnout.
+    /// Higher values lead to higher voter participation and faster decision-making.
+    /// Only used when enable_voting is true.
+    /// Default: 0.3 (30% chance per person per step)
+    #[serde(default = "default_voting_participation_rate")]
+    pub voting_participation_rate: f64,
 }
 
 fn default_production_probability() -> f64 {
@@ -675,6 +726,18 @@ fn default_friendship_discount() -> f64 {
     0.1 // 10% discount for friend trades
 }
 
+fn default_proposal_duration() -> usize {
+    20 // 20 steps voting period
+}
+
+fn default_proposal_probability() -> f64 {
+    0.05 // 5% chance per step to create a proposal
+}
+
+fn default_voting_participation_rate() -> f64 {
+    0.3 // 30% chance per person per step to vote
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -733,6 +796,11 @@ impl Default for SimulationConfig {
             enable_environment: false,            // Disabled by default
             resource_cost_per_transaction: 1.0,   // Resource consumption matches transaction value
             custom_resource_reserves: None,       // Use default reserves
+            enable_voting: false,                 // Disabled by default
+            voting_method: crate::voting::VotingMethod::SimpleMajority, // One person, one vote
+            proposal_duration: 20,                // 20 steps voting period
+            proposal_probability: 0.05,           // 5% chance per step to create proposal
+            voting_participation_rate: 0.3,       // 30% chance per person per step to vote
         }
     }
 }
