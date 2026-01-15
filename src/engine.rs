@@ -2349,18 +2349,25 @@ impl SimulationEngine {
             self.wealth_stats_history.push(snapshot);
 
             // Track social mobility: assign each person to a quintile (0-4)
-            let quintile_size = (sorted_money.len() as f64 / 5.0).ceil() as usize;
-            for (idx, entity) in self.entities.iter().enumerate() {
-                let person_money = entity.get_money();
-                // Find which quintile this person belongs to based on sorted money
-                let position = sorted_money
-                    .iter()
-                    .position(|&m| (m - person_money).abs() < 1e-10)
-                    .unwrap_or(0);
-                let quintile = (position / quintile_size).min(4); // Ensure max is 4
+            // Create a sorted list of (money, entity_index) to handle ties properly
+            let mut money_with_indices: Vec<(f64, usize)> = self
+                .entities
+                .iter()
+                .enumerate()
+                .map(|(idx, entity)| (entity.get_money(), idx))
+                .collect();
+            money_with_indices
+                .sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+
+            // Assign quintiles based on sorted position (with proper handling of remainders)
+            let total_persons = money_with_indices.len();
+            for (sorted_position, (_money, entity_idx)) in money_with_indices.iter().enumerate() {
+                // Map position to quintile (0-4) using integer division
+                // This ensures more balanced quintiles when total_persons is not divisible by 5
+                let quintile = ((sorted_position * 5) / total_persons).min(4);
 
                 self.mobility_quintiles
-                    .entry(idx)
+                    .entry(*entity_idx)
                     .or_default()
                     .push(quintile);
             }
