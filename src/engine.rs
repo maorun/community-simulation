@@ -78,6 +78,8 @@ pub struct SimulationCheckpoint {
     pub total_contracts_completed: usize,
     /// Time-series of wealth distribution statistics
     pub wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
+    /// Social mobility tracking: person_id -> Vec of quintile assignments at each step
+    pub mobility_quintiles: HashMap<usize, Vec<usize>>,
     /// Environmental resource tracking (if enabled)
     pub environment: Option<Environment>,
     /// Voting system state (if enabled)
@@ -125,6 +127,8 @@ pub struct SimulationEngine {
     total_contracts_completed: usize,
     // Wealth statistics history tracking
     wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
+    // Social mobility tracking: person_id -> Vec of quintile assignments (0-4) at each step
+    mobility_quintiles: HashMap<usize, Vec<usize>>,
     // Plugin system for extending simulation
     plugin_registry: PluginRegistry,
     // Production system recipes (cached for performance)
@@ -273,6 +277,7 @@ impl SimulationEngine {
             total_contracts_created: 0,
             total_contracts_completed: 0,
             wealth_stats_history: Vec::new(),
+            mobility_quintiles: HashMap::new(),
             plugin_registry: PluginRegistry::new(),
             production_recipes,
             environment,
@@ -1364,6 +1369,9 @@ impl SimulationEngine {
             trading_partner_statistics: crate::result::calculate_trading_partner_statistics(
                 &self.entities,
             ),
+            mobility_statistics: crate::result::calculate_mobility_statistics(
+                &self.mobility_quintiles,
+            ),
             events: None, // Event system infrastructure ready, full integration pending
             final_persons_data: self.entities.clone(),
         };
@@ -2339,6 +2347,30 @@ impl SimulationEngine {
             };
 
             self.wealth_stats_history.push(snapshot);
+
+            // Track social mobility: assign each person to a quintile (0-4)
+            // Create a sorted list of (money, entity_index) to handle ties properly
+            let mut money_with_indices: Vec<(f64, usize)> = self
+                .entities
+                .iter()
+                .enumerate()
+                .map(|(idx, entity)| (entity.get_money(), idx))
+                .collect();
+            money_with_indices
+                .sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+
+            // Assign quintiles based on sorted position (with proper handling of remainders)
+            let total_persons = money_with_indices.len();
+            for (sorted_position, (_money, entity_idx)) in money_with_indices.iter().enumerate() {
+                // Map position to quintile (0-4) using integer division
+                // This ensures more balanced quintiles when total_persons is not divisible by 5
+                let quintile = ((sorted_position * 5) / total_persons).min(4);
+
+                self.mobility_quintiles
+                    .entry(*entity_idx)
+                    .or_default()
+                    .push(quintile);
+            }
         }
 
         // Update environment step counter (if enabled)
@@ -2698,6 +2730,9 @@ impl SimulationEngine {
                     most_active_pair: None,
                 },
             },
+            mobility_statistics: crate::result::calculate_mobility_statistics(
+                &self.mobility_quintiles,
+            ),
             events: None,
             final_persons_data: self.entities.clone(),
         }
@@ -2765,6 +2800,7 @@ impl SimulationEngine {
             total_contracts_created: self.total_contracts_created,
             total_contracts_completed: self.total_contracts_completed,
             wealth_stats_history: self.wealth_stats_history.clone(),
+            mobility_quintiles: self.mobility_quintiles.clone(),
             environment: self.environment.clone(),
             voting_system: self.voting_system.clone(),
         };
@@ -2884,6 +2920,7 @@ impl SimulationEngine {
             total_contracts_created: checkpoint.total_contracts_created,
             total_contracts_completed: checkpoint.total_contracts_completed,
             wealth_stats_history: checkpoint.wealth_stats_history,
+            mobility_quintiles: checkpoint.mobility_quintiles,
             plugin_registry: PluginRegistry::new(),
             production_recipes,
             environment: checkpoint.environment,

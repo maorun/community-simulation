@@ -214,25 +214,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 5. Erweiterte Analyse
 
-#### 5.1 Soziale Mobilitätsanalyse
-**Beschreibung:** Tracking und Analyse von Einkommens- und Vermögensmobilität über Zeit. Misst, wie leicht Personen zwischen Einkommensquintilen wechseln können.
-
-**Harmonien:**
-- **Gini-Koeffizient:** Ergänzt statische Ungleichheitsmessung mit dynamischer Perspektive
-- **Bildungssystem:** Mobilität durch Bildung messbar
-- **Kredite:** Zugang zu Krediten beeinflusst Mobilität
-- **Reputation:** Reputationsaufbau ermöglicht Aufstieg
-- **Generationen:** Inter-generationale Mobilität (falls implementiert)
-
-**Nutzen:** Unterscheidung zwischen statischer Ungleichheit und dynamischer Chancengleichheit.
-
-**Implementierung:**
-- Tracking von Einkommensquintilen pro Person über Zeit
-- Mobilitätsmatrix (Übergangswahrscheinlichkeiten zwischen Quintilen)
-- Metriken: Aufstiegswahrscheinlichkeit, Abstiegsrisiko, Persistenz
-- Visualisierung von Mobilitätspfaden
-
-#### 5.2 Kausalanalyse-Framework
+#### 5.1 Kausalanalyse-Framework
 **Beschreibung:** Eingebautes Framework für kausale Inferenz: A/B-Tests mit Kontrollgruppen, synthetische Kontrollmethoden, Difference-in-Differences Analyse.
 
 **Harmonien:**
@@ -590,20 +572,19 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 8. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
 9. **Vertrauensnetzwerke** - Ausgefeiltes soziales Kapital-Modell
 10. **Adaptive Strategien** - Macht Agenten realistischer
-11. **Soziale Mobilitätsanalyse** - Wichtige Forschungsmetrik
-12. **Netzwerk-Zentralitätsanalyse** - Nutzt bestehendes Netzwerk besser aus
+11. **Netzwerk-Zentralitätsanalyse** - Nutzt bestehendes Netzwerk besser aus
 
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
-13. **Technologieschocks** - Interessant aber komplex
-14. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
-15. **Gemeinschaftliche Ressourcenpools** - Nischenanwendung
-16. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
-17. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
-18. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
-19. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-20. **Simulation-Debugger** - Nice-to-have für Entwicklung
-21. **Spezielle Anwendungsfälle** - Domänenspezifisch
+12. **Technologieschocks** - Interessant aber komplex
+13. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
+14. **Gemeinschaftliche Ressourcenpools** - Nischenanwendung
+15. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
+16. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
+17. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
+18. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
+19. **Simulation-Debugger** - Nice-to-have für Entwicklung
+20. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
@@ -684,11 +665,10 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - Adaptive Strategien profitieren von allen bisherigen Features
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)
-11. Soziale Mobilitätsanalyse
-12. Netzwerk-Zentralitätsanalyse
-13. Kausalanalyse-Framework
-14. Konjunkturzyklen-Detektion
-15. Externalitäten-Analyse
+11. Netzwerk-Zentralitätsanalyse
+12. Kausalanalyse-Framework
+13. Konjunkturzyklen-Detektion
+14. Externalitäten-Analyse
 
 **Warum diese Reihenfolge?**
 - Analysen profitieren von den reicheren Daten aus Phasen 1-2
