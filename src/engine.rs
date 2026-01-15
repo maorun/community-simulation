@@ -1387,6 +1387,70 @@ impl SimulationEngine {
             trading_partner_statistics: crate::result::calculate_trading_partner_statistics(
                 &self.entities,
             ),
+            centrality_analysis: {
+                // Calculate centrality analysis from trading network
+                let trading_stats =
+                    crate::result::calculate_trading_partner_statistics(&self.entities);
+
+                // Build network nodes and edges manually (similar to export_trading_network)
+                let nodes: Vec<crate::result::NetworkNode> = trading_stats
+                    .per_person
+                    .iter()
+                    .map(|person_stats| {
+                        let person_id = person_stats.person_id;
+                        // Get money and reputation directly from entities
+                        let entity = &self.entities[person_id];
+                        let money = entity.person_data.money;
+                        let reputation = entity.person_data.reputation;
+                        let trade_count = person_stats.total_trades_as_buyer
+                            + person_stats.total_trades_as_seller;
+
+                        crate::result::NetworkNode {
+                            id: format!("Person{}", person_id),
+                            money,
+                            reputation,
+                            trade_count,
+                            unique_partners: person_stats.unique_partners,
+                        }
+                    })
+                    .collect();
+
+                // Build edges from trading relationships
+                let mut edge_map: HashMap<(usize, usize), (usize, f64)> = HashMap::new();
+                for person_stats in &trading_stats.per_person {
+                    let person_id = person_stats.person_id;
+                    for partner in &person_stats.top_partners {
+                        let partner_id = partner.partner_id;
+                        let edge_key = if person_id < partner_id {
+                            (person_id, partner_id)
+                        } else {
+                            (partner_id, person_id)
+                        };
+                        let entry = edge_map.entry(edge_key).or_insert((0, 0.0));
+                        entry.0 += partner.trade_count;
+                        entry.1 += partner.total_value;
+                    }
+                }
+
+                let edges: Vec<crate::result::NetworkEdge> = edge_map
+                    .into_iter()
+                    .map(|((source_id, target_id), (weight, total_value))| {
+                        crate::result::NetworkEdge {
+                            source: format!("Person{}", source_id),
+                            target: format!("Person{}", target_id),
+                            weight,
+                            total_value,
+                        }
+                    })
+                    .collect();
+
+                // Only calculate centrality if there are nodes (avoid empty network)
+                if !nodes.is_empty() {
+                    Some(crate::centrality::calculate_centrality(&nodes, &edges))
+                } else {
+                    None
+                }
+            },
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
@@ -2911,6 +2975,7 @@ impl SimulationEngine {
                     most_active_pair: None,
                 },
             },
+            centrality_analysis: None, // Simplified for interactive mode
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),

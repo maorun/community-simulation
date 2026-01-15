@@ -383,6 +383,7 @@ mod tests {
                     most_active_pair: None,
                 },
             },
+            centrality_analysis: None,
             mobility_statistics: None,
             failed_trade_statistics: crate::result::FailedTradeStats {
                 total_failed_attempts: 0,
