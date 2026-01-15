@@ -1,7 +1,7 @@
 use crate::loan::LoanId;
 use crate::skill::{Skill, SkillId};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 pub type PersonId = usize;
 pub type UrgencyLevel = u8; // Define UrgencyLevel (e.g., 1-3, higher is more urgent)
@@ -152,6 +152,11 @@ pub struct Person {
     /// Geographic location of this person in 2D space.
     /// Used for calculating distance-based trade costs when enabled.
     pub location: Location,
+    /// Quality ratings for skills this person provides (0.0-5.0 scale).
+    /// Maps SkillId to quality rating. Higher quality enables higher prices.
+    /// Quality improves through successful trades and decays when not used.
+    /// Only populated when quality system is enabled.
+    pub skill_qualities: HashMap<SkillId, f64>,
 }
 
 impl Person {
@@ -182,10 +187,11 @@ impl Person {
             borrowed_loans: Vec::new(),
             lent_loans: Vec::new(),
             strategy,
-            learned_skills: Vec::new(), // Start with no learned skills
-            friends: HashSet::new(),    // Start with no friends
-            group_id: None,             // Start with no group assignment
+            learned_skills: Vec::new(),    // Start with no learned skills
+            friends: HashSet::new(),       // Start with no friends
+            group_id: None,                // Start with no group assignment
             location,
+            skill_qualities: HashMap::new(), // Start with empty quality map (populated when quality enabled)
         }
     }
 

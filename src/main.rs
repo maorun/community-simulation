@@ -302,6 +302,30 @@ struct Args {
     /// Available commands: step, run N, stats, save <path>, help, exit
     #[arg(long, default_value_t = false)]
     interactive: bool,
+
+    /// Enable quality rating system for skills (0.0-5.0 scale)
+    /// Skills have quality that improves with successful trades and decays when not used
+    /// Higher quality enables higher prices, creating quality competition in the market
+    #[arg(long, default_value_t = false)]
+    enable_quality: bool,
+
+    /// Rate at which skill quality improves per successful trade (0.0-1.0, default: 0.1)
+    /// Each successful sale increases quality by this amount (capped at 5.0)
+    /// Only used when --enable-quality is set
+    #[arg(long)]
+    quality_improvement_rate: Option<f64>,
+
+    /// Rate at which unused skill quality decays per step (0.0-1.0, default: 0.05)
+    /// Skills that are not sold lose this much quality per step (minimum 0.0)
+    /// Only used when --enable-quality is set
+    #[arg(long)]
+    quality_decay_rate: Option<f64>,
+
+    /// Initial quality rating for all skills at simulation start (0.0-5.0, default: 3.0)
+    /// All skills begin with this quality rating (3.0 = average quality)
+    /// Only used when --enable-quality is set
+    #[arg(long)]
+    initial_quality: Option<f64>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -715,6 +739,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             proposal_duration: SimulationConfig::default().proposal_duration,
             proposal_probability: SimulationConfig::default().proposal_probability,
             voting_participation_rate: SimulationConfig::default().voting_participation_rate,
+            enable_quality: args.enable_quality,
+            quality_improvement_rate: args
+                .quality_improvement_rate
+                .unwrap_or(SimulationConfig::default().quality_improvement_rate),
+            quality_decay_rate: args
+                .quality_decay_rate
+                .unwrap_or(SimulationConfig::default().quality_decay_rate),
+            initial_quality: args
+                .initial_quality
+                .unwrap_or(SimulationConfig::default().initial_quality),
         }
     };
 

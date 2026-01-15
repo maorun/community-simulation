@@ -624,6 +624,60 @@ pub struct SimulationConfig {
     /// Default: 0.3 (30% chance per person per step)
     #[serde(default = "default_voting_participation_rate")]
     pub voting_participation_rate: f64,
+
+    /// Enable quality rating system for skills.
+    ///
+    /// When enabled, each skill has a quality rating (0.0-5.0) that affects its price.
+    /// Quality improves through successful trades (practice makes perfect) and decays
+    /// when skills are not used (skills rust). Higher quality skills command higher prices,
+    /// creating product differentiation and quality competition in the market.
+    ///
+    /// This enables studying:
+    /// - Quality vs. price competition dynamics
+    /// - Skill improvement through experience
+    /// - Effects of skill maintenance and practice
+    ///
+    /// Set to false to disable quality system (default).
+    #[serde(default)]
+    pub enable_quality: bool,
+
+    /// Rate at which skill quality improves per successful trade.
+    ///
+    /// Each time a person successfully sells a skill, the quality of that skill
+    /// increases by this amount. Quality is capped at 5.0 (maximum quality).
+    /// Higher values lead to faster quality improvement.
+    ///
+    /// Only used when enable_quality is true.
+    /// Default: 0.1 (quality increases by 0.1 per successful trade)
+    /// Valid range: 0.0-1.0
+    #[serde(default = "default_quality_improvement_rate")]
+    pub quality_improvement_rate: f64,
+
+    /// Rate at which unused skill quality decays per simulation step.
+    ///
+    /// Each simulation step, skills that were not used (not sold) lose this much quality.
+    /// Quality is floored at 0.0 (minimum quality). This simulates skill rust and
+    /// the need for ongoing practice to maintain expertise.
+    /// Higher values lead to faster quality decay for unused skills.
+    ///
+    /// Only used when enable_quality is true.
+    /// Default: 0.05 (quality decreases by 0.05 per step when not used)
+    /// Valid range: 0.0-1.0
+    #[serde(default = "default_quality_decay_rate")]
+    pub quality_decay_rate: f64,
+
+    /// Initial quality rating for all skills at simulation start.
+    ///
+    /// All skills begin with this quality rating on a 0.0-5.0 scale.
+    /// A value of 3.0 represents average quality, with room to improve or decline.
+    /// This baseline can be adjusted to simulate different starting scenarios
+    /// (e.g., experienced workforce vs. inexperienced).
+    ///
+    /// Only used when enable_quality is true.
+    /// Default: 3.0 (average quality on 0.0-5.0 scale)
+    /// Valid range: 0.0-5.0
+    #[serde(default = "default_initial_quality")]
+    pub initial_quality: f64,
 }
 
 fn default_production_probability() -> f64 {
@@ -738,6 +792,18 @@ fn default_voting_participation_rate() -> f64 {
     0.3 // 30% chance per person per step to vote
 }
 
+fn default_quality_improvement_rate() -> f64 {
+    0.1 // Quality increases by 0.1 per successful trade
+}
+
+fn default_quality_decay_rate() -> f64 {
+    0.05 // Quality decreases by 0.05 per step when not used
+}
+
+fn default_initial_quality() -> f64 {
+    3.0 // Average quality on 0.0-5.0 scale
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -801,6 +867,10 @@ impl Default for SimulationConfig {
             proposal_duration: 20,                // 20 steps voting period
             proposal_probability: 0.05,           // 5% chance per step to create proposal
             voting_participation_rate: 0.3,       // 30% chance per person per step to vote
+            enable_quality: false,                // Disabled by default
+            quality_improvement_rate: 0.1,        // Quality increases by 0.1 per trade
+            quality_decay_rate: 0.05,             // Quality decreases by 0.05 per step
+            initial_quality: 3.0,                 // Average quality (0.0-5.0 scale)
         }
     }
 }
@@ -1186,6 +1256,29 @@ impl SimulationConfig {
                     )));
                 }
             }
+        }
+
+        // Quality system validation
+        // Validate quality parameters even when disabled to prevent configuration errors
+        if !(0.0..=1.0).contains(&self.quality_improvement_rate) {
+            return Err(SimulationError::ValidationError(format!(
+                "quality_improvement_rate must be between 0.0 and 1.0, got: {}",
+                self.quality_improvement_rate
+            )));
+        }
+
+        if !(0.0..=1.0).contains(&self.quality_decay_rate) {
+            return Err(SimulationError::ValidationError(format!(
+                "quality_decay_rate must be between 0.0 and 1.0, got: {}",
+                self.quality_decay_rate
+            )));
+        }
+
+        if !(0.0..=5.0).contains(&self.initial_quality) {
+            return Err(SimulationError::ValidationError(format!(
+                "initial_quality must be between 0.0 and 5.0, got: {}",
+                self.initial_quality
+            )));
         }
 
         Ok(())
