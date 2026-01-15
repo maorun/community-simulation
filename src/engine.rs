@@ -1390,6 +1390,60 @@ impl SimulationEngine {
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
+            quality_statistics: if self.config.enable_quality {
+                // Collect all quality ratings from all persons
+                let mut all_qualities: Vec<f64> = Vec::new();
+                for entity in self.entities.iter().filter(|e| e.active) {
+                    for quality in entity.person_data.skill_qualities.values() {
+                        all_qualities.push(*quality);
+                    }
+                }
+
+                if !all_qualities.is_empty() {
+                    all_qualities
+                        .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+                    let sum: f64 = all_qualities.iter().sum();
+                    let count = all_qualities.len();
+                    let average = sum / count as f64;
+
+                    let median = if count % 2 == 1 {
+                        all_qualities[count / 2]
+                    } else {
+                        (all_qualities[count / 2 - 1] + all_qualities[count / 2]) / 2.0
+                    };
+
+                    let variance = all_qualities
+                        .iter()
+                        .map(|q| {
+                            let diff = average - q;
+                            diff * diff
+                        })
+                        .sum::<f64>()
+                        / count as f64;
+                    let std_dev = variance.sqrt();
+
+                    let min_quality = *all_qualities.first().unwrap_or(&0.0);
+                    let max_quality = *all_qualities.last().unwrap_or(&0.0);
+
+                    let skills_at_max_quality = all_qualities.iter().filter(|&&q| q >= 5.0).count();
+                    let skills_at_min_quality = all_qualities.iter().filter(|&&q| q <= 0.0).count();
+
+                    Some(crate::result::QualityStats {
+                        average_quality: average,
+                        median_quality: median,
+                        std_dev_quality: std_dev,
+                        min_quality,
+                        max_quality,
+                        skills_at_max_quality,
+                        skills_at_min_quality,
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
             events: None, // Event system infrastructure ready, full integration pending
             final_persons_data: self.entities.clone(),
         };
@@ -2855,6 +2909,7 @@ impl SimulationEngine {
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
+            quality_statistics: None, // Simplified for interactive mode
             events: None,
             final_persons_data: self.entities.clone(),
         }
