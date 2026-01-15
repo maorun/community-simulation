@@ -397,6 +397,27 @@ pub struct TradingNetworkData {
     pub edges: Vec<NetworkEdge>,
 }
 
+/// Statistics about social mobility and wealth transitions between quintiles over time.
+///
+/// This structure captures how persons move between wealth quintiles (bottom 20%,
+/// second 20%, etc.) throughout the simulation, providing insight into economic mobility
+/// and the dynamics of wealth inequality.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MobilityStatistics {
+    /// 5x5 transition matrix showing probability of moving between quintiles.
+    /// Entry [i][j] represents the probability of moving from quintile i to quintile j.
+    /// Quintiles: 0 = bottom 20%, 1 = second 20%, 2 = middle 20%, 3 = fourth 20%, 4 = top 20%
+    pub transition_matrix: Vec<Vec<f64>>,
+    /// Probability of moving to a higher quintile (upward mobility)
+    pub upward_mobility_probability: f64,
+    /// Probability of moving to a lower quintile (downward mobility)
+    pub downward_mobility_probability: f64,
+    /// Probability of remaining in the same quintile (persistence)
+    pub quintile_persistence: f64,
+    /// Average number of quintile changes per person across the simulation
+    pub avg_quintile_changes: f64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     // Core simulation metrics
@@ -487,6 +508,11 @@ pub struct SimulationResult {
 
     /// Trading partner statistics showing network relationships and trading patterns
     pub trading_partner_statistics: TradingPartnerStats,
+
+    /// Social mobility statistics tracking wealth transitions between quintiles over time.
+    /// Only present if the simulation ran for at least 2 steps (need at least 2 time points).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mobility_statistics: Option<MobilityStatistics>,
 
     /// Event log (only present if event tracking is enabled).
     ///
@@ -2117,6 +2143,108 @@ impl MonteCarloResult {
     }
 }
 
+/// Calculate social mobility statistics from quintile tracking data.
+///
+/// Analyzes how persons move between wealth quintiles (bottom 20%, second 20%, etc.)
+/// over the simulation, calculating transition probabilities and mobility metrics.
+///
+/// # Arguments
+/// * `mobility_quintiles` - Map of person_id to vector of quintile assignments (0-4) at each step
+///
+/// # Returns
+/// * `Option<MobilityStatistics>` - Mobility statistics if sufficient data exists (at least 2 steps)
+pub fn calculate_mobility_statistics(
+    mobility_quintiles: &HashMap<usize, Vec<usize>>,
+) -> Option<MobilityStatistics> {
+    if mobility_quintiles.is_empty() {
+        return None;
+    }
+
+    // Check if we have at least 2 time points (need transitions)
+    let min_length = mobility_quintiles.values().map(|v| v.len()).min()?;
+    if min_length < 2 {
+        return None;
+    }
+
+    // Initialize 5x5 transition count matrix
+    let mut transition_counts: Vec<Vec<usize>> = vec![vec![0; 5]; 5];
+    let mut total_transitions = 0;
+    let mut upward_moves = 0;
+    let mut downward_moves = 0;
+    let mut same_quintile = 0;
+    let mut total_quintile_changes_count = 0;
+
+    // Count transitions for each person
+    for quintiles in mobility_quintiles.values() {
+        let mut person_changes = 0;
+        for i in 0..quintiles.len() - 1 {
+            let from_quintile = quintiles[i];
+            let to_quintile = quintiles[i + 1];
+
+            transition_counts[from_quintile][to_quintile] += 1;
+            total_transitions += 1;
+
+            if to_quintile > from_quintile {
+                upward_moves += 1;
+                person_changes += 1;
+            } else if to_quintile < from_quintile {
+                downward_moves += 1;
+                person_changes += 1;
+            } else {
+                same_quintile += 1;
+            }
+        }
+        total_quintile_changes_count += person_changes;
+    }
+
+    // Convert counts to probabilities
+    let transition_matrix: Vec<Vec<f64>> = transition_counts
+        .iter()
+        .map(|row| {
+            let row_sum: usize = row.iter().sum();
+            if row_sum > 0 {
+                row.iter()
+                    .map(|&count| count as f64 / row_sum as f64)
+                    .collect()
+            } else {
+                vec![0.0; 5]
+            }
+        })
+        .collect();
+
+    let upward_mobility_probability = if total_transitions > 0 {
+        upward_moves as f64 / total_transitions as f64
+    } else {
+        0.0
+    };
+
+    let downward_mobility_probability = if total_transitions > 0 {
+        downward_moves as f64 / total_transitions as f64
+    } else {
+        0.0
+    };
+
+    let quintile_persistence = if total_transitions > 0 {
+        same_quintile as f64 / total_transitions as f64
+    } else {
+        0.0
+    };
+
+    let avg_quintile_changes = if !mobility_quintiles.is_empty() {
+        total_quintile_changes_count as f64 / mobility_quintiles.len() as f64
+    } else {
+        0.0
+    };
+
+    Some(MobilityStatistics {
+        transition_matrix,
+        upward_mobility_probability,
+        downward_mobility_probability,
+        quintile_persistence,
+        avg_quintile_changes,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2204,6 +2332,7 @@ mod tests {
                     most_active_pair: None,
                 },
             },
+            mobility_statistics: None,
             events: None,
             final_persons_data: vec![],
         }
@@ -3262,5 +3391,138 @@ mod tests {
                 scalar_var
             );
         }
+    }
+
+    #[test]
+    fn test_calculate_mobility_statistics_empty() {
+        let empty_map: HashMap<usize, Vec<usize>> = HashMap::new();
+        let result = calculate_mobility_statistics(&empty_map);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_calculate_mobility_statistics_single_step() {
+        let mut mobility_quintiles = HashMap::new();
+        mobility_quintiles.insert(0, vec![2]); // Only one time point
+        mobility_quintiles.insert(1, vec![1]);
+
+        let result = calculate_mobility_statistics(&mobility_quintiles);
+        assert!(result.is_none()); // Need at least 2 time points for transitions
+    }
+
+    #[test]
+    fn test_calculate_mobility_statistics_no_mobility() {
+        // All persons stay in their initial quintile
+        let mut mobility_quintiles = HashMap::new();
+        mobility_quintiles.insert(0, vec![0, 0, 0]); // Bottom quintile, stays
+        mobility_quintiles.insert(1, vec![2, 2, 2]); // Middle quintile, stays
+        mobility_quintiles.insert(2, vec![4, 4, 4]); // Top quintile, stays
+
+        let result = calculate_mobility_statistics(&mobility_quintiles);
+        assert!(result.is_some());
+
+        let stats = result.unwrap();
+
+        // All transitions should be diagonal (same quintile)
+        assert_eq!(stats.upward_mobility_probability, 0.0);
+        assert_eq!(stats.downward_mobility_probability, 0.0);
+        assert_eq!(stats.quintile_persistence, 1.0); // 100% persistence
+        assert_eq!(stats.avg_quintile_changes, 0.0);
+    }
+
+    #[test]
+    fn test_calculate_mobility_statistics_upward_only() {
+        // All persons move upward
+        let mut mobility_quintiles = HashMap::new();
+        mobility_quintiles.insert(0, vec![0, 1, 2]); // Moves up two quintiles
+        mobility_quintiles.insert(1, vec![1, 2, 3]); // Moves up two quintiles
+
+        let result = calculate_mobility_statistics(&mobility_quintiles);
+        assert!(result.is_some());
+
+        let stats = result.unwrap();
+
+        assert_eq!(stats.upward_mobility_probability, 1.0); // 100% upward
+        assert_eq!(stats.downward_mobility_probability, 0.0);
+        assert_eq!(stats.quintile_persistence, 0.0);
+        assert_eq!(stats.avg_quintile_changes, 2.0); // 2 changes per person on average
+    }
+
+    #[test]
+    fn test_calculate_mobility_statistics_downward_only() {
+        // All persons move downward
+        let mut mobility_quintiles = HashMap::new();
+        mobility_quintiles.insert(0, vec![4, 3, 2]); // Moves down two quintiles
+        mobility_quintiles.insert(1, vec![3, 2, 1]); // Moves down two quintiles
+
+        let result = calculate_mobility_statistics(&mobility_quintiles);
+        assert!(result.is_some());
+
+        let stats = result.unwrap();
+
+        assert_eq!(stats.upward_mobility_probability, 0.0);
+        assert_eq!(stats.downward_mobility_probability, 1.0); // 100% downward
+        assert_eq!(stats.quintile_persistence, 0.0);
+        assert_eq!(stats.avg_quintile_changes, 2.0);
+    }
+
+    #[test]
+    fn test_calculate_mobility_statistics_mixed() {
+        // Mixed mobility patterns
+        let mut mobility_quintiles = HashMap::new();
+        mobility_quintiles.insert(0, vec![0, 1, 1, 2]); // Upward: 0->1, stays 1->1, 1->2 upward
+        mobility_quintiles.insert(1, vec![4, 3, 3, 2]); // Downward: 4->3, stays 3->3, 3->2 downward
+        mobility_quintiles.insert(2, vec![2, 2, 2, 2]); // No change: all stays
+
+        let result = calculate_mobility_statistics(&mobility_quintiles);
+        assert!(result.is_some());
+
+        let stats = result.unwrap();
+
+        // Person 0: 0->1 (up), 1->1 (stay), 1->2 (up) = 2 up, 1 stay
+        // Person 1: 4->3 (down), 3->3 (stay), 3->2 (down) = 2 down, 1 stay
+        // Person 2: 2->2 (stay), 2->2 (stay), 2->2 (stay) = 3 stay
+        // Total: 2 up, 2 down, 5 stay = 9 total transitions
+        assert!((stats.upward_mobility_probability - 2.0 / 9.0).abs() < 1e-10);
+        assert!((stats.downward_mobility_probability - 2.0 / 9.0).abs() < 1e-10);
+        assert!((stats.quintile_persistence - 5.0 / 9.0).abs() < 1e-10);
+
+        // Person 0: 2 changes, Person 1: 2 changes, Person 2: 0 changes
+        // Average: 4/3 = 1.333...
+        assert!((stats.avg_quintile_changes - 4.0 / 3.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_calculate_mobility_statistics_transition_matrix() {
+        // Simple case to verify transition matrix calculation
+        let mut mobility_quintiles = HashMap::new();
+        // From quintile 0: goes to 0 (stay) and 1 (up)
+        mobility_quintiles.insert(0, vec![0, 0, 1]);
+        // From quintile 1: goes to 1 (stay) and 0 (down)
+        mobility_quintiles.insert(1, vec![1, 1, 0]);
+
+        let result = calculate_mobility_statistics(&mobility_quintiles);
+        assert!(result.is_some());
+
+        let stats = result.unwrap();
+        let matrix = stats.transition_matrix;
+
+        // Check matrix is 5x5
+        assert_eq!(matrix.len(), 5);
+        assert_eq!(matrix[0].len(), 5);
+
+        // From quintile 0: 2 transitions (0->0, 0->0, 0->1)
+        // So 2/2 = 1.0 to stay at 0, and 0/2 = 0.0 to go to 1
+        // Wait, we have 0->0 (step 0 to 1), 0->1 (step 1 to 2)
+        // So from quintile 0: 1 transition to 0, 1 transition to 1
+        // Matrix[0][0] = 0.5, Matrix[0][1] = 0.5
+        assert!((matrix[0][0] - 0.5).abs() < 1e-10);
+        assert!((matrix[0][1] - 0.5).abs() < 1e-10);
+
+        // From quintile 1: 1->1 (step 0 to 1), 1->0 (step 1 to 2)
+        // So from quintile 1: 1 transition to 1, 1 transition to 0
+        // Matrix[1][1] = 0.5, Matrix[1][0] = 0.5
+        assert!((matrix[1][0] - 0.5).abs() < 1e-10);
+        assert!((matrix[1][1] - 0.5).abs() < 1e-10);
     }
 }

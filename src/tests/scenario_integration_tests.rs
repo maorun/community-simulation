@@ -1218,6 +1218,73 @@ mod integration_tests {
         );
     }
 
+    /// Test social mobility statistics tracking
+    #[test]
+    fn test_mobility_statistics_tracking() {
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Mobility statistics should be present for simulations with at least 2 steps
+        assert!(result.mobility_statistics.is_some());
+
+        let mobility_stats = result.mobility_statistics.unwrap();
+
+        // Verify transition matrix is 5x5
+        assert_eq!(mobility_stats.transition_matrix.len(), 5);
+        for row in &mobility_stats.transition_matrix {
+            assert_eq!(row.len(), 5);
+        }
+
+        // Probabilities should sum to approximately 1.0 (or 0 if no transitions from that quintile)
+        for (i, row) in mobility_stats.transition_matrix.iter().enumerate() {
+            let row_sum: f64 = row.iter().sum();
+            // Either the row sums to 1.0 (has transitions) or 0.0 (no person started in that quintile)
+            assert!(
+                (row_sum - 1.0).abs() < 1e-6 || row_sum == 0.0,
+                "Row {} sum is {}, expected 1.0 or 0.0",
+                i,
+                row_sum
+            );
+        }
+
+        // All probabilities should be between 0 and 1
+        assert!(
+            mobility_stats.upward_mobility_probability >= 0.0
+                && mobility_stats.upward_mobility_probability <= 1.0
+        );
+        assert!(
+            mobility_stats.downward_mobility_probability >= 0.0
+                && mobility_stats.downward_mobility_probability <= 1.0
+        );
+        assert!(
+            mobility_stats.quintile_persistence >= 0.0
+                && mobility_stats.quintile_persistence <= 1.0
+        );
+
+        // The three probabilities should sum to 1.0
+        let prob_sum = mobility_stats.upward_mobility_probability
+            + mobility_stats.downward_mobility_probability
+            + mobility_stats.quintile_persistence;
+        assert!(
+            (prob_sum - 1.0).abs() < 1e-6,
+            "Probabilities sum to {}, expected 1.0",
+            prob_sum
+        );
+
+        // Average quintile changes should be non-negative
+        assert!(mobility_stats.avg_quintile_changes >= 0.0);
+    }
+
     /// Test that loan system can be enabled and functions properly
     #[test]
     fn test_loan_system_enabled() {
