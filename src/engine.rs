@@ -1395,11 +1395,15 @@ impl SimulationEngine {
                 let mut all_qualities: Vec<f64> = Vec::new();
                 for entity in self.entities.iter().filter(|e| e.active) {
                     for quality in entity.person_data.skill_qualities.values() {
-                        all_qualities.push(*quality);
+                        // Quality values should always be valid (0.0-5.0), but filter out NaN just in case
+                        if !quality.is_nan() {
+                            all_qualities.push(*quality);
+                        }
                     }
                 }
 
                 if !all_qualities.is_empty() {
+                    // Safe to use unwrap_or(Equal) here as we've filtered out NaN values
                     all_qualities
                         .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
@@ -1423,8 +1427,9 @@ impl SimulationEngine {
                         / count as f64;
                     let std_dev = variance.sqrt();
 
-                    let min_quality = *all_qualities.first().unwrap_or(&0.0);
-                    let max_quality = *all_qualities.last().unwrap_or(&0.0);
+                    // Safe to unwrap as we've already checked !is_empty()
+                    let min_quality = *all_qualities.first().unwrap();
+                    let max_quality = *all_qualities.last().unwrap();
 
                     let skills_at_max_quality = all_qualities.iter().filter(|&&q| q >= 5.0).count();
                     let skills_at_min_quality = all_qualities.iter().filter(|&&q| q <= 0.0).count();
