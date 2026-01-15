@@ -63,25 +63,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Erweiterte Marktmechanismen
 
-#### 2.1 Qualitätsbewertungssystem
-**Beschreibung:** Jede Fähigkeit hat eine Qualitätsstufe (1-5 Sterne), die die Qualität der angebotenen Dienstleistung repräsentiert. Höhere Qualität führt zu höheren Preisen aber auch höherer Nachfrage.
-
-**Harmonien:**
-- **Reputation:** Qualität beeinflusst und wird beeinflusst von Reputation
-- **Bildungssystem:** Gelernte Fähigkeiten beginnen mit niedriger Qualität
-- **Produktionssystem:** Produzierte Fähigkeiten erben Qualität von Input-Fähigkeiten
-- **Bewertungssystem:** Käufer können Qualität bewerten, beeinflusst zukünftige Ratings
-- **Freundschaft:** Freunde bieten möglicherweise ehrlichere Qualitätsbewertungen
-
-**Nutzen:** Fügt Produktdifferenzierung hinzu und ermöglicht die Untersuchung von Qualitätswettbewerb vs. Preiswettbewerb.
-
-**Implementierung:**
-- `SkillQuality` Feld für jede Fähigkeit einer Person (0.0-5.0)
-- Qualität steigt mit erfolgreichen Trades (Übung macht den Meister)
-- Preis-Qualitäts-Anpassung: höhere Qualität = höherer Preis und höhere Nachfrage
-- Qualitätszerfall bei Nichtnutzung (Skills rosten ein)
-
-#### 2.2 Zertifizierungssystem
+#### 2.1 Zertifizierungssystem
 **Beschreibung:** Fähigkeiten können durch eine zentrale Autorität oder durch Peer-Review zertifiziert werden, was Vertrauen schafft und höhere Preise ermöglicht.
 
 **Harmonien:**
@@ -99,7 +81,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Zertifizierte Skills haben Preisaufschlag
 - Zertifizierung kann ablaufen und muss erneuert werden
 
-#### 2.3 Handelsabkommen zwischen Personen
+#### 2.2 Handelsabkommen zwischen Personen
 **Beschreibung:** Zwei oder mehr Personen können bilaterale oder multilaterale Handelsabkommen schließen, die gegenseitige Präferenzen, Rabatte oder Exklusivität gewähren.
 
 **Harmonien:**

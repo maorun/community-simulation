@@ -102,6 +102,28 @@ pub struct SavingsStats {
     pub max_savings: f64,
 }
 
+/// Statistics about skill quality ratings across all persons and skills.
+///
+/// Quality ratings range from 0.0 (minimum) to 5.0 (maximum), with 3.0 as average.
+/// Higher quality skills command higher prices, creating quality competition in the market.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct QualityStats {
+    /// Average quality across all skills
+    pub average_quality: f64,
+    /// Median quality value
+    pub median_quality: f64,
+    /// Standard deviation of quality distribution
+    pub std_dev_quality: f64,
+    /// Minimum quality rating
+    pub min_quality: f64,
+    /// Maximum quality rating
+    pub max_quality: f64,
+    /// Number of skills at maximum quality (5.0)
+    pub skills_at_max_quality: usize,
+    /// Number of skills at minimum quality (0.0)
+    pub skills_at_min_quality: usize,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SkillPriceInfo {
     pub id: SkillId,
@@ -514,6 +536,13 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mobility_statistics: Option<MobilityStatistics>,
 
+    /// Quality rating statistics for skills (only present if quality system is enabled).
+    ///
+    /// Tracks the distribution of skill quality ratings across all persons.
+    /// Quality ratings range from 0.0-5.0 and affect skill prices.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quality_statistics: Option<QualityStats>,
+
     /// Event log (only present if event tracking is enabled).
     ///
     /// Contains timestamped events for trades, price updates, reputation changes,
@@ -602,6 +631,7 @@ impl SimulationResult {
     /// #         },
     /// #     },
     /// #     mobility_statistics: None,
+    /// #     quality_statistics: None,
     /// #     events: None,
     /// #     final_persons_data: vec![],
     /// # };
@@ -1189,6 +1219,46 @@ impl SimulationResult {
             self.reputation_statistics.min_reputation,
             self.reputation_statistics.max_reputation
         );
+
+        // Print quality statistics if quality system was enabled
+        if let Some(ref quality_stats) = self.quality_statistics {
+            println!(
+                "\n{}",
+                "--- Quality Rating Distribution ---".bright_cyan().bold()
+            );
+            println!(
+                "{} {:.2}",
+                "Average Quality:".bold(),
+                quality_stats.average_quality
+            );
+            println!(
+                "{} {:.2}",
+                "Median Quality:".bold(),
+                quality_stats.median_quality
+            );
+            println!(
+                "{} {:.2}",
+                "Std Dev Quality:".bold(),
+                quality_stats.std_dev_quality
+            );
+            println!(
+                "{} {:.2} / {:.2} {}",
+                "Min/Max Quality:".bold(),
+                quality_stats.min_quality,
+                quality_stats.max_quality,
+                "(scale: 0.0-5.0)".dimmed()
+            );
+            println!(
+                "{} {}",
+                "Skills at Max Quality (5.0):".bold(),
+                quality_stats.skills_at_max_quality
+            );
+            println!(
+                "{} {}",
+                "Skills at Min Quality (0.0):".bold(),
+                quality_stats.skills_at_min_quality
+            );
+        }
 
         println!("\n{}", "--- Skill Valuations ---".bright_blue().bold());
         if let Some(skill) = &self.most_valuable_skill {
@@ -2334,6 +2404,7 @@ mod tests {
                 },
             },
             mobility_statistics: None,
+            quality_statistics: None,
             events: None,
             final_persons_data: vec![],
         }

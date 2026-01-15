@@ -16,7 +16,7 @@ use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::panic;
@@ -388,6 +388,24 @@ impl SimulationEngine {
                 // Round-robin group assignment
                 entity.person_data.group_id = Some(i % num_groups);
             }
+        }
+
+        // Initialize skill qualities if quality system is enabled
+        if config.enable_quality {
+            for entity in entities.iter_mut() {
+                // Initialize quality for all own skills
+                for skill in &entity.person_data.own_skills {
+                    entity
+                        .person_data
+                        .skill_qualities
+                        .insert(skill.id.clone(), config.initial_quality);
+                }
+                // Note: Learned skills will have their quality initialized when learned
+            }
+            debug!(
+                "Skill quality system initialized with initial quality: {}",
+                config.initial_quality
+            );
         }
 
         entities
@@ -1372,6 +1390,65 @@ impl SimulationEngine {
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
+            quality_statistics: if self.config.enable_quality {
+                // Collect all quality ratings from all persons
+                let mut all_qualities: Vec<f64> = Vec::new();
+                for entity in self.entities.iter().filter(|e| e.active) {
+                    for quality in entity.person_data.skill_qualities.values() {
+                        // Quality values should always be valid (0.0-5.0), but filter out NaN just in case
+                        if !quality.is_nan() {
+                            all_qualities.push(*quality);
+                        }
+                    }
+                }
+
+                if !all_qualities.is_empty() {
+                    // Safe to use unwrap_or(Equal) here as we've filtered out NaN values
+                    all_qualities
+                        .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+                    let sum: f64 = all_qualities.iter().sum();
+                    let count = all_qualities.len();
+                    let average = sum / count as f64;
+
+                    let median = if count % 2 == 1 {
+                        all_qualities[count / 2]
+                    } else {
+                        (all_qualities[count / 2 - 1] + all_qualities[count / 2]) / 2.0
+                    };
+
+                    let variance = all_qualities
+                        .iter()
+                        .map(|q| {
+                            let diff = average - q;
+                            diff * diff
+                        })
+                        .sum::<f64>()
+                        / count as f64;
+                    let std_dev = variance.sqrt();
+
+                    // Safe to unwrap as we've already checked !is_empty()
+                    let min_quality = *all_qualities.first().unwrap();
+                    let max_quality = *all_qualities.last().unwrap();
+
+                    let skills_at_max_quality = all_qualities.iter().filter(|&&q| q >= 5.0).count();
+                    let skills_at_min_quality = all_qualities.iter().filter(|&&q| q <= 0.0).count();
+
+                    Some(crate::result::QualityStats {
+                        average_quality: average,
+                        median_quality: median,
+                        std_dev_quality: std_dev,
+                        min_quality,
+                        max_quality,
+                        skills_at_max_quality,
+                        skills_at_min_quality,
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
             events: None, // Event system infrastructure ready, full integration pending
             final_persons_data: self.entities.clone(),
         };
@@ -1793,6 +1870,31 @@ impl SimulationEngine {
                         }
                     }
 
+                    // Apply quality-based price adjustment if enabled
+                    if self.config.enable_quality {
+                        if let Some(seller_id) = seller_id_opt {
+                            if let Some(&quality) = self.entities[seller_id]
+                                .person_data
+                                .skill_qualities
+                                .get(needed_skill_id)
+                            {
+                                // Quality ranges from 0.0-5.0, with 3.0 as average
+                                // Price adjustment: +10% per quality point above/below 3.0
+                                // Quality 5.0 -> +20% price, Quality 3.0 -> base price, Quality 1.0 -> -20% price
+                                let quality_multiplier = 1.0 + (quality - 3.0) * 0.1;
+                                final_price *= quality_multiplier;
+                                trace!(
+                                    "Quality price adjustment: Person {} skill '{}' quality {:.2}, price adjusted by {:.1}% to ${:.2}",
+                                    self.entities[seller_id].id,
+                                    needed_skill_id,
+                                    quality,
+                                    (quality_multiplier - 1.0) * 100.0,
+                                    final_price
+                                );
+                            }
+                        }
+                    }
+
                     // Apply distance-based cost multiplier if enabled
                     if self.config.distance_cost_factor > 0.0 {
                         if let Some(seller_id) = seller_id_opt {
@@ -2019,6 +2121,27 @@ impl SimulationEngine {
                 seller_rep_before,
                 self.entities[seller_idx].person_data.reputation
             );
+
+            // Improve skill quality for seller (if quality system enabled)
+            if self.config.enable_quality {
+                if let Some(current_quality) = self.entities[seller_idx]
+                    .person_data
+                    .skill_qualities
+                    .get_mut(&skill_id)
+                {
+                    let old_quality = *current_quality;
+                    // Increase quality by improvement rate, capped at 5.0
+                    *current_quality =
+                        (*current_quality + self.config.quality_improvement_rate).min(5.0);
+                    trace!(
+                        "Person {} skill '{}' quality improved: {:.2} -> {:.2}",
+                        seller_entity_id,
+                        skill_id,
+                        old_quality,
+                        *current_quality
+                    );
+                }
+            }
 
             // Track total fees collected
             self.total_fees_collected += fee;
@@ -2378,7 +2501,65 @@ impl SimulationEngine {
             environment.step();
         }
 
+        // Apply quality decay for unused skills (if quality system enabled)
+        if self.config.enable_quality {
+            self.apply_quality_decay();
+        }
+
         self.current_step += 1;
+    }
+
+    /// Apply quality decay for unused skills.
+    ///
+    /// For each person, checks which skills they didn't sell this step
+    /// and reduces their quality by the configured decay rate.
+    /// Quality is floored at 0.0 (minimum quality).
+    ///
+    /// This simulates the need for ongoing practice and "skills rust" over time.
+    fn apply_quality_decay(&mut self) {
+        for entity in self.entities.iter_mut() {
+            if !entity.active {
+                continue;
+            }
+
+            // Track which skills were sold this step (satisfied needs)
+            let sold_skills: HashSet<SkillId> = entity
+                .person_data
+                .transaction_history
+                .iter()
+                .filter(|tx| {
+                    tx.step == self.current_step
+                        && matches!(tx.transaction_type, crate::person::TransactionType::Sell)
+                })
+                .map(|tx| tx.skill_id.clone())
+                .collect();
+
+            // Apply decay to skills that weren't sold
+            for skill_id in entity
+                .person_data
+                .skill_qualities
+                .keys()
+                .cloned()
+                .collect::<Vec<_>>()
+            {
+                if !sold_skills.contains(&skill_id) {
+                    if let Some(quality) = entity.person_data.skill_qualities.get_mut(&skill_id) {
+                        let old_quality = *quality;
+                        // Decrease quality by decay rate, floored at 0.0
+                        *quality = (*quality - self.config.quality_decay_rate).max(0.0);
+                        if old_quality != *quality {
+                            trace!(
+                                "Person {} skill '{}' quality decayed (unused): {:.2} -> {:.2}",
+                                entity.id,
+                                skill_id,
+                                old_quality,
+                                *quality
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Processes loan payments for the current step.
@@ -2733,6 +2914,7 @@ impl SimulationEngine {
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
+            quality_statistics: None, // Simplified for interactive mode
             events: None,
             final_persons_data: self.entities.clone(),
         }

@@ -401,6 +401,7 @@ mod tests {
             environment_statistics: None,
             friendship_statistics: None,
             group_statistics: None,
+            quality_statistics: None,
             events: None,
         }
     }
