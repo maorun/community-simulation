@@ -301,18 +301,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Code-Qualität
 
-#### 3.1 Umfassende Integration-Tests
-**Beschreibung:** Erweiterte Test-Suite mit End-to-End-Szenario-Tests, die komplexe Feature-Interaktionen validieren.
-
-**Nutzen:** Höhere Codequalität, Regression-Prevention, Dokumentation durch Tests.
-
-**Implementierung:**
-- Szenario-basierte Tests (z.B. "Crisis Recovery", "Education Impact")
-- Property-based Testing mit proptest für invariante Validierung
-- Performance-Regression-Tests
-- Fuzz-Testing für Robustheit
-
-#### 3.2 Konfigurationsvalidierung und -dokumentation
+#### 3.1 Konfigurationsvalidierung und -dokumentation
 **Beschreibung:** Automatisch generierte Dokumentation aller Konfigurationsparameter mit Ranges, Defaults, Abhängigkeiten.
 
 **Nutzen:** Bessere Benutzererfahrung, weniger Konfigurationsfehler, selbstdokumentierender Code.

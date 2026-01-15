@@ -1,3 +1,4 @@
+mod comprehensive_scenario_tests;
 mod proptest_tests;
 mod scenario_integration_tests;
 
