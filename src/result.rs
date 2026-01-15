@@ -601,6 +601,7 @@ impl SimulationResult {
     /// #             most_active_pair: None,
     /// #         },
     /// #     },
+    /// #     mobility_statistics: None,
     /// #     events: None,
     /// #     final_persons_data: vec![],
     /// # };
