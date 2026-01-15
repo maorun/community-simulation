@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod comprehensive_scenarios {
     use crate::scenario::Scenario;
+    use crate::voting::VotingMethod;
     use crate::{SimulationConfig, SimulationEngine};
 
     /// Test: Crisis Recovery Scenario
@@ -555,7 +556,7 @@ mod comprehensive_scenarios {
             scenario: Scenario::Original,
             // Enable voting system
             enable_voting: true,
-            voting_method: crate::voting::VotingMethod::SimpleMajority,
+            voting_method: VotingMethod::SimpleMajority,
             proposal_duration: 25,
             proposal_probability: 0.08,     // 8% chance per step
             voting_participation_rate: 0.4, // 40% of persons vote
