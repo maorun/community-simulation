@@ -187,9 +187,9 @@ impl Person {
             borrowed_loans: Vec::new(),
             lent_loans: Vec::new(),
             strategy,
-            learned_skills: Vec::new(),    // Start with no learned skills
-            friends: HashSet::new(),       // Start with no friends
-            group_id: None,                // Start with no group assignment
+            learned_skills: Vec::new(), // Start with no learned skills
+            friends: HashSet::new(),    // Start with no friends
+            group_id: None,             // Start with no group assignment
             location,
             skill_qualities: HashMap::new(), // Start with empty quality map (populated when quality enabled)
         }

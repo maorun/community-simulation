@@ -402,7 +402,10 @@ impl SimulationEngine {
                 }
                 // Note: Learned skills will have their quality initialized when learned
             }
-            debug!("Skill quality system initialized with initial quality: {}", config.initial_quality);
+            debug!(
+                "Skill quality system initialized with initial quality: {}",
+                config.initial_quality
+            );
         }
 
         entities
@@ -2473,7 +2476,13 @@ impl SimulationEngine {
                 .collect();
 
             // Apply decay to skills that weren't sold
-            for skill_id in entity.person_data.skill_qualities.keys().cloned().collect::<Vec<_>>() {
+            for skill_id in entity
+                .person_data
+                .skill_qualities
+                .keys()
+                .cloned()
+                .collect::<Vec<_>>()
+            {
                 if !sold_skills.contains(&skill_id) {
                     if let Some(quality) = entity.person_data.skill_qualities.get_mut(&skill_id) {
                         let old_quality = *quality;
