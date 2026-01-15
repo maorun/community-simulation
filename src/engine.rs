@@ -1389,6 +1389,8 @@ impl SimulationEngine {
             ),
             centrality_analysis: {
                 // Calculate centrality analysis from trading network
+                // Note: Trading statistics are recalculated here for centrality analysis.
+                // This is a minor redundancy but avoids complex refactoring of the result construction.
                 let trading_stats =
                     crate::result::calculate_trading_partner_statistics(&self.entities);
 

@@ -5,9 +5,8 @@
 //! - Betweenness centrality (brokerage/bridge positions)
 //! - Eigenvector centrality (influence based on connections)
 //! - PageRank (importance based on weighted connections)
-//! - Community detection (Louvain algorithm for identifying trading groups)
 //!
-//! These metrics help identify key traders, market structure, and trading communities.
+//! These metrics help identify key traders, market structure, and trading patterns.
 
 use crate::result::{NetworkEdge, NetworkNode};
 use petgraph::algo::connected_components;
@@ -264,8 +263,8 @@ fn calculate_degree_centrality(
         .collect()
 }
 
-/// Calculate betweenness centrality using a simplified algorithm (normalized 0.0-1.0)
-/// This implementation uses a simplified approach suitable for undirected graphs
+/// Calculate betweenness centrality using Brandes' algorithm (normalized 0.0-1.0)
+/// This is the standard efficient algorithm for computing betweenness centrality
 fn calculate_betweenness_centrality(
     graph: &Graph<String, f64, Undirected>,
     node_indices: &HashMap<String, NodeIndex>,

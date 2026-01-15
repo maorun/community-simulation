@@ -357,24 +357,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Marktzutrittsbarrieren-Analyse
 - Consumer-Surplus und Deadweight-Loss-Berechnung
 
-#### 1.2 Netzwerk-Zentralitätsanalyse
-**Beschreibung:** Umfassende Analyse des Handelsnetzwerks mit Zentralitätsmaßen (Degree, Betweenness, Eigenvector, PageRank).
-
-**Harmonien:**
-- **Handelsnetzwerk-Export:** Nutzt bestehende Netzwerkdaten
-- **Handelspartner-Statistiken:** Ergänzt mit Netzwerkperspektive
-- **Reputation:** Zentralität korreliert mit Reputation
-- **Wirtschaftlicher Erfolg:** Zentrale Akteure oft wohlhabender
-
-**Nutzen:** Identifikation von Schlüsselakteuren, Netzwerkeffekten und strukturellen Löchern.
-
-**Implementierung:**
-- Integration von Graphalgorithmus-Bibliothek (petgraph)
-- Berechnung aller Standard-Zentralitätsmaße
-- Community-Detection (Louvain, Label Propagation)
-- Visualisierung von Netzwerk-Metriken in Output
-
-#### 1.3 Konjunkturzyklen-Detektion
+#### 1.2 Konjunkturzyklen-Detektion
 **Beschreibung:** Automatische Identifikation und Analyse von Wirtschaftszyklen (Expansion, Peak, Rezession, Trough) in der Simulation.
 
 **Harmonien:**
@@ -543,19 +526,18 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 8. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
 9. **Vertrauensnetzwerke** - Ausgefeiltes soziales Kapital-Modell
 10. **Adaptive Strategien** - Macht Agenten realistischer
-11. **Netzwerk-Zentralitätsanalyse** - Nutzt bestehendes Netzwerk besser aus
 
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
-12. **Technologieschocks** - Interessant aber komplex
-13. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
-14. **Gemeinschaftliche Ressourcenpools** - Nischenanwendung
-15. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
-16. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
-17. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
-18. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-19. **Simulation-Debugger** - Nice-to-have für Entwicklung
-20. **Spezielle Anwendungsfälle** - Domänenspezifisch
+11. **Technologieschocks** - Interessant aber komplex
+12. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
+13. **Gemeinschaftliche Ressourcenpools** - Nischenanwendung
+14. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
+15. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
+16. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
+17. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
+18. **Simulation-Debugger** - Nice-to-have für Entwicklung
+19. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
@@ -636,15 +618,13 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - Adaptive Strategien profitieren von allen bisherigen Features
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)
-11. Netzwerk-Zentralitätsanalyse
-12. Kausalanalyse-Framework
-13. Konjunkturzyklen-Detektion
-14. Externalitäten-Analyse
+11. Kausalanalyse-Framework
+12. Konjunkturzyklen-Detektion
+13. Externalitäten-Analyse
 
 **Warum diese Reihenfolge?**
 - Analysen profitieren von den reicheren Daten aus Phasen 1-2
 - Mobilitätsanalyse ist relativ einfach zu implementieren
-- Netzwerkanalyse nutzt bestehendes Trading-Network
 - Kausalanalyse ist methodisch anspruchsvoll
 - Konjunktur- und Externalitäten-Analyse benötigen reife Simulation
 
