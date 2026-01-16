@@ -2767,7 +2767,7 @@ impl SimulationEngine {
         let total: u64 = sorted_scores.iter().map(|&s| s as u64).sum();
         let average_score = total as f64 / sorted_scores.len() as f64;
 
-        let median_score = if sorted_scores.len() % 2 == 0 {
+        let median_score = if sorted_scores.len().is_multiple_of(2) {
             let mid = sorted_scores.len() / 2;
             (sorted_scores[mid - 1] + sorted_scores[mid]) as f64 / 2.0
         } else {
