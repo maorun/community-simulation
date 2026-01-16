@@ -24,24 +24,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Ereignisgesteuerte Auszahlungen basierend auf definierten Bedingungen
 - Prämienkalkulation basierend auf Reputation und historischem Risiko
 
-#### 1.2 Kreditbewertungssystem
-**Beschreibung:** Ein formales Kreditrating-System, das die Kreditwürdigkeit jeder Person bewertet und die Kreditkonditionen (Zinssatz, maximale Kredithöhe, Laufzeit) beeinflusst.
-
-**Harmonien:**
-- **Reputation:** Fließt stark in die Kreditbewertung ein
-- **Kredit-System:** Bestimmt Zinssätze und Kreditlimits
-- **Ersparnisse:** Personen mit hohen Ersparnissen erhalten bessere Ratings
-- **Einkommen:** Handelsvolumen und regelmäßiges Einkommen verbessern Rating
-- **Zahlungshistorie:** Pünktliche Rückzahlungen verbessern das Rating im Zeitverlauf
-
-**Nutzen:** Schafft einen realistischeren Kreditmarkt mit Risikodifferenzierung und ermöglicht die Untersuchung von Kreditzyklen und finanzieller Exklusion.
-
-**Implementierung:**
-- `CreditScore` Komponente (0-850 Skala wie FICO)
-- Berechnung basierend auf: Zahlungshistorie (35%), Schuldenstand (30%), Kredithistorie (15%), neue Kredite (10%), Kredit-Mix (10%)
-- Dynamische Zinssätze basierend auf Score
-- Tracking von Zahlungsausfällen und deren Auswirkung auf Score
-
 #### 1.3 Investitionssystem
 **Beschreibung:** Personen können in Produktionskapazitäten, Bildung anderer Personen oder gemeinsame Projekte investieren und erwarten dafür zukünftige Renditen.
 
@@ -514,10 +496,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ### Hohe Priorität (Kurzfristig - hohe Harmonie-Effekte)
 
 1. **Versicherungssystem** - Starke Synergie mit Reputation, Krediten, Krisen
-2. **Kreditbewertungssystem** - Erweitert bestehendes Kredit-Feature natürlich
-3. **Qualitätsbewertungssystem** - Fügt wichtige Marktdimension hinzu
-4. **Mentorschaft** - Natürliche Erweiterung von Bildung + Freundschaft
-5. **Event-System Integration** - Infrastruktur-Verbesserung mit breitem Nutzen
+2. **Qualitätsbewertungssystem** - Fügt wichtige Marktdimension hinzu (NOTE: Quality rating is already implemented!)
+3. **Mentorschaft** - Natürliche Erweiterung von Bildung + Freundschaft
+4. **Event-System Integration** - Infrastruktur-Verbesserung mit breitem Nutzen
 
 ### Mittlere Priorität (Mittelfristig - gute Harmonien)
 
@@ -590,16 +571,14 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 ## 🔄 Implementations-Roadmap
 
 ### Phase 1: Grundlegende Harmonien (3-6 Monate)
-1. Kreditbewertungssystem implementieren
-2. Versicherungssystem implementieren  
-3. Qualitätsbewertungssystem implementieren
-4. Event-System vollständig integrieren
-5. Mentorschaftssystem implementieren
+1. Versicherungssystem implementieren
+2. Qualitätsbewertungssystem implementieren (NOTE: Already implemented!)
+3. Event-System vollständig integrieren
+4. Mentorschaftssystem implementieren
 
 **Warum diese Reihenfolge?**
-- Kreditrating nutzt bestehende Reputation und Kredite
-- Versicherung baut auf Kreditrating und Reputation auf
-- Qualität ist relativ unabhängig und bringt sofort Mehrwert
+- Versicherung baut auf Reputation und Kredite auf
+- Qualität ist relativ unabhängig und bringt sofort Mehrwert (bereits implementiert!)
 - Event-System ist Infrastruktur für besseres Debugging aller Features
 - Mentorschaft rundet soziale Features ab
 

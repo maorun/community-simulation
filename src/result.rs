@@ -102,6 +102,38 @@ pub struct SavingsStats {
     pub max_savings: f64,
 }
 
+/// Statistics about credit scores across all persons.
+///
+/// Credit scores range from 300 to 850 (FICO-like scale), with higher scores
+/// indicating better creditworthiness and resulting in lower loan interest rates.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CreditScoreStats {
+    /// Average credit score across all persons
+    pub average_score: f64,
+    /// Median credit score
+    pub median_score: f64,
+    /// Standard deviation of credit scores
+    pub std_dev_score: f64,
+    /// Minimum credit score
+    pub min_score: u16,
+    /// Maximum credit score
+    pub max_score: u16,
+    /// Number of persons with excellent credit (800-850)
+    pub excellent_count: usize,
+    /// Number of persons with very good credit (740-799)
+    pub very_good_count: usize,
+    /// Number of persons with good credit (670-739)
+    pub good_count: usize,
+    /// Number of persons with fair credit (580-669)
+    pub fair_count: usize,
+    /// Number of persons with poor credit (300-579)
+    pub poor_count: usize,
+    /// Total successful loan payments made
+    pub total_successful_payments: usize,
+    /// Total missed loan payments
+    pub total_missed_payments: usize,
+}
+
 /// Statistics about skill quality ratings across all persons and skills.
 ///
 /// Quality ratings range from 0.0 (minimum) to 5.0 (maximum), with 3.0 as average.
@@ -462,6 +494,10 @@ pub struct SimulationResult {
     pub final_savings_distribution: Vec<f64>, // List of savings amounts per person
     pub savings_statistics: SavingsStats,
 
+    // Credit rating metrics (only populated when credit rating system is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credit_score_statistics: Option<CreditScoreStats>,
+
     pub final_skill_prices: Vec<SkillPriceInfo>, // Sorted by price
     pub most_valuable_skill: Option<SkillPriceInfo>,
     pub least_valuable_skill: Option<SkillPriceInfo>,
@@ -600,6 +636,7 @@ impl SimulationResult {
     /// #         total_savings: 0.0, average_savings: 0.0, median_savings: 0.0,
     /// #         min_savings: 0.0, max_savings: 0.0,
     /// #     },
+    /// #     credit_score_statistics: None,
     /// #     final_skill_prices: vec![],
     /// #     most_valuable_skill: None,
     /// #     least_valuable_skill: None,
@@ -2367,6 +2404,7 @@ mod tests {
                 min_savings: 0.0,
                 max_savings: 20.0,
             },
+            credit_score_statistics: None,
             final_skill_prices: vec![],
             most_valuable_skill: None,
             least_valuable_skill: None,

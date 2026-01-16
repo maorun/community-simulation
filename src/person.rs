@@ -1,3 +1,4 @@
+use crate::credit_rating::CreditScore;
 use crate::loan::LoanId;
 use crate::skill::{Skill, SkillId};
 use serde::{Deserialize, Serialize};
@@ -157,6 +158,11 @@ pub struct Person {
     /// Quality improves through successful trades and decays when not used.
     /// Only populated when quality system is enabled.
     pub skill_qualities: HashMap<SkillId, f64>,
+    /// Credit score tracking creditworthiness (300-850 FICO-like scale).
+    /// Affects interest rates on loans - higher scores get better rates.
+    /// Calculated from payment history, debt level, credit history length, new credit, and credit mix.
+    /// Only meaningful when credit rating system is enabled.
+    pub credit_score: CreditScore,
 }
 
 impl Person {
@@ -192,6 +198,7 @@ impl Person {
             group_id: None,             // Start with no group assignment
             location,
             skill_qualities: HashMap::new(), // Start with empty quality map (populated when quality enabled)
+            credit_score: CreditScore::new(), // Start with default credit score
         }
     }
 

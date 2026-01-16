@@ -63,6 +63,7 @@
 //! - [`centrality`] - Network centrality analysis for trading networks
 //! - [`config`] - Simulation configuration parameters
 //! - [`contract`] - Contract system for long-term agreements
+//! - [`credit_rating`] - Credit scoring system for evaluating creditworthiness
 //! - [`database`] - SQLite database export functionality
 //! - [`engine`] - Main simulation engine and execution loop
 //! - [`entity`] - Entity wrapper around Person for simulation framework
@@ -84,6 +85,7 @@
 pub mod centrality;
 pub mod config;
 pub mod contract;
+pub mod credit_rating;
 pub mod crisis;
 pub mod database;
 pub mod engine;
@@ -109,6 +111,7 @@ pub mod voting;
 pub use centrality::{calculate_centrality, CentralityAnalysis, NodeCentrality};
 pub use config::{PresetName, SimulationConfig};
 pub use contract::{Contract, ContractId};
+pub use credit_rating::CreditScore;
 pub use crisis::CrisisEvent;
 pub use engine::{SimulationCheckpoint, SimulationEngine};
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
