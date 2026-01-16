@@ -328,7 +328,7 @@ pub struct MentorshipStats {
     pub total_mentorships: usize,
     /// Total number of successful mentored learning events
     pub successful_mentored_learnings: usize,
-    /// Average cost savings from mentorship (compared to unmentored learning)
+    /// Total cost savings from mentorship (compared to unmentored learning)
     pub total_cost_savings: f64,
     /// Number of unique persons who acted as mentors
     pub unique_mentors: usize,
