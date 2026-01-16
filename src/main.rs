@@ -218,6 +218,27 @@ struct Args {
     #[arg(long)]
     learning_probability: Option<f64>,
 
+    /// Enable mentorship system where experienced persons can mentor others for reduced learning costs.
+    /// Requires education to be enabled. Mentors must have high-quality skills to teach others.
+    /// Mentees pay reduced learning costs and mentors gain reputation bonuses.
+    #[arg(long, default_value_t = false)]
+    enable_mentorship: bool,
+
+    /// Cost reduction for mentored learning as a fraction (0.0-1.0, e.g., 0.5 = 50% discount)
+    /// Only used when --enable-mentorship is set
+    #[arg(long)]
+    mentorship_cost_reduction: Option<f64>,
+
+    /// Minimum skill quality required to be eligible as a mentor (0.0-5.0 scale, default: 3.5)
+    /// Only used when --enable-mentorship is set
+    #[arg(long)]
+    min_mentor_quality: Option<f64>,
+
+    /// Reputation bonus awarded to mentors for successful mentoring (default: 0.05)
+    /// Only used when --enable-mentorship is set
+    #[arg(long)]
+    mentor_reputation_bonus: Option<f64>,
+
     /// Enable random crisis events that create economic shocks during the simulation
     /// When enabled, crises like market crashes, demand shocks, supply shocks, and currency devaluations can occur
     #[arg(long, default_value_t = false)]
@@ -463,6 +484,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(probability) = args.learning_probability {
             cfg.learning_probability = probability;
         }
+        if args.enable_mentorship {
+            cfg.enable_mentorship = true;
+        }
+        if let Some(cost_reduction) = args.mentorship_cost_reduction {
+            cfg.mentorship_cost_reduction = cost_reduction;
+        }
+        if let Some(min_quality) = args.min_mentor_quality {
+            cfg.min_mentor_quality = min_quality;
+        }
+        if let Some(bonus) = args.mentor_reputation_bonus {
+            cfg.mentor_reputation_bonus = bonus;
+        }
         if args.enable_loans {
             cfg.enable_loans = true;
         }
@@ -575,6 +608,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Some(probability) = args.learning_probability {
                 cfg.learning_probability = probability;
+            }
+            if args.enable_mentorship {
+                cfg.enable_mentorship = true;
+            }
+            if let Some(cost_reduction) = args.mentorship_cost_reduction {
+                cfg.mentorship_cost_reduction = cost_reduction;
+            }
+            if let Some(min_quality) = args.min_mentor_quality {
+                cfg.min_mentor_quality = min_quality;
+            }
+            if let Some(bonus) = args.mentor_reputation_bonus {
+                cfg.mentor_reputation_bonus = bonus;
             }
             if args.enable_crisis_events {
                 cfg.enable_crisis_events = true;
@@ -706,6 +751,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             learning_probability: args
                 .learning_probability
                 .unwrap_or(SimulationConfig::default().learning_probability),
+            enable_mentorship: args.enable_mentorship,
+            mentorship_cost_reduction: args
+                .mentorship_cost_reduction
+                .unwrap_or(SimulationConfig::default().mentorship_cost_reduction),
+            min_mentor_quality: args
+                .min_mentor_quality
+                .unwrap_or(SimulationConfig::default().min_mentor_quality),
+            mentor_reputation_bonus: args
+                .mentor_reputation_bonus
+                .unwrap_or(SimulationConfig::default().mentor_reputation_bonus),
             enable_crisis_events: args.enable_crisis_events,
             crisis_probability: args
                 .crisis_probability

@@ -130,7 +130,12 @@ pub struct Mentorship {
 
 impl Mentorship {
     /// Creates a new mentorship relationship.
-    pub fn new(mentor_id: PersonId, mentee_id: PersonId, skill_id: SkillId, start_step: usize) -> Self {
+    pub fn new(
+        mentor_id: PersonId,
+        mentee_id: PersonId,
+        skill_id: SkillId,
+        start_step: usize,
+    ) -> Self {
         Mentorship {
             mentor_id,
             mentee_id,

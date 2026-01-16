@@ -1217,7 +1217,8 @@ impl SimulationConfig {
         if self.enable_mentorship {
             if !self.enable_education {
                 return Err(SimulationError::ValidationError(
-                    "Mentorship requires education to be enabled (enable_education must be true)".to_string()
+                    "Mentorship requires education to be enabled (enable_education must be true)"
+                        .to_string(),
                 ));
             }
 
