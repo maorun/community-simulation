@@ -1500,7 +1500,7 @@ impl SimulationEngine {
                         let mut total_balance = 0.0;
                         let mut total_contrib = 0.0;
                         let mut total_withdr = 0.0;
-                        for (_, (balance, contrib, withdr)) in &self.resource_pools {
+                        for (balance, contrib, withdr) in self.resource_pools.values() {
                             total_balance += balance;
                             total_contrib += contrib;
                             total_withdr += withdr;

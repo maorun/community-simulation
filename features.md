@@ -83,24 +83,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Vorteile skalieren mit Vertrauenslevel
 - Vertrauensbruch propagiert im Netzwerk
 
-#### 3.2 Gemeinschaftliche Ressourcenpools
-**Beschreibung:** Gruppen können gemeinsame Ressourcenpools bilden (Geld, Fähigkeiten, Versicherung), auf die Mitglieder zugreifen können. Fördert Solidarität und kollektive Sicherheit.
-
-**Harmonien:**
-- **Gruppen:** Natürliche Erweiterung des Gruppensystems
-- **Ersparnisse:** Kollektive Sparmodelle
-- **Versicherung:** Gegenseitige Versicherungsvereine
-- **Kredite:** Kreditgenossenschaften innerhalb der Gruppe
-- **Steuern/Umverteilung:** Alternative zu zentraler Umverteilung
-
-**Nutzen:** Modelliert Genossenschaften, Mikrofinanzsysteme und informelle Spargruppen (wie ROSCAs).
-
-**Implementierung:**
-- `ResourcePool` pro Gruppe mit Einzahlungen, Auszahlungen, Regeln
-- Mitgliedsbeiträge (Prozentsatz oder fester Betrag)
-- Zugangsregeln: Bedürftigkeit, Rotation, Abstimmung
-- Transparenz und Rechenschaftspflicht-Mechanismen
-
 ### 4. Erweiterte Szenarien
 
 #### 4.1 Technologieschocks
@@ -476,13 +458,12 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 11. **Technologieschocks** - Interessant aber komplex
 12. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
-13. **Gemeinschaftliche Ressourcenpools** - Nischenanwendung
-14. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
-15. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
-16. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
-17. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-18. **Simulation-Debugger** - Nice-to-have für Entwicklung
-19. **Spezielle Anwendungsfälle** - Domänenspezifisch
+13. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
+14. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
+15. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
+16. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
+17. **Simulation-Debugger** - Nice-to-have für Entwicklung
+18. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
