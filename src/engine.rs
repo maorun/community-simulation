@@ -1246,6 +1246,30 @@ impl SimulationEngine {
             } else {
                 None
             },
+            certification_statistics: if self.config.enable_certification {
+                // Count active (non-expired) certifications
+                let active_certifications = self
+                    .market
+                    .skills
+                    .values()
+                    .filter(|skill| {
+                        if let Some(cert) = &skill.certification {
+                            !cert.is_expired(self.current_step)
+                        } else {
+                            false
+                        }
+                    })
+                    .count();
+
+                Some(crate::result::CertificationStats {
+                    total_issued: self.total_certifications_issued,
+                    total_expired: self.total_certifications_expired,
+                    active_certifications,
+                    total_cost: self.total_certification_cost,
+                })
+            } else {
+                None
+            },
             environment_statistics: if self.config.enable_environment {
                 if let Some(ref environment) = self.environment {
                     use crate::environment::Resource;
@@ -3390,6 +3414,7 @@ impl SimulationEngine {
             contract_statistics: None,
             education_statistics: None,
             mentorship_statistics: None,
+            certification_statistics: None,
             environment_statistics: None, // Simplified for interactive mode
             friendship_statistics: None,  // Simplified
             group_statistics: None,
