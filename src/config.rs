@@ -791,6 +791,58 @@ pub struct SimulationConfig {
     /// Valid range: 0.0-1.0
     #[serde(default = "default_certification_probability")]
     pub certification_probability: f64,
+
+    /// Enable community resource pools for groups.
+    ///
+    /// When enabled alongside groups (num_groups), each group maintains a shared resource pool
+    /// where members contribute a percentage of their money each step. The pool can be used
+    /// for collective support, mutual aid, or resource redistribution within the group.
+    ///
+    /// This enables studying:
+    /// - Cooperative economics and mutual aid societies
+    /// - Resource pooling and collective security
+    /// - Solidarity economics and community wealth building
+    /// - Alternative approaches to social insurance
+    ///
+    /// Requires num_groups to be set. Set to false to disable (default).
+    #[serde(default)]
+    pub enable_resource_pools: bool,
+
+    /// Contribution rate to the group resource pool as a percentage of money (0.0-1.0).
+    ///
+    /// Each simulation step, group members contribute this percentage of their current money
+    /// to their group's shared resource pool. For example, 0.05 means 5% of money is contributed.
+    ///
+    /// The contribution is deducted from the person's available money and added to the pool.
+    /// Contributions are tracked per group for transparency and analysis.
+    ///
+    /// Only used when enable_resource_pools is true.
+    /// Default: 0.02 (2% contribution per step)
+    /// Valid range: 0.0-0.5 (0% to 50%)
+    #[serde(default = "default_pool_contribution_rate")]
+    pub pool_contribution_rate: f64,
+
+    /// Minimum money threshold for receiving support from the resource pool.
+    ///
+    /// Group members with money below this threshold are eligible to receive equal
+    /// distributions from their group's pool each step (if the pool has funds).
+    /// This simulates needs-based access to collective resources.
+    ///
+    /// For example, if set to 50.0, members with less than $50 can receive pool support.
+    ///
+    /// Only used when enable_resource_pools is true.
+    /// Default: 30.0 (members with less than $30 are eligible)
+    /// Valid range: 0.0-1000.0
+    #[serde(default = "default_pool_withdrawal_threshold")]
+    pub pool_withdrawal_threshold: f64,
+}
+
+fn default_pool_contribution_rate() -> f64 {
+    0.02 // 2% contribution per step
+}
+
+fn default_pool_withdrawal_threshold() -> f64 {
+    30.0 // Members with less than $30 are eligible for support
 }
 
 fn default_certification_cost_multiplier() -> f64 {
@@ -1017,6 +1069,9 @@ impl Default for SimulationConfig {
             certification_cost_multiplier: 2.0,   // 2x base price per level
             certification_duration: Some(200),    // Certifications last 200 steps
             certification_probability: 0.05,      // 5% chance per step to attempt certification
+            enable_resource_pools: false,         // Disabled by default
+            pool_contribution_rate: 0.02,         // 2% contribution per step
+            pool_withdrawal_threshold: 30.0,      // Support for members below $30
         }
     }
 }
@@ -1477,6 +1532,29 @@ impl SimulationConfig {
                 return Err(SimulationError::ValidationError(format!(
                     "certification_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
                     self.certification_probability
+                )));
+            }
+        }
+
+        // Resource pool validation
+        if self.enable_resource_pools {
+            if self.num_groups.is_none() {
+                return Err(SimulationError::ValidationError(
+                    "enable_resource_pools requires num_groups to be set".to_string(),
+                ));
+            }
+
+            if !(0.0..=0.5).contains(&self.pool_contribution_rate) {
+                return Err(SimulationError::ValidationError(format!(
+                    "pool_contribution_rate must be between 0.0 and 0.5 (0% to 50%), got: {}",
+                    self.pool_contribution_rate
+                )));
+            }
+
+            if self.pool_withdrawal_threshold < 0.0 || self.pool_withdrawal_threshold > 1000.0 {
+                return Err(SimulationError::ValidationError(format!(
+                    "pool_withdrawal_threshold must be between 0.0 and 1000.0, got: {}",
+                    self.pool_withdrawal_threshold
                 )));
             }
         }

@@ -378,6 +378,15 @@ pub struct SingleGroupStats {
     pub total_money: f64,
     /// Average reputation of group members
     pub avg_reputation: f64,
+    /// Resource pool balance for this group (if resource pools enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pool_balance: Option<f64>,
+    /// Total contributions to the pool
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_contributions: Option<f64>,
+    /// Total withdrawals from the pool
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_withdrawals: Option<f64>,
 }
 
 /// Statistics about group/organization system
@@ -393,6 +402,15 @@ pub struct GroupStats {
     pub max_group_size: usize,
     /// Statistics for each individual group
     pub groups: Vec<SingleGroupStats>,
+    /// Total balance across all resource pools (if resource pools enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_pool_balance: Option<f64>,
+    /// Total contributions across all pools (if resource pools enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_contributions: Option<f64>,
+    /// Total withdrawals across all pools (if resource pools enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_withdrawals: Option<f64>,
 }
 
 /// Information about a trading partner relationship
