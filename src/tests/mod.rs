@@ -692,4 +692,69 @@ mod engine_tests {
             );
         }
     }
+
+    #[test]
+    fn test_event_tracking_enabled() {
+        // Test that events are collected when enabled
+        let mut config = get_test_config();
+        config.max_steps = 10;
+        config.entity_count = 5;
+        config.enable_events = true; // Enable event tracking
+        config.seed = 123;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify events were collected
+        assert!(
+            result.events.is_some(),
+            "Events should be collected when enabled"
+        );
+        let events = result.events.as_ref().unwrap();
+        assert!(!events.is_empty(), "Should have collected some events");
+
+        // Count different event types
+        let mut trade_events = 0;
+        let mut price_events = 0;
+        let mut reputation_events = 0;
+        let mut step_events = 0;
+
+        for event in events {
+            match &event.event_type {
+                crate::event::EventType::TradeExecuted { .. } => trade_events += 1,
+                crate::event::EventType::PriceUpdated { .. } => price_events += 1,
+                crate::event::EventType::ReputationChanged { .. } => reputation_events += 1,
+                crate::event::EventType::StepCompleted { .. } => step_events += 1,
+            }
+        }
+
+        // Should have at least some of each type of event
+        assert!(step_events > 0, "Should have step completed events");
+        // Trade and reputation events depend on successful trades happening
+        // Price events depend on prices changing
+        // Just verify that we're collecting events in general
+        assert!(
+            trade_events > 0 || price_events > 0 || reputation_events > 0,
+            "Should have trade, price, or reputation events"
+        );
+    }
+
+    #[test]
+    fn test_event_tracking_disabled() {
+        // Test that events are NOT collected when disabled
+        let mut config = get_test_config();
+        config.max_steps = 10;
+        config.entity_count = 5;
+        config.enable_events = false; // Disable event tracking
+        config.seed = 123;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify events were NOT collected
+        assert!(
+            result.events.is_none(),
+            "Events should not be collected when disabled"
+        );
+    }
 }
