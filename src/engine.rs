@@ -89,6 +89,8 @@ pub struct SimulationCheckpoint {
     pub total_certifications_issued: usize,
     pub total_certifications_expired: usize,
     pub total_certification_cost: f64,
+    /// Resource pool tracking: group_id -> (balance, total_contributions, total_withdrawals)
+    pub resource_pools: HashMap<usize, (f64, f64, f64)>,
 }
 
 pub struct SimulationEngine {
@@ -147,6 +149,8 @@ pub struct SimulationEngine {
     mobility_quintiles: HashMap<usize, Vec<usize>>,
     // Plugin system for extending simulation
     plugin_registry: PluginRegistry,
+    // Resource pool tracking: group_id -> (balance, total_contributions, total_withdrawals)
+    resource_pools: HashMap<usize, (f64, f64, f64)>,
     // Production system recipes (cached for performance)
     production_recipes: Option<Vec<crate::production::Recipe>>,
     // Environmental resource tracking (if enabled)
@@ -265,6 +269,25 @@ impl SimulationEngine {
             None
         };
 
+        // Initialize resource pools before moving config
+        let resource_pools = {
+            let mut pools = HashMap::new();
+            if config.enable_resource_pools {
+                if let Some(num_groups) = config.num_groups {
+                    for group_id in 0..num_groups {
+                        // Initialize pool with (balance, total_contributions, total_withdrawals)
+                        pools.insert(group_id, (0.0, 0.0, 0.0));
+                    }
+                    debug!(
+                        "Resource pools initialized for {} groups with {}% contribution rate",
+                        num_groups,
+                        config.pool_contribution_rate * 100.0
+                    );
+                }
+            }
+            pools
+        };
+
         Self {
             config,
             entities,
@@ -304,6 +327,7 @@ impl SimulationEngine {
             wealth_stats_history: Vec::new(),
             mobility_quintiles: HashMap::new(),
             plugin_registry: PluginRegistry::new(),
+            resource_pools,
             production_recipes,
             environment,
             voting_system,
@@ -1411,21 +1435,52 @@ impl SimulationEngine {
                             0.0
                         };
 
+                        // Include resource pool data if pools are enabled
+                        let (pool_balance, total_contributions, total_withdrawals) =
+                            if self.config.enable_resource_pools {
+                                self.resource_pools
+                                    .get(&group_id)
+                                    .map(|(balance, contrib, withdr)| {
+                                        (Some(*balance), Some(*contrib), Some(*withdr))
+                                    })
+                                    .unwrap_or((Some(0.0), Some(0.0), Some(0.0)))
+                            } else {
+                                (None, None, None)
+                            };
+
                         groups_stats.push(crate::result::SingleGroupStats {
                             group_id,
                             member_count,
                             avg_money,
                             total_money,
                             avg_reputation,
+                            pool_balance,
+                            total_contributions,
+                            total_withdrawals,
                         });
                     } else {
                         // Empty group
+                        let (pool_balance, total_contributions, total_withdrawals) =
+                            if self.config.enable_resource_pools {
+                                self.resource_pools
+                                    .get(&group_id)
+                                    .map(|(balance, contrib, withdr)| {
+                                        (Some(*balance), Some(*contrib), Some(*withdr))
+                                    })
+                                    .unwrap_or((Some(0.0), Some(0.0), Some(0.0)))
+                            } else {
+                                (None, None, None)
+                            };
+
                         groups_stats.push(crate::result::SingleGroupStats {
                             group_id,
                             member_count: 0,
                             avg_money: 0.0,
                             total_money: 0.0,
                             avg_reputation: 0.0,
+                            pool_balance,
+                            total_contributions,
+                            total_withdrawals,
                         });
                     }
                 }
@@ -1439,12 +1494,31 @@ impl SimulationEngine {
                     0.0
                 };
 
+                // Calculate aggregate pool statistics if pools are enabled
+                let (total_pool_balance, total_contributions, total_withdrawals) =
+                    if self.config.enable_resource_pools {
+                        let mut total_balance = 0.0;
+                        let mut total_contrib = 0.0;
+                        let mut total_withdr = 0.0;
+                        for (_, (balance, contrib, withdr)) in &self.resource_pools {
+                            total_balance += balance;
+                            total_contrib += contrib;
+                            total_withdr += withdr;
+                        }
+                        (Some(total_balance), Some(total_contrib), Some(total_withdr))
+                    } else {
+                        (None, None, None)
+                    };
+
                 Some(crate::result::GroupStats {
                     total_groups: num_groups,
                     avg_group_size,
                     min_group_size,
                     max_group_size,
                     groups: groups_stats,
+                    total_pool_balance,
+                    total_contributions,
+                    total_withdrawals,
                 })
             } else {
                 None
@@ -2419,6 +2493,84 @@ impl SimulationEngine {
                             money_before,
                             entity.person_data.money
                         );
+                    }
+                }
+            }
+        }
+
+        // Resource pool contributions and withdrawals (if enabled)
+        if self.config.enable_resource_pools && self.config.num_groups.is_some() {
+            // Step 1: Collect contributions from all group members
+            for entity in &mut self.entities {
+                if !entity.active {
+                    continue;
+                }
+
+                if let Some(group_id) = entity.person_data.group_id {
+                    // Only contribute if person has positive money
+                    if entity.person_data.money > 0.0 {
+                        let contribution =
+                            entity.person_data.money * self.config.pool_contribution_rate;
+                        entity.person_data.money -= contribution;
+
+                        // Update pool balance and total contributions
+                        if let Some(pool) = self.resource_pools.get_mut(&group_id) {
+                            pool.0 += contribution; // balance
+                            pool.1 += contribution; // total_contributions
+                            trace!(
+                                "Person {} contributed ${:.2} to group {} pool (balance: ${:.2})",
+                                entity.id,
+                                contribution,
+                                group_id,
+                                pool.0
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Step 2: Distribute pool resources to needy members
+            // First, identify needy members by group
+            let mut needy_by_group: HashMap<usize, Vec<usize>> = HashMap::new();
+            for entity in &self.entities {
+                if !entity.active {
+                    continue;
+                }
+
+                if let Some(group_id) = entity.person_data.group_id {
+                    if entity.person_data.money < self.config.pool_withdrawal_threshold {
+                        needy_by_group.entry(group_id).or_default().push(entity.id);
+                    }
+                }
+            }
+
+            // Distribute pool funds equally among needy members
+            for (group_id, needy_ids) in needy_by_group {
+                if needy_ids.is_empty() {
+                    continue;
+                }
+
+                if let Some(pool) = self.resource_pools.get_mut(&group_id) {
+                    if pool.0 > 0.0 {
+                        // Equal distribution among needy members
+                        let distribution_per_person = pool.0 / needy_ids.len() as f64;
+
+                        for person_id in needy_ids {
+                            if let Some(entity) =
+                                self.entities.iter_mut().find(|e| e.id == person_id)
+                            {
+                                entity.person_data.money += distribution_per_person;
+                                pool.0 -= distribution_per_person; // balance
+                                pool.2 += distribution_per_person; // total_withdrawals
+                                trace!(
+                                    "Person {} received ${:.2} from group {} pool (new balance: ${:.2})",
+                                    person_id,
+                                    distribution_per_person,
+                                    group_id,
+                                    entity.person_data.money
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -3504,6 +3656,7 @@ impl SimulationEngine {
             total_certifications_issued: self.total_certifications_issued,
             total_certifications_expired: self.total_certifications_expired,
             total_certification_cost: self.total_certification_cost,
+            resource_pools: self.resource_pools.clone(),
         };
 
         let file = File::create(path)?;
@@ -3632,6 +3785,7 @@ impl SimulationEngine {
             wealth_stats_history: checkpoint.wealth_stats_history,
             mobility_quintiles: checkpoint.mobility_quintiles,
             plugin_registry: PluginRegistry::new(),
+            resource_pools: checkpoint.resource_pools,
             production_recipes,
             environment: checkpoint.environment,
             voting_system: checkpoint.voting_system,

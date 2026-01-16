@@ -370,6 +370,24 @@ struct Args {
     /// Only used when --enable-certification is set
     #[arg(long)]
     certification_probability: Option<f64>,
+
+    /// Enable community resource pools for groups (requires --num-groups)
+    /// Groups maintain shared pools where members contribute money each step
+    /// Pools provide collective support and mutual aid to members in need
+    #[arg(long, default_value_t = false)]
+    enable_resource_pools: bool,
+
+    /// Contribution rate to group resource pool as percentage of money (0.0-0.5, default: 0.02)
+    /// Each step, group members contribute this percentage to their pool
+    /// Only used when --enable-resource-pools is set
+    #[arg(long)]
+    pool_contribution_rate: Option<f64>,
+
+    /// Minimum money threshold for pool support (default: 30.0)
+    /// Members with less than this amount can receive equal distributions from their group's pool
+    /// Only used when --enable-resource-pools is set
+    #[arg(long)]
+    pool_withdrawal_threshold: Option<f64>,
 }
 
 /// Converts a certification duration argument to an Option.
@@ -706,6 +724,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(probability) = args.certification_probability {
                 cfg.certification_probability = probability;
             }
+            if args.enable_resource_pools {
+                cfg.enable_resource_pools = true;
+            }
+            if let Some(contribution_rate) = args.pool_contribution_rate {
+                cfg.pool_contribution_rate = contribution_rate;
+            }
+            if let Some(threshold) = args.pool_withdrawal_threshold {
+                cfg.pool_withdrawal_threshold = threshold;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -862,6 +889,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             certification_probability: args
                 .certification_probability
                 .unwrap_or(SimulationConfig::default().certification_probability),
+            enable_resource_pools: args.enable_resource_pools,
+            pool_contribution_rate: args
+                .pool_contribution_rate
+                .unwrap_or(SimulationConfig::default().pool_contribution_rate),
+            pool_withdrawal_threshold: args
+                .pool_withdrawal_threshold
+                .unwrap_or(SimulationConfig::default().pool_withdrawal_threshold),
         }
     };
 
