@@ -337,6 +337,7 @@ mod tests {
                 min_savings: 0.0,
                 max_savings: 0.0,
             },
+            credit_score_statistics: None,
             trade_volume_statistics: TradeVolumeStats {
                 total_trades: 500,
                 total_volume: 5000.0,

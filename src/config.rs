@@ -175,6 +175,7 @@ pub struct SimulationConfig {
     /// - Tracks payment history, debt levels, and credit behavior
     /// - Affects interest rates on loans (better scores = lower rates)
     /// - Updates dynamically based on loan activity and repayments
+    ///
     /// Only has effect when enable_loans is also true.
     /// Set to false to disable credit ratings (default).
     #[serde(default)]
@@ -189,6 +190,7 @@ pub struct SimulationConfig {
     /// - Good (670-739): 1.0x base rate (this value)
     /// - Fair (580-669): 1.5x base rate
     /// - Poor (300-579): 2.5x base rate
+    ///
     /// Only used when enable_loans is true.
     /// A value of 0.01 means the borrower pays 1% interest per step (for good credit).
     /// Valid range: 0.0 to 1.0 (0% to 100%)
@@ -833,12 +835,12 @@ impl Default for SimulationConfig {
             time_step: 1.0,                  // Represents one discrete step or turn
             scenario: Scenario::Original,
             demand_strategy: DemandStrategy::default(),
-            tech_growth_rate: 0.0,   // Disabled by default
-            seasonal_amplitude: 0.0, // Disabled by default
-            seasonal_period: 100,    // Default cycle length
-            transaction_fee: 0.0,    // Disabled by default
-            savings_rate: 0.0,       // Disabled by default
-            enable_loans: false,     // Disabled by default
+            tech_growth_rate: 0.0,       // Disabled by default
+            seasonal_amplitude: 0.0,     // Disabled by default
+            seasonal_period: 100,        // Default cycle length
+            transaction_fee: 0.0,        // Disabled by default
+            savings_rate: 0.0,           // Disabled by default
+            enable_loans: false,         // Disabled by default
             enable_credit_rating: false, // Disabled by default
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,

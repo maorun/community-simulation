@@ -1066,6 +1066,11 @@ impl SimulationEngine {
             reputation_statistics: reputation_stats,
             final_savings_distribution,
             savings_statistics: savings_stats,
+            credit_score_statistics: if self.config.enable_credit_rating {
+                self.calculate_credit_score_statistics()
+            } else {
+                None
+            },
             final_skill_prices: final_skill_prices_vec,
             most_valuable_skill,
             least_valuable_skill,
@@ -2293,6 +2298,32 @@ impl SimulationEngine {
             }
         }
 
+        // Update credit scores and history if credit rating is enabled
+        if self.config.enable_credit_rating {
+            for entity in &mut self.entities {
+                if entity.active {
+                    // Increment credit history for persons with credit history
+                    entity.person_data.credit_score.increment_credit_history();
+
+                    // Calculate current debt level
+                    let total_debt: f64 = entity
+                        .person_data
+                        .borrowed_loans
+                        .iter()
+                        .filter_map(|loan_id| self.loans.get(loan_id))
+                        .map(|loan| loan.remaining_principal)
+                        .sum();
+
+                    // Update credit score based on current financial state
+                    entity.person_data.credit_score.calculate_score(
+                        total_debt,
+                        entity.person_data.money,
+                        self.current_step,
+                    );
+                }
+            }
+        }
+
         // Apply savings - persons save a portion of their money
         if self.config.savings_rate > 0.0 {
             for entity in &mut self.entities {
@@ -2650,6 +2681,14 @@ impl SimulationEngine {
                 self.entities[borrower_idx].person_data.money -= payment_amount;
                 self.entities[lender_idx].person_data.money += payment_amount;
 
+                // Update credit score if credit rating is enabled
+                if self.config.enable_credit_rating {
+                    self.entities[borrower_idx]
+                        .person_data
+                        .credit_score
+                        .record_successful_payment();
+                }
+
                 debug!(
                     "Loan payment: Person {} paid ${:.2} to Person {} (remaining: ${:.2})",
                     self.entities[borrower_idx].id,
@@ -2667,6 +2706,18 @@ impl SimulationEngine {
                     );
                 }
             } else {
+                // Borrower cannot afford the payment - record as missed payment
+                if self.config.enable_credit_rating {
+                    self.entities[borrower_idx]
+                        .person_data
+                        .credit_score
+                        .record_missed_payment();
+                    debug!(
+                        "Person {} missed loan payment, credit score affected",
+                        self.entities[borrower_idx].id
+                    );
+                }
+
                 trace!(
                     "Person {} cannot afford loan payment of ${:.2} (has ${:.2})",
                     self.entities[borrower_idx].id,
@@ -2693,6 +2744,90 @@ impl SimulationEngine {
 
             self.total_loans_repaid += 1;
         }
+    }
+
+    /// Calculates credit score statistics for all persons.
+    /// Only called when credit rating system is enabled.
+    fn calculate_credit_score_statistics(&self) -> Option<crate::result::CreditScoreStats> {
+        let active_persons: Vec<_> = self.entities.iter().filter(|e| e.active).collect();
+
+        if active_persons.is_empty() {
+            return None;
+        }
+
+        let credit_scores: Vec<u16> = active_persons
+            .iter()
+            .map(|e| e.person_data.credit_score.score)
+            .collect();
+
+        let mut sorted_scores = credit_scores.clone();
+        sorted_scores.sort_unstable();
+
+        let total: u64 = sorted_scores.iter().map(|&s| s as u64).sum();
+        let average_score = total as f64 / sorted_scores.len() as f64;
+
+        let median_score = if sorted_scores.len().is_multiple_of(2) {
+            let mid = sorted_scores.len() / 2;
+            (sorted_scores[mid - 1] + sorted_scores[mid]) as f64 / 2.0
+        } else {
+            sorted_scores[sorted_scores.len() / 2] as f64
+        };
+
+        // Calculate standard deviation
+        let variance: f64 = sorted_scores
+            .iter()
+            .map(|&s| {
+                let diff = s as f64 - average_score;
+                diff * diff
+            })
+            .sum::<f64>()
+            / sorted_scores.len() as f64;
+        let std_dev_score = variance.sqrt();
+
+        let min_score = *sorted_scores.first().unwrap_or(&650);
+        let max_score = *sorted_scores.last().unwrap_or(&650);
+
+        // Count by rating category
+        let excellent_count = credit_scores.iter().filter(|&&s| s >= 800).count();
+        let very_good_count = credit_scores
+            .iter()
+            .filter(|&&s| (740..800).contains(&s))
+            .count();
+        let good_count = credit_scores
+            .iter()
+            .filter(|&&s| (670..740).contains(&s))
+            .count();
+        let fair_count = credit_scores
+            .iter()
+            .filter(|&&s| (580..670).contains(&s))
+            .count();
+        let poor_count = credit_scores.iter().filter(|&&s| s < 580).count();
+
+        // Sum up payment statistics
+        let total_successful_payments: usize = active_persons
+            .iter()
+            .map(|e| e.person_data.credit_score.successful_payments)
+            .sum();
+
+        let total_missed_payments: usize = active_persons
+            .iter()
+            .map(|e| e.person_data.credit_score.missed_payments)
+            .sum();
+
+        Some(crate::result::CreditScoreStats {
+            average_score,
+            median_score,
+            std_dev_score,
+            min_score,
+            max_score,
+            excellent_count,
+            very_good_count,
+            good_count,
+            fair_count,
+            poor_count,
+            total_successful_payments,
+            total_missed_payments,
+        })
     }
 
     fn calculate_average_money(&self) -> f64 {
@@ -2924,6 +3059,11 @@ impl SimulationEngine {
             reputation_statistics: reputation_stats,
             final_savings_distribution,
             savings_statistics: savings_stats,
+            credit_score_statistics: if self.config.enable_credit_rating {
+                self.calculate_credit_score_statistics()
+            } else {
+                None
+            },
             final_skill_prices,
             most_valuable_skill,
             least_valuable_skill,
