@@ -372,6 +372,17 @@ struct Args {
     certification_probability: Option<f64>,
 }
 
+/// Converts a certification duration argument to an Option.
+/// Duration of 0 means certifications never expire (None).
+/// Any other value is returned as Some(duration).
+fn certification_duration_from_arg(duration: usize) -> Option<usize> {
+    if duration == 0 {
+        None
+    } else {
+        Some(duration)
+    }
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
@@ -690,7 +701,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cfg.certification_cost_multiplier = cost_multiplier;
             }
             if let Some(duration) = args.certification_duration {
-                cfg.certification_duration = if duration == 0 { None } else { Some(duration) };
+                cfg.certification_duration = certification_duration_from_arg(duration);
             }
             if let Some(probability) = args.certification_probability {
                 cfg.certification_probability = probability;
@@ -846,7 +857,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or(SimulationConfig::default().certification_cost_multiplier),
             certification_duration: args.certification_duration.map_or_else(
                 || SimulationConfig::default().certification_duration,
-                |d| if d == 0 { None } else { Some(d) },
+                certification_duration_from_arg,
             ),
             certification_probability: args
                 .certification_probability
