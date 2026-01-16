@@ -1871,21 +1871,23 @@ pub fn calculate_skill_market_concentration(
         return None;
     }
 
-    // Calculate HHI using existing function (it expects percentages and returns 0-10000)
+    // Calculate HHI using existing function (operates on raw values)
     let herfindahl_index = calculate_herfindahl_index(&volumes);
 
     // Calculate CR4 (top 4 sellers' market share)
     let cr4 = if volumes.len() >= 4 {
         volumes.iter().take(4).sum::<f64>() / total_volume
     } else {
-        volumes.iter().sum::<f64>() / total_volume // All sellers if < 4
+        // All sellers included when fewer than 4 exist
+        1.0
     };
 
     // Calculate CR8 (top 8 sellers' market share)
     let cr8 = if volumes.len() >= 8 {
         volumes.iter().take(8).sum::<f64>() / total_volume
     } else {
-        volumes.iter().sum::<f64>() / total_volume // All sellers if < 8
+        // All sellers included when fewer than 8 exist
+        1.0
     };
 
     // Classify market structure based on HHI
