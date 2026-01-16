@@ -169,11 +169,28 @@ pub struct SimulationConfig {
     #[serde(default)]
     pub enable_loans: bool,
 
+    /// Enable credit rating system to evaluate creditworthiness.
+    ///
+    /// When enabled, each person has a credit score (300-850 FICO-like scale) that:
+    /// - Tracks payment history, debt levels, and credit behavior
+    /// - Affects interest rates on loans (better scores = lower rates)
+    /// - Updates dynamically based on loan activity and repayments
+    /// Only has effect when enable_loans is also true.
+    /// Set to false to disable credit ratings (default).
+    #[serde(default)]
+    pub enable_credit_rating: bool,
+
     /// Interest rate per step for loans (e.g., 0.01 = 1% per step).
     ///
-    /// This is the interest charged on loan principal per simulation step.
+    /// This is the BASE interest charged on loan principal per simulation step.
+    /// When credit rating is enabled, actual rates vary based on credit score:
+    /// - Excellent (800+): 0.5x base rate
+    /// - Very Good (740-799): 0.7x base rate
+    /// - Good (670-739): 1.0x base rate (this value)
+    /// - Fair (580-669): 1.5x base rate
+    /// - Poor (300-579): 2.5x base rate
     /// Only used when enable_loans is true.
-    /// A value of 0.01 means the borrower pays 1% interest per step.
+    /// A value of 0.01 means the borrower pays 1% interest per step (for good credit).
     /// Valid range: 0.0 to 1.0 (0% to 100%)
     #[serde(default = "default_loan_interest_rate")]
     pub loan_interest_rate: f64,
@@ -822,6 +839,7 @@ impl Default for SimulationConfig {
             transaction_fee: 0.0,    // Disabled by default
             savings_rate: 0.0,       // Disabled by default
             enable_loans: false,     // Disabled by default
+            enable_credit_rating: false, // Disabled by default
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
@@ -1002,6 +1020,13 @@ impl SimulationConfig {
                 "min_money_to_lend must be non-negative, got: {}",
                 self.min_money_to_lend
             )));
+        }
+
+        // Credit rating system validation
+        if self.enable_credit_rating && !self.enable_loans {
+            return Err(SimulationError::ValidationError(
+                "enable_credit_rating requires enable_loans to be true".to_string(),
+            ));
         }
 
         // Additional sanity checks for extreme values
