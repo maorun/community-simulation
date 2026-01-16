@@ -268,24 +268,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Wirtschaftliche Analysen
 
-#### 1.1 Marktmacht und Monopolanalyse
-**Beschreibung:** Detaillierte Analyse von Marktmacht, Monopolbildung und Wettbewerbsintensität für einzelne Fähigkeitenmärkte.
-
-**Harmonien:**
-- **Herfindahl-Index:** Erweitert bestehenden HHI auf Skill-Ebene
-- **Handelspartner-Statistiken:** Identifiziert dominante Anbieter
-- **Preishistorie:** Zeigt monopolistische Preissetzung
-- **Qualitätsbewertung:** Monopole können Qualität reduzieren
-
-**Nutzen:** Untersuchung von Marktmacht, Preissetzungsverhalten und Wohlfahrtsverlusten durch Monopole.
-
-**Implementierung:**
-- Per-Skill HHI und Konzentrationsverhältnisse (CR4, CR8)
-- Lerner-Index für Markup-Messung
-- Marktzutrittsbarrieren-Analyse
-- Consumer-Surplus und Deadweight-Loss-Berechnung
-
-#### 1.2 Konjunkturzyklen-Detektion
+#### 1.1 Konjunkturzyklen-Detektion
 **Beschreibung:** Automatische Identifikation und Analyse von Wirtschaftszyklen (Expansion, Peak, Rezession, Trough) in der Simulation.
 
 **Harmonien:**
@@ -302,7 +285,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Zyklus-Charakterisierung: Dauer, Amplitude, Asymmetrie
 - Leading/Lagging Indikatoren-Analyse
 
-#### 1.4 Externalitäten-Analyse
+#### 1.2 Externalitäten-Analyse
 **Beschreibung:** Messung und Analyse von positiven und negativen Externalitäten zwischen Agenten und Aktivitäten.
 
 **Harmonien:**

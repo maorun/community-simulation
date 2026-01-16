@@ -175,6 +175,37 @@ pub struct SkillTradeStats {
     pub avg_price: f64,
 }
 
+/// Market concentration metrics for a single skill
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SkillMarketConcentration {
+    /// Unique identifier for the skill
+    pub skill_id: SkillId,
+    /// Herfindahl-Hirschman Index for this skill (0-10000)
+    /// < 1500 = competitive, 1500-2500 = moderate concentration, > 2500 = high concentration
+    pub herfindahl_index: f64,
+    /// Concentration Ratio for top 4 sellers (CR4) as percentage (0.0-1.0)
+    pub cr4: f64,
+    /// Concentration Ratio for top 8 sellers (CR8) as percentage (0.0-1.0)
+    pub cr8: f64,
+    /// Market structure classification based on HHI
+    pub market_structure: MarketStructure,
+    /// Number of active sellers (providers) for this skill
+    pub num_sellers: usize,
+    /// Total trading volume for this skill
+    pub total_volume: f64,
+}
+
+/// Classification of market structure based on concentration metrics
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub enum MarketStructure {
+    /// Competitive market (HHI < 1500)
+    Competitive,
+    /// Moderately concentrated market (HHI 1500-2500)
+    ModerateConcentration,
+    /// Highly concentrated market / oligopoly (HHI > 2500)
+    HighConcentration,
+}
+
 /// Statistics about trade volume and economic activity
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TradeVolumeStats {
@@ -568,6 +599,9 @@ pub struct SimulationResult {
     pub total_fees_collected: f64,
     /// Per-skill trade statistics (sorted by trade volume, highest first)
     pub per_skill_trade_stats: Vec<SkillTradeStats>,
+    /// Market concentration analysis per skill (only present if sufficient trade data exists)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skill_market_concentration: Option<Vec<SkillMarketConcentration>>,
 
     /// Failed trade attempt statistics (trade attempts that failed due to insufficient funds)
     pub failed_trade_statistics: FailedTradeStats,
@@ -706,6 +740,7 @@ impl SimulationResult {
     /// #     volume_per_step: vec![],
     /// #     total_fees_collected: 0.0,
     /// #     per_skill_trade_stats: vec![],
+    /// #     skill_market_concentration: None,
     /// #     failed_trade_statistics: simulation_framework::result::FailedTradeStats {
     /// #         total_failed_attempts: 0, failure_rate: 0.0,
     /// #         avg_failed_per_step: 0.0,
@@ -1792,6 +1827,89 @@ pub fn calculate_herfindahl_index(values: &[f64]) -> f64 {
     }
 }
 
+/// Calculate market concentration metrics for a single skill.
+///
+/// This function computes comprehensive market power indicators for a specific skill:
+/// - **HHI (Herfindahl-Hirschman Index)**: Sum of squared market shares (0-10000 scale)
+/// - **CR4 (Concentration Ratio 4)**: Market share of top 4 sellers (0.0-1.0)
+/// - **CR8 (Concentration Ratio 8)**: Market share of top 8 sellers (0.0-1.0)  
+/// - **Market Structure**: Classification based on HHI thresholds
+///
+/// # Arguments
+/// * `skill_id` - The skill to analyze
+/// * `seller_volumes` - HashMap mapping seller IDs to their total trading volume for this skill
+///
+/// # Returns
+/// `SkillMarketConcentration` with all concentration metrics, or `None` if insufficient data
+///
+/// # Examples
+/// ```
+/// use std::collections::HashMap;
+/// use simulation_framework::result::calculate_skill_market_concentration;
+///
+/// let mut volumes = HashMap::new();
+/// volumes.insert(0, 100.0);
+/// volumes.insert(1, 50.0);
+/// volumes.insert(2, 50.0);
+/// let concentration = calculate_skill_market_concentration("Programming".to_string(), &volumes).unwrap();
+/// assert!(concentration.herfindahl_index > 3000.0); // High concentration
+/// ```
+pub fn calculate_skill_market_concentration(
+    skill_id: SkillId,
+    seller_volumes: &HashMap<usize, f64>,
+) -> Option<SkillMarketConcentration> {
+    if seller_volumes.is_empty() {
+        return None;
+    }
+
+    // Collect seller volumes into a vector and sort descending
+    let mut volumes: Vec<f64> = seller_volumes.values().copied().collect();
+    volumes.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+
+    let total_volume: f64 = volumes.iter().sum();
+    if total_volume == 0.0 {
+        return None;
+    }
+
+    // Calculate HHI using existing function (operates on raw values)
+    let herfindahl_index = calculate_herfindahl_index(&volumes);
+
+    // Calculate CR4 (top 4 sellers' market share)
+    let cr4 = if volumes.len() >= 4 {
+        volumes.iter().take(4).sum::<f64>() / total_volume
+    } else {
+        // All sellers included when fewer than 4 exist
+        1.0
+    };
+
+    // Calculate CR8 (top 8 sellers' market share)
+    let cr8 = if volumes.len() >= 8 {
+        volumes.iter().take(8).sum::<f64>() / total_volume
+    } else {
+        // All sellers included when fewer than 8 exist
+        1.0
+    };
+
+    // Classify market structure based on HHI
+    let market_structure = if herfindahl_index < 1500.0 {
+        MarketStructure::Competitive
+    } else if herfindahl_index <= 2500.0 {
+        MarketStructure::ModerateConcentration
+    } else {
+        MarketStructure::HighConcentration
+    };
+
+    Some(SkillMarketConcentration {
+        skill_id,
+        herfindahl_index,
+        cr4,
+        cr8,
+        market_structure,
+        num_sellers: volumes.len(),
+        total_volume,
+    })
+}
+
 /// Calculate wealth concentration ratios for different percentile groups.
 ///
 /// This function computes what share of total wealth is held by different groups:
@@ -2481,6 +2599,7 @@ mod tests {
             ],
             total_fees_collected: 0.0,
             per_skill_trade_stats: vec![],
+            skill_market_concentration: None,
             failed_trade_statistics: FailedTradeStats {
                 total_failed_attempts: 20,
                 failure_rate: 0.1667, // 20 / (100 + 20) = 0.1667
@@ -3103,6 +3222,128 @@ mod tests {
         let hhi = calculate_herfindahl_index(&values);
         // 20 participants with 5% each = HHI of 500
         assert!((hhi - 500.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_skill_market_concentration_competitive() {
+        use std::collections::HashMap;
+
+        // 10 sellers with equal market shares - should be competitive
+        let mut volumes = HashMap::new();
+        for i in 0..10 {
+            volumes.insert(i, 10.0);
+        }
+
+        let concentration =
+            calculate_skill_market_concentration("TestSkill".to_string(), &volumes).unwrap();
+
+        assert_eq!(concentration.num_sellers, 10);
+        assert_eq!(concentration.total_volume, 100.0);
+        assert!(concentration.herfindahl_index < 1500.0); // Competitive
+        assert_eq!(concentration.market_structure, MarketStructure::Competitive);
+        assert!((concentration.cr4 - 0.4).abs() < 0.01); // Top 4 = 40%
+        assert!((concentration.cr8 - 0.8).abs() < 0.01); // Top 8 = 80%
+    }
+
+    #[test]
+    fn test_skill_market_concentration_moderate() {
+        use std::collections::HashMap;
+
+        // 5 sellers with moderately concentrated market
+        let mut volumes = HashMap::new();
+        volumes.insert(0, 25.0);
+        volumes.insert(1, 25.0);
+        volumes.insert(2, 20.0);
+        volumes.insert(3, 15.0);
+        volumes.insert(4, 15.0);
+
+        let concentration =
+            calculate_skill_market_concentration("TestSkill".to_string(), &volumes).unwrap();
+
+        assert_eq!(concentration.num_sellers, 5);
+        assert_eq!(concentration.total_volume, 100.0);
+        assert!(
+            concentration.herfindahl_index >= 1500.0 && concentration.herfindahl_index <= 2500.0
+        );
+        assert_eq!(
+            concentration.market_structure,
+            MarketStructure::ModerateConcentration
+        );
+        assert!((concentration.cr4 - 0.85).abs() < 0.01); // Top 4 = 85%
+    }
+
+    #[test]
+    fn test_skill_market_concentration_high() {
+        use std::collections::HashMap;
+
+        // High concentration - 2 dominant sellers
+        let mut volumes = HashMap::new();
+        volumes.insert(0, 50.0);
+        volumes.insert(1, 40.0);
+        volumes.insert(2, 5.0);
+        volumes.insert(3, 5.0);
+
+        let concentration =
+            calculate_skill_market_concentration("TestSkill".to_string(), &volumes).unwrap();
+
+        assert_eq!(concentration.num_sellers, 4);
+        assert_eq!(concentration.total_volume, 100.0);
+        assert!(concentration.herfindahl_index > 2500.0); // Highly concentrated
+        assert_eq!(
+            concentration.market_structure,
+            MarketStructure::HighConcentration
+        );
+        assert!((concentration.cr4 - 1.0).abs() < 0.01); // All 4 = 100%
+    }
+
+    #[test]
+    fn test_skill_market_concentration_monopoly() {
+        use std::collections::HashMap;
+
+        // Pure monopoly - single seller
+        let mut volumes = HashMap::new();
+        volumes.insert(0, 100.0);
+
+        let concentration =
+            calculate_skill_market_concentration("TestSkill".to_string(), &volumes).unwrap();
+
+        assert_eq!(concentration.num_sellers, 1);
+        assert_eq!(concentration.total_volume, 100.0);
+        assert!((concentration.herfindahl_index - 10000.0).abs() < 1.0); // Perfect monopoly
+        assert_eq!(
+            concentration.market_structure,
+            MarketStructure::HighConcentration
+        );
+        assert!((concentration.cr4 - 1.0).abs() < 0.01); // Only seller = 100%
+        assert!((concentration.cr8 - 1.0).abs() < 0.01); // Only seller = 100%
+    }
+
+    #[test]
+    fn test_skill_market_concentration_empty() {
+        use std::collections::HashMap;
+
+        // No sellers - should return None
+        let volumes = HashMap::new();
+        let concentration = calculate_skill_market_concentration("TestSkill".to_string(), &volumes);
+
+        assert!(concentration.is_none());
+    }
+
+    #[test]
+    fn test_skill_market_concentration_few_sellers() {
+        use std::collections::HashMap;
+
+        // Only 2 sellers - CR4 and CR8 should both be 100%
+        let mut volumes = HashMap::new();
+        volumes.insert(0, 60.0);
+        volumes.insert(1, 40.0);
+
+        let concentration =
+            calculate_skill_market_concentration("TestSkill".to_string(), &volumes).unwrap();
+
+        assert_eq!(concentration.num_sellers, 2);
+        assert!((concentration.cr4 - 1.0).abs() < 0.01); // Both sellers = 100%
+        assert!((concentration.cr8 - 1.0).abs() < 0.01); // Both sellers = 100%
     }
 
     #[test]

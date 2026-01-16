@@ -71,6 +71,9 @@ pub struct SimulationCheckpoint {
     pub total_taxes_redistributed: f64,
     /// Per-skill trade tracking: (skill_id -> (trade_count, total_volume))
     pub per_skill_trades: HashMap<SkillId, (usize, f64)>,
+    /// Per-seller, per-skill trade tracking for market concentration analysis
+    /// (skill_id -> (seller_id -> total_volume))
+    pub per_skill_seller_volumes: HashMap<SkillId, HashMap<usize, f64>>,
     /// All contracts in the system
     pub contracts: HashMap<ContractId, Contract>,
     /// Total contracts created counter
@@ -126,6 +129,9 @@ pub struct SimulationEngine {
     total_taxes_redistributed: f64,
     // Per-skill trade tracking: (skill_id -> (trade_count, total_volume))
     per_skill_trades: HashMap<SkillId, (usize, f64)>,
+    // Per-seller, per-skill trade tracking for market concentration analysis
+    // (skill_id -> (seller_id -> total_volume))
+    per_skill_seller_volumes: HashMap<SkillId, HashMap<usize, f64>>,
     // Streaming output writer
     stream_writer: Option<BufWriter<File>>,
     // Contract system tracking
@@ -311,6 +317,7 @@ impl SimulationEngine {
             total_taxes_collected: 0.0,
             total_taxes_redistributed: 0.0,
             per_skill_trades: HashMap::new(),
+            per_skill_seller_volumes: HashMap::new(),
             stream_writer,
             contracts: HashMap::new(),
             total_contracts_created: 0,
@@ -1103,6 +1110,32 @@ impl SimulationEngine {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
+        // Calculate market concentration metrics for each skill
+        let skill_market_concentration: Option<Vec<crate::result::SkillMarketConcentration>> =
+            if !self.per_skill_seller_volumes.is_empty() {
+                let mut concentrations: Vec<crate::result::SkillMarketConcentration> = self
+                    .per_skill_seller_volumes
+                    .iter()
+                    .filter_map(|(skill_id, seller_volumes)| {
+                        crate::result::calculate_skill_market_concentration(
+                            skill_id.clone(),
+                            seller_volumes,
+                        )
+                    })
+                    .collect();
+
+                // Sort by HHI (most concentrated first) for easier analysis
+                concentrations.sort_by(|a, b| {
+                    b.herfindahl_index
+                        .partial_cmp(&a.herfindahl_index)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+
+                Some(concentrations)
+            } else {
+                None
+            };
+
         let mut result = SimulationResult {
             total_steps: self.config.max_steps,
             total_duration: total_duration.as_secs_f64(),
@@ -1130,6 +1163,7 @@ impl SimulationEngine {
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
             per_skill_trade_stats,
+            skill_market_concentration,
             failed_trade_statistics,
             failed_attempts_per_step: self.failed_attempts_per_step.clone(),
             black_market_statistics: if self.config.enable_black_market {
@@ -2428,6 +2462,13 @@ impl SimulationEngine {
             skill_stats.0 += 1; // Increment trade count
             skill_stats.1 += price; // Add to total volume
 
+            // Track per-seller, per-skill volumes for market concentration analysis
+            let seller_volumes = self
+                .per_skill_seller_volumes
+                .entry(skill_id.clone())
+                .or_default();
+            *seller_volumes.entry(seller_idx).or_insert(0.0) += price;
+
             *self
                 .market
                 .sales_this_step
@@ -3540,7 +3581,8 @@ impl SimulationEngine {
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),
             total_fees_collected: self.total_fees_collected,
-            per_skill_trade_stats: vec![], // Simplified
+            per_skill_trade_stats: vec![],    // Simplified
+            skill_market_concentration: None, // Not calculated for current result
             failed_trade_statistics: crate::result::FailedTradeStats {
                 total_failed_attempts: 0,
                 failure_rate: 0.0,
@@ -3646,6 +3688,7 @@ impl SimulationEngine {
             total_taxes_collected: self.total_taxes_collected,
             total_taxes_redistributed: self.total_taxes_redistributed,
             per_skill_trades: self.per_skill_trades.clone(),
+            per_skill_seller_volumes: self.per_skill_seller_volumes.clone(),
             contracts: self.contracts.clone(),
             total_contracts_created: self.total_contracts_created,
             total_contracts_completed: self.total_contracts_completed,
@@ -3769,6 +3812,7 @@ impl SimulationEngine {
             total_taxes_collected: checkpoint.total_taxes_collected,
             total_taxes_redistributed: checkpoint.total_taxes_redistributed,
             per_skill_trades: checkpoint.per_skill_trades,
+            per_skill_seller_volumes: checkpoint.per_skill_seller_volumes,
             stream_writer,
             contracts: checkpoint.contracts,
             total_contracts_created: checkpoint.total_contracts_created,
