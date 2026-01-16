@@ -114,6 +114,37 @@ pub struct NeededSkillItem {
     pub urgency: UrgencyLevel,
 }
 
+/// Represents an active mentorship relationship where an experienced person
+/// teaches a skill to another person.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Mentorship {
+    /// ID of the person acting as mentor
+    pub mentor_id: PersonId,
+    /// ID of the person being mentored
+    pub mentee_id: PersonId,
+    /// The skill being taught
+    pub skill_id: SkillId,
+    /// Step when the mentorship began
+    pub start_step: usize,
+}
+
+impl Mentorship {
+    /// Creates a new mentorship relationship.
+    pub fn new(
+        mentor_id: PersonId,
+        mentee_id: PersonId,
+        skill_id: SkillId,
+        start_step: usize,
+    ) -> Self {
+        Mentorship {
+            mentor_id,
+            mentee_id,
+            skill_id,
+            start_step,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Person {
     pub id: PersonId,

@@ -399,6 +399,43 @@ pub struct SimulationConfig {
     #[serde(default = "default_learning_probability")]
     pub learning_probability: f64,
 
+    /// Enable mentorship system where experienced persons can mentor others for reduced learning costs.
+    ///
+    /// When enabled alongside education, persons with high-quality skills can mentor others,
+    /// reducing learning costs and improving learning outcomes. Mentors gain reputation
+    /// bonuses for successful mentees.
+    /// Set to false to disable mentorship (default).
+    #[serde(default)]
+    pub enable_mentorship: bool,
+
+    /// Cost reduction for learning when mentored, as a fraction (0.0-1.0).
+    ///
+    /// Mentored learners pay this fraction of the normal learning cost.
+    /// For example, 0.5 means mentees pay 50% of the standard learning cost.
+    /// This represents the efficiency gained from having an experienced teacher.
+    /// Only used when enable_mentorship is true.
+    /// Default: 0.5 (50% cost reduction)
+    #[serde(default = "default_mentorship_cost_reduction")]
+    pub mentorship_cost_reduction: f64,
+
+    /// Minimum skill quality required to be eligible as a mentor (0.0-5.0 scale).
+    ///
+    /// Only persons with skills at or above this quality level can mentor others in that skill.
+    /// This ensures mentors have sufficient expertise to teach effectively.
+    /// Only used when enable_mentorship is true.
+    /// Default: 3.5 (above average quality)
+    #[serde(default = "default_min_mentor_quality")]
+    pub min_mentor_quality: f64,
+
+    /// Reputation bonus awarded to mentors when their mentee successfully learns a skill.
+    ///
+    /// This bonus rewards mentors for contributing to skill development in the economy.
+    /// Added directly to the mentor's reputation score.
+    /// Only used when enable_mentorship is true.
+    /// Default: 0.05
+    #[serde(default = "default_mentor_reputation_bonus")]
+    pub mentor_reputation_bonus: f64,
+
     /// Enable crisis events that create economic shocks during the simulation.
     ///
     /// When enabled, random crisis events (market crashes, demand shocks, supply shocks,
@@ -783,6 +820,18 @@ fn default_learning_probability() -> f64 {
     0.1 // 10% chance per step to attempt learning
 }
 
+fn default_mentorship_cost_reduction() -> f64 {
+    0.5 // Mentees pay 50% of normal learning cost
+}
+
+fn default_min_mentor_quality() -> f64 {
+    3.5 // Above average quality required to mentor
+}
+
+fn default_mentor_reputation_bonus() -> f64 {
+    0.05 // Small reputation boost for successful mentoring
+}
+
 fn default_crisis_probability() -> f64 {
     0.02 // 2% chance per step (approximately once every 50 steps)
 }
@@ -866,6 +915,10 @@ impl Default for SimulationConfig {
             enable_education: false,              // Disabled by default
             learning_cost_multiplier: 3.0,        // Learning costs 3x market price
             learning_probability: 0.1,            // 10% chance per step
+            enable_mentorship: false,             // Disabled by default
+            mentorship_cost_reduction: 0.5,       // 50% cost reduction for mentees
+            min_mentor_quality: 3.5,              // Above average quality required
+            mentor_reputation_bonus: 0.05,        // Small reputation boost
             enable_crisis_events: false,          // Disabled by default
             crisis_probability: 0.02,             // 2% chance per step
             crisis_severity: 0.5,                 // Moderate severity
@@ -1157,6 +1210,36 @@ impl SimulationConfig {
                 return Err(SimulationError::ValidationError(format!(
                     "learning_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
                     self.learning_probability
+                )));
+            }
+        }
+
+        if self.enable_mentorship {
+            if !self.enable_education {
+                return Err(SimulationError::ValidationError(
+                    "Mentorship requires education to be enabled (enable_education must be true)"
+                        .to_string(),
+                ));
+            }
+
+            if !(0.0..=1.0).contains(&self.mentorship_cost_reduction) {
+                return Err(SimulationError::ValidationError(format!(
+                    "mentorship_cost_reduction must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.mentorship_cost_reduction
+                )));
+            }
+
+            if self.min_mentor_quality < 0.0 || self.min_mentor_quality > 5.0 {
+                return Err(SimulationError::ValidationError(format!(
+                    "min_mentor_quality must be between 0.0 and 5.0 (quality scale), got: {}",
+                    self.min_mentor_quality
+                )));
+            }
+
+            if self.mentor_reputation_bonus < 0.0 {
+                return Err(SimulationError::ValidationError(format!(
+                    "mentor_reputation_bonus must be non-negative, got: {}",
+                    self.mentor_reputation_bonus
                 )));
             }
         }
