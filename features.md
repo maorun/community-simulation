@@ -45,25 +45,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Erweiterte Marktmechanismen
 
-#### 2.1 Zertifizierungssystem
-**Beschreibung:** Fähigkeiten können durch eine zentrale Autorität oder durch Peer-Review zertifiziert werden, was Vertrauen schafft und höhere Preise ermöglicht.
-
-**Harmonien:**
-- **Reputation:** Zertifizierte Fähigkeiten bauen schneller Reputation auf
-- **Bildungssystem:** Bildungsabschlüsse werden automatisch zertifiziert
-- **Qualitätsbewertung:** Zertifizierung garantiert Mindestqualität
-- **Produktionssystem:** Zertifizierte Inputs führen zu höherwertigen Outputs
-- **Verträge:** Verträge können Zertifizierung verlangen
-
-**Nutzen:** Modelliert Berufsqualifikationen, Lizenzen und Qualitätssicherungsmechanismen in Märkten.
-
-**Implementierung:**
-- `Certification` Komponente mit Zertifizierungsstelle, Level, Ablaufdatum
-- Kosten für Zertifizierung (Zeit und Geld)
-- Zertifizierte Skills haben Preisaufschlag
-- Zertifizierung kann ablaufen und muss erneuert werden
-
-#### 2.2 Handelsabkommen zwischen Personen
+#### 2.1 Handelsabkommen zwischen Personen
 **Beschreibung:** Zwei oder mehr Personen können bilaterale oder multilaterale Handelsabkommen schließen, die gegenseitige Präferenzen, Rabatte oder Exklusivität gewähren.
 
 **Harmonien:**
