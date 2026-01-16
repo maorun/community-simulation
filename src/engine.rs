@@ -1,5 +1,6 @@
 use crate::{
     contract::{Contract, ContractId},
+    credit_rating::DEFAULT_CREDIT_SCORE,
     crisis::CrisisEvent,
     environment::Environment,
     loan::{Loan, LoanId},
@@ -2766,7 +2767,7 @@ impl SimulationEngine {
         let total: u64 = sorted_scores.iter().map(|&s| s as u64).sum();
         let average_score = total as f64 / sorted_scores.len() as f64;
 
-        let median_score = if sorted_scores.len().is_multiple_of(2) {
+        let median_score = if sorted_scores.len() % 2 == 0 {
             let mid = sorted_scores.len() / 2;
             (sorted_scores[mid - 1] + sorted_scores[mid]) as f64 / 2.0
         } else {
@@ -2784,8 +2785,8 @@ impl SimulationEngine {
             / sorted_scores.len() as f64;
         let std_dev_score = variance.sqrt();
 
-        let min_score = *sorted_scores.first().unwrap_or(&650);
-        let max_score = *sorted_scores.last().unwrap_or(&650);
+        let min_score = *sorted_scores.first().unwrap_or(&DEFAULT_CREDIT_SCORE);
+        let max_score = *sorted_scores.last().unwrap_or(&DEFAULT_CREDIT_SCORE);
 
         // Count by rating category
         let excellent_count = credit_scores.iter().filter(|&&s| s >= 800).count();

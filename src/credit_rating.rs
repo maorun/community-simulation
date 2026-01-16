@@ -1,6 +1,6 @@
 //! # Credit Rating System Module
 //!
-//! Implements a credit scoring system similar to FICO (0-850 scale) that evaluates
+//! Implements a credit scoring system similar to FICO (300-850 scale) that evaluates
 //! creditworthiness of persons based on their financial behavior.
 //!
 //! ## Features
@@ -25,6 +25,9 @@
 //! - < 300: No credit history - Default medium interest rate
 
 use serde::{Deserialize, Serialize};
+
+/// Default credit score for persons with no credit history (fair credit).
+pub const DEFAULT_CREDIT_SCORE: u16 = 650;
 
 /// Credit score data structure tracking a person's creditworthiness.
 ///
@@ -68,7 +71,7 @@ impl Default for CreditScore {
     /// Starts at 650 (fair credit) which is the median for new borrowers.
     fn default() -> Self {
         CreditScore {
-            score: 650, // Fair credit - neutral starting point
+            score: DEFAULT_CREDIT_SCORE, // Fair credit - neutral starting point
             successful_payments: 0,
             missed_payments: 0,
             credit_history_steps: 0,
