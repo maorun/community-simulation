@@ -85,6 +85,10 @@ pub struct SimulationCheckpoint {
     pub environment: Option<Environment>,
     /// Voting system state (if enabled)
     pub voting_system: Option<crate::voting::VotingSystem>,
+    /// Certification system tracking
+    pub total_certifications_issued: usize,
+    pub total_certifications_expired: usize,
+    pub total_certification_cost: f64,
 }
 
 pub struct SimulationEngine {
@@ -133,6 +137,10 @@ pub struct SimulationEngine {
     total_mentorship_cost_savings: f64,
     unique_mentors: HashSet<usize>,
     unique_mentees: HashSet<usize>,
+    // Certification system tracking
+    total_certifications_issued: usize,
+    total_certifications_expired: usize,
+    total_certification_cost: f64,
     // Wealth statistics history tracking
     wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
     // Social mobility tracking: person_id -> Vec of quintile assignments (0-4) at each step
@@ -290,6 +298,9 @@ impl SimulationEngine {
             total_mentorship_cost_savings: 0.0,
             unique_mentors: HashSet::new(),
             unique_mentees: HashSet::new(),
+            total_certifications_issued: 0,
+            total_certifications_expired: 0,
+            total_certification_cost: 0.0,
             wealth_stats_history: Vec::new(),
             mobility_quintiles: HashMap::new(),
             plugin_registry: PluginRegistry::new(),
@@ -1235,6 +1246,30 @@ impl SimulationEngine {
             } else {
                 None
             },
+            certification_statistics: if self.config.enable_certification {
+                // Count active (non-expired) certifications
+                let active_certifications = self
+                    .market
+                    .skills
+                    .values()
+                    .filter(|skill| {
+                        if let Some(cert) = &skill.certification {
+                            !cert.is_expired(self.current_step)
+                        } else {
+                            false
+                        }
+                    })
+                    .count();
+
+                Some(crate::result::CertificationStats {
+                    total_issued: self.total_certifications_issued,
+                    total_expired: self.total_certifications_expired,
+                    active_certifications,
+                    total_cost: self.total_certification_cost,
+                })
+            } else {
+                None
+            },
             environment_statistics: if self.config.enable_environment {
                 if let Some(ref environment) = self.environment {
                     use crate::environment::Resource;
@@ -1991,6 +2026,25 @@ impl SimulationEngine {
                         }
                     }
 
+                    // Apply certification-based price premium if enabled
+                    if self.config.enable_certification {
+                        if let Some(skill) = self.market.skills.get(needed_skill_id) {
+                            if let Some(cert) = &skill.certification {
+                                if !cert.is_expired(self.current_step) {
+                                    let cert_multiplier = cert.price_multiplier();
+                                    final_price *= cert_multiplier;
+                                    trace!(
+                                        "Certification premium applied: Skill '{}' level {} certification, price increased by {:.1}% to ${:.2}",
+                                        needed_skill_id,
+                                        cert.level,
+                                        (cert_multiplier - 1.0) * 100.0,
+                                        final_price
+                                    );
+                                }
+                            }
+                        }
+                    }
+
                     // Apply distance-based cost multiplier if enabled
                     if self.config.distance_cost_factor > 0.0 {
                         if let Some(seller_id) = seller_id_opt {
@@ -2470,6 +2524,118 @@ impl SimulationEngine {
                                 skill_to_learn.current_price
                             );
                         }
+                    }
+                }
+            }
+        }
+
+        // Certification system - persons can get their skills certified
+        if self.config.enable_certification && self.config.certification_probability > 0.0 {
+            for i in 0..self.entities.len() {
+                if !self.entities[i].active {
+                    continue;
+                }
+
+                // Check if this person attempts to certify a skill this step
+                let attempt_cert: f64 = self.rng.random();
+                if attempt_cert >= self.config.certification_probability {
+                    continue;
+                }
+
+                let person_id = self.entities[i].id;
+
+                // Find skills this person has that aren't certified yet
+                let person_skills = self.entities[i].person_data.all_skills();
+                let uncertified_skills: Vec<SkillId> = person_skills
+                    .into_iter()
+                    .map(|skill| skill.id.clone())
+                    .filter(|skill_id| {
+                        if let Some(skill) = self.market.skills.get(skill_id) {
+                            // Check if skill is not certified or certification expired
+                            if let Some(cert) = &skill.certification {
+                                cert.is_expired(self.current_step)
+                            } else {
+                                true // No certification exists
+                            }
+                        } else {
+                            false
+                        }
+                    })
+                    .collect();
+
+                if uncertified_skills.is_empty() {
+                    continue;
+                }
+
+                // Randomly select a skill to certify
+                if let Some(skill_id) = uncertified_skills.as_slice().choose(&mut self.rng).cloned()
+                {
+                    if let Some(skill) = self.market.skills.get(&skill_id) {
+                        // Determine certification level (1-5, higher quality gives better chance at higher level)
+                        let level: u8 = if self.config.enable_quality {
+                            // Level based on quality: quality 5.0 -> level 5, quality 0.0 -> level 1
+                            let quality = self.entities[i]
+                                .person_data
+                                .skill_qualities
+                                .get(&skill_id)
+                                .copied()
+                                .unwrap_or(self.config.initial_quality);
+                            ((quality / 5.0 * 4.0) + 1.0).round() as u8
+                        } else {
+                            // Random level 1-5 if quality not enabled
+                            (self.rng.random::<u8>() % 5) + 1
+                        };
+
+                        // Calculate certification cost: base_price * cost_multiplier * level
+                        let cert_cost = skill.current_price
+                            * self.config.certification_cost_multiplier
+                            * (level as f64);
+
+                        // Check if person can afford certification
+                        if self.entities[i].person_data.money >= cert_cost {
+                            // Deduct cost
+                            self.entities[i].person_data.money -= cert_cost;
+                            self.total_certification_cost += cert_cost;
+
+                            // Calculate expiration step
+                            let expiration_step = self
+                                .config
+                                .certification_duration
+                                .map(|duration| self.current_step + duration);
+
+                            // Issue certification
+                            let cert = crate::skill::Certification::new(
+                                "CentralAuthority".to_string(),
+                                level,
+                                expiration_step,
+                            );
+
+                            // Update the skill in the market
+                            if let Some(market_skill) = self.market.skills.get_mut(&skill_id) {
+                                market_skill.certification = Some(cert.clone());
+                                self.total_certifications_issued += 1;
+
+                                debug!(
+                                    "Person {} certified skill '{}' at level {} for ${:.2} (expires at step: {:?})",
+                                    person_id, skill_id, level, cert_cost, expiration_step
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Check for expired certifications and remove them
+            for skill in self.market.skills.values_mut() {
+                if let Some(cert) = &skill.certification {
+                    if cert.is_expired(self.current_step) {
+                        skill.certification = None;
+                        self.total_certifications_expired += 1;
+                        trace!(
+                            "Certification expired for skill '{}' at step {}",
+                            skill.id,
+                            self.current_step
+                        );
                     }
                 }
             }
@@ -3248,6 +3414,7 @@ impl SimulationEngine {
             contract_statistics: None,
             education_statistics: None,
             mentorship_statistics: None,
+            certification_statistics: None,
             environment_statistics: None, // Simplified for interactive mode
             friendship_statistics: None,  // Simplified
             group_statistics: None,
@@ -3334,6 +3501,9 @@ impl SimulationEngine {
             mobility_quintiles: self.mobility_quintiles.clone(),
             environment: self.environment.clone(),
             voting_system: self.voting_system.clone(),
+            total_certifications_issued: self.total_certifications_issued,
+            total_certifications_expired: self.total_certifications_expired,
+            total_certification_cost: self.total_certification_cost,
         };
 
         let file = File::create(path)?;
@@ -3456,6 +3626,9 @@ impl SimulationEngine {
             total_mentorship_cost_savings: 0.0,
             unique_mentors: HashSet::new(),
             unique_mentees: HashSet::new(),
+            total_certifications_issued: checkpoint.total_certifications_issued,
+            total_certifications_expired: checkpoint.total_certifications_expired,
+            total_certification_cost: checkpoint.total_certification_cost,
             wealth_stats_history: checkpoint.wealth_stats_history,
             mobility_quintiles: checkpoint.mobility_quintiles,
             plugin_registry: PluginRegistry::new(),

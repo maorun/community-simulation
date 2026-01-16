@@ -85,6 +85,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Replay and Debugging System:** Comprehensive debugging capabilities for bug reproduction and deterministic testing. Combines checkpoints, streaming output, and detailed logging to enable exact reproduction of simulation behavior. Fixed seeds ensure identical results across runs, enabling regression testing and bug investigation. Load checkpoints to inspect exact simulation state at any point, use streaming output to identify problematic steps, and leverage trace-level logging to understand decision-making. The system provides action log infrastructure for detailed event tracking when needed. Perfect for troubleshooting, validating changes, and understanding complex simulation dynamics without specialized replay tools.
 - **Education System:** Persons can learn new skills over time by investing money in education. Each simulation step, persons have a configurable probability of attempting to learn a skill they don't currently possess. The cost to learn a skill is based on the current market price multiplied by a learning cost multiplier (default: 3x). This simulates human capital formation and skill development, allowing persons to become more versatile and participate in multiple markets. Education statistics (total skills learned, average per person, total spending) are tracked and reported. Enable via `--enable-education` flag or configuration file with parameters `learning_cost_multiplier` and `learning_probability`. Learned skills allow persons to provide those services in the market, increasing their earning potential.
 - **Mentorship System:** Experienced persons can mentor others, reducing learning costs and accelerating skill acquisition. When enabled alongside education, persons with high-quality skills (quality >= 3.5 by default) can mentor others learning that skill. Mentored learners pay a reduced cost (default: 50% of normal learning cost), simulating the efficiency gain from having an experienced teacher. Mentors receive reputation bonuses (+0.05 by default) for successful mentoring, incentivizing knowledge transfer. The system tracks comprehensive mentorship statistics including total mentorships formed, successful mentored learnings, total cost savings, and counts of unique mentors and mentees. Enable via `--enable-mentorship` flag (requires `--enable-education` and works best with `--enable-quality`) with configurable parameters: `--mentorship-cost-reduction` (0.0-1.0, default: 0.5), `--min-mentor-quality` (0.0-5.0, default: 3.5), and `--mentor-reputation-bonus` (default: 0.05). Mentorship statistics are automatically included in JSON output. Perfect for studying knowledge transfer, educational efficiency, and the value of experience in human capital development.
+- **Certification System:** Professional credentialing system that validates skill quality and increases market trust. When enabled, persons can invest money to get their skills certified by a central authority. Certifications have levels (1-5) based on skill quality (if quality system is enabled) or randomly assigned, with higher levels commanding greater price premiums (+5% per level, so level 5 = +25% price). Certification cost is calculated as: `skill_base_price × certification_cost_multiplier × certification_level` (default multiplier: 2.0). Certifications expire after a configurable duration (default: 200 steps) and must be renewed to maintain the price premium, simulating real-world credential renewal requirements. Each simulation step, persons have a configurable probability (default: 5%) of attempting certification if they can afford it and their skill isn't already certified. The system tracks comprehensive statistics including total certifications issued, expired certifications, active certifications, and total money spent on certification. Enable via `--enable-certification` flag or configuration file with configurable parameters: `--certification-cost-multiplier` (0.1-10.0, default: 2.0), `--certification-duration` (in steps, default: 200, set to 0 for non-expiring certifications), and `--certification-probability` (0.0-1.0, default: 0.05 or 5% chance per step). Certification statistics are automatically included in JSON output. Perfect for studying professional licensing, quality signaling, credential markets, and the economic impact of standardization and certification programs. Works synergistically with quality and reputation systems to create multi-dimensional skill value assessment.
 - **Environmental Resource Tracking:** Track resource consumption and sustainability metrics throughout the simulation. When enabled, each transaction consumes environmental resources (Energy, Water, Materials, Land) proportional to its value. The system tracks total consumption by resource type, remaining reserves, and calculates sustainability scores (1.0 = sustainable, 0.0 = depleted, <0 = overconsumed). Environmental statistics include per-resource and overall sustainability scores, remaining reserves, and a boolean sustainability flag. This enables modeling ecological economics, studying the environmental impact of different trading behaviors, and analyzing resource depletion patterns. Configure via `enable_environment: true` in configuration file, with parameters `resource_cost_per_transaction` (default: 1.0, resource units consumed per dollar traded) and optional `custom_resource_reserves` (custom starting reserves per resource type). Default reserves: Energy 100,000, Water 100,000, Materials 100,000, Land 10,000 units. Environmental data is included in JSON output under `environment_statistics` with detailed per-resource breakdowns. Ideal for sustainability research, environmental policy analysis, and studying the trade-offs between economic growth and resource conservation.
 - **Production System:** Persons can combine two skills they possess to produce new, more valuable skills through predefined recipes. When enabled, persons have a configurable probability of attempting production each step. If they have the required input skills and can afford the production cost (based on input skill prices and a recipe cost multiplier), a new skill is learned and added to the market. The system includes 14 predefined recipes such as: Programming + DataAnalysis → MachineLearning, Marketing + GraphicDesign → DigitalMarketing, and Engineering + Programming → SoftwareEngineering. This simulates supply chains, skill composition, and economic specialization, enabling study of how advanced skills emerge from basic building blocks. Enable via `--enable-production` flag or configuration file with parameter `production_probability` (default: 0.05 or 5% chance per step). Produced skills are priced higher than their inputs (reflecting value added) and are automatically added to the market for trading. Works well in combination with the education system to create dynamic skill ecosystems where basic skills are learned and combined to create specialized advanced skills.
 - **Crisis Events:** Random economic shocks that test the resilience of the simulated economy. When enabled, crisis events can occur randomly during the simulation, creating unexpected challenges such as market crashes (price drops), demand shocks (reduced consumption), supply shocks (reduced availability), or currency devaluations (wealth destruction). Each crisis type has distinct effects on the economy with configurable severity levels. Enable via `--enable-crisis-events` flag with parameters `--crisis-probability` (frequency, default: 2% per step) and `--crisis-severity` (impact level 0.0-1.0, default: 0.5). The crisis scenario preset (`--preset crisis_scenario`) demonstrates this feature with higher crisis probability (5%) and severity (0.7) to create a challenging economic environment. Ideal for studying economic resilience, shock recovery, and the effectiveness of stabilization mechanisms like price floors and redistribution policies.
@@ -568,6 +569,50 @@ Education system usage:
   - Model economies where workers can retrain and adapt to market demands
   - Analyze the relationship between education investment and economic mobility
 - Learned skills persist through the simulation and count toward a person's available skills for trading.
+
+**Example with Certification System:**
+
+```bash
+# Enable certification with default parameters (2x cost multiplier, 200 step duration, 5% probability)
+./target/release/simulation-framework --steps 500 --persons 100 --enable-certification --output cert_results.json
+
+# Custom certification parameters: cheaper certification (1.5x price) and higher probability (20%)
+./target/release/simulation-framework --steps 1000 --persons 50 \
+  --enable-certification --certification-cost-multiplier 1.5 --certification-probability 0.2 \
+  --certification-duration 300 --initial-money 200 --output cert_custom.json
+
+# Combine with quality system for quality-based certification levels
+./target/release/simulation-framework --steps 1500 --persons 100 \
+  --enable-quality --enable-certification \
+  --certification-duration 250 --certification-probability 0.15 \
+  --output quality_cert.json
+
+# Study certification economics with education and mentorship
+./target/release/simulation-framework --steps 2000 --persons 100 \
+  --enable-education --enable-quality --enable-mentorship --enable-certification \
+  --certification-cost-multiplier 2.5 --certification-duration 0 \
+  --initial-money 300 --output full_education_economy.json
+```
+
+Certification system usage:
+- When enabled, persons can invest money to get their skills certified by a central authority.
+- Each simulation step, each person has a `certification_probability` chance (default: 5%) of attempting to certify an uncertified skill.
+- Certification cost: `skill_base_price × certification_cost_multiplier × certification_level` (default multiplier: 2.0)
+- Certification levels (1-5) are based on skill quality if quality system is enabled, otherwise randomly assigned.
+- Certified skills receive a price premium: +5% per level (level 1 = +5%, level 5 = +25%)
+- Certifications expire after `certification_duration` steps (default: 200), requiring renewal to maintain the premium.
+- Set `certification_duration` to 0 for non-expiring (permanent) certifications.
+- Certification statistics are tracked and reported in JSON output:
+  - Total certifications issued during simulation
+  - Total certifications that expired
+  - Currently active (non-expired) certifications at simulation end
+  - Total money spent on obtaining certifications
+- **Use cases:**
+  - Model professional licensing and credentialing markets
+  - Study the economic impact of quality signaling through certification
+  - Analyze the cost-benefit trade-offs of professional credentials
+  - Simulate certification renewal markets and credential inflation
+  - Research the effects of standardization on market trust and pricing
 
 **Example with CSV Export:**
 

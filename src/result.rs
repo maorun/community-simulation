@@ -336,6 +336,19 @@ pub struct MentorshipStats {
     pub unique_mentees: usize,
 }
 
+/// Statistics about certification system activity
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CertificationStats {
+    /// Total number of certifications issued during the simulation
+    pub total_issued: usize,
+    /// Total number of certifications that expired during the simulation
+    pub total_expired: usize,
+    /// Number of certifications currently active (not expired) at simulation end
+    pub active_certifications: usize,
+    /// Total money spent on obtaining certifications across all persons
+    pub total_cost: f64,
+}
+
 /// Statistics about the friendship system (social connections)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FriendshipStats {
@@ -571,6 +584,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mentorship_statistics: Option<MentorshipStats>,
 
+    /// Certification system statistics (only present if certification is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub certification_statistics: Option<CertificationStats>,
+
     /// Environmental resource consumption and sustainability statistics (only present if environment tracking is enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub environment_statistics: Option<EnvironmentStats>,
@@ -684,6 +701,7 @@ impl SimulationResult {
     /// #     contract_statistics: None,
     /// #     education_statistics: None,
     /// #     mentorship_statistics: None,
+    /// #     certification_statistics: None,
     /// #     environment_statistics: None,
     /// #     friendship_statistics: None,
     /// #     group_statistics: None,
@@ -2460,6 +2478,7 @@ mod tests {
             contract_statistics: None,
             education_statistics: None,
             mentorship_statistics: None,
+            certification_statistics: None,
             environment_statistics: None,
             friendship_statistics: None,
             group_statistics: None,

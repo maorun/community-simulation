@@ -347,6 +347,40 @@ struct Args {
     /// Only used when --enable-quality is set
     #[arg(long)]
     initial_quality: Option<f64>,
+
+    /// Enable certification system for skills
+    /// Persons can get their skills certified by paying a fee, which increases skill prices
+    /// Certifications have levels (1-5) and can expire after a certain duration
+    #[arg(long, default_value_t = false)]
+    enable_certification: bool,
+
+    /// Cost multiplier for obtaining skill certification (0.1-10.0, default: 2.0)
+    /// Certification cost = base_skill_price * multiplier * certification_level
+    /// Only used when --enable-certification is set
+    #[arg(long)]
+    certification_cost_multiplier: Option<f64>,
+
+    /// Duration in steps before certification expires (default: 200)
+    /// Set to 0 for certifications that never expire
+    /// Only used when --enable-certification is set
+    #[arg(long)]
+    certification_duration: Option<usize>,
+
+    /// Probability that a person attempts to certify a skill each step (0.0-1.0, default: 0.05)
+    /// Only used when --enable-certification is set
+    #[arg(long)]
+    certification_probability: Option<f64>,
+}
+
+/// Converts a certification duration argument to an Option.
+/// Duration of 0 means certifications never expire (None).
+/// Any other value is returned as Some(duration).
+fn certification_duration_from_arg(duration: usize) -> Option<usize> {
+    if duration == 0 {
+        None
+    } else {
+        Some(duration)
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -660,6 +694,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(production_prob) = args.production_probability {
                 cfg.production_probability = production_prob;
             }
+            if args.enable_certification {
+                cfg.enable_certification = true;
+            }
+            if let Some(cost_multiplier) = args.certification_cost_multiplier {
+                cfg.certification_cost_multiplier = cost_multiplier;
+            }
+            if let Some(duration) = args.certification_duration {
+                cfg.certification_duration = certification_duration_from_arg(duration);
+            }
+            if let Some(probability) = args.certification_probability {
+                cfg.certification_probability = probability;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -805,6 +851,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             initial_quality: args
                 .initial_quality
                 .unwrap_or(SimulationConfig::default().initial_quality),
+            enable_certification: args.enable_certification,
+            certification_cost_multiplier: args
+                .certification_cost_multiplier
+                .unwrap_or(SimulationConfig::default().certification_cost_multiplier),
+            certification_duration: args.certification_duration.map_or_else(
+                || SimulationConfig::default().certification_duration,
+                certification_duration_from_arg,
+            ),
+            certification_probability: args
+                .certification_probability
+                .unwrap_or(SimulationConfig::default().certification_probability),
         }
     };
 
