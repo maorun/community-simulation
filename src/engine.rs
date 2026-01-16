@@ -126,6 +126,13 @@ pub struct SimulationEngine {
     contracts: HashMap<ContractId, Contract>,
     total_contracts_created: usize,
     total_contracts_completed: usize,
+    // Mentorship system tracking
+    mentorships: Vec<crate::person::Mentorship>,
+    total_mentorships_formed: usize,
+    successful_mentored_learnings: usize,
+    total_mentorship_cost_savings: f64,
+    unique_mentors: HashSet<usize>,
+    unique_mentees: HashSet<usize>,
     // Wealth statistics history tracking
     wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
     // Social mobility tracking: person_id -> Vec of quintile assignments (0-4) at each step
@@ -277,6 +284,12 @@ impl SimulationEngine {
             contracts: HashMap::new(),
             total_contracts_created: 0,
             total_contracts_completed: 0,
+            mentorships: Vec::new(),
+            total_mentorships_formed: 0,
+            successful_mentored_learnings: 0,
+            total_mentorship_cost_savings: 0.0,
+            unique_mentors: HashSet::new(),
+            unique_mentees: HashSet::new(),
             wealth_stats_history: Vec::new(),
             mobility_quintiles: HashMap::new(),
             plugin_registry: PluginRegistry::new(),
@@ -1207,6 +1220,17 @@ impl SimulationEngine {
                     avg_learned_skills_per_person,
                     max_learned_skills,
                     total_education_spending,
+                })
+            } else {
+                None
+            },
+            mentorship_statistics: if self.config.enable_mentorship {
+                Some(crate::result::MentorshipStats {
+                    total_mentorships: self.total_mentorships_formed,
+                    successful_mentored_learnings: self.successful_mentored_learnings,
+                    total_cost_savings: self.total_mentorship_cost_savings,
+                    unique_mentors: self.unique_mentors.len(),
+                    unique_mentees: self.unique_mentees.len(),
                 })
             } else {
                 None
@@ -2346,10 +2370,10 @@ impl SimulationEngine {
             }
         }
 
-        // Education system - persons can learn new skills
+        // Education system - persons can learn new skills (with optional mentorship support)
         if self.config.enable_education && self.config.learning_probability > 0.0 {
-            for entity in &mut self.entities {
-                if !entity.active {
+            for i in 0..self.entities.len() {
+                if !self.entities[i].active {
                     continue;
                 }
 
@@ -2359,12 +2383,15 @@ impl SimulationEngine {
                     continue;
                 }
 
+                let learner_id = self.entities[i].id;
+
                 // Find skills this person doesn't have yet
-                let potential_skills: Vec<&Skill> = self
+                let potential_skills: Vec<Skill> = self
                     .market
                     .skills
                     .values()
-                    .filter(|skill| !entity.person_data.has_skill(&skill.id))
+                    .filter(|skill| !self.entities[i].person_data.has_skill(&skill.id))
+                    .cloned()
                     .collect();
 
                 if potential_skills.is_empty() {
@@ -2372,22 +2399,70 @@ impl SimulationEngine {
                 }
 
                 // Randomly select a skill to learn
-                if let Some(&skill_to_learn) = potential_skills.as_slice().choose(&mut self.rng) {
-                    let learning_cost =
+                if let Some(skill_to_learn) = potential_skills.as_slice().choose(&mut self.rng).cloned() {
+                    let base_learning_cost =
                         skill_to_learn.current_price * self.config.learning_cost_multiplier;
+                    
+                    // Try to find a mentor if mentorship is enabled
+                    let mentor_info = if self.config.enable_mentorship {
+                        self.find_mentor_for_skill(&skill_to_learn.id, learner_id)
+                    } else {
+                        None
+                    };
+
+                    // Calculate final cost (reduced if mentored)
+                    let (final_cost, mentor_id) = if let Some((mentor_id, _mentor_quality)) = mentor_info {
+                        let reduced_cost = base_learning_cost * self.config.mentorship_cost_reduction;
+                        (reduced_cost, Some(mentor_id))
+                    } else {
+                        (base_learning_cost, None)
+                    };
 
                     // Attempt to learn the skill
-                    if entity
+                    if self.entities[i]
                         .person_data
-                        .learn_skill(skill_to_learn.clone(), learning_cost)
+                        .learn_skill(skill_to_learn.clone(), final_cost)
                     {
-                        debug!(
-                            "Person {} learned skill '{}' for ${:.2} (market price: ${:.2})",
-                            entity.id,
-                            skill_to_learn.id,
-                            learning_cost,
-                            skill_to_learn.current_price
-                        );
+                        if let Some(mid) = mentor_id {
+                            // Successful mentored learning
+                            let cost_savings = base_learning_cost - final_cost;
+                            self.successful_mentored_learnings += 1;
+                            self.total_mentorship_cost_savings += cost_savings;
+                            self.unique_mentees.insert(learner_id);
+                            self.unique_mentors.insert(mid);
+                            
+                            // Award reputation bonus to mentor
+                            if let Some(mentor_entity) = self.entities.iter_mut().find(|e| e.id == mid) {
+                                mentor_entity.person_data.reputation += self.config.mentor_reputation_bonus;
+                                debug!(
+                                    "Person {} learned skill '{}' from mentor {} for ${:.2} (saved ${:.2}, mentor gained +{:.3} reputation)",
+                                    learner_id,
+                                    skill_to_learn.id,
+                                    mid,
+                                    final_cost,
+                                    cost_savings,
+                                    self.config.mentor_reputation_bonus
+                                );
+                            }
+                            
+                            // Record the mentorship relationship
+                            let mentorship = crate::person::Mentorship::new(
+                                mid,
+                                learner_id,
+                                skill_to_learn.id.clone(),
+                                self.current_step
+                            );
+                            self.mentorships.push(mentorship);
+                            self.total_mentorships_formed += 1;
+                        } else {
+                            debug!(
+                                "Person {} learned skill '{}' for ${:.2} (market price: ${:.2}, no mentor)",
+                                learner_id,
+                                skill_to_learn.id,
+                                final_cost,
+                                skill_to_learn.current_price
+                            );
+                        }
                     }
                 }
             }
@@ -2744,6 +2819,55 @@ impl SimulationEngine {
                 .retain(|&id| id != loan_id);
 
             self.total_loans_repaid += 1;
+        }
+    }
+
+    /// Finds a suitable mentor for a given skill.
+    ///
+    /// A suitable mentor is someone who:
+    /// - Has the skill (either as own_skill or learned)
+    /// - Has sufficient quality in that skill (>= min_mentor_quality)
+    /// - Is not the learner themselves
+    ///
+    /// Returns Some((mentor_id, mentor_quality)) if a mentor is found, None otherwise.
+    fn find_mentor_for_skill(&self, skill_id: &SkillId, learner_id: usize) -> Option<(usize, f64)> {
+        let mut potential_mentors = Vec::new();
+
+        for entity in &self.entities {
+            if !entity.active || entity.id == learner_id {
+                continue;
+            }
+
+            // Check if this person has the skill
+            let has_skill = entity.person_data.own_skills.iter().any(|s| &s.id == skill_id)
+                || entity.person_data.learned_skills.iter().any(|s| &s.id == skill_id);
+
+            if !has_skill {
+                continue;
+            }
+
+            // Check quality if quality system is enabled
+            if self.config.enable_quality {
+                if let Some(&quality) = entity.person_data.skill_qualities.get(skill_id) {
+                    if quality >= self.config.min_mentor_quality {
+                        potential_mentors.push((entity.id, quality));
+                    }
+                }
+            } else {
+                // If quality system is disabled, any person with the skill can mentor
+                // Use a default "quality" for sorting purposes
+                potential_mentors.push((entity.id, 3.0));
+            }
+        }
+
+        // Select the best mentor from those eligible (highest quality)
+        if !potential_mentors.is_empty() {
+            // Sort by quality descending to prefer better mentors
+            potential_mentors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            // Return the best mentor (highest quality)
+            potential_mentors.first().copied()
+        } else {
+            None
         }
     }
 
@@ -3107,6 +3231,7 @@ impl SimulationEngine {
             loan_statistics: None, // Simplified
             contract_statistics: None,
             education_statistics: None,
+            mentorship_statistics: None,
             environment_statistics: None, // Simplified for interactive mode
             friendship_statistics: None,  // Simplified
             group_statistics: None,
@@ -3309,6 +3434,12 @@ impl SimulationEngine {
             contracts: checkpoint.contracts,
             total_contracts_created: checkpoint.total_contracts_created,
             total_contracts_completed: checkpoint.total_contracts_completed,
+            mentorships: Vec::new(),  // Reset mentorship data on resume
+            total_mentorships_formed: 0,
+            successful_mentored_learnings: 0,
+            total_mentorship_cost_savings: 0.0,
+            unique_mentors: HashSet::new(),
+            unique_mentees: HashSet::new(),
             wealth_stats_history: checkpoint.wealth_stats_history,
             mobility_quintiles: checkpoint.mobility_quintiles,
             plugin_registry: PluginRegistry::new(),

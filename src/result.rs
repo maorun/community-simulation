@@ -321,6 +321,21 @@ pub struct EducationStats {
     pub total_education_spending: f64,
 }
 
+/// Statistics about mentorship system activity
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MentorshipStats {
+    /// Total number of mentorships formed during the simulation
+    pub total_mentorships: usize,
+    /// Total number of successful mentored learning events
+    pub successful_mentored_learnings: usize,
+    /// Average cost savings from mentorship (compared to unmentored learning)
+    pub total_cost_savings: f64,
+    /// Number of unique persons who acted as mentors
+    pub unique_mentors: usize,
+    /// Number of unique persons who were mentored
+    pub unique_mentees: usize,
+}
+
 /// Statistics about the friendship system (social connections)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FriendshipStats {
@@ -551,6 +566,10 @@ pub struct SimulationResult {
     /// Education system statistics (only present if education is enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub education_statistics: Option<EducationStats>,
+
+    /// Mentorship system statistics (only present if mentorship is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mentorship_statistics: Option<MentorshipStats>,
 
     /// Environmental resource consumption and sustainability statistics (only present if environment tracking is enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
