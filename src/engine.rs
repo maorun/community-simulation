@@ -1937,26 +1937,30 @@ impl SimulationEngine {
         }
 
         // Capture prices before update for event emission
-        let prices_before: HashMap<SkillId, f64> = if self.event_bus.is_enabled() {
+        // Use Vec instead of HashMap for better performance with small to medium number of skills
+        let prices_before: Vec<(SkillId, f64)> = if self.event_bus.is_enabled() {
             self.market
                 .skills
                 .iter()
                 .map(|(id, skill)| (id.clone(), skill.current_price))
                 .collect()
         } else {
-            HashMap::new()
+            Vec::new()
         };
 
         self.market.update_prices(&mut self.rng);
 
         // Emit price update events for changed prices
         if self.event_bus.is_enabled() {
-            for (skill_id, skill) in &self.market.skills {
-                if let Some(&old_price) = prices_before.get(skill_id) {
-                    if (old_price - skill.current_price).abs() > f64::EPSILON {
+            // Use a tolerance appropriate for currency comparisons (0.01 = 1 cent)
+            const PRICE_CHANGE_TOLERANCE: f64 = 0.01;
+
+            for (skill_id, old_price) in prices_before {
+                if let Some(skill) = self.market.skills.get(&skill_id) {
+                    if (old_price - skill.current_price).abs() > PRICE_CHANGE_TOLERANCE {
                         self.event_bus.emit_price_update(
                             self.current_step,
-                            skill_id.clone(),
+                            skill_id,
                             old_price,
                             skill.current_price,
                         );
