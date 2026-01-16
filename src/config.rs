@@ -734,6 +734,75 @@ pub struct SimulationConfig {
     /// Valid range: 0.0-5.0
     #[serde(default = "default_initial_quality")]
     pub initial_quality: f64,
+
+    /// Enable skill certification system.
+    ///
+    /// When enabled, persons can get their skills certified by a central authority,
+    /// which increases the effective price of those skills. Certifications have levels (1-5)
+    /// and can expire after a certain number of steps, requiring renewal.
+    ///
+    /// This enables studying:
+    /// - Professional qualifications and licensing effects
+    /// - Quality signaling and trust in markets
+    /// - Certification cost-benefit trade-offs
+    /// - Credential inflation and renewal markets
+    ///
+    /// Set to false to disable certification system (default).
+    #[serde(default)]
+    pub enable_certification: bool,
+
+    /// Cost multiplier for obtaining skill certification.
+    ///
+    /// The actual cost to certify a skill is calculated as:
+    /// `skill_base_price * certification_cost_multiplier * certification_level`
+    ///
+    /// For example, with a base price of $10, a multiplier of 2.0, and level 3 certification,
+    /// the cost would be: $10 * 2.0 * 3 = $60
+    ///
+    /// Higher values make certification more expensive, limiting access.
+    /// Lower values make certification more accessible.
+    ///
+    /// Only used when enable_certification is true.
+    /// Default: 2.0 (certification costs 2x the base skill price per level)
+    /// Valid range: 0.1-10.0
+    #[serde(default = "default_certification_cost_multiplier")]
+    pub certification_cost_multiplier: f64,
+
+    /// Duration in simulation steps before a certification expires.
+    ///
+    /// Certifications expire after this many steps and must be renewed to maintain
+    /// their price premium benefits. This simulates professional credential renewal
+    /// requirements (e.g., licenses that must be renewed every few years).
+    ///
+    /// Set to None for certifications that never expire.
+    ///
+    /// Only used when enable_certification is true.
+    /// Default: Some(200) (certifications last 200 steps before expiring)
+    #[serde(default = "default_certification_duration")]
+    pub certification_duration: Option<usize>,
+
+    /// Probability that a person will attempt to certify a skill each simulation step.
+    ///
+    /// Each step, each person has this probability of attempting to get one of their
+    /// skills certified (if they can afford it and the skill isn't already certified).
+    ///
+    /// Only used when enable_certification is true.
+    /// Default: 0.05 (5% chance per step to attempt certification)
+    /// Valid range: 0.0-1.0
+    #[serde(default = "default_certification_probability")]
+    pub certification_probability: f64,
+}
+
+fn default_certification_cost_multiplier() -> f64 {
+    2.0 // Certification costs 2x the base skill price per level
+}
+
+fn default_certification_duration() -> Option<usize> {
+    Some(200) // Certifications last 200 steps
+}
+
+fn default_certification_probability() -> f64 {
+    0.05 // 5% chance per step to attempt certification
 }
 
 fn default_production_probability() -> f64 {
@@ -944,6 +1013,10 @@ impl Default for SimulationConfig {
             quality_improvement_rate: 0.1,        // Quality increases by 0.1 per trade
             quality_decay_rate: 0.05,             // Quality decreases by 0.05 per step
             initial_quality: 3.0,                 // Average quality (0.0-5.0 scale)
+            enable_certification: false,          // Disabled by default
+            certification_cost_multiplier: 2.0,   // 2x base price per level
+            certification_duration: Some(200),    // Certifications last 200 steps
+            certification_probability: 0.05,      // 5% chance per step to attempt certification
         }
     }
 }
@@ -1389,6 +1462,23 @@ impl SimulationConfig {
                 "initial_quality must be between 0.0 and 5.0, got: {}",
                 self.initial_quality
             )));
+        }
+
+        // Certification system validation
+        if self.enable_certification {
+            if !(0.1..=10.0).contains(&self.certification_cost_multiplier) {
+                return Err(SimulationError::ValidationError(format!(
+                    "certification_cost_multiplier must be between 0.1 and 10.0, got: {}",
+                    self.certification_cost_multiplier
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.certification_probability) {
+                return Err(SimulationError::ValidationError(format!(
+                    "certification_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.certification_probability
+                )));
+            }
         }
 
         Ok(())

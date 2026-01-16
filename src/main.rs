@@ -805,6 +805,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             initial_quality: args
                 .initial_quality
                 .unwrap_or(SimulationConfig::default().initial_quality),
+            enable_certification: SimulationConfig::default().enable_certification,
+            certification_cost_multiplier: SimulationConfig::default()
+                .certification_cost_multiplier,
+            certification_duration: SimulationConfig::default().certification_duration,
+            certification_probability: SimulationConfig::default().certification_probability,
         }
     };
 
