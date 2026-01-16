@@ -60,6 +60,7 @@
 //!
 //! ## Modules
 //!
+//! - [`centrality`] - Network centrality analysis for trading networks
 //! - [`config`] - Simulation configuration parameters
 //! - [`contract`] - Contract system for long-term agreements
 //! - [`database`] - SQLite database export functionality
@@ -80,6 +81,7 @@
 //! - [`skill`] - Skill definitions and generation
 //! - [`voting`] - Voting system for governance and collective decision-making
 
+pub mod centrality;
 pub mod config;
 pub mod contract;
 pub mod crisis;
@@ -104,6 +106,7 @@ pub mod scenario_comparison;
 pub mod skill;
 pub mod voting;
 
+pub use centrality::{calculate_centrality, CentralityAnalysis, NodeCentrality};
 pub use config::{PresetName, SimulationConfig};
 pub use contract::{Contract, ContractId};
 pub use crisis::CrisisEvent;

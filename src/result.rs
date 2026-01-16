@@ -531,6 +531,14 @@ pub struct SimulationResult {
     /// Trading partner statistics showing network relationships and trading patterns
     pub trading_partner_statistics: TradingPartnerStats,
 
+    /// Network centrality analysis for the trading network.
+    ///
+    /// Provides comprehensive analysis of network structure including degree centrality,
+    /// betweenness centrality, eigenvector centrality, PageRank, and identification
+    /// of key market participants (hubs, brokers, influencers).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub centrality_analysis: Option<crate::centrality::CentralityAnalysis>,
+
     /// Social mobility statistics tracking wealth transitions between quintiles over time.
     /// Only present if the simulation ran for at least 2 steps (need at least 2 time points).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -630,6 +638,7 @@ impl SimulationResult {
     /// #             most_active_pair: None,
     /// #         },
     /// #     },
+    /// #     centrality_analysis: None,
     /// #     mobility_statistics: None,
     /// #     quality_statistics: None,
     /// #     events: None,
@@ -2403,6 +2412,7 @@ mod tests {
                     most_active_pair: None,
                 },
             },
+            centrality_analysis: None,
             mobility_statistics: None,
             quality_statistics: None,
             events: None,
