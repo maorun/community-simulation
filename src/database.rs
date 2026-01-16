@@ -375,6 +375,7 @@ mod tests {
             final_persons_data: vec![],
             total_fees_collected: 0.0,
             per_skill_trade_stats: vec![],
+            skill_market_concentration: None,
             wealth_stats_history: vec![],
             trading_partner_statistics: crate::result::TradingPartnerStats {
                 per_person: vec![],
