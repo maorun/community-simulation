@@ -83,25 +83,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Soziale Netzwerke und Beziehungen
 
-#### 3.1 Mentorschaft und Ausbildungsprogramme
-**Beschreibung:** Erfahrene Personen können als Mentoren für andere fungieren, wodurch Lernen beschleunigt wird, Kosten reduziert werden und soziale Bindungen entstehen.
-
-**Harmonien:**
-- **Bildungssystem:** Mentoren reduzieren Lernkosten und -zeit erheblich
-- **Reputation:** Mentoren mit hoher Reputation sind effektiver
-- **Freundschaft:** Mentorschaft führt oft zu Freundschaften
-- **Qualität:** Mentoren übertragen Qualitätskenntnisse
-- **Generationengerechtigkeit:** Wissenstransfer zwischen Generationen
-
-**Nutzen:** Modelliert Wissenstransfer, Ausbildungssysteme und den Wert von Erfahrung.
-
-**Implementierung:**
-- `Mentorship` Beziehung mit Mentor, Mentee, Fähigkeit, Fortschritt
-- Mentoren benötigen hohe Qualität in der zu lehrenden Fähigkeit
-- Reduzierte Lernkosten (z.B. 50%) und höhere Erfolgsrate
-- Mentoren erhalten Reputation-Bonus für erfolgreiche Mentees
-
-#### 3.2 Vertrauensnetzwerke
+#### 3.1 Vertrauensnetzwerke
 **Beschreibung:** Ein mehrschichtiges Vertrauenssystem, bei dem Vertrauen transitiv ist (Freund eines Freundes erhält teilweises Vertrauen). Ermöglicht Handel mit reduzierten Risiken in erweiterten Netzwerken.
 
 **Harmonien:**
@@ -119,7 +101,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Vorteile skalieren mit Vertrauenslevel
 - Vertrauensbruch propagiert im Netzwerk
 
-#### 3.3 Gemeinschaftliche Ressourcenpools
+#### 3.2 Gemeinschaftliche Ressourcenpools
 **Beschreibung:** Gruppen können gemeinsame Ressourcenpools bilden (Geld, Fähigkeiten, Versicherung), auf die Mitglieder zugreifen können. Fördert Solidarität und kollektive Sicherheit.
 
 **Harmonien:**
