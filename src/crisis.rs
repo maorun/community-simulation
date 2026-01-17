@@ -31,6 +31,12 @@ pub enum CrisisEvent {
     /// Reduces money holdings of all persons by a percentage (typically 10-30%).
     /// Simulates inflation, currency crisis, or wealth destruction.
     CurrencyDevaluation,
+
+    /// Technology shock - sudden technological breakthrough making skills obsolete
+    ///
+    /// Randomly affects certain skills with massive value loss (typically 50-80%).
+    /// Simulates technological disruption, automation, or paradigm shifts.
+    TechnologyShock,
 }
 
 impl CrisisEvent {
@@ -41,6 +47,7 @@ impl CrisisEvent {
             CrisisEvent::DemandShock,
             CrisisEvent::SupplyShock,
             CrisisEvent::CurrencyDevaluation,
+            CrisisEvent::TechnologyShock,
         ]
     }
 
@@ -51,6 +58,7 @@ impl CrisisEvent {
             CrisisEvent::DemandShock => "Demand Shock",
             CrisisEvent::SupplyShock => "Supply Shock",
             CrisisEvent::CurrencyDevaluation => "Currency Devaluation",
+            CrisisEvent::TechnologyShock => "Technology Shock",
         }
     }
 
@@ -61,6 +69,9 @@ impl CrisisEvent {
             CrisisEvent::DemandShock => "Sudden drop in overall demand (30-50%)",
             CrisisEvent::SupplyShock => "Reduction in available supply (20-40%)",
             CrisisEvent::CurrencyDevaluation => "Reduction in purchasing power (10-30%)",
+            CrisisEvent::TechnologyShock => {
+                "Technological disruption making certain skills obsolete (50-80%)"
+            }
         }
     }
 
@@ -110,6 +121,13 @@ impl CrisisEvent {
                 let randomness = rng.random_range(MONEY_RANDOMNESS_MIN..=MONEY_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
             }
+            CrisisEvent::TechnologyShock => {
+                // Technology shock: 50% to 80% price drop for obsolete skills
+                let drop_percentage = 0.50 + (severity * 0.30);
+                let randomness =
+                    rng.random_range(STANDARD_RANDOMNESS_MIN..=STANDARD_RANDOMNESS_MAX);
+                base_value * (1.0 - drop_percentage) * randomness
+            }
         }
     }
 }
@@ -128,16 +146,18 @@ mod tests {
             CrisisEvent::CurrencyDevaluation.name(),
             "Currency Devaluation"
         );
+        assert_eq!(CrisisEvent::TechnologyShock.name(), "Technology Shock");
     }
 
     #[test]
     fn test_all_crisis_types() {
         let types = CrisisEvent::all_types();
-        assert_eq!(types.len(), 4);
+        assert_eq!(types.len(), 5);
         assert!(types.contains(&CrisisEvent::MarketCrash));
         assert!(types.contains(&CrisisEvent::DemandShock));
         assert!(types.contains(&CrisisEvent::SupplyShock));
         assert!(types.contains(&CrisisEvent::CurrencyDevaluation));
+        assert!(types.contains(&CrisisEvent::TechnologyShock));
     }
 
     #[test]
@@ -186,5 +206,20 @@ mod tests {
         assert!(new_money < base_money);
         assert!(new_money > base_money * 0.65); // Not more than 35% drop
         assert!(new_money < base_money * 0.95); // Some reduction happened
+    }
+
+    #[test]
+    fn test_technology_shock_effect() {
+        let mut rng = StepRng::new(5, 1);
+        let base_price = 100.0;
+        let severity = 0.5;
+
+        let new_price = CrisisEvent::TechnologyShock.apply_effect(base_price, severity, &mut rng);
+
+        // Should reduce price by 50-80%, with severity=0.5 -> ~65% reduction
+        // With randomness ±10%, expect roughly 25-40 range
+        assert!(new_price < base_price);
+        assert!(new_price < base_price * 0.5); // At least 50% drop
+        assert!(new_price > base_price * 0.1); // Not complete elimination
     }
 }

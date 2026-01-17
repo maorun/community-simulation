@@ -48,25 +48,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Erweiterte Szenarien
 
-#### 4.1 Technologieschocks
-**Beschreibung:** Plötzliche technologische Durchbrüche, die bestimmte Fähigkeiten obsolet machen oder neue Fähigkeiten schaffen. Simuliert technologischen Wandel und Strukturwandel.
-
-**Harmonien:**
-- **Technologischer Fortschritt:** Beschleunigt bestehende Tech-Wachstumsrate
-- **Bildungssystem:** Umschulungsbedarf steigt dramatisch
-- **Produktionssystem:** Neue Produktionsrezepte werden verfügbar
-- **Krisen-Events:** Kann kurzfristig Krisencharakter haben
-- **Arbeitslosigkeit:** Personen mit veralteten Skills temporär arbeitslos
-
-**Nutzen:** Ermöglicht die Untersuchung von Strukturwandel, technologischer Arbeitslosigkeit und Anpassungsfähigkeit.
-
-**Implementierung:**
-- `TechShock` Event mit betroffenen Fähigkeiten (obsolet/neu)
-- Veraltete Fähigkeiten verlieren massiv an Wert
-- Neue Fähigkeiten mit hohem Anfangswert erscheinen
-- Umschulungskosten und -zeit für betroffene Personen
-
-#### 4.2 Regulatorische Interventionen
+#### 4.1 Regulatorische Interventionen
 **Beschreibung:** Externe Regulierungsbehörde kann Markteingriffe vornehmen: Preiskontrollen, Berufszulassungen, Mindeststandards, Kartellrecht.
 
 **Harmonien:**

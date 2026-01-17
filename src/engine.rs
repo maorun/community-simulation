@@ -646,6 +646,66 @@ impl SimulationEngine {
                     );
                 }
             }
+            CrisisEvent::TechnologyShock => {
+                // Technology shock: randomly select subset of skills to become obsolete
+                debug!("Applying technology shock: making skills obsolete");
+
+                // Randomly select 20-40% of skills to be affected (scaled by severity)
+                let total_skills = self.market.skills.len();
+                let affected_percentage = 0.20 + (self.config.crisis_severity * 0.20);
+                let num_affected = ((total_skills as f64) * affected_percentage).ceil() as usize;
+
+                // Collect skill IDs and shuffle them to randomly select affected skills
+                let mut skill_ids: Vec<_> = self.market.skills.keys().cloned().collect();
+                use rand::seq::SliceRandom;
+                skill_ids.shuffle(&mut self.rng);
+
+                // Take the first N skills as the affected ones
+                let affected_skills: Vec<_> =
+                    skill_ids.iter().take(num_affected).cloned().collect();
+
+                // Apply massive price drops to affected skills
+                for skill_id in &affected_skills {
+                    if let Some(skill) = self.market.skills.get_mut(skill_id) {
+                        let old_price = skill.current_price;
+                        skill.current_price = crisis.apply_effect(
+                            skill.current_price,
+                            self.config.crisis_severity,
+                            &mut self.rng,
+                        );
+                        // Respect minimum price floor
+                        skill.current_price = skill.current_price.max(self.config.min_skill_price);
+                        debug!(
+                            "  Skill {} obsolete: ${:.2} -> ${:.2} ({:.0}% drop)",
+                            skill.id,
+                            old_price,
+                            skill.current_price,
+                            ((old_price - skill.current_price) / old_price * 100.0)
+                        );
+                    }
+                }
+
+                // Also apply to black market if enabled
+                if let Some(ref mut bm) = self.black_market {
+                    for skill_id in &affected_skills {
+                        if let Some(skill) = bm.skills.get_mut(skill_id) {
+                            skill.current_price = crisis.apply_effect(
+                                skill.current_price,
+                                self.config.crisis_severity,
+                                &mut self.rng,
+                            );
+                            skill.current_price =
+                                skill.current_price.max(self.config.min_skill_price);
+                        }
+                    }
+                }
+
+                info!(
+                    "Technology shock affected {} out of {} skills",
+                    affected_skills.len(),
+                    total_skills
+                );
+            }
         }
     }
 
