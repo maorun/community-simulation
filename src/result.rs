@@ -648,6 +648,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub friendship_statistics: Option<FriendshipStats>,
 
+    /// Trade agreement system statistics (only present if trade agreements are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trade_agreement_statistics: Option<crate::trade_agreement::TradeAgreementStatistics>,
+
     /// Group/organization statistics (only present if groups are configured)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_statistics: Option<GroupStats>,
@@ -757,6 +761,7 @@ impl SimulationResult {
     /// #     certification_statistics: None,
     /// #     environment_statistics: None,
     /// #     friendship_statistics: None,
+    /// #     trade_agreement_statistics: None,
     /// #     group_statistics: None,
     /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
     /// #         per_person: vec![],
@@ -2618,6 +2623,7 @@ mod tests {
             certification_statistics: None,
             environment_statistics: None,
             friendship_statistics: None,
+            trade_agreement_statistics: None,
             group_statistics: None,
             trading_partner_statistics: TradingPartnerStats {
                 per_person: vec![],

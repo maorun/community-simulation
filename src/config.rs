@@ -493,6 +493,47 @@ pub struct SimulationConfig {
     #[serde(default = "default_friendship_discount")]
     pub friendship_discount: f64,
 
+    /// Enable trade agreements between persons for preferential trading.
+    ///
+    /// When enabled, persons can form bilateral or multilateral trade agreements
+    /// that provide mutual price discounts on trades between agreement partners.
+    /// Agreements have a limited duration and expire after a set number of steps.
+    /// This enables studying trade policy, regional economic blocks, and
+    /// preferential trade relationships.
+    /// Set to false to disable trade agreements (default).
+    #[serde(default)]
+    pub enable_trade_agreements: bool,
+
+    /// Probability per step that a person will attempt to form a trade agreement (0.0-1.0).
+    ///
+    /// Each simulation step, each person has this probability of attempting to form a new
+    /// trade agreement with one of their friends (if they have any). Higher values lead to
+    /// more trade agreements forming.
+    /// Only used when enable_trade_agreements is true.
+    /// Default: 0.05 (5% chance per step)
+    #[serde(default = "default_trade_agreement_probability")]
+    pub trade_agreement_probability: f64,
+
+    /// Price discount for trades under a trade agreement as a percentage (0.0-1.0).
+    ///
+    /// When persons with a trade agreement trade with each other, the price is reduced
+    /// by this percentage. For example, 0.15 means a 15% discount for agreement partners.
+    /// This discount stacks with friendship discounts if both persons are also friends.
+    /// Only used when enable_trade_agreements is true.
+    /// Default: 0.15 (15% discount for trade agreement partners)
+    #[serde(default = "default_trade_agreement_discount")]
+    pub trade_agreement_discount: f64,
+
+    /// Duration of trade agreements in simulation steps.
+    ///
+    /// Trade agreements expire after this many steps from when they were created.
+    /// Longer durations create more stable trading relationships, while shorter
+    /// durations create more dynamic markets.
+    /// Only used when enable_trade_agreements is true.
+    /// Default: 100 (agreement lasts for 100 simulation steps)
+    #[serde(default = "default_trade_agreement_duration")]
+    pub trade_agreement_duration: usize,
+
     /// Number of groups/organizations to create in the simulation.
     ///
     /// When set, persons are assigned to groups in a round-robin fashion at initialization.
@@ -969,6 +1010,18 @@ fn default_friendship_discount() -> f64 {
     0.1 // 10% discount for friend trades
 }
 
+fn default_trade_agreement_probability() -> f64 {
+    0.05 // 5% chance per step to form a trade agreement
+}
+
+fn default_trade_agreement_discount() -> f64 {
+    0.15 // 15% discount for trade agreement partners
+}
+
+fn default_trade_agreement_duration() -> usize {
+    100 // Trade agreements last for 100 steps
+}
+
 fn default_proposal_duration() -> usize {
     20 // 20 steps voting period
 }
@@ -1046,6 +1099,10 @@ impl Default for SimulationConfig {
             enable_friendships: false,            // Disabled by default
             friendship_probability: 0.1,          // 10% chance per trade
             friendship_discount: 0.1,             // 10% discount for friends
+            enable_trade_agreements: false,       // Disabled by default
+            trade_agreement_probability: 0.05,    // 5% chance per step
+            trade_agreement_discount: 0.15,       // 15% discount for agreement partners
+            trade_agreement_duration: 100,        // Agreements last 100 steps
             num_groups: None,                     // No groups by default
             distance_cost_factor: 0.0,            // Disabled by default
             price_elasticity_factor: 0.1,         // 10% price adjustment per unit imbalance
@@ -1402,6 +1459,36 @@ impl SimulationConfig {
                     "friendship_discount must be between 0.0 and 1.0, got: {}",
                     self.friendship_discount
                 )));
+            }
+        }
+
+        // Trade agreement system validation
+        if self.enable_trade_agreements {
+            if !(0.0..=1.0).contains(&self.trade_agreement_probability) {
+                return Err(SimulationError::ValidationError(format!(
+                    "trade_agreement_probability must be between 0.0 and 1.0, got: {}",
+                    self.trade_agreement_probability
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.trade_agreement_discount) {
+                return Err(SimulationError::ValidationError(format!(
+                    "trade_agreement_discount must be between 0.0 and 1.0, got: {}",
+                    self.trade_agreement_discount
+                )));
+            }
+
+            if self.trade_agreement_duration == 0 {
+                return Err(SimulationError::ValidationError(
+                    "trade_agreement_duration must be greater than 0 when trade agreements are enabled"
+                        .to_string(),
+                ));
+            }
+
+            // Trade agreements require friendships to function
+            // Without friendships, no agreements can be formed
+            if !self.enable_friendships {
+                log::warn!("Trade agreements are enabled but friendships are disabled. No trade agreements will be formed because agreements can only form between existing friends. Enable friendships for trade agreements to work.");
             }
         }
 

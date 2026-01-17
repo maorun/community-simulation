@@ -5,7 +5,7 @@ use crate::{
     environment::Environment,
     event::EventBus,
     loan::{Loan, LoanId},
-    person::Strategy,
+    person::{PersonId, Strategy},
     plugin::{PluginContext, PluginRegistry},
     result::{write_step_to_stream, StepData},
     scenario::{DemandGenerator, PriceUpdater},
@@ -95,6 +95,11 @@ pub struct SimulationCheckpoint {
     pub total_certification_cost: f64,
     /// Resource pool tracking: group_id -> (balance, total_contributions, total_withdrawals)
     pub resource_pools: HashMap<usize, (f64, f64, f64)>,
+    /// Trade agreement system tracking
+    pub trade_agreements: Vec<crate::trade_agreement::TradeAgreement>,
+    pub total_trade_agreements_formed: usize,
+    pub total_trade_agreements_expired: usize,
+    pub trade_agreement_counter: usize,
 }
 
 pub struct SimulationEngine {
@@ -166,6 +171,11 @@ pub struct SimulationEngine {
     voting_system: Option<crate::voting::VotingSystem>,
     // Event bus for tracking simulation events (if enabled)
     event_bus: EventBus,
+    // Trade agreement system tracking
+    trade_agreements: Vec<crate::trade_agreement::TradeAgreement>,
+    total_trade_agreements_formed: usize,
+    total_trade_agreements_expired: usize,
+    trade_agreement_counter: usize,
 }
 
 impl SimulationEngine {
@@ -348,6 +358,10 @@ impl SimulationEngine {
             environment,
             voting_system,
             event_bus,
+            trade_agreements: Vec::new(),
+            total_trade_agreements_formed: 0,
+            total_trade_agreements_expired: 0,
+            trade_agreement_counter: 0,
         }
     }
 
@@ -1446,6 +1460,76 @@ impl SimulationEngine {
             } else {
                 None
             },
+            trade_agreement_statistics: if self.config.enable_trade_agreements {
+                // Calculate trade agreement statistics
+                let active_agreements = self
+                    .trade_agreements
+                    .iter()
+                    .filter(|a| a.is_active(self.current_step))
+                    .count();
+
+                let total_agreement_trades: usize =
+                    self.trade_agreements.iter().map(|a| a.trade_count).sum();
+
+                let total_agreement_trade_value: f64 = self
+                    .trade_agreements
+                    .iter()
+                    .map(|a| a.total_trade_value)
+                    .sum();
+
+                let bilateral_agreements = self
+                    .trade_agreements
+                    .iter()
+                    .filter(|a| a.partner_count() == 2)
+                    .count();
+
+                let multilateral_agreements = self
+                    .trade_agreements
+                    .iter()
+                    .filter(|a| a.partner_count() > 2)
+                    .count();
+
+                let average_discount_rate = if !self.trade_agreements.is_empty() {
+                    self.trade_agreements
+                        .iter()
+                        .map(|a| a.discount_rate)
+                        .sum::<f64>()
+                        / self.trade_agreements.len() as f64
+                } else {
+                    0.0
+                };
+
+                let average_duration = if !self.trade_agreements.is_empty() {
+                    self.trade_agreements
+                        .iter()
+                        .map(|a| a.duration)
+                        .sum::<usize>() as f64
+                        / self.trade_agreements.len() as f64
+                } else {
+                    0.0
+                };
+
+                let average_trades_per_agreement = if !self.trade_agreements.is_empty() {
+                    total_agreement_trades as f64 / self.trade_agreements.len() as f64
+                } else {
+                    0.0
+                };
+
+                Some(crate::trade_agreement::TradeAgreementStatistics {
+                    total_agreements_formed: self.total_trade_agreements_formed,
+                    active_agreements,
+                    expired_agreements: self.total_trade_agreements_expired,
+                    bilateral_agreements,
+                    multilateral_agreements,
+                    total_agreement_trades,
+                    total_agreement_trade_value,
+                    average_discount_rate,
+                    average_duration,
+                    average_trades_per_agreement,
+                })
+            } else {
+                None
+            },
             group_statistics: if self.config.num_groups.is_some() {
                 // Calculate group statistics
                 let num_groups = self.config.num_groups.unwrap();
@@ -1863,6 +1947,9 @@ impl SimulationEngine {
             }
         }
 
+        // Try to form new trade agreements and remove expired ones
+        self.try_form_trade_agreements();
+
         // Pre-calculate seasonal factors for all skills to avoid borrowing issues
         let seasonal_enabled = self.config.seasonal_amplitude > 0.0;
         let seasonal_factors: HashMap<SkillId, f64> = if seasonal_enabled {
@@ -2150,6 +2237,39 @@ impl SimulationEngine {
                                     self.entities[seller_id].id,
                                     self.config.friendship_discount * 100.0
                                 );
+                            }
+                        }
+                    }
+
+                    // Apply trade agreement discount if enabled and buyer-seller have an agreement
+                    if self.config.enable_trade_agreements {
+                        if let Some(seller_id) = seller_id_opt {
+                            let buyer_id = self.entities[buyer_idx].id;
+                            let seller_person_id = self.entities[seller_id].id;
+
+                            // Check if there's an active agreement between buyer and seller
+                            let buyer_agreements = self.entities[buyer_idx]
+                                .person_data
+                                .trade_agreement_ids
+                                .clone();
+
+                            for agreement_id in buyer_agreements {
+                                if let Some(agreement) = self.trade_agreements.iter().find(|a| {
+                                    a.id == agreement_id && a.is_active(self.current_step)
+                                }) {
+                                    if agreement.includes_both(buyer_id, seller_person_id) {
+                                        let agreement_multiplier = 1.0 - agreement.discount_rate;
+                                        final_price *= agreement_multiplier;
+                                        trace!(
+                                            "Trade agreement discount applied: Person {} and Person {} have agreement {}, price reduced by {:.1}%",
+                                            buyer_id,
+                                            seller_person_id,
+                                            agreement_id,
+                                            agreement.discount_rate * 100.0
+                                        );
+                                        break; // Only one agreement discount per trade
+                                    }
+                                }
                             }
                         }
                     }
@@ -2496,6 +2616,11 @@ impl SimulationEngine {
                     }
                 }
             }
+
+            // Record trade in agreement if applicable
+            let buyer_id = self.entities[buyer_idx].id;
+            let seller_id = self.entities[seller_idx].id;
+            self.record_trade_in_agreement(buyer_id, seller_id, price);
 
             // Track environmental resource consumption (if enabled)
             if let Some(ref mut environment) = self.environment {
@@ -3685,6 +3810,7 @@ impl SimulationEngine {
             certification_statistics: None,
             environment_statistics: None, // Simplified for interactive mode
             friendship_statistics: None,  // Simplified
+            trade_agreement_statistics: None, // Simplified
             group_statistics: None,
             trading_partner_statistics: crate::result::TradingPartnerStats {
                 per_person: vec![],
@@ -3778,6 +3904,10 @@ impl SimulationEngine {
             total_certifications_expired: self.total_certifications_expired,
             total_certification_cost: self.total_certification_cost,
             resource_pools: self.resource_pools.clone(),
+            trade_agreements: self.trade_agreements.clone(),
+            total_trade_agreements_formed: self.total_trade_agreements_formed,
+            total_trade_agreements_expired: self.total_trade_agreements_expired,
+            trade_agreement_counter: self.trade_agreement_counter,
         };
 
         let file = File::create(path)?;
@@ -3915,6 +4045,150 @@ impl SimulationEngine {
             environment: checkpoint.environment,
             voting_system: checkpoint.voting_system,
             event_bus,
+            trade_agreements: checkpoint.trade_agreements,
+            total_trade_agreements_formed: checkpoint.total_trade_agreements_formed,
+            total_trade_agreements_expired: checkpoint.total_trade_agreements_expired,
+            trade_agreement_counter: checkpoint.trade_agreement_counter,
         })
+    }
+
+    /// Attempts to form trade agreements between persons who are friends.
+    /// Called once per simulation step to create new agreements based on configured probability.
+    fn try_form_trade_agreements(&mut self) {
+        if !self.config.enable_trade_agreements {
+            return;
+        }
+
+        // Remove expired agreements first
+        self.trade_agreements.retain(|agreement| {
+            let active = agreement.is_active(self.current_step);
+            if !active {
+                self.total_trade_agreements_expired += 1;
+                // Remove agreement IDs from persons
+                for entity in &mut self.entities {
+                    entity
+                        .person_data
+                        .trade_agreement_ids
+                        .retain(|id| *id != agreement.id);
+                }
+                trace!(
+                    "Trade agreement {} expired at step {}",
+                    agreement.id,
+                    self.current_step
+                );
+            }
+            active
+        });
+
+        // Try to form new agreements
+        for i in 0..self.entities.len() {
+            if !self.entities[i].active {
+                continue;
+            }
+
+            // Check probability of forming an agreement
+            if self.rng.random_range(0.0..1.0) > self.config.trade_agreement_probability {
+                continue;
+            }
+
+            let person_id = self.entities[i].id;
+            let friends: Vec<PersonId> = self.entities[i]
+                .person_data
+                .friends
+                .iter()
+                .copied()
+                .collect();
+
+            // Need at least one friend to form an agreement
+            if friends.is_empty() {
+                continue;
+            }
+
+            // Pick a random friend to form agreement with
+            // Safe to unwrap here because we just checked friends is not empty above
+            let friend_id = match friends.choose(&mut self.rng) {
+                Some(&id) => id,
+                None => continue, // Should never happen due to empty check, but handle safely
+            };
+
+            // Check if an agreement already exists between these two
+            let already_has_agreement = self
+                .trade_agreements
+                .iter()
+                .any(|agreement| agreement.includes_both(person_id, friend_id));
+
+            if already_has_agreement {
+                continue;
+            }
+
+            // Create new bilateral trade agreement
+            let agreement = crate::trade_agreement::TradeAgreement::new_bilateral(
+                self.trade_agreement_counter,
+                person_id,
+                friend_id,
+                self.config.trade_agreement_discount,
+                self.current_step,
+                self.config.trade_agreement_duration,
+            );
+
+            trace!(
+                "Trade agreement {} formed between persons {} and {} at step {}",
+                agreement.id,
+                person_id,
+                friend_id,
+                self.current_step
+            );
+
+            // Add agreement ID to both persons
+            for entity in &mut self.entities {
+                if entity.id == person_id || entity.id == friend_id {
+                    entity.person_data.trade_agreement_ids.push(agreement.id);
+                }
+            }
+
+            self.trade_agreements.push(agreement);
+            self.trade_agreement_counter += 1;
+            self.total_trade_agreements_formed += 1;
+        }
+    }
+
+    /// Records a trade under a trade agreement, if applicable.
+    fn record_trade_in_agreement(
+        &mut self,
+        buyer_id: PersonId,
+        seller_id: PersonId,
+        trade_value: f64,
+    ) {
+        if !self.config.enable_trade_agreements {
+            return;
+        }
+
+        // Find if there's an active agreement between these two persons
+        let buyer_agreements: Vec<usize> = self
+            .entities
+            .iter()
+            .find(|e| e.id == buyer_id)
+            .map(|e| e.person_data.trade_agreement_ids.clone())
+            .unwrap_or_default();
+
+        for agreement_id in buyer_agreements {
+            if let Some(agreement) = self
+                .trade_agreements
+                .iter_mut()
+                .find(|a| a.id == agreement_id && a.is_active(self.current_step))
+            {
+                if agreement.includes_both(buyer_id, seller_id) {
+                    agreement.record_trade(trade_value);
+                    trace!(
+                        "Trade recorded in agreement {}: buyer={}, seller={}, value={}",
+                        agreement_id,
+                        buyer_id,
+                        seller_id,
+                        trade_value
+                    );
+                    break;
+                }
+            }
+        }
     }
 }
