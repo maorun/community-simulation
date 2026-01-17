@@ -177,6 +177,9 @@ pub struct Person {
     /// Set of person IDs who are friends with this person.
     /// Friends receive price discounts when trading with each other.
     pub friends: HashSet<PersonId>,
+    /// IDs of trade agreements this person is part of.
+    /// Agreement partners receive price discounts when trading with each other.
+    pub trade_agreement_ids: Vec<usize>,
     /// Optional group/organization ID this person belongs to.
     /// Enables analysis of collective behavior and group-based statistics.
     /// None indicates no group membership.
@@ -226,6 +229,7 @@ impl Person {
             strategy,
             learned_skills: Vec::new(), // Start with no learned skills
             friends: HashSet::new(),    // Start with no friends
+            trade_agreement_ids: Vec::new(), // Start with no trade agreements
             group_id: None,             // Start with no group assignment
             location,
             skill_qualities: HashMap::new(), // Start with empty quality map (populated when quality enabled)

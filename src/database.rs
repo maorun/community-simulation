@@ -405,6 +405,7 @@ mod tests {
             certification_statistics: None,
             environment_statistics: None,
             friendship_statistics: None,
+            trade_agreement_statistics: None,
             group_statistics: None,
             quality_statistics: None,
             events: None,
