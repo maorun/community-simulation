@@ -115,13 +115,28 @@ This repository contains a configurable economic simulation written in Rust. It 
   - Implement custom algorithms and analysis
   
   The plugin system uses a feature-flags approach for compile-time plugin selection, ensuring zero runtime overhead for unused plugins. Plugins are type-safe, thread-safe (`Send + Sync`), and support downcasting for accessing plugin-specific methods. Perfect for research extensions, custom metrics collection, and experimental features without forking the codebase. See the `plugin` module documentation for implementation details and the `Plugin` trait for available lifecycle hooks.
-- **Event System:** Foundational infrastructure for tracking simulation events with zero overhead when disabled. The event system provides:
-  - Event types for key occurrences: TradeExecuted, PriceUpdated, ReputationChanged, StepCompleted
-  - EventBus for collecting and managing events
-  - Optional event tracking via `--enable-events` flag or configuration
-  - Full serialization support for event logs in JSON output
+- **Event System:** Comprehensive event tracking system for detailed simulation analysis and debugging. The event system captures all key simulation events in real-time:
+  - **TradeExecuted**: Records every successful trade with buyer, seller, skill, and price
+  - **PriceUpdated**: Tracks all price changes in the market with before/after values
+  - **ReputationChanged**: Monitors reputation adjustments for all persons
+  - **StepCompleted**: Marks the end of each simulation step with trade count and volume
   
-  The event system infrastructure is complete and tested, ready for future integration into simulation logic. When fully integrated, events will enable detailed timeline analysis, debugging, and research into market dynamics. Currently provides the foundation without modifying existing simulation behavior.
+  Enable via `--enable-events` flag or `enable_events: true` in configuration file. When enabled, all events are collected by the EventBus and included in the JSON output under the `events` array. Each event is timestamped with its simulation step and contains detailed contextual information. Zero performance overhead when disabled (events are not collected). Perfect for timeline analysis, debugging complex behaviors, understanding market dynamics, and conducting detailed research into economic phenomena. Events can be filtered, analyzed, and visualized using the JSON output.
+  
+  Example event:
+  ```json
+  {
+    "step": 42,
+    "event_type": {
+      "type": "TradeExecuted",
+      "buyer_id": 5,
+      "seller_id": 12,
+      "skill_id": "Programming",
+      "price": 25.50
+    }
+  }
+  ```
+
 - **Voting System (Political Simulation):** Democratic governance and collective decision-making system for studying how different voting mechanisms affect economic outcomes. When enabled, persons can create and vote on proposals that affect simulation parameters. 
   
   The system supports **three voting methods**:

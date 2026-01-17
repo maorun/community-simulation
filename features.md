@@ -181,18 +181,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Architektur und Design
 
-#### 1.1 Event-System vollständige Integration
-**Beschreibung:** Das vorhandene Event-System-Framework vollständig in die Simulationslogik integrieren, um detailliertes Event-Tracking zu ermöglichen.
-
-**Nutzen:** Ermöglicht Timeline-Analyse, detailliertes Debugging und Forschung über Kausalzusammenhänge in der Simulation.
-
-**Implementierung:**
-- Events bei jedem Trade, Preisupdate, Reputationsänderung emittieren
-- Event-Filter und -Subscriptions für selektives Tracking
-- Event-Replay-Funktionalität für Debugging
-- Performance-optimiertes Event-Logging mit optionaler Kompression
-
-#### 1.2 Erweiterbare Agentenarchitektur
+#### 1.1 Erweiterbare Agentenarchitektur
 **Beschreibung:** Refactoring der Person-Struktur zu einer modularen, komponenten-basierten Architektur (Entity-Component-System inspiriert).
 
 **Nutzen:** Einfachere Erweiterung mit neuen Features ohne Monolith-Struktur, bessere Testbarkeit, modulare Aktivierung von Features.
@@ -426,27 +415,26 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 1. **Versicherungssystem** - Starke Synergie mit Reputation, Krediten, Krisen
 2. **Qualitätsbewertungssystem** - Fügt wichtige Marktdimension hinzu (NOTE: Quality rating is already implemented!)
-3. **Mentorschaft** - Natürliche Erweiterung von Bildung + Freundschaft
-4. **Event-System Integration** - Infrastruktur-Verbesserung mit breitem Nutzen
+3. **Mentorschaft** - Natürliche Erweiterung von Bildung + Freundschaft (NOTE: Mentorship is already implemented!)
 
 ### Mittlere Priorität (Mittelfristig - gute Harmonien)
 
-6. **Investitionssystem** - Verbindet Ersparnisse, Kredite, Produktion
-7. **Handelsabkommen** - Erweitert Freundschaft und Verträge
-8. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
-9. **Vertrauensnetzwerke** - Ausgefeiltes soziales Kapital-Modell
-10. **Adaptive Strategien** - Macht Agenten realistischer
+4. **Investitionssystem** - Verbindet Ersparnisse, Kredite, Produktion
+5. **Handelsabkommen** - Erweitert Freundschaft und Verträge
+6. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
+7. **Vertrauensnetzwerke** - Ausgefeiltes soziales Kapital-Modell
+8. **Adaptive Strategien** - Macht Agenten realistischer
 
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
-11. **Technologieschocks** - Interessant aber komplex
-12. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
-13. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
-14. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
-15. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
-16. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-17. **Simulation-Debugger** - Nice-to-have für Entwicklung
-18. **Spezielle Anwendungsfälle** - Domänenspezifisch
+9. **Technologieschocks** - Interessant aber komplex
+10. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
+11. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
+12. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
+13. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
+14. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
+15. **Simulation-Debugger** - Nice-to-have für Entwicklung
+16. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
@@ -501,21 +489,20 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 ### Phase 1: Grundlegende Harmonien (3-6 Monate)
 1. Versicherungssystem implementieren
 2. Qualitätsbewertungssystem implementieren (NOTE: Already implemented!)
-3. Event-System vollständig integrieren
-4. Mentorschaftssystem implementieren
+3. Mentorschaftssystem implementieren (NOTE: Already implemented!)
 
 **Warum diese Reihenfolge?**
 - Versicherung baut auf Reputation und Kredite auf
 - Qualität ist relativ unabhängig und bringt sofort Mehrwert (bereits implementiert!)
-- Event-System ist Infrastruktur für besseres Debugging aller Features
-- Mentorschaft rundet soziale Features ab
+- Mentorschaft rundet soziale Features ab (bereits implementiert!)
+- Event-System ist nun vollständig integriert und ermöglicht besseres Debugging aller Features
 
 ### Phase 2: Erweiterte Interaktionen (6-12 Monate)
-6. Investitionssystem implementieren
-7. Handelsabkommen implementieren
-8. Zertifizierungssystem implementieren
-9. Vertrauensnetzwerke implementieren
-10. Adaptive Strategien implementieren
+4. Investitionssystem implementieren
+5. Handelsabkommen implementieren
+6. Zertifizierungssystem implementieren
+7. Vertrauensnetzwerke implementieren
+8. Adaptive Strategien implementieren
 
 **Warum diese Reihenfolge?**
 - Investitionen nutzen Ersparnisse, Kredite, Reputation aus Phase 1
@@ -525,13 +512,12 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - Adaptive Strategien profitieren von allen bisherigen Features
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)
-11. Kausalanalyse-Framework
-12. Konjunkturzyklen-Detektion
-13. Externalitäten-Analyse
+9. Kausalanalyse-Framework
+10. Konjunkturzyklen-Detektion
+11. Externalitäten-Analyse
 
 **Warum diese Reihenfolge?**
 - Analysen profitieren von den reicheren Daten aus Phasen 1-2
-- Mobilitätsanalyse ist relativ einfach zu implementieren
 - Kausalanalyse ist methodisch anspruchsvoll
 - Konjunktur- und Externalitäten-Analyse benötigen reife Simulation
 

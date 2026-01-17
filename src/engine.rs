@@ -3,6 +3,7 @@ use crate::{
     credit_rating::DEFAULT_CREDIT_SCORE,
     crisis::CrisisEvent,
     environment::Environment,
+    event::EventBus,
     loan::{Loan, LoanId},
     person::Strategy,
     plugin::{PluginContext, PluginRegistry},
@@ -163,6 +164,8 @@ pub struct SimulationEngine {
     environment: Option<Environment>,
     // Voting system for governance and collective decision-making (if enabled)
     voting_system: Option<crate::voting::VotingSystem>,
+    // Event bus for tracking simulation events (if enabled)
+    event_bus: EventBus,
 }
 
 impl SimulationEngine {
@@ -275,6 +278,12 @@ impl SimulationEngine {
             None
         };
 
+        // Initialize event bus
+        let event_bus = EventBus::new(config.enable_events);
+        if config.enable_events {
+            debug!("Event tracking system enabled");
+        }
+
         // Initialize resource pools before moving config
         let resource_pools = {
             let mut pools = HashMap::new();
@@ -338,6 +347,7 @@ impl SimulationEngine {
             production_recipes,
             environment,
             voting_system,
+            event_bus,
         }
     }
 
@@ -1688,7 +1698,11 @@ impl SimulationEngine {
             } else {
                 None
             },
-            events: None, // Event system infrastructure ready, full integration pending
+            events: if self.event_bus.is_enabled() {
+                Some(self.event_bus.events().to_vec())
+            } else {
+                None
+            },
             final_persons_data: self.entities.clone(),
         };
 
@@ -1922,7 +1936,38 @@ impl SimulationEngine {
             }
         }
 
+        // Capture prices before update for event emission
+        // Use Vec instead of HashMap for better performance with small to medium number of skills
+        let prices_before: Vec<(SkillId, f64)> = if self.event_bus.is_enabled() {
+            self.market
+                .skills
+                .iter()
+                .map(|(id, skill)| (id.clone(), skill.current_price))
+                .collect()
+        } else {
+            Vec::new()
+        };
+
         self.market.update_prices(&mut self.rng);
+
+        // Emit price update events for changed prices
+        if self.event_bus.is_enabled() {
+            // Use a tolerance appropriate for currency comparisons (0.01 = 1 cent)
+            const PRICE_CHANGE_TOLERANCE: f64 = 0.01;
+
+            for (skill_id, old_price) in prices_before {
+                if let Some(skill) = self.market.skills.get(&skill_id) {
+                    if (old_price - skill.current_price).abs() > PRICE_CHANGE_TOLERANCE {
+                        self.event_bus.emit_price_update(
+                            self.current_step,
+                            skill_id,
+                            old_price,
+                            skill.current_price,
+                        );
+                    }
+                }
+            }
+        }
 
         // Check for and trigger crisis events (if enabled)
         self.check_and_trigger_crisis();
@@ -2332,6 +2377,13 @@ impl SimulationEngine {
                 "Person {} reputation increased as buyer: {:.3} -> {:.3}",
                 buyer_entity_id, buyer_rep_before, self.entities[buyer_idx].person_data.reputation
             );
+            // Emit reputation change event for buyer
+            self.event_bus.emit_reputation_change(
+                self.current_step,
+                buyer_entity_id,
+                buyer_rep_before,
+                self.entities[buyer_idx].person_data.reputation,
+            );
 
             // Seller receives price minus fee
             let seller_balance_before = self.entities[seller_idx].person_data.money;
@@ -2378,6 +2430,22 @@ impl SimulationEngine {
                 seller_entity_id,
                 seller_rep_before,
                 self.entities[seller_idx].person_data.reputation
+            );
+            // Emit reputation change event for seller
+            self.event_bus.emit_reputation_change(
+                self.current_step,
+                seller_entity_id,
+                seller_rep_before,
+                self.entities[seller_idx].person_data.reputation,
+            );
+
+            // Emit trade executed event
+            self.event_bus.emit_trade(
+                self.current_step,
+                buyer_entity_id,
+                seller_entity_id,
+                skill_id.clone(),
+                price,
             );
 
             // Improve skill quality for seller (if quality system enabled)
@@ -3045,6 +3113,12 @@ impl SimulationEngine {
             self.apply_quality_decay();
         }
 
+        // Emit step completed event
+        let trades_this_step = *self.trades_per_step.last().unwrap_or(&0);
+        let volume_this_step = *self.volume_per_step.last().unwrap_or(&0.0);
+        self.event_bus
+            .emit_step_completed(self.current_step, trades_this_step, volume_this_step);
+
         self.current_step += 1;
     }
 
@@ -3625,7 +3699,11 @@ impl SimulationEngine {
                 &self.mobility_quintiles,
             ),
             quality_statistics: None, // Simplified for interactive mode
-            events: None,
+            events: if self.event_bus.is_enabled() {
+                Some(self.event_bus.events().to_vec())
+            } else {
+                None
+            },
             final_persons_data: self.entities.clone(),
         }
     }
@@ -3789,6 +3867,9 @@ impl SimulationEngine {
             None
         };
 
+        // Initialize event bus (events from previous run are not preserved)
+        let event_bus = EventBus::new(checkpoint.config.enable_events);
+
         Ok(Self {
             config: checkpoint.config,
             entities: checkpoint.entities,
@@ -3833,6 +3914,7 @@ impl SimulationEngine {
             production_recipes,
             environment: checkpoint.environment,
             voting_system: checkpoint.voting_system,
+            event_bus,
         })
     }
 }
