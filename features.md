@@ -24,25 +24,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Ereignisgesteuerte Auszahlungen basierend auf definierten Bedingungen
 - Prämienkalkulation basierend auf Reputation und historischem Risiko
 
-#### 1.3 Investitionssystem
-**Beschreibung:** Personen können in Produktionskapazitäten, Bildung anderer Personen oder gemeinsame Projekte investieren und erwarten dafür zukünftige Renditen.
-
-**Harmonien:**
-- **Ersparnisse:** Überschüssige Ersparnisse können produktiv investiert werden
-- **Kredit-System:** Investitionen können mit Krediten finanziert werden
-- **Produktionssystem:** Investitionen in Produktionsrezepte erhöhen Output
-- **Bildungssystem:** Investitionen in Bildung anderer schaffen zukünftige Handelsmöglichkeiten
-- **Gruppen:** Gruppeninvestitionen in gemeinsame Projekte
-- **Verträge:** Investitionsverträge mit garantierten Rückflüssen
-
-**Nutzen:** Ermöglicht die Modellierung von Kapitalallokation, Risikobereitschaft und wirtschaftlichem Wachstum durch Investitionen.
-
-**Implementierung:**
-- `Investment` Struktur mit Investor, Investitionsziel, Betrag, erwartete Rendite, Laufzeit
-- Verschiedene Investitionstypen: Produktionskapazität, Bildung, Infrastruktur
-- ROI-Berechnung basierend auf Erfolg der Investition
-- Portfolio-Tracking pro Person
-
 ### 2. Erweiterte Marktmechanismen
 
 ### 3. Soziale Netzwerke und Beziehungen
@@ -401,22 +382,21 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### Mittlere Priorität (Mittelfristig - gute Harmonien)
 
-4. **Investitionssystem** - Verbindet Ersparnisse, Kredite, Produktion
-5. **Handelsabkommen** - Erweitert Freundschaft und Verträge
-6. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
-7. **Vertrauensnetzwerke** - Ausgefeiltes soziales Kapital-Modell
-8. **Adaptive Strategien** - Macht Agenten realistischer
+4. **Handelsabkommen** - Erweitert Freundschaft und Verträge
+5. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
+6. **Vertrauensnetzwerke** - Ausgefeiltes soziales Kapital-Modell
+7. **Adaptive Strategien** - Macht Agenten realistischer
 
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
-9. **Technologieschocks** - Interessant aber komplex
-10. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
-11. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
-12. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
-13. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
-14. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-15. **Simulation-Debugger** - Nice-to-have für Entwicklung
-16. **Spezielle Anwendungsfälle** - Domänenspezifisch
+8. **Technologieschocks** - Interessant aber komplex
+9. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
+10. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
+11. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
+12. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
+13. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
+14. **Simulation-Debugger** - Nice-to-have für Entwicklung
+15. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
@@ -480,14 +460,12 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - Event-System ist nun vollständig integriert und ermöglicht besseres Debugging aller Features
 
 ### Phase 2: Erweiterte Interaktionen (6-12 Monate)
-4. Investitionssystem implementieren
-5. Handelsabkommen implementieren
-6. Zertifizierungssystem implementieren
-7. Vertrauensnetzwerke implementieren
-8. Adaptive Strategien implementieren
+4. Handelsabkommen implementieren
+5. Zertifizierungssystem implementieren
+6. Vertrauensnetzwerke implementieren
+7. Adaptive Strategien implementieren
 
 **Warum diese Reihenfolge?**
-- Investitionen nutzen Ersparnisse, Kredite, Reputation aus Phase 1
 - Handelsabkommen bauen auf Freundschaften und Verträgen auf
 - Zertifizierung ergänzt Qualitätssystem aus Phase 1
 - Vertrauensnetzwerke erweitern Freundschaftssystem

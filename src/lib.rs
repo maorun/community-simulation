@@ -70,6 +70,7 @@
 //! - [`environment`] - Environmental resource tracking and sustainability metrics
 //! - [`error`] - Custom error types for robust error handling
 //! - [`event`] - Event system for tracking simulation events
+//! - [`investment`] - Investment system for capital allocation and returns
 //! - [`loan`] - Loan system for credit between persons
 //! - [`market`] - Market mechanisms and price dynamics
 //! - [`person`] - Person agents, transactions, and behavior
@@ -94,6 +95,7 @@ pub mod entity; // Represents a Person in the simulation
 pub mod environment;
 pub mod error;
 pub mod event;
+pub mod investment;
 pub mod loan;
 pub mod market;
 pub mod parameter_sweep;
@@ -120,6 +122,7 @@ pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use environment::{Environment, Resource};
 pub use error::{Result, SimulationError};
 pub use event::{EventBus, EventType, SimulationEvent};
+pub use investment::{Investment, InvestmentId, InvestmentType};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
 pub use parameter_sweep::{ParameterRange, ParameterSweepResult};

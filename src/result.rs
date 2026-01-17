@@ -273,6 +273,23 @@ pub struct LoanStats {
     pub active_loans: usize,
 }
 
+/// Statistics about the investment system
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InvestmentStats {
+    /// Total number of investments created during the simulation
+    pub total_investments_created: usize,
+    /// Total number of investments completed (all returns paid)
+    pub total_investments_completed: usize,
+    /// Number of active investments at simulation end
+    pub active_investments: usize,
+    /// Total amount of money invested (principals)
+    pub total_invested: f64,
+    /// Total amount of returns paid to investors
+    pub total_returns_paid: f64,
+    /// Average ROI percentage across all completed investments
+    pub avg_roi_percentage: f64,
+}
+
 /// Statistics about the contract system
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ContractStats {
@@ -624,6 +641,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub loan_statistics: Option<LoanStats>,
 
+    /// Investment system statistics (only present if investments are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub investment_statistics: Option<InvestmentStats>,
+
     /// Contract system statistics (only present if contracts are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contract_statistics: Option<ContractStats>,
@@ -755,6 +776,7 @@ impl SimulationResult {
     /// #     total_taxes_collected: None,
     /// #     total_taxes_redistributed: None,
     /// #     loan_statistics: None,
+    /// #     investment_statistics: None,
     /// #     contract_statistics: None,
     /// #     education_statistics: None,
     /// #     mentorship_statistics: None,
@@ -2617,6 +2639,7 @@ mod tests {
             total_taxes_collected: None,
             total_taxes_redistributed: None,
             loan_statistics: None,
+            investment_statistics: None,
             contract_statistics: None,
             education_statistics: None,
             mentorship_statistics: None,
