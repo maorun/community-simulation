@@ -1,4 +1,5 @@
 use crate::credit_rating::CreditScore;
+use crate::investment::InvestmentId;
 use crate::loan::LoanId;
 use crate::skill::{Skill, SkillId};
 use serde::{Deserialize, Serialize};
@@ -168,6 +169,8 @@ pub struct Person {
     pub borrowed_loans: Vec<LoanId>,
     /// IDs of loans where this person is the lender
     pub lent_loans: Vec<LoanId>,
+    /// IDs of investments where this person is the investor
+    pub active_investments: Vec<InvestmentId>,
     /// Behavioral strategy that affects spending decisions.
     /// Determines how aggressively this person spends money to acquire needed skills.
     pub strategy: Strategy,
@@ -226,6 +229,7 @@ impl Person {
             savings: 0.0,    // Start with no savings
             borrowed_loans: Vec::new(),
             lent_loans: Vec::new(),
+            active_investments: Vec::new(), // Start with no investments
             strategy,
             learned_skills: Vec::new(), // Start with no learned skills
             friends: HashSet::new(),    // Start with no friends

@@ -784,6 +784,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             min_money_to_lend: args
                 .min_money_to_lend
                 .unwrap_or(SimulationConfig::default().min_money_to_lend),
+            enable_investments: SimulationConfig::default().enable_investments,
+            investment_return_rate: SimulationConfig::default().investment_return_rate,
+            investment_duration: SimulationConfig::default().investment_duration,
+            investment_probability: SimulationConfig::default().investment_probability,
+            min_money_to_invest: SimulationConfig::default().min_money_to_invest,
             checkpoint_interval: args
                 .checkpoint_interval
                 .unwrap_or(SimulationConfig::default().checkpoint_interval),

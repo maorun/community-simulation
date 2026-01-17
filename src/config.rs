@@ -213,6 +213,53 @@ pub struct SimulationConfig {
     #[serde(default = "default_min_money_to_lend")]
     pub min_money_to_lend: f64,
 
+    /// Enable investment system where persons can invest money for returns.
+    ///
+    /// When enabled, persons can make investments in education (other persons' learning)
+    /// or production capacity enhancements. Investments provide periodic returns over time
+    /// based on the configured return rate.
+    /// Set to false to disable investments (default).
+    #[serde(default)]
+    pub enable_investments: bool,
+
+    /// Investment return rate per step (e.g., 0.02 = 2% per step).
+    ///
+    /// This is the rate of return on investments. Investors receive their principal back
+    /// plus this rate multiplied by the investment duration as profit.
+    /// For example, with a rate of 0.02 and duration of 10 steps, an investment of 100
+    /// would return 120 total (100 principal + 20 profit).
+    /// Only used when enable_investments is true.
+    /// A value of 0.02 means investors earn 2% return per step.
+    /// Valid range: 0.0 to 1.0 (0% to 100%)
+    #[serde(default = "default_investment_return_rate")]
+    pub investment_return_rate: f64,
+
+    /// Default duration for investments in simulation steps.
+    ///
+    /// Determines how many steps an investment pays returns before completing.
+    /// Only used when enable_investments is true.
+    /// For example, a value of 20 means investments pay returns over 20 steps.
+    #[serde(default = "default_investment_duration")]
+    pub investment_duration: usize,
+
+    /// Probability of attempting to create an investment each step (0.0-1.0).
+    ///
+    /// Each simulation step, persons with sufficient money have this probability
+    /// of attempting to create a new investment.
+    /// Only used when enable_investments is true.
+    /// A value of 0.05 means a 5% chance per step.
+    /// Valid range: 0.0 to 1.0 (0% to 100%)
+    #[serde(default = "default_investment_probability")]
+    pub investment_probability: f64,
+
+    /// Minimum money threshold for a person to be eligible to invest.
+    ///
+    /// Persons must have at least this much money to make investments.
+    /// Only used when enable_investments is true.
+    /// This ensures persons keep enough money for their basic needs.
+    #[serde(default = "default_min_money_to_invest")]
+    pub min_money_to_invest: f64,
+
     /// Interval (in steps) between automatic checkpoint saves.
     ///
     /// When set to a value > 0, the simulation will automatically save its state
@@ -926,6 +973,22 @@ fn default_min_money_to_lend() -> f64 {
     50.0 // Must have at least 50 money to lend
 }
 
+fn default_investment_return_rate() -> f64 {
+    0.02 // 2% return per step
+}
+
+fn default_investment_duration() -> usize {
+    20 // Investments last 20 steps by default
+}
+
+fn default_investment_probability() -> f64 {
+    0.05 // 5% chance of creating investment per step
+}
+
+fn default_min_money_to_invest() -> f64 {
+    100.0 // Must have at least 100 money to invest
+}
+
 fn default_skills_per_person() -> usize {
     1 // Each person specializes in one skill by default
 }
@@ -1068,7 +1131,12 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
-            checkpoint_interval: 0,               // Disabled by default
+            enable_investments: false,           // Disabled by default
+            investment_return_rate: 0.02,        // 2% return per step
+            investment_duration: 20,             // 20 steps duration
+            investment_probability: 0.05,        // 5% chance per step
+            min_money_to_invest: 100.0,          // Require 100 money to invest
+            checkpoint_interval: 0,              // Disabled by default
             checkpoint_file: None,                // No default checkpoint file
             resume_from_checkpoint: false,        // Don't resume by default
             tax_rate: 0.0,                        // Disabled by default
