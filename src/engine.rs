@@ -1238,6 +1238,7 @@ impl SimulationEngine {
                 None
             },
             loan_statistics,
+            investment_statistics: None, // Investment system not yet fully implemented
             contract_statistics: if self.config.enable_contracts {
                 let active_contracts = self.contracts.values().filter(|c| c.is_active()).count();
 
@@ -3803,7 +3804,8 @@ impl SimulationEngine {
             } else {
                 None
             },
-            loan_statistics: None, // Simplified
+            loan_statistics: None,       // Simplified
+            investment_statistics: None, // Simplified for interactive mode
             contract_statistics: None,
             education_statistics: None,
             mentorship_statistics: None,

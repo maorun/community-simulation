@@ -1131,12 +1131,12 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
-            enable_investments: false,           // Disabled by default
-            investment_return_rate: 0.02,        // 2% return per step
-            investment_duration: 20,             // 20 steps duration
-            investment_probability: 0.05,        // 5% chance per step
-            min_money_to_invest: 100.0,          // Require 100 money to invest
-            checkpoint_interval: 0,              // Disabled by default
+            enable_investments: false,            // Disabled by default
+            investment_return_rate: 0.02,         // 2% return per step
+            investment_duration: 20,              // 20 steps duration
+            investment_probability: 0.05,         // 5% chance per step
+            min_money_to_invest: 100.0,           // Require 100 money to invest
+            checkpoint_interval: 0,               // Disabled by default
             checkpoint_file: None,                // No default checkpoint file
             resume_from_checkpoint: false,        // Don't resume by default
             tax_rate: 0.0,                        // Disabled by default

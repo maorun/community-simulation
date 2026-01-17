@@ -69,6 +69,7 @@ impl Investment {
     /// # Returns
     ///
     /// A new `Investment` instance with calculated return amounts
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: InvestmentId,
         investor_id: PersonId,
