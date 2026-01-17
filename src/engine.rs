@@ -25,6 +25,10 @@ use std::panic;
 use std::path::Path;
 use std::time::Instant;
 
+// Technology shock crisis constants
+const TECH_SHOCK_MIN_AFFECTED_PERCENTAGE: f64 = 0.20; // Minimum 20% of skills affected
+const TECH_SHOCK_SEVERITY_RANGE: f64 = 0.20; // Additional 20% based on severity
+
 /// Checkpoint structure for saving and restoring simulation state.
 ///
 /// This structure captures all the stateful information needed to resume
@@ -652,12 +656,12 @@ impl SimulationEngine {
 
                 // Randomly select 20-40% of skills to be affected (scaled by severity)
                 let total_skills = self.market.skills.len();
-                let affected_percentage = 0.20 + (self.config.crisis_severity * 0.20);
+                let affected_percentage = TECH_SHOCK_MIN_AFFECTED_PERCENTAGE
+                    + (self.config.crisis_severity * TECH_SHOCK_SEVERITY_RANGE);
                 let num_affected = ((total_skills as f64) * affected_percentage).ceil() as usize;
 
                 // Collect skill IDs and shuffle them to randomly select affected skills
                 let mut skill_ids: Vec<_> = self.market.skills.keys().cloned().collect();
-                use rand::seq::SliceRandom;
                 skill_ids.shuffle(&mut self.rng);
 
                 // Take the first N skills as the affected ones
@@ -675,12 +679,17 @@ impl SimulationEngine {
                         );
                         // Respect minimum price floor
                         skill.current_price = skill.current_price.max(self.config.min_skill_price);
+
+                        // Safe division by zero handling for percentage calculation
+                        let drop_percentage = if old_price > 0.0 {
+                            (old_price - skill.current_price) / old_price * 100.0
+                        } else {
+                            0.0
+                        };
+
                         debug!(
                             "  Skill {} obsolete: ${:.2} -> ${:.2} ({:.0}% drop)",
-                            skill.id,
-                            old_price,
-                            skill.current_price,
-                            ((old_price - skill.current_price) / old_price * 100.0)
+                            skill.id, old_price, skill.current_price, drop_percentage
                         );
                     }
                 }
