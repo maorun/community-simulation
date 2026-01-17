@@ -52,6 +52,7 @@ The feature implementation is complete when:
 - [ ] Feature selected and documented in PR
 - [ ] Code compiles without errors: `cargo build --verbose`
 - [ ] All tests pass: `cargo test --verbose`
+- [ ] All doctests pass: `cargo test --doc --verbose`
 - [ ] Code formatted: `cargo fmt`
 - [ ] Code linted: `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass without errors)
 - [ ] Feature tested manually with example run
@@ -66,8 +67,11 @@ The feature implementation is complete when:
 # Build
 cargo build --verbose
 
-# Test
+# Test (unit and integration tests)
 cargo test --verbose
+
+# Test (doctests)
+cargo test --doc --verbose
 
 # Format
 cargo fmt
@@ -119,6 +123,7 @@ cargo clippy --all-targets --all-features -- -D warnings -A deprecated
    - Write unit tests
    - Write integration tests  
    - Run all tests
+   - Run doctests
    - Test manually
 
 4. **Quality & Documentation**
@@ -155,6 +160,9 @@ cargo build --verbose
 
 # 4. Run all tests
 cargo test --verbose
+
+# 5. Run doctests
+cargo test --doc --verbose
 ```
 
 Even minor changes require full validation to ensure no regressions are introduced.
@@ -172,7 +180,7 @@ Even minor changes require full validation to ensure no regressions are introduc
    - Configuration: `src/config.rs`
    - Results: `src/result.rs`
 
-3. **Testing:** Add tests using `#[cfg(test)] mod tests { ... }` pattern. Use fixed seeds for deterministic tests.
+3. **Testing:** Add tests using `#[cfg(test)] mod tests { ... }` pattern. Use fixed seeds for deterministic tests. Add doctests in `///` documentation comments for public APIs with examples.
 
 4. **Configuration:** If adding CLI args, update `Args` struct in `main.rs` and `SimulationConfig` in `config.rs`.
 
