@@ -45,24 +45,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Erweiterte Marktmechanismen
 
-#### 2.1 Handelsabkommen zwischen Personen
-**Beschreibung:** Zwei oder mehr Personen können bilaterale oder multilaterale Handelsabkommen schließen, die gegenseitige Präferenzen, Rabatte oder Exklusivität gewähren.
-
-**Harmonien:**
-- **Freundschaft:** Handelsabkommen entstehen natürlich zwischen Freunden
-- **Verträge:** Langfristige Handelsabkommen sind formalisierte Verträge
-- **Gruppen:** Gruppeninterne Handelsabkommen (Binnenmarkt)
-- **Reputation:** Einhaltung von Abkommen stärkt Reputation
-- **Geografie:** Regionale Handelsabkommen zwischen nahegelegenen Personen
-
-**Nutzen:** Ermöglicht die Untersuchung von Handelspolitik, regionalen Wirtschaftsblöcken und präferentiellen Handelsbeziehungen.
-
-**Implementierung:**
-- `TradeAgreement` Struktur mit Partnern, Rabattsatz, Exklusivitätsklauseln, Dauer
-- Verschiedene Typen: Bilateral, Regional, Multilateral
-- Handelsvolumen-Boni für Abkommenspartner
-- Strafen bei Bruch des Abkommens
-
 ### 3. Soziale Netzwerke und Beziehungen
 
 #### 3.1 Vertrauensnetzwerke
