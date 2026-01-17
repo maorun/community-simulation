@@ -1485,10 +1485,10 @@ impl SimulationConfig {
                 ));
             }
 
-            // Trade agreements work best with friendships, but it's not required
-            // Just log a warning if friendships are disabled
+            // Trade agreements require friendships to function
+            // Without friendships, no agreements can be formed
             if !self.enable_friendships {
-                log::warn!("Trade agreements are enabled but friendships are disabled. Agreements can still form but will be less realistic.");
+                log::warn!("Trade agreements are enabled but friendships are disabled. No trade agreements will be formed because agreements can only form between existing friends. Enable friendships for trade agreements to work.");
             }
         }
 

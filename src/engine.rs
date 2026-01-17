@@ -4105,7 +4105,11 @@ impl SimulationEngine {
             }
 
             // Pick a random friend to form agreement with
-            let friend_id = *friends.choose(&mut self.rng).unwrap();
+            // Safe to unwrap here because we just checked friends is not empty above
+            let friend_id = match friends.choose(&mut self.rng) {
+                Some(&id) => id,
+                None => continue, // Should never happen due to empty check, but handle safely
+            };
 
             // Check if an agreement already exists between these two
             let already_has_agreement = self
