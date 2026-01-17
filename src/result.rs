@@ -761,6 +761,7 @@ impl SimulationResult {
     /// #     certification_statistics: None,
     /// #     environment_statistics: None,
     /// #     friendship_statistics: None,
+    /// #     trade_agreement_statistics: None,
     /// #     group_statistics: None,
     /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
     /// #         per_person: vec![],
