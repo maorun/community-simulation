@@ -844,6 +844,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             enable_friendships: SimulationConfig::default().enable_friendships,
             friendship_probability: SimulationConfig::default().friendship_probability,
             friendship_discount: SimulationConfig::default().friendship_discount,
+            enable_trade_agreements: SimulationConfig::default().enable_trade_agreements,
+            trade_agreement_probability: SimulationConfig::default().trade_agreement_probability,
+            trade_agreement_discount: SimulationConfig::default().trade_agreement_discount,
+            trade_agreement_duration: SimulationConfig::default().trade_agreement_duration,
             num_groups: args.num_groups,
             distance_cost_factor: args
                 .distance_cost_factor
