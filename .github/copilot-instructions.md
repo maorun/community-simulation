@@ -60,9 +60,19 @@ cargo test --verbose
 - All 14 tests should pass
 - Tests include: unit tests in `src/tests/mod.rs`, scenario tests in `src/scenario.rs`, and result tests in `src/result.rs`
 
+**Run doctests:**
+```bash
+cargo test --doc --verbose
+```
+- Test time: ~2 seconds (after initial build)
+- 32 doctests should pass (5 ignored)
+- Doctests are code examples in documentation comments (`/// ```rust ... ````)
+- **IMPORTANT:** Always run doctests as part of the test suite
+
 **Test Structure:**
 - Unit tests are in `src/tests/mod.rs` - tests for `SimulationEngine`
 - Module tests are inline in source files using `#[cfg(test)] mod tests { ... }`
+- Doctests are in `///` documentation comments with code blocks
 - Tests use `tempfile` (dev-dependency) for file I/O testing
 
 ### Linting and Formatting
@@ -198,7 +208,7 @@ cargo run --release -- -s 10 -p 5 -o /tmp/test.json
 
 **To replicate CI locally:**
 ```bash
-cargo build --verbose && cargo test --verbose
+cargo build --verbose && cargo test --verbose && cargo test --doc --verbose
 ```
 
 ## Common Issues and Workarounds
@@ -300,6 +310,9 @@ cargo build --verbose
 
 # 4. Run all tests
 cargo test --verbose
+
+# 5. Run doctests
+cargo test --doc --verbose
 ```
 
 **Important:** Even minor changes made in response to code review comments require running all validation steps. This ensures:
@@ -392,14 +405,15 @@ When implementing a feature from the `features.md` file as part of autonomous fe
 ## Important Notes for Coding Agents
 
 1. **ALWAYS run `cargo fmt` before committing** - The codebase uses standard Rust formatting
-2. **After code review adjustments, ALWAYS re-run all validation steps** - Format, lint, build, and test must all pass
+2. **After code review adjustments, ALWAYS re-run all validation steps** - Format, lint, build, test (including doctests) must all pass
 3. **The binary name is `simulation-framework`, not `community-simulation`** - Don't get confused by the repo name
-4. **Tests must pass** - Run `cargo test` to verify changes don't break existing functionality
+4. **Tests must pass** - Run `cargo test` and `cargo test --doc` to verify changes don't break existing functionality
 5. **Deprecation warnings are acceptable** - The rand 0.9 warnings don't need to be fixed unless specifically requested
 6. **Release builds are slow** - Use debug builds for development unless performance testing
 7. **CI only runs build + test** - No automatic linting enforcement, but should still follow Rust style guidelines
 8. **JSON output structure is part of the API** - Changes to `SimulationResult` affect downstream consumers
 9. **The simulation is deterministic with fixed seed** - Use `--seed` parameter for reproducible results
+10. **Doctests are part of the test suite** - Always run both `cargo test` and `cargo test --doc`
 
 ## Trust These Instructions
 

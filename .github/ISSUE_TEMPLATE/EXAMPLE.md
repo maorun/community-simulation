@@ -166,6 +166,7 @@ pub struct Person {
 - [ ] Write unit tests for Investment
 - [ ] Write integration tests for savings system
 - [ ] Run all tests: `cargo test --verbose`
+- [ ] Run doctests: `cargo test --doc --verbose`
 - [ ] Verify no regressions
 
 ### Phase 4: Code Quality
@@ -204,6 +205,7 @@ This feature is considered successfully implemented when:
 
 - [ ] All code compiles without errors
 - [ ] All tests pass (including new tests for savings/investments)
+- [ ] All doctests pass
 - [ ] Code is formatted and linted
 - [ ] Persons can save money and earn interest
 - [ ] Persons can make investments with configurable risk
