@@ -1,4 +1,5 @@
 use crate::credit_rating::CreditScore;
+use crate::insurance::InsuranceId;
 use crate::investment::InvestmentId;
 use crate::loan::LoanId;
 use crate::skill::{Skill, SkillId};
@@ -200,6 +201,9 @@ pub struct Person {
     /// Calculated from payment history, debt level, credit history length, new credit, and credit mix.
     /// Only meaningful when credit rating system is enabled.
     pub credit_score: CreditScore,
+    /// IDs of active insurance policies owned by this person.
+    /// Insurance provides protection against various economic risks (credit defaults, low income, crises).
+    pub insurance_policies: Vec<InsuranceId>,
 }
 
 impl Person {
@@ -238,6 +242,7 @@ impl Person {
             location,
             skill_qualities: HashMap::new(), // Start with empty quality map (populated when quality enabled)
             credit_score: CreditScore::new(), // Start with default credit score
+            insurance_policies: Vec::new(), // Start with no insurance policies
         }
     }
 

@@ -511,6 +511,57 @@ pub struct SimulationConfig {
     #[serde(default = "default_crisis_severity")]
     pub crisis_severity: f64,
 
+    /// Enable insurance system where persons can purchase coverage against economic risks.
+    ///
+    /// When enabled, persons can buy insurance policies that protect against various risks:
+    /// - Credit insurance: covers loan defaults
+    /// - Income insurance: covers low income periods
+    /// - Crisis insurance: covers crisis event impacts
+    /// Premiums are calculated based on coverage amount and reputation, with better
+    /// reputation leading to lower premiums.
+    /// Set to false to disable insurance (default).
+    #[serde(default)]
+    pub enable_insurance: bool,
+
+    /// Base premium rate as a percentage of coverage amount (0.0-1.0).
+    ///
+    /// The premium is calculated as: coverage * premium_base_rate, then adjusted for reputation.
+    /// For example, 0.05 means premiums are 5% of the coverage amount before reputation discount.
+    /// Only used when enable_insurance is true.
+    /// Default: 0.05 (5% of coverage)
+    #[serde(default = "default_insurance_premium_rate")]
+    pub insurance_premium_rate: f64,
+
+    /// Default insurance policy duration in simulation steps.
+    ///
+    /// Determines how many steps an insurance policy remains active after purchase.
+    /// After this duration, policies expire and must be renewed.
+    /// Set to 0 for indefinite coverage (policies never expire).
+    /// Only used when enable_insurance is true.
+    /// Default: 100 steps
+    #[serde(default = "default_insurance_duration")]
+    pub insurance_duration: usize,
+
+    /// Probability per step that a person will attempt to purchase insurance (0.0-1.0).
+    ///
+    /// Each simulation step, persons have this probability of attempting to buy insurance
+    /// if they can afford it and don't already have active coverage.
+    /// Higher values lead to faster insurance market adoption.
+    /// Only used when enable_insurance is true.
+    /// Default: 0.05 (5% chance per step)
+    #[serde(default = "default_insurance_purchase_probability")]
+    pub insurance_purchase_probability: f64,
+
+    /// Default coverage amount for insurance policies.
+    ///
+    /// The maximum payout amount for an insurance claim.
+    /// Typically set as a multiple of base_skill_price or initial_money_per_person.
+    /// Higher coverage provides more protection but costs more in premiums.
+    /// Only used when enable_insurance is true.
+    /// Default: 50.0 (half of typical starting money)
+    #[serde(default = "default_insurance_coverage_amount")]
+    pub insurance_coverage_amount: f64,
+
     /// Enable friendship system where persons can form social bonds.
     ///
     /// When enabled, persons who successfully trade together have a chance to become friends.
@@ -1065,6 +1116,22 @@ fn default_crisis_severity() -> f64 {
     0.5 // Moderate severity (50% of maximum impact)
 }
 
+fn default_insurance_premium_rate() -> f64 {
+    0.05 // 5% of coverage amount
+}
+
+fn default_insurance_duration() -> usize {
+    100 // Insurance policies last for 100 steps
+}
+
+fn default_insurance_purchase_probability() -> f64 {
+    0.05 // 5% chance per step to purchase insurance
+}
+
+fn default_insurance_coverage_amount() -> f64 {
+    50.0 // Default coverage of 50 (half of typical starting money)
+}
+
 fn default_friendship_probability() -> f64 {
     0.1 // 10% chance per successful trade
 }
@@ -1164,6 +1231,11 @@ impl Default for SimulationConfig {
             enable_crisis_events: false,          // Disabled by default
             crisis_probability: 0.02,             // 2% chance per step
             crisis_severity: 0.5,                 // Moderate severity
+            enable_insurance: false,              // Disabled by default
+            insurance_premium_rate: 0.05,         // 5% of coverage amount
+            insurance_duration: 100,              // Policies last 100 steps
+            insurance_purchase_probability: 0.05, // 5% chance per step
+            insurance_coverage_amount: 50.0,      // Default coverage of 50
             enable_friendships: false,            // Disabled by default
             friendship_probability: 0.1,          // 10% chance per trade
             friendship_discount: 0.1,             // 10% discount for friends
