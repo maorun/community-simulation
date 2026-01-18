@@ -419,6 +419,25 @@ pub struct ContractStats {
     pub total_contract_value: f64,
 }
 
+/// Statistics about the insurance system
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InsuranceStats {
+    /// Total number of insurance policies issued during the simulation
+    pub total_policies_issued: usize,
+    /// Number of active (not expired, not claimed) policies at simulation end
+    pub active_policies: usize,
+    /// Total number of claims paid out
+    pub total_claims_paid: usize,
+    /// Total premiums collected from policyholders
+    pub total_premiums_collected: f64,
+    /// Total payouts made to claimants
+    pub total_payouts_made: f64,
+    /// Net profit/loss for the insurance system (premiums - payouts)
+    pub net_result: f64,
+    /// Loss ratio (payouts / premiums) - indicates profitability
+    pub loss_ratio: f64,
+}
+
 /// Aggregated statistics across multiple Monte Carlo runs
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MonteCarloStats {
@@ -786,6 +805,10 @@ pub struct SimulationResult {
     /// Trade agreement system statistics (only present if trade agreements are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trade_agreement_statistics: Option<crate::trade_agreement::TradeAgreementStatistics>,
+
+    /// Insurance system statistics (only present if insurance is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub insurance_statistics: Option<InsuranceStats>,
 
     /// Group/organization statistics (only present if groups are configured)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -2864,6 +2887,7 @@ mod tests {
             environment_statistics: None,
             friendship_statistics: None,
             trade_agreement_statistics: None,
+            insurance_statistics: None,
             group_statistics: None,
             trading_partner_statistics: TradingPartnerStats {
                 per_person: vec![],

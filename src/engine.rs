@@ -104,6 +104,13 @@ pub struct SimulationCheckpoint {
     pub total_trade_agreements_formed: usize,
     pub total_trade_agreements_expired: usize,
     pub trade_agreement_counter: usize,
+    /// Insurance system tracking
+    pub insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
+    pub insurance_counter: usize,
+    pub total_insurance_policies_issued: usize,
+    pub total_insurance_claims_paid: usize,
+    pub total_premiums_collected: f64,
+    pub total_payouts_made: f64,
 }
 
 pub struct SimulationEngine {
@@ -180,6 +187,13 @@ pub struct SimulationEngine {
     total_trade_agreements_formed: usize,
     total_trade_agreements_expired: usize,
     trade_agreement_counter: usize,
+    // Insurance system tracking
+    insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
+    insurance_counter: usize,
+    total_insurance_policies_issued: usize,
+    total_insurance_claims_paid: usize,
+    total_premiums_collected: f64,
+    total_payouts_made: f64,
 }
 
 impl SimulationEngine {
@@ -366,6 +380,12 @@ impl SimulationEngine {
             total_trade_agreements_formed: 0,
             total_trade_agreements_expired: 0,
             trade_agreement_counter: 0,
+            insurances: HashMap::new(),
+            insurance_counter: 0,
+            total_insurance_policies_issued: 0,
+            total_insurance_claims_paid: 0,
+            total_premiums_collected: 0.0,
+            total_payouts_made: 0.0,
         }
     }
 
@@ -716,6 +736,9 @@ impl SimulationEngine {
                 );
             }
         }
+
+        // Process insurance payouts for crisis events
+        self.process_crisis_insurance_payouts(self.config.crisis_severity);
     }
 
     pub fn run(&mut self) -> SimulationResult {
@@ -1145,6 +1168,33 @@ impl SimulationEngine {
                 total_loans_issued: self.total_loans_issued,
                 total_loans_repaid: self.total_loans_repaid,
                 active_loans: self.loans.len(),
+            })
+        } else {
+            None
+        };
+
+        // Calculate insurance statistics if insurance is enabled
+        let insurance_statistics = if self.config.enable_insurance {
+            let active_policies = self
+                .insurances
+                .values()
+                .filter(|policy| policy.is_active && !policy.is_expired(self.current_step))
+                .count();
+
+            let loss_ratio = if self.total_premiums_collected > 0.0 {
+                self.total_payouts_made / self.total_premiums_collected
+            } else {
+                0.0
+            };
+
+            Some(crate::result::InsuranceStats {
+                total_policies_issued: self.total_insurance_policies_issued,
+                active_policies,
+                total_claims_paid: self.total_insurance_claims_paid,
+                total_premiums_collected: self.total_premiums_collected,
+                total_payouts_made: self.total_payouts_made,
+                net_result: self.total_premiums_collected - self.total_payouts_made,
+                loss_ratio,
             })
         } else {
             None
@@ -1600,6 +1650,7 @@ impl SimulationEngine {
             } else {
                 None
             },
+            insurance_statistics,
             group_statistics: if self.config.num_groups.is_some() {
                 // Calculate group statistics
                 let num_groups = self.config.num_groups.unwrap();
@@ -2128,6 +2179,9 @@ impl SimulationEngine {
 
         // Check for and trigger crisis events (if enabled)
         self.check_and_trigger_crisis();
+
+        // Try to purchase insurance policies
+        self.try_purchase_insurance();
 
         /// Helper struct to hold priority information for purchase decisions.
         /// Combines multiple factors (urgency, affordability, efficiency, reputation)
@@ -3457,6 +3511,157 @@ impl SimulationEngine {
         }
     }
 
+    /// Attempts to sell insurance policies to persons based on configuration.
+    ///
+    /// Persons have a probability (insurance_purchase_probability) of attempting to
+    /// purchase insurance each step if they can afford it and don't already have active coverage.
+    fn try_purchase_insurance(&mut self) {
+        if !self.config.enable_insurance {
+            return;
+        }
+
+        // For simplicity, focus on Crisis insurance only initially
+        let insurance_type = crate::insurance::InsuranceType::Crisis;
+
+        for entity_idx in 0..self.entities.len() {
+            if !self.entities[entity_idx].active {
+                continue;
+            }
+
+            // Check if person already has active crisis insurance
+            let has_active_crisis_insurance = self.entities[entity_idx]
+                .person_data
+                .insurance_policies
+                .iter()
+                .any(|&policy_id| {
+                    if let Some(policy) = self.insurances.get(&policy_id) {
+                        policy.insurance_type == insurance_type
+                            && policy.is_active
+                            && !policy.is_expired(self.current_step)
+                    } else {
+                        false
+                    }
+                });
+
+            if has_active_crisis_insurance {
+                continue; // Already has active crisis insurance
+            }
+
+            // Random chance to attempt purchase
+            if !self
+                .rng
+                .random_bool(self.config.insurance_purchase_probability)
+            {
+                continue;
+            }
+
+            // Calculate premium based on coverage and reputation
+            let base_premium = crate::insurance::Insurance::calculate_base_premium(
+                self.config.insurance_coverage_amount,
+                self.config.insurance_premium_rate,
+            );
+            let premium = crate::insurance::Insurance::apply_reputation_discount(
+                base_premium,
+                self.entities[entity_idx].person_data.reputation,
+            );
+
+            // Check if person can afford the premium
+            if self.entities[entity_idx].person_data.money < premium {
+                continue;
+            }
+
+            // Create insurance policy
+            let insurance_id = self.insurance_counter;
+            self.insurance_counter += 1;
+
+            let insurance = crate::insurance::Insurance::new(
+                insurance_id,
+                entity_idx,
+                insurance_type,
+                premium,
+                self.config.insurance_coverage_amount,
+                self.config.insurance_duration,
+                self.current_step,
+            );
+
+            // Deduct premium from person's money
+            self.entities[entity_idx].person_data.money -= premium;
+
+            // Track insurance
+            self.entities[entity_idx]
+                .person_data
+                .insurance_policies
+                .push(insurance_id);
+            self.insurances.insert(insurance_id, insurance);
+
+            // Update statistics
+            self.total_insurance_policies_issued += 1;
+            self.total_premiums_collected += premium;
+
+            debug!(
+                "Person {} purchased Crisis insurance (ID: {}) - Premium: ${:.2}, Coverage: ${:.2}",
+                entity_idx, insurance_id, premium, self.config.insurance_coverage_amount
+            );
+        }
+    }
+
+    /// Processes insurance payouts for crisis events.
+    ///
+    /// When a crisis occurs, persons with active Crisis insurance receive payouts
+    /// to compensate for their losses. The payout amount is calculated based on
+    /// the crisis severity and the policy coverage.
+    fn process_crisis_insurance_payouts(&mut self, crisis_severity: f64) {
+        if !self.config.enable_insurance {
+            return;
+        }
+
+        // Calculate damage amount based on crisis severity
+        // Higher severity = more damage = higher payout claim
+        let damage_per_person = self.config.insurance_coverage_amount * crisis_severity;
+
+        let mut policies_to_claim: Vec<(crate::insurance::InsuranceId, usize)> = Vec::new();
+
+        // Collect policies that should receive payouts
+        for entity in &self.entities {
+            if !entity.active {
+                continue;
+            }
+
+            for &policy_id in &entity.person_data.insurance_policies {
+                if let Some(policy) = self.insurances.get(&policy_id) {
+                    if policy.insurance_type == crate::insurance::InsuranceType::Crisis
+                        && policy.is_active
+                        && !policy.is_expired(self.current_step)
+                        && !policy.has_claimed
+                    {
+                        policies_to_claim.push((policy_id, entity.id));
+                    }
+                }
+            }
+        }
+
+        // Process claims
+        for (policy_id, owner_id) in policies_to_claim {
+            if let Some(policy) = self.insurances.get_mut(&policy_id) {
+                let payout = policy.file_claim(damage_per_person, self.current_step);
+
+                if payout > 0.0 {
+                    // Add payout to person's money
+                    self.entities[owner_id].person_data.money += payout;
+
+                    // Update statistics
+                    self.total_insurance_claims_paid += 1;
+                    self.total_payouts_made += payout;
+
+                    info!(
+                        "💰 Insurance payout: Person {} received ${:.2} from Crisis insurance (Policy ID: {})",
+                        owner_id, payout, policy_id
+                    );
+                }
+            }
+        }
+    }
+
     /// Finds a suitable mentor for a given skill.
     ///
     /// A suitable mentor is someone who:
@@ -3882,6 +4087,7 @@ impl SimulationEngine {
             environment_statistics: None, // Simplified for interactive mode
             friendship_statistics: None,  // Simplified
             trade_agreement_statistics: None, // Simplified
+            insurance_statistics: None,   // Simplified
             group_statistics: None,
             trading_partner_statistics: crate::result::TradingPartnerStats {
                 per_person: vec![],
@@ -3979,6 +4185,12 @@ impl SimulationEngine {
             total_trade_agreements_formed: self.total_trade_agreements_formed,
             total_trade_agreements_expired: self.total_trade_agreements_expired,
             trade_agreement_counter: self.trade_agreement_counter,
+            insurances: self.insurances.clone(),
+            insurance_counter: self.insurance_counter,
+            total_insurance_policies_issued: self.total_insurance_policies_issued,
+            total_insurance_claims_paid: self.total_insurance_claims_paid,
+            total_premiums_collected: self.total_premiums_collected,
+            total_payouts_made: self.total_payouts_made,
         };
 
         let file = File::create(path)?;
@@ -4120,6 +4332,12 @@ impl SimulationEngine {
             total_trade_agreements_formed: checkpoint.total_trade_agreements_formed,
             total_trade_agreements_expired: checkpoint.total_trade_agreements_expired,
             trade_agreement_counter: checkpoint.trade_agreement_counter,
+            insurances: checkpoint.insurances,
+            insurance_counter: checkpoint.insurance_counter,
+            total_insurance_policies_issued: checkpoint.total_insurance_policies_issued,
+            total_insurance_claims_paid: checkpoint.total_insurance_claims_paid,
+            total_premiums_collected: checkpoint.total_premiums_collected,
+            total_payouts_made: checkpoint.total_payouts_made,
         })
     }
 
