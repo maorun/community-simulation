@@ -221,15 +221,7 @@ mod tests {
 
     #[test]
     fn test_insurance_creation() {
-        let insurance = Insurance::new(
-            1,
-            42,
-            InsuranceType::Crisis,
-            10.0,
-            100.0,
-            50,
-            0,
-        );
+        let insurance = Insurance::new(1, 42, InsuranceType::Crisis, 10.0, 100.0, 50, 0);
 
         assert_eq!(insurance.id, 1);
         assert_eq!(insurance.owner_id, 42);
@@ -244,15 +236,7 @@ mod tests {
 
     #[test]
     fn test_insurance_expiration() {
-        let insurance = Insurance::new(
-            1,
-            42,
-            InsuranceType::Crisis,
-            10.0,
-            100.0,
-            50,
-            0,
-        );
+        let insurance = Insurance::new(1, 42, InsuranceType::Crisis, 10.0, 100.0, 50, 0);
 
         assert!(!insurance.is_expired(0));
         assert!(!insurance.is_expired(49));
@@ -279,15 +263,7 @@ mod tests {
 
     #[test]
     fn test_insurance_claim() {
-        let mut insurance = Insurance::new(
-            1,
-            42,
-            InsuranceType::Crisis,
-            10.0,
-            100.0,
-            50,
-            0,
-        );
+        let mut insurance = Insurance::new(1, 42, InsuranceType::Crisis, 10.0, 100.0, 50, 0);
 
         // Claim within coverage
         let payout = insurance.file_claim(50.0, 10);
@@ -303,15 +279,7 @@ mod tests {
 
     #[test]
     fn test_insurance_claim_exceeds_coverage() {
-        let mut insurance = Insurance::new(
-            1,
-            42,
-            InsuranceType::Income,
-            10.0,
-            100.0,
-            50,
-            0,
-        );
+        let mut insurance = Insurance::new(1, 42, InsuranceType::Income, 10.0, 100.0, 50, 0);
 
         // Claim exceeds coverage - should be capped
         let payout = insurance.file_claim(150.0, 10);
@@ -321,15 +289,7 @@ mod tests {
 
     #[test]
     fn test_expired_policy_claim_fails() {
-        let mut insurance = Insurance::new(
-            1,
-            42,
-            InsuranceType::Crisis,
-            10.0,
-            100.0,
-            50,
-            0,
-        );
+        let mut insurance = Insurance::new(1, 42, InsuranceType::Crisis, 10.0, 100.0, 50, 0);
 
         // Try to claim after expiration
         let payout = insurance.file_claim(50.0, 60);

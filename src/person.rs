@@ -242,7 +242,7 @@ impl Person {
             location,
             skill_qualities: HashMap::new(), // Start with empty quality map (populated when quality enabled)
             credit_score: CreditScore::new(), // Start with default credit score
-            insurance_policies: Vec::new(), // Start with no insurance policies
+            insurance_policies: Vec::new(),  // Start with no insurance policies
         }
     }
 

@@ -514,9 +514,10 @@ pub struct SimulationConfig {
     /// Enable insurance system where persons can purchase coverage against economic risks.
     ///
     /// When enabled, persons can buy insurance policies that protect against various risks:
-    /// - Credit insurance: covers loan defaults
-    /// - Income insurance: covers low income periods
-    /// - Crisis insurance: covers crisis event impacts
+    ///   - Credit insurance: covers loan defaults
+    ///   - Income insurance: covers low income periods
+    ///   - Crisis insurance: covers crisis event impacts
+    ///  
     /// Premiums are calculated based on coverage amount and reputation, with better
     /// reputation leading to lower premiums.
     /// Set to false to disable insurance (default).
