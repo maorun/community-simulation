@@ -1,6 +1,13 @@
 use crate::person::PersonId;
 use serde::{Deserialize, Serialize};
 
+/// Reputation adjustment factor for insurance premiums (±20%)
+///
+/// Higher reputation leads to lower premiums (better risk), lower reputation
+/// leads to higher premiums (worse risk). At reputation 2.0 (excellent):
+/// 20% discount. At reputation 0.0 (worst): 20% premium increase.
+pub const REPUTATION_PREMIUM_ADJUSTMENT: f64 = 0.2;
+
 /// Unique identifier for an insurance policy
 pub type InsuranceId = usize;
 
@@ -206,11 +213,13 @@ impl Insurance {
     pub fn apply_reputation_discount(base_premium: f64, reputation: f64) -> f64 {
         // Reputation typically ranges from 0.0 to 2.0 (capped at both ends)
         // At reputation 1.0 (neutral): no adjustment
-        // At reputation 2.0 (excellent): 20% discount
-        // At reputation 0.0 (worst): 20% premium increase
-        // Formula: multiplier = 1.0 - (reputation - 1.0) * 0.2
-        let multiplier = 1.0 - (reputation - 1.0) * 0.2;
-        let multiplier = multiplier.clamp(0.8, 1.2); // Clamp to ±20%
+        // At reputation 2.0 (excellent): REPUTATION_PREMIUM_ADJUSTMENT discount (20%)
+        // At reputation 0.0 (worst): REPUTATION_PREMIUM_ADJUSTMENT increase (20%)
+        // Formula: multiplier = 1.0 - (reputation - 1.0) * REPUTATION_PREMIUM_ADJUSTMENT
+        let multiplier = 1.0 - (reputation - 1.0) * REPUTATION_PREMIUM_ADJUSTMENT;
+        let min_multiplier = 1.0 - REPUTATION_PREMIUM_ADJUSTMENT; // 0.8 (20% discount)
+        let max_multiplier = 1.0 + REPUTATION_PREMIUM_ADJUSTMENT; // 1.2 (20% increase)
+        let multiplier = multiplier.clamp(min_multiplier, max_multiplier);
         base_premium * multiplier
     }
 }

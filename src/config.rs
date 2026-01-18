@@ -1586,6 +1586,30 @@ impl SimulationConfig {
             }
         }
 
+        // Insurance system validation
+        if self.enable_insurance {
+            if !(0.0..=1.0).contains(&self.insurance_premium_rate) {
+                return Err(SimulationError::ValidationError(format!(
+                    "insurance_premium_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.insurance_premium_rate
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.insurance_purchase_probability) {
+                return Err(SimulationError::ValidationError(format!(
+                    "insurance_purchase_probability must be between 0.0 and 1.0, got: {}",
+                    self.insurance_purchase_probability
+                )));
+            }
+
+            if self.insurance_coverage_amount.is_sign_negative() {
+                return Err(SimulationError::ValidationError(format!(
+                    "insurance_coverage_amount must be non-negative, got: {}",
+                    self.insurance_coverage_amount
+                )));
+            }
+        }
+
         // Friendship system validation
         if self.enable_friendships {
             if !(0.0..=1.0).contains(&self.friendship_probability) {
