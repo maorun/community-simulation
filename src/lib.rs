@@ -133,7 +133,7 @@ pub use production::{generate_default_recipes, Recipe};
 pub use replay::{ActionLog, SimulationAction};
 pub use result::{
     calculate_statistics, calculate_wealth_concentration, write_step_to_stream, ContractStats,
-    MonteCarloResult, MonteCarloStats, SimulationResult, StepData,
+    IncrementalStats, MonteCarloResult, MonteCarloStats, SimulationResult, StepData,
 };
 pub use scenario::{PriceUpdater, Scenario};
 pub use scenario_comparison::ScenarioComparisonResult;

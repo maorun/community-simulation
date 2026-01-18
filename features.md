@@ -150,17 +150,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Atomare Operationen für gemeinsame Ressourcen
 - Benchmark-Suite zur Performance-Messung
 
-#### 2.2 Inkrementelle Statistikberechnung
-**Beschreibung:** Statt volle Neuberechnung in jedem Schritt inkrementelle Updates von Statistiken (Mittelwert, Median, Gini).
-
-**Nutzen:** Reduzierung der Berechnungskomplexität von O(n) zu O(1) pro Update, ermöglicht größere Simulationen.
-
-**Implementierung:**
-- Inkrementelle Algorithmen für Mittelwert, Varianz
-- Approximative inkrementelle Median-Berechnung (Quantil-Sketch)
-- Effiziente Gini-Updates unter Verwendung von sortiertem Index
-- Validierung gegen exakte Berechnung in Tests
-
 ### 3. Code-Qualität
 
 #### 3.1 Konfigurationsvalidierung und -dokumentation
