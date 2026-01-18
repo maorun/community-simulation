@@ -2711,11 +2711,15 @@ mod tests {
             stats.update(v);
         }
 
-        // Expected: mean = 30.0, variance = 250.0, std_dev = 15.811...
+        // Expected: mean = 30.0, variance = 250.0, std_dev = sqrt(250.0)
+        let expected_mean = 30.0;
+        let expected_variance = 250.0;
+        let expected_std_dev = (250.0_f64).sqrt(); // sqrt(250.0) ≈ 15.811388
+
         assert_eq!(stats.count(), 5);
-        assert_eq!(stats.mean(), 30.0);
-        assert!((stats.variance() - 250.0).abs() < 1e-10);
-        assert!((stats.std_dev() - 15.811388300841896).abs() < 1e-10);
+        assert_eq!(stats.mean(), expected_mean);
+        assert!((stats.variance() - expected_variance).abs() < 1e-10);
+        assert!((stats.std_dev() - expected_std_dev).abs() < 1e-10);
     }
 
     #[test]
