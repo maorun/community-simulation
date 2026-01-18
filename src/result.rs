@@ -9,6 +9,120 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
+/// Incremental statistics calculator using Welford's online algorithm.
+///
+/// This structure maintains running statistics (mean and variance) that can be updated
+/// in O(1) time per value, avoiding the need for O(n) recalculation each step.
+/// The algorithm is numerically stable and avoids catastrophic cancellation.
+///
+/// # Performance
+///
+/// - Update: O(1) per value
+/// - Get statistics: O(1)
+/// - Memory: O(1) - only stores running totals
+///
+/// # Algorithm
+///
+/// Uses Welford's online algorithm for variance calculation:
+/// ```text
+/// M_k = M_{k-1} + (x_k - M_{k-1}) / k
+/// S_k = S_{k-1} + (x_k - M_{k-1}) * (x_k - M_k)
+/// variance = S_k / (k - 1)
+/// ```
+///
+/// # Example
+///
+/// ```
+/// use simulation_framework::result::IncrementalStats;
+///
+/// let mut stats = IncrementalStats::new();
+/// stats.update(10.0);
+/// stats.update(20.0);
+/// stats.update(30.0);
+///
+/// assert_eq!(stats.mean(), 20.0);
+/// assert!((stats.variance() - 100.0).abs() < 1e-10);
+/// assert!((stats.std_dev() - 10.0).abs() < 1e-10);
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IncrementalStats {
+    /// Count of values processed
+    count: usize,
+    /// Running mean (M_k in Welford's algorithm)
+    mean: f64,
+    /// Running sum of squared differences (S_k in Welford's algorithm)
+    m2: f64,
+}
+
+impl IncrementalStats {
+    /// Create a new incremental statistics calculator.
+    pub fn new() -> Self {
+        Self {
+            count: 0,
+            mean: 0.0,
+            m2: 0.0,
+        }
+    }
+
+    /// Update statistics with a new value using Welford's algorithm.
+    ///
+    /// This is an O(1) operation that maintains numerically stable running statistics.
+    ///
+    /// # Arguments
+    ///
+    /// * `value` - The new value to incorporate into the statistics
+    pub fn update(&mut self, value: f64) {
+        self.count += 1;
+        let delta = value - self.mean;
+        self.mean += delta / self.count as f64;
+        let delta2 = value - self.mean;
+        self.m2 += delta * delta2;
+    }
+
+    /// Get the current count of values.
+    pub fn count(&self) -> usize {
+        self.count
+    }
+
+    /// Get the current mean (average) value.
+    ///
+    /// Returns 0.0 if no values have been added.
+    pub fn mean(&self) -> f64 {
+        self.mean
+    }
+
+    /// Get the current sample variance.
+    ///
+    /// Returns 0.0 if fewer than 2 values have been added.
+    pub fn variance(&self) -> f64 {
+        if self.count < 2 {
+            0.0
+        } else {
+            self.m2 / (self.count - 1) as f64
+        }
+    }
+
+    /// Get the current standard deviation.
+    ///
+    /// Returns 0.0 if fewer than 2 values have been added.
+    pub fn std_dev(&self) -> f64 {
+        self.variance().sqrt()
+    }
+
+    /// Reset all statistics to initial state.
+    pub fn reset(&mut self) {
+        self.count = 0;
+        self.mean = 0.0;
+        self.m2 = 0.0;
+    }
+}
+
+impl Default for IncrementalStats {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Data for a single simulation step, used for streaming output
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StepData {
@@ -2568,6 +2682,105 @@ mod tests {
     use super::*;
     use std::io::Read;
     use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_incremental_stats_empty() {
+        let stats = IncrementalStats::new();
+        assert_eq!(stats.count(), 0);
+        assert_eq!(stats.mean(), 0.0);
+        assert_eq!(stats.variance(), 0.0);
+        assert_eq!(stats.std_dev(), 0.0);
+    }
+
+    #[test]
+    fn test_incremental_stats_single_value() {
+        let mut stats = IncrementalStats::new();
+        stats.update(42.0);
+        assert_eq!(stats.count(), 1);
+        assert_eq!(stats.mean(), 42.0);
+        assert_eq!(stats.variance(), 0.0); // Single value has no variance
+        assert_eq!(stats.std_dev(), 0.0);
+    }
+
+    #[test]
+    fn test_incremental_stats_multiple_values() {
+        let mut stats = IncrementalStats::new();
+        let values = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+
+        for &v in &values {
+            stats.update(v);
+        }
+
+        // Expected: mean = 30.0, variance = 250.0, std_dev = 15.811...
+        assert_eq!(stats.count(), 5);
+        assert_eq!(stats.mean(), 30.0);
+        assert!((stats.variance() - 250.0).abs() < 1e-10);
+        assert!((stats.std_dev() - 15.811388300841896).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_incremental_stats_vs_batch_calculation() {
+        // Test that incremental stats match batch calculation
+        let values = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+
+        // Incremental
+        let mut incremental = IncrementalStats::new();
+        for &v in &values {
+            incremental.update(v);
+        }
+
+        // Batch calculation
+        let sum: f64 = values.iter().sum();
+        let count = values.len() as f64;
+        let mean = sum / count;
+        let variance = values
+            .iter()
+            .map(|&v| {
+                let diff = v - mean;
+                diff * diff
+            })
+            .sum::<f64>()
+            / (count - 1.0);
+        let std_dev = variance.sqrt();
+
+        assert_eq!(incremental.mean(), mean);
+        assert!((incremental.variance() - variance).abs() < 1e-10);
+        assert!((incremental.std_dev() - std_dev).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_incremental_stats_reset() {
+        let mut stats = IncrementalStats::new();
+        stats.update(10.0);
+        stats.update(20.0);
+        stats.update(30.0);
+
+        assert_eq!(stats.count(), 3);
+        assert_eq!(stats.mean(), 20.0);
+
+        stats.reset();
+
+        assert_eq!(stats.count(), 0);
+        assert_eq!(stats.mean(), 0.0);
+        assert_eq!(stats.variance(), 0.0);
+    }
+
+    #[test]
+    fn test_incremental_stats_numerical_stability() {
+        // Test with values that could cause numerical issues with naive algorithms
+        let mut stats = IncrementalStats::new();
+        let base = 1e9;
+        let values = vec![base + 1.0, base + 2.0, base + 3.0, base + 4.0, base + 5.0];
+
+        for &v in &values {
+            stats.update(v);
+        }
+
+        // Mean should be base + 3.0
+        assert!((stats.mean() - (base + 3.0)).abs() < 1e-6);
+        // Variance should be 2.5 (same as [1,2,3,4,5])
+        assert!((stats.variance() - 2.5).abs() < 1e-6);
+    }
 
     fn get_test_result() -> SimulationResult {
         SimulationResult {
