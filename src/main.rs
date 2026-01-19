@@ -846,6 +846,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             crisis_severity: args
                 .crisis_severity
                 .unwrap_or(SimulationConfig::default().crisis_severity),
+            enable_insurance: SimulationConfig::default().enable_insurance,
+            insurance_premium_rate: SimulationConfig::default().insurance_premium_rate,
+            insurance_duration: SimulationConfig::default().insurance_duration,
+            insurance_purchase_probability: SimulationConfig::default()
+                .insurance_purchase_probability,
+            insurance_coverage_amount: SimulationConfig::default().insurance_coverage_amount,
             enable_friendships: SimulationConfig::default().enable_friendships,
             friendship_probability: SimulationConfig::default().friendship_probability,
             friendship_discount: SimulationConfig::default().friendship_discount,
