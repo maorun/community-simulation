@@ -4,25 +4,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🚀 Neue Features
 
-### 1. Erweiterte Wirtschaftsmechaniken
-
-#### 1.1 Versicherungssystem
-**Beschreibung:** Ein Versicherungsmarkt, bei dem Personen Versicherungspolicen kaufen können, um sich gegen wirtschaftliche Risiken abzusichern. Versicherungen zahlen bei Eintritt bestimmter Ereignisse (z.B. Krisen, niedriges Einkommen, Kreditausfall).
-
-**Harmonien:**
-- **Reputation:** Personen mit höherer Reputation erhalten günstigere Versicherungsprämien
-- **Kredit-System:** Versicherungen können Kreditausfälle abdecken, reduzieren das Risiko für Kreditgeber
-- **Verträge:** Langfristige Versicherungsverträge mit garantierten Prämien
-- **Krisen-Events:** Versicherungen werden besonders wertvoll während Wirtschaftskrisen
-- **Ersparnisse:** Alternative zu reinen Ersparnissen zur Risikominimierung
-
-**Nutzen:** Ermöglicht die Untersuchung von Risikoallokation, Versicherungsmärkten und der Stabilisierung von Wirtschaften durch Risikoteilung.
-
-**Implementierung:** 
-- Neue `Insurance` Struktur mit Typ (Kredit, Einkommen, Katastrophe), Prämie, Deckung
-- Versicherungsanbieter als spezielle Rolle oder alle Personen als Pool
-- Ereignisgesteuerte Auszahlungen basierend auf definierten Bedingungen
-- Prämienkalkulation basierend auf Reputation und historischem Risiko
+### 1. Erweiterte Wirtschaftsmechanismen
 
 ### 2. Erweiterte Marktmechanismen
 
@@ -347,9 +329,8 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### Hohe Priorität (Kurzfristig - hohe Harmonie-Effekte)
 
-1. **Versicherungssystem** - Starke Synergie mit Reputation, Krediten, Krisen
-2. **Qualitätsbewertungssystem** - Fügt wichtige Marktdimension hinzu (NOTE: Quality rating is already implemented!)
-3. **Mentorschaft** - Natürliche Erweiterung von Bildung + Freundschaft (NOTE: Mentorship is already implemented!)
+1. **Qualitätsbewertungssystem** - Fügt wichtige Marktdimension hinzu (NOTE: Quality rating is already implemented!)
+2. **Mentorschaft** - Natürliche Erweiterung von Bildung + Freundschaft (NOTE: Mentorship is already implemented!)
 
 ### Mittlere Priorität (Mittelfristig - gute Harmonien)
 
@@ -383,7 +364,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 
 ### Reputation als Zentrum
-- **Reputation** ↔ **Versicherung**: Günstigere Prämien
 - **Reputation** ↔ **Kredite**: Bessere Konditionen
 - **Reputation** ↔ **Qualität**: Gegenseitige Verstärkung
 - **Reputation** ↔ **Mentorschaft**: Effektivere Mentoren
@@ -404,9 +384,6 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - **Verträge** ↔ **Handelsabkommen**: Formalisierte Abkommen
 
 ### Risikomanagement
-- **Versicherung** ↔ **Kredite**: Kreditausfallversicherung
-- **Versicherung** ↔ **Krisen**: Schutz vor Schocks
-- **Versicherung** ↔ **Gemeinschaftspools**: Gegenseitige Versicherung
 - **Ersparnisse** ↔ **Investitionen**: Kapitalallokation
 - **Ersparnisse** ↔ **Kreditrating**: Besseres Rating
 
@@ -420,12 +397,10 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 ## 🔄 Implementations-Roadmap
 
 ### Phase 1: Grundlegende Harmonien (3-6 Monate)
-1. Versicherungssystem implementieren
-2. Qualitätsbewertungssystem implementieren (NOTE: Already implemented!)
-3. Mentorschaftssystem implementieren (NOTE: Already implemented!)
+1. Qualitätsbewertungssystem implementieren (NOTE: Already implemented!)
+2. Mentorschaftssystem implementieren (NOTE: Already implemented!)
 
 **Warum diese Reihenfolge?**
-- Versicherung baut auf Reputation und Kredite auf
 - Qualität ist relativ unabhängig und bringt sofort Mehrwert (bereits implementiert!)
 - Mentorschaft rundet soziale Features ab (bereits implementiert!)
 - Event-System ist nun vollständig integriert und ermöglicht besseres Debugging aller Features
@@ -502,7 +477,6 @@ Verwende diese Kriterien für die Priorisierung zusätzlicher Features:
 
 | Feature | Harmonie | Aufwand | Forschung | Praxis | Lehre | Gesamt |
 |---------|----------|---------|-----------|--------|-------|--------|
-| Versicherung | 9 | M | 8 | 10 | 8 | 35/50 |
 | Kreditrating | 10 | S | 7 | 10 | 7 | 34/50 |
 | Qualität | 8 | M | 7 | 9 | 9 | 33/50 |
 | Mentorschaft | 7 | S | 6 | 7 | 10 | 30/50 |
