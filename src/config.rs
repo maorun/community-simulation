@@ -633,6 +633,20 @@ pub struct SimulationConfig {
     #[serde(default = "default_trade_agreement_duration")]
     pub trade_agreement_duration: usize,
 
+    /// Enable trust network system for transitive trust relationships.
+    ///
+    /// When enabled, trust propagates through the friendship network up to 3 degrees
+    /// of separation. Persons receive discounted prices when trading with:
+    /// - Direct friends: 100% of the friendship discount
+    /// - Friends of friends (2nd degree): 50% of the friendship discount
+    /// - Friends of friends of friends (3rd degree): 25% of the friendship discount
+    ///
+    /// This models social capital and trust-based economic relationships.
+    /// Requires enable_friendships to be true to function.
+    /// Set to false to disable trust networks (default).
+    #[serde(default)]
+    pub enable_trust_networks: bool,
+
     /// Number of groups/organizations to create in the simulation.
     ///
     /// When set, persons are assigned to groups in a round-robin fashion at initialization.
@@ -1244,6 +1258,7 @@ impl Default for SimulationConfig {
             trade_agreement_probability: 0.05,    // 5% chance per step
             trade_agreement_discount: 0.15,       // 15% discount for agreement partners
             trade_agreement_duration: 100,        // Agreements last 100 steps
+            enable_trust_networks: false,         // Disabled by default
             num_groups: None,                     // No groups by default
             distance_cost_factor: 0.0,            // Disabled by default
             price_elasticity_factor: 0.1,         // 10% price adjustment per unit imbalance
@@ -1654,6 +1669,17 @@ impl SimulationConfig {
             // Without friendships, no agreements can be formed
             if !self.enable_friendships {
                 log::warn!("Trade agreements are enabled but friendships are disabled. No trade agreements will be formed because agreements can only form between existing friends. Enable friendships for trade agreements to work.");
+            }
+        }
+
+        // Trust network validation
+        if self.enable_trust_networks {
+            // Trust networks require friendships to be enabled
+            if !self.enable_friendships {
+                return Err(SimulationError::ValidationError(
+                    "Trust networks require friendships to be enabled. Set enable_friendships to true when using trust networks."
+                        .to_string(),
+                ));
             }
         }
 

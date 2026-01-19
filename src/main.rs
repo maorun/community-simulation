@@ -859,6 +859,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             trade_agreement_probability: SimulationConfig::default().trade_agreement_probability,
             trade_agreement_discount: SimulationConfig::default().trade_agreement_discount,
             trade_agreement_duration: SimulationConfig::default().trade_agreement_duration,
+            enable_trust_networks: SimulationConfig::default().enable_trust_networks,
             num_groups: args.num_groups,
             distance_cost_factor: args
                 .distance_cost_factor

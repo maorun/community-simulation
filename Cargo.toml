@@ -20,7 +20,7 @@ flate2 = "1.0"
 colored = "3.0"
 rusqlite = "0.38"
 rustyline = "17.0"
-petgraph = "0.8"
+petgraph = { version = "0.8", features = ["serde-1"] }
 
 [dev-dependencies]
 tempfile = "3.10.1"

@@ -104,6 +104,8 @@ pub struct SimulationCheckpoint {
     pub total_trade_agreements_formed: usize,
     pub total_trade_agreements_expired: usize,
     pub trade_agreement_counter: usize,
+    /// Trust network system (if enabled)
+    pub trust_network: Option<crate::trust_network::TrustNetwork>,
     /// Insurance system tracking
     pub insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
     pub insurance_counter: usize,
@@ -187,6 +189,8 @@ pub struct SimulationEngine {
     total_trade_agreements_formed: usize,
     total_trade_agreements_expired: usize,
     trade_agreement_counter: usize,
+    // Trust network system (if enabled)
+    trust_network: Option<crate::trust_network::TrustNetwork>,
     // Insurance system tracking
     insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
     insurance_counter: usize,
@@ -331,6 +335,19 @@ impl SimulationEngine {
             pools
         };
 
+        // Initialize trust network if enabled
+        let trust_network = if config.enable_trust_networks {
+            let mut network = crate::trust_network::TrustNetwork::new();
+            // Add all persons to the trust network
+            for entity in entities.iter() {
+                network.add_person(entity.person_data.id);
+            }
+            debug!("Trust network initialized with {} persons", entities.len());
+            Some(network)
+        } else {
+            None
+        };
+
         Self {
             config,
             entities,
@@ -380,6 +397,7 @@ impl SimulationEngine {
             total_trade_agreements_formed: 0,
             total_trade_agreements_expired: 0,
             trade_agreement_counter: 0,
+            trust_network,
             insurances: HashMap::new(),
             insurance_counter: 0,
             total_insurance_policies_issued: 0,
@@ -1580,6 +1598,10 @@ impl SimulationEngine {
             } else {
                 None
             },
+            trust_network_statistics: self
+                .trust_network
+                .as_ref()
+                .map(|trust_network| trust_network.get_statistics()),
             trade_agreement_statistics: if self.config.enable_trade_agreements {
                 // Calculate trade agreement statistics
                 let active_agreements = self
@@ -2349,18 +2371,44 @@ impl SimulationEngine {
                     // Apply friendship discount if enabled and buyer-seller are friends
                     if self.config.enable_friendships {
                         if let Some(seller_id) = seller_id_opt {
+                            let buyer_person_id = self.entities[buyer_idx].id;
+                            let seller_person_id = self.entities[seller_id].id;
+
                             if self.entities[buyer_idx]
                                 .person_data
-                                .is_friend_with(self.entities[seller_id].id)
+                                .is_friend_with(seller_person_id)
                             {
+                                // Direct friendship discount
                                 let friendship_multiplier = 1.0 - self.config.friendship_discount;
                                 final_price *= friendship_multiplier;
                                 trace!(
                                     "Friendship discount applied: Person {} and Person {} are friends, price reduced by {:.1}%",
-                                    self.entities[buyer_idx].id,
-                                    self.entities[seller_id].id,
+                                    buyer_person_id,
+                                    seller_person_id,
                                     self.config.friendship_discount * 100.0
                                 );
+                            } else if self.config.enable_trust_networks {
+                                // Check for trust network discount (indirect trust)
+                                if let Some(ref mut trust_network) = self.trust_network {
+                                    let trust_level = trust_network
+                                        .get_trust_level(buyer_person_id, seller_person_id);
+                                    let trust_multiplier = trust_level.discount_multiplier();
+
+                                    if trust_multiplier > 0.0 {
+                                        // Apply partial friendship discount based on trust level
+                                        let trust_discount =
+                                            self.config.friendship_discount * trust_multiplier;
+                                        let trust_price_multiplier = 1.0 - trust_discount;
+                                        final_price *= trust_price_multiplier;
+                                        trace!(
+                                            "Trust network discount applied: Person {} trusts Person {} at level {:?}, price reduced by {:.1}%",
+                                            buyer_person_id,
+                                            seller_person_id,
+                                            trust_level,
+                                            trust_discount * 100.0
+                                        );
+                                    }
+                                }
                             }
                         }
                     }
@@ -2733,6 +2781,12 @@ impl SimulationEngine {
                         // Form bidirectional friendship
                         self.entities[buyer_idx].person_data.add_friend(seller_id);
                         self.entities[seller_idx].person_data.add_friend(buyer_id);
+
+                        // Update trust network if enabled
+                        if let Some(ref mut trust_network) = self.trust_network {
+                            trust_network.add_friendship(buyer_id, seller_id);
+                        }
+
                         debug!(
                             "Friendship formed: Person {} and Person {} are now friends after successful trade",
                             buyer_id, seller_id
@@ -4086,6 +4140,7 @@ impl SimulationEngine {
             certification_statistics: None,
             environment_statistics: None, // Simplified for interactive mode
             friendship_statistics: None,  // Simplified
+            trust_network_statistics: None, // Simplified
             trade_agreement_statistics: None, // Simplified
             insurance_statistics: None,   // Simplified
             group_statistics: None,
@@ -4185,6 +4240,7 @@ impl SimulationEngine {
             total_trade_agreements_formed: self.total_trade_agreements_formed,
             total_trade_agreements_expired: self.total_trade_agreements_expired,
             trade_agreement_counter: self.trade_agreement_counter,
+            trust_network: self.trust_network.clone(),
             insurances: self.insurances.clone(),
             insurance_counter: self.insurance_counter,
             total_insurance_policies_issued: self.total_insurance_policies_issued,
@@ -4332,6 +4388,7 @@ impl SimulationEngine {
             total_trade_agreements_formed: checkpoint.total_trade_agreements_formed,
             total_trade_agreements_expired: checkpoint.total_trade_agreements_expired,
             trade_agreement_counter: checkpoint.trade_agreement_counter,
+            trust_network: checkpoint.trust_network,
             insurances: checkpoint.insurances,
             insurance_counter: checkpoint.insurance_counter,
             total_insurance_policies_issued: checkpoint.total_insurance_policies_issued,
