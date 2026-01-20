@@ -10,24 +10,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Soziale Netzwerke und Beziehungen
 
-#### 3.1 Vertrauensnetzwerke
-**Beschreibung:** Ein mehrschichtiges Vertrauenssystem, bei dem Vertrauen transitiv ist (Freund eines Freundes erhält teilweises Vertrauen). Ermöglicht Handel mit reduzierten Risiken in erweiterten Netzwerken.
-
-**Harmonien:**
-- **Freundschaft:** Freundschaften bilden die Basis von Vertrauensnetzwerken
-- **Reputation:** Netzwerkposition beeinflusst Reputation
-- **Kredite:** Kredite innerhalb von Vertrauensnetzwerken haben niedrigere Zinsen
-- **Verträge:** Verträge im Netzwerk sind zuverlässiger
-- **Versicherung:** Gegenseitige Versicherung innerhalb von Vertrauensgruppen
-
-**Nutzen:** Ermöglicht die Untersuchung von sozialem Kapital, Netzwerkeffekten und informellem Kreditwesen.
-
-**Implementierung:**
-- Graph-basiertes Vertrauensmodell mit Vertrauensstufen (direkt, 2. Grad, 3. Grad)
-- Vertrauenswert nimmt mit Distanz ab (z.B. 100%, 50%, 25%)
-- Vorteile skalieren mit Vertrauenslevel
-- Vertrauensbruch propagiert im Netzwerk
-
 ### 4. Erweiterte Szenarien
 
 #### 4.1 Regulatorische Interventionen
@@ -336,8 +318,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 4. **Handelsabkommen** - Erweitert Freundschaft und Verträge
 5. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
-6. **Vertrauensnetzwerke** - Ausgefeiltes soziales Kapital-Modell
-7. **Adaptive Strategien** - Macht Agenten realistischer
+6. **Adaptive Strategien** - Macht Agenten realistischer
 
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
@@ -408,13 +389,11 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 ### Phase 2: Erweiterte Interaktionen (6-12 Monate)
 4. Handelsabkommen implementieren
 5. Zertifizierungssystem implementieren
-6. Vertrauensnetzwerke implementieren
-7. Adaptive Strategien implementieren
+6. Adaptive Strategien implementieren
 
 **Warum diese Reihenfolge?**
 - Handelsabkommen bauen auf Freundschaften und Verträgen auf
 - Zertifizierung ergänzt Qualitätssystem aus Phase 1
-- Vertrauensnetzwerke erweitern Freundschaftssystem
 - Adaptive Strategien profitieren von allen bisherigen Features
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)

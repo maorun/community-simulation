@@ -82,6 +82,7 @@
 //! - [`scenario`] - Price update strategies for different simulation scenarios
 //! - [`skill`] - Skill definitions and generation
 //! - [`trade_agreement`] - Trade agreements between persons for preferential trading
+//! - [`trust_network`] - Trust network system for transitive trust relationships
 //! - [`voting`] - Voting system for governance and collective decision-making
 
 pub mod centrality;
@@ -111,6 +112,7 @@ pub mod scenario;
 pub mod scenario_comparison;
 pub mod skill;
 pub mod trade_agreement;
+pub mod trust_network;
 pub mod voting;
 
 pub use centrality::{calculate_centrality, CentralityAnalysis, NodeCentrality};
@@ -141,6 +143,7 @@ pub use scenario::{PriceUpdater, Scenario};
 pub use scenario_comparison::ScenarioComparisonResult;
 pub use skill::{Skill, SkillId};
 pub use trade_agreement::{TradeAgreement, TradeAgreementStatistics};
+pub use trust_network::{TrustLevel, TrustNetwork, TrustNetworkStats};
 pub use voting::{
     Proposal, ProposalId, ProposalType, Vote, VotingMethod, VotingResult, VotingStatistics,
     VotingSystem,

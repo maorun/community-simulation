@@ -802,6 +802,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub friendship_statistics: Option<FriendshipStats>,
 
+    /// Trust network statistics (only present if trust networks are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trust_network_statistics: Option<crate::trust_network::TrustNetworkStats>,
+
     /// Trade agreement system statistics (only present if trade agreements are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trade_agreement_statistics: Option<crate::trade_agreement::TradeAgreementStatistics>,
@@ -920,6 +924,7 @@ impl SimulationResult {
     /// #     certification_statistics: None,
     /// #     environment_statistics: None,
     /// #     friendship_statistics: None,
+    /// #     trust_network_statistics: None,
     /// #     trade_agreement_statistics: None,
     /// #     insurance_statistics: None,
     /// #     group_statistics: None,
@@ -2887,6 +2892,7 @@ mod tests {
             certification_statistics: None,
             environment_statistics: None,
             friendship_statistics: None,
+            trust_network_statistics: None,
             trade_agreement_statistics: None,
             insurance_statistics: None,
             group_statistics: None,
