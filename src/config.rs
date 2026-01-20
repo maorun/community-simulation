@@ -989,6 +989,59 @@ pub struct SimulationConfig {
     /// Valid range: 0.0-1000.0
     #[serde(default = "default_pool_withdrawal_threshold")]
     pub pool_withdrawal_threshold: f64,
+
+    /// Enable adaptive strategy system where agents learn from experience.
+    ///
+    /// When enabled, persons adjust their behavioral strategies based on success metrics.
+    /// Agents that experience wealth growth become more aggressive (higher spending),
+    /// while those experiencing decline become more conservative (lower spending).
+    /// This creates emergent behavior patterns through reinforcement learning.
+    ///
+    /// Adaptation uses:
+    /// - Success metrics: Wealth growth rate and trade volume
+    /// - Simple learning rule: Positive growth → increase aggression, negative → decrease
+    /// - Exploration: Random strategy adjustments for discovering new behaviors
+    /// - Bounded adaptation: Adjustment factor stays within reasonable limits (0.5-2.0x)
+    ///
+    /// This enables studying:
+    /// - Emergent agent behaviors and strategy evolution
+    /// - How learning affects market dynamics
+    /// - Adaptation to changing economic conditions
+    /// - Evolutionary economics and strategy selection
+    ///
+    /// Set to false to disable adaptive strategies (default).
+    #[serde(default)]
+    pub enable_adaptive_strategies: bool,
+
+    /// Rate at which strategies adapt to performance (0.0-1.0).
+    ///
+    /// Determines how quickly agents adjust their spending behavior based on success.
+    /// Higher values lead to faster adaptation but more volatility.
+    /// Lower values create slower, more stable adaptation.
+    ///
+    /// For example, 0.1 means that a 10% wealth increase leads to a 1% increase
+    /// in the strategy adjustment factor.
+    ///
+    /// Only used when enable_adaptive_strategies is true.
+    /// Default: 0.1 (10% adaptation rate, balanced responsiveness)
+    /// Valid range: 0.0-1.0 (0% to 100%)
+    #[serde(default = "default_adaptation_rate")]
+    pub adaptation_rate: f64,
+
+    /// Probability of random strategy exploration (0.0-1.0).
+    ///
+    /// Each adaptation step, agents have this probability of making a random
+    /// adjustment to their strategy instead of a performance-based adjustment.
+    /// This enables discovering new strategies through exploration.
+    ///
+    /// Higher values lead to more exploration and variety in strategies.
+    /// Lower values focus more on exploiting known successful strategies.
+    ///
+    /// Only used when enable_adaptive_strategies is true.
+    /// Default: 0.05 (5% exploration rate, ε-greedy approach)
+    /// Valid range: 0.0-1.0 (0% to 100%)
+    #[serde(default = "default_exploration_rate")]
+    pub exploration_rate: f64,
 }
 
 fn default_pool_contribution_rate() -> f64 {
@@ -997,6 +1050,14 @@ fn default_pool_contribution_rate() -> f64 {
 
 fn default_pool_withdrawal_threshold() -> f64 {
     30.0 // Members with less than $30 are eligible for support
+}
+
+fn default_adaptation_rate() -> f64 {
+    0.1 // 10% adaptation rate for balanced responsiveness
+}
+
+fn default_exploration_rate() -> f64 {
+    0.05 // 5% exploration rate (ε-greedy approach)
 }
 
 fn default_certification_cost_multiplier() -> f64 {
@@ -1285,6 +1346,9 @@ impl Default for SimulationConfig {
             enable_resource_pools: false,         // Disabled by default
             pool_contribution_rate: 0.02,         // 2% contribution per step
             pool_withdrawal_threshold: 30.0,      // Support for members below $30
+            enable_adaptive_strategies: false,    // Disabled by default
+            adaptation_rate: 0.1,                 // 10% adaptation rate
+            exploration_rate: 0.05,               // 5% exploration (ε-greedy)
         }
     }
 }
@@ -1833,6 +1897,23 @@ impl SimulationConfig {
                 return Err(SimulationError::ValidationError(format!(
                     "pool_withdrawal_threshold must be between 0.0 and 1000.0, got: {}",
                     self.pool_withdrawal_threshold
+                )));
+            }
+        }
+
+        // Adaptive strategies validation
+        if self.enable_adaptive_strategies {
+            if !(0.0..=1.0).contains(&self.adaptation_rate) {
+                return Err(SimulationError::ValidationError(format!(
+                    "adaptation_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.adaptation_rate
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.exploration_rate) {
+                return Err(SimulationError::ValidationError(format!(
+                    "exploration_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.exploration_rate
                 )));
             }
         }

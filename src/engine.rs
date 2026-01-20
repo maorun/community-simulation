@@ -2676,6 +2676,13 @@ impl SimulationEngine {
                 buyer_rep_before,
                 self.entities[buyer_idx].person_data.reputation,
             );
+            // Track successful trade for adaptive strategies
+            if self.config.enable_adaptive_strategies {
+                self.entities[buyer_idx]
+                    .person_data
+                    .strategy_params
+                    .record_successful_buy();
+            }
 
             // Seller receives price minus fee
             let seller_balance_before = self.entities[seller_idx].person_data.money;
@@ -2730,6 +2737,13 @@ impl SimulationEngine {
                 seller_rep_before,
                 self.entities[seller_idx].person_data.reputation,
             );
+            // Track successful trade for adaptive strategies
+            if self.config.enable_adaptive_strategies {
+                self.entities[seller_idx]
+                    .person_data
+                    .strategy_params
+                    .record_successful_sell();
+            }
 
             // Emit trade executed event
             self.event_bus.emit_trade(
@@ -2860,6 +2874,27 @@ impl SimulationEngine {
         for entity in &mut self.entities {
             if entity.active {
                 entity.person_data.apply_reputation_decay();
+            }
+        }
+
+        // Adapt strategies based on performance (if enabled)
+        if self.config.enable_adaptive_strategies {
+            for entity in &mut self.entities {
+                if entity.active {
+                    let adapted = entity.person_data.adapt_strategy(
+                        self.config.adaptation_rate,
+                        &mut self.rng,
+                        self.config.exploration_rate,
+                    );
+                    if adapted {
+                        trace!(
+                            "Person {} adapted strategy: adjustment_factor={:.3}, effective_multiplier={:.3}",
+                            entity.id,
+                            entity.person_data.strategy_params.adjustment_factor,
+                            entity.person_data.get_effective_spending_multiplier()
+                        );
+                    }
+                }
             }
         }
 
