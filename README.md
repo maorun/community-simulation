@@ -41,6 +41,13 @@ This repository contains a configurable economic simulation written in Rust. It 
   - **Aggressive** (1.3x spending multiplier): Risk-taking agents who prioritize acquiring skills and are willing to spend beyond their immediate means. Can afford skills up to 130% of their current money.
   - **Frugal** (0.5x spending multiplier): Extremely cautious agents who minimize spending and maximize savings. Only willing to spend up to 50% of their money.
   Strategies are distributed equally across the population using round-robin assignment, ensuring balanced representation. The strategy system enables studying how different agent behaviors affect market dynamics, wealth distribution, and economic activity.
+- **Adaptive Strategies:** Persons can dynamically adapt their behavioral strategies based on performance through reinforcement learning. When enabled, agents track their wealth growth and adjust their spending behavior accordingly:
+  - **Positive growth:** Agents become more aggressive (higher spending multiplier), reinforcing successful behavior
+  - **Negative growth:** Agents become more conservative (lower spending multiplier), adapting to poor outcomes
+  - **Exploration:** Random adjustments (ε-greedy approach) enable discovering new strategies
+  - **Bounded adaptation:** Adjustment factor stays within 0.5-2.0x to prevent extreme behavior
+  
+  The system tracks success metrics (wealth growth rate, trade counts) and uses a simple learning rule: agents that are doing well increase their risk-taking, while struggling agents become more cautious. This creates emergent behavior patterns and evolutionary dynamics where successful strategies spread through learning rather than fixed assignment. Enable via configuration file with `enable_adaptive_strategies: true`, then configure `adaptation_rate` (0.0-1.0, default: 0.1 or 10% adaptation rate) and `exploration_rate` (0.0-1.0, default: 0.05 or 5% exploration). Perfect for studying agent learning, strategy evolution, market adaptation, and how behavioral flexibility affects economic outcomes.
 - **Priority-Based Buying Decisions:** Sophisticated multi-factor decision-making system for purchase prioritization. Each purchase option is scored based on four weighted factors:
   - **Urgency** (default weight: 0.5): Need urgency level (1-3 scale, randomly assigned)
   - **Affordability** (default weight: 0.3): Cost relative to available money (lower cost = higher priority)
