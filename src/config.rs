@@ -1,6 +1,7 @@
 use crate::error::{Result, SimulationError};
 use crate::scenario::{DemandStrategy, Scenario};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::str::FromStr;
@@ -96,6 +97,29 @@ pub struct SimulationConfig {
     /// Default: 1.0
     #[serde(default = "default_min_skill_price")]
     pub min_skill_price: f64,
+
+    /// Per-skill price limits for targeted regulatory interventions.
+    ///
+    /// Allows setting skill-specific minimum and maximum prices that override
+    /// the global `min_skill_price` and `max_skill_price` values.
+    /// Format: HashMap<skill_name, (Option<min>, Option<max>)>
+    ///
+    /// Example in YAML:
+    /// ```yaml
+    /// per_skill_price_limits:
+    ///   "Programming": [25.0, 100.0]  # min 25, max 100
+    ///   "Design": [null, 75.0]         # no min, max 75
+    ///   "Writing": [15.0, null]        # min 15, no max
+    /// ```
+    ///
+    /// This enables studying:
+    /// - Skill-specific minimum wages (e.g., professional licensing requirements)
+    /// - Skill-specific price caps (e.g., essential services regulation)
+    /// - Mixed regulatory regimes (some skills regulated, others free-market)
+    ///
+    /// Default: Empty (no per-skill limits, use global limits only)
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub per_skill_price_limits: HashMap<String, (Option<f64>, Option<f64>)>,
 
     // time_step might not be directly relevant for a turn-based economic sim,
     // but we can keep it or remove it later. For now, let's keep it.
@@ -1261,6 +1285,7 @@ impl Default for SimulationConfig {
             initial_money_per_person: 100.0, // 100 Euros
             base_skill_price: 10.0,          // 10 Euros base price for skills
             min_skill_price: 1.0,            // Minimum price floor
+            per_skill_price_limits: HashMap::new(), // No per-skill limits by default
             time_step: 1.0,                  // Represents one discrete step or turn
             scenario: Scenario::Original,
             demand_strategy: DemandStrategy::default(),

@@ -216,6 +216,26 @@ impl SimulationEngine {
         // This is the version from feat/economic-simulation-model
         let entities = Self::initialize_entities(&config, &mut rng, &mut market);
 
+        // Apply per-skill price limits from configuration
+        if !config.per_skill_price_limits.is_empty() {
+            // Collect skill IDs first to avoid borrow checker issues
+            let skill_name_to_id: HashMap<String, SkillId> = market
+                .skills
+                .iter()
+                .map(|(id, skill)| (skill.id.clone(), id.clone()))
+                .collect();
+
+            for (skill_name, (min_price, max_price)) in &config.per_skill_price_limits {
+                if let Some(skill_id) = skill_name_to_id.get(skill_name) {
+                    market.set_per_skill_price_limits(skill_id, *min_price, *max_price);
+                    debug!(
+                        "Set per-skill price limits for '{}': min={:?}, max={:?}",
+                        skill_name, min_price, max_price
+                    );
+                }
+            }
+        }
+
         let all_skill_ids = market.skills.keys().cloned().collect::<Vec<SkillId>>();
 
         // Initialize black market if enabled
