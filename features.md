@@ -52,24 +52,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 6. Verschiedene Agentenstrategien
 
-#### 6.1 Adaptive Strategien
-**Beschreibung:** Agenten passen ihre Verhaltensstrategien basierend auf Erfolg an. Lernen aus Erfahrung durch Reinforcement Learning oder evolutionäre Strategien.
-
-**Harmonien:**
-- **Verhaltensstrategien:** Erweitert statische Strategien mit Lernen
-- **Reputation:** Erfolg korreliert mit Reputationsaufbau
-- **Krisen:** Strategieanpassung als Krisenreaktion
-- **Bildung:** Lernen neuer Fähigkeiten als strategische Anpassung
-
-**Nutzen:** Realistische Agenten mit adaptiven Fähigkeiten, emergente Strategien, evolutionäre Dynamiken.
-
-**Implementierung:**
-- Strategie-Parameter werden pro Person getrackt
-- Erfolgsmetriken: Vermögenswachstum, Handelsvolumen
-- Einfache Lernregel: Erfolgreiche Strategien werden verstärkt
-- Mutation und Exploration (ε-greedy oder ähnlich)
-
-#### 6.2 Spezialisierung und Diversifikation
+#### 6.1 Spezialisierung und Diversifikation
 **Beschreibung:** Agenten entscheiden strategisch, ob sie sich auf wenige Fähigkeiten spezialisieren (Experte) oder viele Fähigkeiten lernen (Generalist).
 
 **Harmonien:**
@@ -318,7 +301,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 4. **Handelsabkommen** - Erweitert Freundschaft und Verträge
 5. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
-6. **Adaptive Strategien** - Macht Agenten realistischer
 
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
@@ -389,12 +371,10 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 ### Phase 2: Erweiterte Interaktionen (6-12 Monate)
 4. Handelsabkommen implementieren
 5. Zertifizierungssystem implementieren
-6. Adaptive Strategien implementieren
 
 **Warum diese Reihenfolge?**
 - Handelsabkommen bauen auf Freundschaften und Verträgen auf
 - Zertifizierung ergänzt Qualitätssystem aus Phase 1
-- Adaptive Strategien profitieren von allen bisherigen Features
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)
 9. Kausalanalyse-Framework

@@ -95,6 +95,82 @@ impl Strategy {
     }
 }
 
+/// Parameters tracking strategy performance and adaptation for an agent.
+///
+/// Enables agents to learn from experience by tracking their success metrics
+/// and adjusting their behavioral strategies accordingly. This creates adaptive
+/// behavior where successful strategies are reinforced and unsuccessful ones
+/// are modified.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StrategyParameters {
+    /// Money the person started with (for calculating growth rate).
+    pub initial_money: f64,
+    /// Money from the previous step (for tracking short-term changes).
+    pub previous_money: f64,
+    /// Total number of successful trades as buyer.
+    pub successful_buys: usize,
+    /// Total number of successful trades as seller.
+    pub successful_sells: usize,
+    /// Strategy adjustment factor (0.0-2.0, starts at 1.0).
+    /// Multiplied with the base strategy spending multiplier.
+    /// Higher values indicate more aggressive spending, lower values more conservative.
+    pub adjustment_factor: f64,
+    /// Number of times strategy has been adapted.
+    pub adaptation_count: usize,
+}
+
+impl StrategyParameters {
+    /// Creates a new StrategyParameters with initial values.
+    pub fn new(initial_money: f64) -> Self {
+        StrategyParameters {
+            initial_money,
+            previous_money: initial_money,
+            successful_buys: 0,
+            successful_sells: 0,
+            adjustment_factor: 1.0, // Start with neutral adjustment
+            adaptation_count: 0,
+        }
+    }
+
+    /// Calculates the wealth growth rate since the previous step.
+    /// Returns a value where 0.0 = no change, positive = growth, negative = decline.
+    pub fn calculate_short_term_growth_rate(&self, current_money: f64) -> f64 {
+        if self.previous_money == 0.0 {
+            return 0.0;
+        }
+        (current_money - self.previous_money) / self.previous_money
+    }
+
+    /// Calculates the overall wealth growth rate since initialization.
+    /// Returns a value where 0.0 = no change, positive = growth, negative = decline.
+    pub fn calculate_long_term_growth_rate(&self, current_money: f64) -> f64 {
+        if self.initial_money == 0.0 {
+            return 0.0;
+        }
+        (current_money - self.initial_money) / self.initial_money
+    }
+
+    /// Updates the previous money for next step's comparison.
+    pub fn update_previous_money(&mut self, current_money: f64) {
+        self.previous_money = current_money;
+    }
+
+    /// Records a successful trade as buyer.
+    pub fn record_successful_buy(&mut self) {
+        self.successful_buys += 1;
+    }
+
+    /// Records a successful trade as seller.
+    pub fn record_successful_sell(&mut self) {
+        self.successful_sells += 1;
+    }
+
+    /// Total successful trades (both buying and selling).
+    pub fn total_successful_trades(&self) -> usize {
+        self.successful_buys + self.successful_sells
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     pub step: usize,
@@ -204,6 +280,10 @@ pub struct Person {
     /// IDs of active insurance policies owned by this person.
     /// Insurance provides protection against various economic risks (credit defaults, low income, crises).
     pub insurance_policies: Vec<InsuranceId>,
+    /// Parameters tracking strategy adaptation and learning.
+    /// Enables agents to learn from experience and adjust their behavioral strategies.
+    /// Only meaningful when adaptive strategies system is enabled.
+    pub strategy_params: StrategyParameters,
 }
 
 impl Person {
@@ -243,6 +323,7 @@ impl Person {
             skill_qualities: HashMap::new(), // Start with empty quality map (populated when quality enabled)
             credit_score: CreditScore::new(), // Start with default credit score
             insurance_policies: Vec::new(),  // Start with no insurance policies
+            strategy_params: StrategyParameters::new(initial_money), // Initialize strategy tracking
         }
     }
 
@@ -253,18 +334,23 @@ impl Person {
     /// Checks if the person can afford a purchase considering their behavioral strategy.
     /// Different strategies have different spending thresholds.
     ///
+    /// When adaptive strategies are enabled, the adjustment factor is also applied.
+    ///
     /// # Arguments
     /// * `amount` - The cost of the skill to purchase
     ///
     /// # Returns
-    /// `true` if the person's money multiplied by their strategy's spending multiplier
+    /// `true` if the person's money multiplied by their strategy's effective spending multiplier
     /// is greater than or equal to the amount, `false` otherwise.
     ///
     /// # Examples
     /// - A Conservative person with $100 and a 0.7x multiplier can afford items up to $70
     /// - An Aggressive person with $100 and a 1.3x multiplier can afford items up to $130
+    /// - With adaptation, the multiplier is further adjusted by the adjustment_factor
     pub fn can_afford_with_strategy(&self, amount: f64) -> bool {
-        let effective_money = self.money * self.strategy.spending_multiplier();
+        let base_multiplier = self.strategy.spending_multiplier();
+        let effective_multiplier = base_multiplier * self.strategy_params.adjustment_factor;
+        let effective_money = self.money * effective_multiplier;
         effective_money >= amount
     }
 
@@ -397,6 +483,70 @@ impl Person {
     pub fn has_skill(&self, skill_id: &SkillId) -> bool {
         self.own_skills.iter().any(|s| &s.id == skill_id)
             || self.learned_skills.iter().any(|s| &s.id == skill_id)
+    }
+
+    /// Adapts the person's strategy based on recent performance.
+    ///
+    /// Uses a simple reinforcement learning approach:
+    /// - If wealth is growing, increase aggression (higher adjustment factor)
+    /// - If wealth is declining, become more conservative (lower adjustment factor)
+    ///
+    /// # Arguments
+    /// * `adaptation_rate` - How quickly to adapt (0.0-1.0, typically 0.05-0.2)
+    /// * `rng` - Random number generator for exploration
+    /// * `exploration_rate` - Probability of random exploration (0.0-1.0)
+    ///
+    /// # Returns
+    /// `true` if the strategy was adapted, `false` otherwise
+    pub fn adapt_strategy<R: rand::Rng>(
+        &mut self,
+        adaptation_rate: f64,
+        rng: &mut R,
+        exploration_rate: f64,
+    ) -> bool {
+        // With exploration_rate probability, make a random adjustment
+        if rng.random_range(0.0..1.0) < exploration_rate {
+            // Random exploration: adjust factor randomly
+            let random_adjustment = rng.random_range(-0.1..0.1);
+            self.strategy_params.adjustment_factor += random_adjustment;
+            self.strategy_params.adjustment_factor =
+                self.strategy_params.adjustment_factor.clamp(0.5, 2.0);
+            self.strategy_params.adaptation_count += 1;
+            return true;
+        }
+
+        // Calculate wealth growth rate
+        let growth_rate = self
+            .strategy_params
+            .calculate_short_term_growth_rate(self.money);
+
+        // Only adapt if growth is significant (avoid noise)
+        if growth_rate.abs() < 0.01 {
+            // Less than 1% change, don't adapt
+            self.strategy_params.update_previous_money(self.money);
+            return false;
+        }
+
+        // Positive growth -> increase aggression slightly
+        // Negative growth -> decrease aggression (become more conservative)
+        let adjustment = growth_rate * adaptation_rate;
+        self.strategy_params.adjustment_factor += adjustment;
+
+        // Clamp to reasonable bounds (0.5 to 2.0)
+        // 0.5 = very conservative (half normal spending)
+        // 2.0 = very aggressive (double normal spending)
+        self.strategy_params.adjustment_factor =
+            self.strategy_params.adjustment_factor.clamp(0.5, 2.0);
+
+        self.strategy_params.adaptation_count += 1;
+        self.strategy_params.update_previous_money(self.money);
+
+        true
+    }
+
+    /// Returns the effective spending multiplier including adaptation.
+    pub fn get_effective_spending_multiplier(&self) -> f64 {
+        self.strategy.spending_multiplier() * self.strategy_params.adjustment_factor
     }
 
     /// Returns all skills this person can provide (both own_skills and learned_skills).
@@ -912,5 +1062,165 @@ mod tests {
         assert!(skill_ids.contains(&"OwnSkill".to_string()));
         assert!(skill_ids.contains(&"LearnedSkill1".to_string()));
         assert!(skill_ids.contains(&"LearnedSkill2".to_string()));
+    }
+
+    #[test]
+    fn test_strategy_parameters_initialization() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        assert_eq!(person.strategy_params.initial_money, 100.0);
+        assert_eq!(person.strategy_params.previous_money, 100.0);
+        assert_eq!(person.strategy_params.successful_buys, 0);
+        assert_eq!(person.strategy_params.successful_sells, 0);
+        assert_eq!(person.strategy_params.adjustment_factor, 1.0);
+        assert_eq!(person.strategy_params.adaptation_count, 0);
+    }
+
+    #[test]
+    fn test_strategy_params_growth_rate_calculation() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        // Simulate wealth growth
+        person.money = 110.0; // 10% growth
+        let growth_rate = person
+            .strategy_params
+            .calculate_short_term_growth_rate(person.money);
+        assert!(
+            (growth_rate - 0.1).abs() < 0.01,
+            "Growth rate should be approximately 0.1 (10%)"
+        );
+
+        // Test long-term growth
+        let long_term_growth = person
+            .strategy_params
+            .calculate_long_term_growth_rate(person.money);
+        assert!(
+            (long_term_growth - 0.1).abs() < 0.01,
+            "Long-term growth should be 10%"
+        );
+    }
+
+    #[test]
+    fn test_strategy_adaptation_positive_growth() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut rng = rand::rngs::mock::StepRng::new(0, 1); // Deterministic RNG that avoids exploration
+
+        // Simulate wealth growth
+        person.money = 110.0; // 10% growth
+
+        // Adapt strategy with low exploration rate
+        let adapted = person.adapt_strategy(0.1, &mut rng, 0.0);
+
+        assert!(adapted, "Strategy should adapt with significant growth");
+        assert!(
+            person.strategy_params.adjustment_factor > 1.0,
+            "Adjustment factor should increase with positive growth"
+        );
+        assert_eq!(person.strategy_params.adaptation_count, 1);
+    }
+
+    #[test]
+    fn test_strategy_adaptation_negative_growth() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut rng = rand::rngs::mock::StepRng::new(0, 1); // Deterministic RNG
+
+        // Simulate wealth decline
+        person.money = 90.0; // -10% decline
+
+        // Adapt strategy with low exploration rate
+        let adapted = person.adapt_strategy(0.1, &mut rng, 0.0);
+
+        assert!(adapted, "Strategy should adapt with significant decline");
+        assert!(
+            person.strategy_params.adjustment_factor < 1.0,
+            "Adjustment factor should decrease with negative growth"
+        );
+        assert_eq!(person.strategy_params.adaptation_count, 1);
+    }
+
+    #[test]
+    fn test_strategy_no_adaptation_small_change() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut rng = rand::rngs::mock::StepRng::new(0, 1);
+
+        // Simulate very small wealth change (less than 1%)
+        person.money = 100.5; // 0.5% growth
+
+        // Try to adapt
+        let adapted = person.adapt_strategy(0.1, &mut rng, 0.0);
+
+        assert!(
+            !adapted,
+            "Strategy should not adapt with insignificant change"
+        );
+        assert_eq!(
+            person.strategy_params.adjustment_factor, 1.0,
+            "Adjustment factor should remain unchanged"
+        );
+    }
+
+    #[test]
+    fn test_strategy_adjustment_bounds() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut rng = rand::rngs::mock::StepRng::new(0, 1);
+
+        // Simulate extreme wealth growth multiple times
+        for _ in 0..20 {
+            person.money *= 1.5; // 50% growth each iteration
+            person.adapt_strategy(0.5, &mut rng, 0.0); // High adaptation rate
+            person.strategy_params.update_previous_money(person.money);
+        }
+
+        // Check that adjustment factor is bounded
+        assert!(
+            person.strategy_params.adjustment_factor <= 2.0,
+            "Adjustment factor should be capped at 2.0"
+        );
+        assert!(
+            person.strategy_params.adjustment_factor >= 0.5,
+            "Adjustment factor should not go below 0.5"
+        );
+    }
+
+    #[test]
+    fn test_can_afford_with_adjusted_strategy() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+
+        // Initially with adjustment_factor = 1.0, Balanced strategy (1.0x multiplier)
+        // Can afford up to 100.0 * 1.0 * 1.0 = 100.0
+        assert!(person.can_afford_with_strategy(100.0));
+        assert!(!person.can_afford_with_strategy(101.0));
+
+        // Increase adjustment factor to simulate successful adaptation
+        person.strategy_params.adjustment_factor = 1.5;
+
+        // Now can afford up to 100.0 * 1.0 * 1.5 = 150.0
+        assert!(person.can_afford_with_strategy(150.0));
+        assert!(!person.can_afford_with_strategy(151.0));
+    }
+
+    #[test]
+    fn test_record_successful_trades() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        // Initially no trades
+        assert_eq!(person.strategy_params.total_successful_trades(), 0);
+
+        // Record some trades
+        person.strategy_params.record_successful_buy();
+        person.strategy_params.record_successful_buy();
+        person.strategy_params.record_successful_sell();
+
+        assert_eq!(person.strategy_params.successful_buys, 2);
+        assert_eq!(person.strategy_params.successful_sells, 1);
+        assert_eq!(person.strategy_params.total_successful_trades(), 3);
     }
 }
