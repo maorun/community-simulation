@@ -118,7 +118,7 @@ pub struct SimulationConfig {
     /// - Mixed regulatory regimes (some skills regulated, others free-market)
     ///
     /// Default: Empty (no per-skill limits, use global limits only)
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default)]
     pub per_skill_price_limits: HashMap<String, (Option<f64>, Option<f64>)>,
 
     // time_step might not be directly relevant for a turn-based economic sim,
@@ -1282,11 +1282,11 @@ impl Default for SimulationConfig {
             max_steps: 500,    // Default to 500 steps for market convergence
             entity_count: 100, // 100 persons
             seed: 42,
-            initial_money_per_person: 100.0, // 100 Euros
-            base_skill_price: 10.0,          // 10 Euros base price for skills
-            min_skill_price: 1.0,            // Minimum price floor
+            initial_money_per_person: 100.0,        // 100 Euros
+            base_skill_price: 10.0,                 // 10 Euros base price for skills
+            min_skill_price: 1.0,                   // Minimum price floor
             per_skill_price_limits: HashMap::new(), // No per-skill limits by default
-            time_step: 1.0,                  // Represents one discrete step or turn
+            time_step: 1.0,                         // Represents one discrete step or turn
             scenario: Scenario::Original,
             demand_strategy: DemandStrategy::default(),
             tech_growth_rate: 0.0,       // Disabled by default

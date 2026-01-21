@@ -48,6 +48,12 @@ This repository contains a configurable economic simulation written in Rust. It 
   - **Bounded adaptation:** Adjustment factor stays within 0.5-2.0x to prevent extreme behavior
   
   The system tracks success metrics (wealth growth rate, trade counts) and uses a simple learning rule: agents that are doing well increase their risk-taking, while struggling agents become more cautious. This creates emergent behavior patterns and evolutionary dynamics where successful strategies spread through learning rather than fixed assignment. Enable via configuration file with `enable_adaptive_strategies: true`, then configure `adaptation_rate` (0.0-1.0, default: 0.1 or 10% adaptation rate) and `exploration_rate` (0.0-1.0, default: 0.05 or 5% exploration). Perfect for studying agent learning, strategy evolution, market adaptation, and how behavioral flexibility affects economic outcomes.
+- **Per-Skill Price Controls:** Skill-specific price floors and ceilings for regulatory intervention studies. While global `min_skill_price` and `max_skill_price` apply to all skills, per-skill price limits enable targeted regulations. Configure via YAML/TOML files using `per_skill_price_limits` (e.g., `"Programming": [25.0, 100.0]` sets min 25 and max 100 for the Programming skill). Per-skill limits override global limits when set, allowing mixed regulatory regimes where some skills are regulated and others follow free-market dynamics. Use `null` for no limit on a side (e.g., `[null, 75.0]` sets only a maximum). This enables studying:
+  - Skill-specific minimum wages (professional licensing requirements)
+  - Price caps on essential services
+  - Mixed regulatory approaches and their effects on market equilibrium
+  - Comparative analysis between regulated and unregulated skills
+  Statistics on price enforcement and limit violations are tracked per skill. Configuration is via YAML/TOML only (not CLI due to complexity). Perfect for regulatory economics research, studying unintended consequences of price controls, and analyzing optimal intervention design.
 - **Priority-Based Buying Decisions:** Sophisticated multi-factor decision-making system for purchase prioritization. Each purchase option is scored based on four weighted factors:
   - **Urgency** (default weight: 0.5): Need urgency level (1-3 scale, randomly assigned)
   - **Affordability** (default weight: 0.3): Cost relative to available money (lower cost = higher priority)
