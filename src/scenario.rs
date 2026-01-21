@@ -489,17 +489,14 @@ impl OriginalPriceUpdater {
     /// * `rng` - Random number generator for volatility
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
         for (skill_id, skill) in market.skills.iter_mut() {
-            // Cache price limits at start of iteration to avoid borrow conflicts
-            let min_price = market
+            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            let (min_opt, max_opt) = market
                 .per_skill_price_limits
                 .get(skill_id)
-                .and_then(|(min, _max)| *min)
-                .unwrap_or(market.min_skill_price);
-            let max_price = market
-                .per_skill_price_limits
-                .get(skill_id)
-                .and_then(|(_min, max)| *max)
-                .unwrap_or(market.max_skill_price);
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
 
             let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
             let supply = (*market.supply_counts.get(skill_id).unwrap_or(&1)).max(1) as f64;
@@ -573,17 +570,14 @@ impl DynamicPricingUpdater {
         let price_change_rate = 0.05; // 5% price change per step
 
         for (skill_id, skill) in market.skills.iter_mut() {
-            // Cache price limits at start of iteration to avoid borrow conflicts
-            let min_price = market
+            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            let (min_opt, max_opt) = market
                 .per_skill_price_limits
                 .get(skill_id)
-                .and_then(|(min, _max)| *min)
-                .unwrap_or(market.min_skill_price);
-            let max_price = market
-                .per_skill_price_limits
-                .get(skill_id)
-                .and_then(|(_min, max)| *max)
-                .unwrap_or(market.max_skill_price);
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
 
             let sales_count = *market.sales_this_step.get(skill_id).unwrap_or(&0);
 
@@ -664,17 +658,14 @@ impl AdaptivePricingUpdater {
         let target_decrease = 0.9; // Target 10% decrease if not sold
 
         for (skill_id, skill) in market.skills.iter_mut() {
-            // Cache price limits at start of iteration to avoid borrow conflicts
-            let min_price = market
+            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            let (min_opt, max_opt) = market
                 .per_skill_price_limits
                 .get(skill_id)
-                .and_then(|(min, _max)| *min)
-                .unwrap_or(market.min_skill_price);
-            let max_price = market
-                .per_skill_price_limits
-                .get(skill_id)
-                .and_then(|(_min, max)| *max)
-                .unwrap_or(market.max_skill_price);
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
 
             let sales_count = *market.sales_this_step.get(skill_id).unwrap_or(&0);
 
@@ -749,17 +740,14 @@ impl AuctionPricingUpdater {
     /// * `rng` - Random number generator for volatility
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
         for (skill_id, skill) in market.skills.iter_mut() {
-            // Cache price limits at start of iteration to avoid borrow conflicts
-            let min_price = market
+            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            let (min_opt, max_opt) = market
                 .per_skill_price_limits
                 .get(skill_id)
-                .and_then(|(min, _max)| *min)
-                .unwrap_or(market.min_skill_price);
-            let max_price = market
-                .per_skill_price_limits
-                .get(skill_id)
-                .and_then(|(_min, max)| *max)
-                .unwrap_or(market.max_skill_price);
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
 
             let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
             let supply = (*market.supply_counts.get(skill_id).unwrap_or(&1)).max(1) as f64;

@@ -218,7 +218,8 @@ impl SimulationEngine {
 
         // Apply per-skill price limits from configuration
         if !config.per_skill_price_limits.is_empty() {
-            // Collect skill IDs first to avoid borrow checker issues
+            // Create mapping from skill name to skill ID (they're both Strings, so this is an identity mapping)
+            // We do this upfront to avoid borrowing issues when setting limits
             let skill_name_to_id: HashMap<String, SkillId> = market
                 .skills
                 .iter()
