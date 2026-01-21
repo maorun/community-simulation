@@ -99,7 +99,7 @@ pub struct Market {
     /// - Skill-specific minimum wages (price floors)
     /// - Skill-specific price caps (price ceilings)
     /// - Mixed regulatory regimes (some skills regulated, others free-market)
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub per_skill_price_limits: HashMap<SkillId, (Option<f64>, Option<f64>)>,
 
     /// Historical price data for each skill across all simulation steps
