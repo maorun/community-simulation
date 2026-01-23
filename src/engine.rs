@@ -1694,9 +1694,8 @@ impl SimulationEngine {
                 None
             },
             insurance_statistics,
-            group_statistics: if self.config.num_groups.is_some() {
+            group_statistics: if let Some(num_groups) = self.config.num_groups {
                 // Calculate group statistics
-                let num_groups = self.config.num_groups.unwrap();
                 let mut group_data: HashMap<usize, Vec<&Entity>> = HashMap::new();
 
                 // Group entities by group_id
