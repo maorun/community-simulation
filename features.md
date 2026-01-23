@@ -281,7 +281,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ### Mittlere Priorität (Mittelfristig - gute Harmonien)
 
 4. **Handelsabkommen** - Erweitert Freundschaft und Verträge
-5. **Zertifizierungssystem** - Qualitätssicherung mit Reputation-Link
 
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
@@ -311,12 +310,10 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - **Reputation** ↔ **Kredite**: Bessere Konditionen
 - **Reputation** ↔ **Qualität**: Gegenseitige Verstärkung
 - **Reputation** ↔ **Mentorschaft**: Effektivere Mentoren
-- **Reputation** ↔ **Zertifizierung**: Schnellerer Aufbau
 
 ### Bildung als Wachstumsmotor
 - **Bildung** ↔ **Mentorschaft**: Reduzierte Kosten, höherer Erfolg
 - **Bildung** ↔ **Qualität**: Erlernte Skills starten mit niedriger Qualität
-- **Bildung** ↔ **Zertifizierung**: Bildung führt zu Zertifizierung
 - **Bildung** ↔ **Investitionen**: Investition in Bildung anderer
 - **Bildung** ↔ **Spezialisierung**: Spezialist vs. Generalist-Strategie
 
@@ -333,7 +330,6 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 
 ### Marktstruktur
 - **Qualität** ↔ **Preise**: Qualitätswettbewerb
-- **Qualität** ↔ **Zertifizierung**: Qualitätsgarantie
 - **Produktion** ↔ **Investitionen**: Produktionskapazitäts-Investitionen
 - **Produktion** ↔ **Qualität**: Qualitäts-Vererbung in Produktionsketten
 - **Schwarzmarkt** ↔ **Regulierung**: Regulierung treibt Schwarzmarkt
@@ -351,11 +347,9 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 
 ### Phase 2: Erweiterte Interaktionen (6-12 Monate)
 4. Handelsabkommen implementieren
-5. Zertifizierungssystem implementieren
 
 **Warum diese Reihenfolge?**
 - Handelsabkommen bauen auf Freundschaften und Verträgen auf
-- Zertifizierung ergänzt Qualitätssystem aus Phase 1
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)
 9. Kausalanalyse-Framework
