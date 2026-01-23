@@ -349,6 +349,54 @@ mod tests {
         // Should be clamped to min_skill_price (1.0)
         assert_eq!(new_price, 1.0);
     }
+
+    #[test]
+    fn test_per_skill_price_limits_enforcement() {
+        // Test that per-skill price limits are enforced during price updates
+        let mut market = Market::new(
+            10.0,
+            1.0,
+            0.1,
+            0.0, // No volatility for deterministic test
+            PriceUpdater::from(Scenario::Original),
+        );
+
+        let skill = Skill::new("Test Skill".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // Set per-skill limits: min 30.0, max 70.0
+        market.set_per_skill_price_limits(&skill_id, Some(30.0), Some(70.0));
+
+        // Simulate high demand to push price above max
+        market.demand_counts.insert(skill_id.clone(), 20);
+        market.supply_counts.insert(skill_id.clone(), 1);
+
+        let mut rng = StepRng::new(2, 1);
+        let updater = OriginalPriceUpdater;
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        // Price should be clamped to per-skill max (70.0), not global max (1000.0)
+        assert!(
+            new_price <= 70.0,
+            "Price {} should be clamped to 70.0",
+            new_price
+        );
+
+        // Now simulate low demand to push price below min
+        market.demand_counts.insert(skill_id.clone(), 0);
+        market.supply_counts.insert(skill_id.clone(), 20);
+
+        updater.update_prices(&mut market, &mut rng);
+        let new_price = market.get_price(&skill_id).unwrap();
+        // Price should be clamped to per-skill min (30.0), not global min (1.0)
+        assert!(
+            new_price >= 30.0,
+            "Price {} should be clamped to 30.0",
+            new_price
+        );
+    }
 }
 
 /// Enum representing different price update strategies.
@@ -441,6 +489,15 @@ impl OriginalPriceUpdater {
     /// * `rng` - Random number generator for volatility
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
         for (skill_id, skill) in market.skills.iter_mut() {
+            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            let (min_opt, max_opt) = market
+                .per_skill_price_limits
+                .get(skill_id)
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
+
             let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
             let supply = (*market.supply_counts.get(skill_id).unwrap_or(&1)).max(1) as f64;
 
@@ -460,9 +517,8 @@ impl OriginalPriceUpdater {
             new_price += random_fluctuation;
 
             let old_price = skill.current_price;
-            new_price = new_price
-                .max(market.min_skill_price)
-                .min(market.max_skill_price);
+            // Apply per-skill price limits (if set) or global limits
+            new_price = new_price.max(min_price).min(max_price);
 
             skill.current_price = new_price;
 
@@ -514,6 +570,15 @@ impl DynamicPricingUpdater {
         let price_change_rate = 0.05; // 5% price change per step
 
         for (skill_id, skill) in market.skills.iter_mut() {
+            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            let (min_opt, max_opt) = market
+                .per_skill_price_limits
+                .get(skill_id)
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
+
             let sales_count = *market.sales_this_step.get(skill_id).unwrap_or(&0);
 
             let old_price = skill.current_price;
@@ -542,10 +607,8 @@ impl DynamicPricingUpdater {
                 );
             }
 
-            // Clamp price to min/max boundaries
-            new_price = new_price
-                .max(market.min_skill_price)
-                .min(market.max_skill_price);
+            // Clamp price to per-skill or global boundaries
+            new_price = new_price.max(min_price).min(max_price);
 
             skill.current_price = new_price;
 
@@ -595,6 +658,15 @@ impl AdaptivePricingUpdater {
         let target_decrease = 0.9; // Target 10% decrease if not sold
 
         for (skill_id, skill) in market.skills.iter_mut() {
+            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            let (min_opt, max_opt) = market
+                .per_skill_price_limits
+                .get(skill_id)
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
+
             let sales_count = *market.sales_this_step.get(skill_id).unwrap_or(&0);
 
             let current_price = skill.current_price;
@@ -609,10 +681,8 @@ impl AdaptivePricingUpdater {
             // Apply exponential moving average for smooth adaptation
             let new_price = current_price + learning_rate * (target_price - current_price);
 
-            // Clamp price to min/max boundaries
-            let clamped_price = new_price
-                .max(market.min_skill_price)
-                .min(market.max_skill_price);
+            // Clamp price to per-skill or global boundaries
+            let clamped_price = new_price.max(min_price).min(max_price);
 
             debug!(
                 "AdaptivePricing: Skill {:?} {} (sales: {}), price ${:.2} -> ${:.2} (target: ${:.2})",
@@ -670,6 +740,15 @@ impl AuctionPricingUpdater {
     /// * `rng` - Random number generator for volatility
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
         for (skill_id, skill) in market.skills.iter_mut() {
+            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            let (min_opt, max_opt) = market
+                .per_skill_price_limits
+                .get(skill_id)
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
+
             let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
             let supply = (*market.supply_counts.get(skill_id).unwrap_or(&1)).max(1) as f64;
 
@@ -721,10 +800,8 @@ impl AuctionPricingUpdater {
                 rng.random_range(-price_range_for_volatility..=price_range_for_volatility);
             new_price += random_fluctuation;
 
-            // Clamp price to min/max boundaries
-            new_price = new_price
-                .max(market.min_skill_price)
-                .min(market.max_skill_price);
+            // Clamp price to per-skill or global boundaries
+            new_price = new_price.max(min_price).min(max_price);
 
             skill.current_price = new_price;
 

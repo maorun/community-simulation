@@ -12,25 +12,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Erweiterte Szenarien
 
-#### 4.1 Regulatorische Interventionen
-**Beschreibung:** Externe Regulierungsbehörde kann Markteingriffe vornehmen: Preiskontrollen, Berufszulassungen, Mindeststandards, Kartellrecht.
-
-**Harmonien:**
-- **Preisboden/-decke:** Erweitert bestehende Preiskontrollen
-- **Zertifizierung:** Kann Zertifizierungen vorschreiben
-- **Schwarzmarkt:** Regulierung treibt Schwarzmarktaktivität
-- **Abstimmungssystem:** Demokratische Entscheidung über Regulierungen
-- **Gruppen:** Gruppenspezifische Regulierungen
-
-**Nutzen:** Ermöglicht die Untersuchung von Regulierungsökonomie, unbeabsichtigten Folgen und optimal intervention design.
-
-**Implementierung:**
-- `Regulation` System mit verschiedenen Interventionstypen
-- Höchst-/Mindestpreise pro Fähigkeit
-- Berufszulassungen (Lizenzen erforderlich)
-- Qualitätsstandards (Mindestqualität für Verkauf)
-- Compliance-Kosten für Anbieter
-
 ### 5. Erweiterte Analyse
 
 #### 5.1 Kausalanalyse-Framework

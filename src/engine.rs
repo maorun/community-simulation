@@ -216,6 +216,27 @@ impl SimulationEngine {
         // This is the version from feat/economic-simulation-model
         let entities = Self::initialize_entities(&config, &mut rng, &mut market);
 
+        // Apply per-skill price limits from configuration
+        if !config.per_skill_price_limits.is_empty() {
+            // Create mapping from skill name to skill ID (they're both Strings, so this is an identity mapping)
+            // We do this upfront to avoid borrowing issues when setting limits
+            let skill_name_to_id: HashMap<String, SkillId> = market
+                .skills
+                .iter()
+                .map(|(id, skill)| (skill.id.clone(), id.clone()))
+                .collect();
+
+            for (skill_name, (min_price, max_price)) in &config.per_skill_price_limits {
+                if let Some(skill_id) = skill_name_to_id.get(skill_name) {
+                    market.set_per_skill_price_limits(skill_id, *min_price, *max_price);
+                    debug!(
+                        "Set per-skill price limits for '{}': min={:?}, max={:?}",
+                        skill_name, min_price, max_price
+                    );
+                }
+            }
+        }
+
         let all_skill_ids = market.skills.keys().cloned().collect::<Vec<SkillId>>();
 
         // Initialize black market if enabled
@@ -1673,9 +1694,8 @@ impl SimulationEngine {
                 None
             },
             insurance_statistics,
-            group_statistics: if self.config.num_groups.is_some() {
+            group_statistics: if let Some(num_groups) = self.config.num_groups {
                 // Calculate group statistics
-                let num_groups = self.config.num_groups.unwrap();
                 let mut group_data: HashMap<usize, Vec<&Entity>> = HashMap::new();
 
                 // Group entities by group_id

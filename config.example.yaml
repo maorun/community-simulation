@@ -29,6 +29,21 @@ base_skill_price: 10.0
 # Default: 1.0
 min_skill_price: 1.0
 
+# Per-skill price limits for regulatory interventions
+# Allows skill-specific minimum and maximum prices that override global limits
+# Format: skill_name: [min_price, max_price]
+# Use null for no limit on that side
+# Examples:
+#per_skill_price_limits:
+#  "Programming": [25.0, 100.0]  # min 25, max 100 for Programming skill
+#  "Design": [null, 75.0]         # no min, max 75 for Design skill
+#  "Writing": [15.0, null]        # min 15, no max for Writing skill
+# This enables studying:
+# - Skill-specific minimum wages (e.g., professional licensing requirements)
+# - Skill-specific price caps (e.g., essential services regulation)
+# - Mixed regulatory regimes (some skills regulated, others free-market)
+# Default: {} (empty, no per-skill limits)
+
 # Time step (for discrete turn-based simulation)
 # This represents one discrete step or turn
 time_step: 1.0

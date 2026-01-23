@@ -4,6 +4,7 @@ use log::{debug, info, warn};
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use simulation_framework::{PresetName, SimulationConfig, SimulationEngine};
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Instant;
 
@@ -752,6 +753,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             min_skill_price: args
                 .min_skill_price
                 .unwrap_or(SimulationConfig::default().min_skill_price),
+            per_skill_price_limits: HashMap::new(), // Not configurable via CLI
             scenario: args
                 .scenario
                 .unwrap_or(SimulationConfig::default().scenario),

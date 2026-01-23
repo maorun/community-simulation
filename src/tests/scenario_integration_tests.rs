@@ -580,9 +580,20 @@ mod integration_tests {
         assert!(mc_result.total_trades_stats.mean >= 0.0);
         assert!(mc_result.avg_reputation_stats.mean > 0.0);
 
-        // Min should be <= mean <= max
-        assert!(mc_result.avg_money_stats.min <= mc_result.avg_money_stats.mean);
-        assert!(mc_result.avg_money_stats.mean <= mc_result.avg_money_stats.max);
+        // Min should be <= mean <= max (with small epsilon tolerance for floating-point precision)
+        let epsilon = 1e-10;
+        assert!(
+            mc_result.avg_money_stats.min <= mc_result.avg_money_stats.mean + epsilon,
+            "min ({}) should be <= mean ({}) + epsilon",
+            mc_result.avg_money_stats.min,
+            mc_result.avg_money_stats.mean
+        );
+        assert!(
+            mc_result.avg_money_stats.mean <= mc_result.avg_money_stats.max + epsilon,
+            "mean ({}) should be <= max ({}) + epsilon",
+            mc_result.avg_money_stats.mean,
+            mc_result.avg_money_stats.max
+        );
     }
 
     /// Test that tax collection works correctly

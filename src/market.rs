@@ -85,6 +85,23 @@ pub struct Market {
     /// Maximum allowed price for any skill
     pub max_skill_price: f64,
 
+    /// Per-skill price limits (minimum, maximum) for regulatory controls.
+    ///
+    /// Enables skill-specific price regulations, overriding global min/max limits.
+    /// When a skill has a specific limit set, that limit takes precedence over
+    /// the global `min_skill_price` and `max_skill_price` values.
+    ///
+    /// Format: HashMap<SkillId, (Option<min>, Option<max>)>
+    /// - None means no specific limit (fall back to global limit)
+    /// - Some(value) means enforce this specific limit
+    ///
+    /// This enables studying regulatory interventions like:
+    /// - Skill-specific minimum wages (price floors)
+    /// - Skill-specific price caps (price ceilings)
+    /// - Mixed regulatory regimes (some skills regulated, others free-market)
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub per_skill_price_limits: HashMap<SkillId, (Option<f64>, Option<f64>)>,
+
     /// Historical price data for each skill across all simulation steps
     ///
     /// Maps skill IDs to a vector of prices, with one entry per simulation step.
@@ -147,6 +164,7 @@ impl Market {
             volatility_percentage,
             min_skill_price,
             max_skill_price: 1000.0,
+            per_skill_price_limits: HashMap::new(),
             skill_price_history: HashMap::new(),
             price_updater,
             sales_this_step: HashMap::new(),
@@ -349,6 +367,84 @@ impl Market {
             .map(|(id, skill)| (id.clone(), skill.current_price))
             .collect()
     }
+
+    /// Gets the effective minimum price for a specific skill.
+    ///
+    /// Returns the per-skill minimum if set, otherwise returns the global minimum.
+    ///
+    /// # Arguments
+    ///
+    /// * `skill_id` - The ID of the skill to check
+    ///
+    /// # Returns
+    ///
+    /// The effective minimum price for this skill
+    pub fn get_effective_min_price(&self, skill_id: &SkillId) -> f64 {
+        self.per_skill_price_limits
+            .get(skill_id)
+            .and_then(|(min, _max)| *min)
+            .unwrap_or(self.min_skill_price)
+    }
+
+    /// Gets the effective maximum price for a specific skill.
+    ///
+    /// Returns the per-skill maximum if set, otherwise returns the global maximum.
+    ///
+    /// # Arguments
+    ///
+    /// * `skill_id` - The ID of the skill to check
+    ///
+    /// # Returns
+    ///
+    /// The effective maximum price for this skill
+    pub fn get_effective_max_price(&self, skill_id: &SkillId) -> f64 {
+        self.per_skill_price_limits
+            .get(skill_id)
+            .and_then(|(_min, max)| *max)
+            .unwrap_or(self.max_skill_price)
+    }
+
+    /// Sets per-skill price limits for a specific skill.
+    ///
+    /// This allows for skill-specific regulatory interventions,
+    /// enabling study of targeted price controls and market regulations.
+    ///
+    /// # Arguments
+    ///
+    /// * `skill_id` - The ID of the skill to set limits for
+    /// * `min_price` - Optional minimum price (None = use global limit)
+    /// * `max_price` - Optional maximum price (None = use global limit)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use simulation_framework::{Market, Skill};
+    /// use simulation_framework::scenario::{PriceUpdater, Scenario};
+    ///
+    /// let updater = PriceUpdater::from(Scenario::Original);
+    /// let mut market = Market::new(10.0, 1.0, 0.1, 0.02, updater);
+    ///
+    /// let skill = Skill::new("Programming".to_string(), 50.0);
+    /// let skill_id = skill.id.clone();
+    /// market.add_skill(skill);
+    ///
+    /// // Set minimum price of 25.0 for this skill
+    /// market.set_per_skill_price_limits(&skill_id, Some(25.0), None);
+    /// ```
+    pub fn set_per_skill_price_limits(
+        &mut self,
+        skill_id: &SkillId,
+        min_price: Option<f64>,
+        max_price: Option<f64>,
+    ) {
+        if min_price.is_some() || max_price.is_some() {
+            self.per_skill_price_limits
+                .insert(skill_id.clone(), (min_price, max_price));
+        } else {
+            // If both are None, remove the entry
+            self.per_skill_price_limits.remove(skill_id);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -494,5 +590,66 @@ mod tests {
         let avg_final = market.get_average_price();
         assert!(avg_final > 0.0); // Price should still be positive
         assert!(market.cache.average_price.is_some());
+    }
+
+    #[test]
+    fn test_per_skill_price_limits_basic() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
+
+        let skill = Skill::new("Programming".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // Initially should use global limits
+        assert_eq!(market.get_effective_min_price(&skill_id), 1.0);
+        assert_eq!(market.get_effective_max_price(&skill_id), 1000.0);
+
+        // Set per-skill limits
+        market.set_per_skill_price_limits(&skill_id, Some(25.0), Some(100.0));
+
+        // Should now use per-skill limits
+        assert_eq!(market.get_effective_min_price(&skill_id), 25.0);
+        assert_eq!(market.get_effective_max_price(&skill_id), 100.0);
+    }
+
+    #[test]
+    fn test_per_skill_price_limits_partial() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
+
+        let skill = Skill::new("Design".to_string(), 30.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // Set only minimum
+        market.set_per_skill_price_limits(&skill_id, Some(15.0), None);
+        assert_eq!(market.get_effective_min_price(&skill_id), 15.0);
+        assert_eq!(market.get_effective_max_price(&skill_id), 1000.0); // Global max
+
+        // Set only maximum
+        market.set_per_skill_price_limits(&skill_id, None, Some(75.0));
+        assert_eq!(market.get_effective_min_price(&skill_id), 1.0); // Global min
+        assert_eq!(market.get_effective_max_price(&skill_id), 75.0);
+    }
+
+    #[test]
+    fn test_per_skill_price_limits_removal() {
+        let price_updater = PriceUpdater::from(Scenario::Original);
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
+
+        let skill = Skill::new("Writing".to_string(), 20.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // Set per-skill limits
+        market.set_per_skill_price_limits(&skill_id, Some(10.0), Some(50.0));
+        assert_eq!(market.get_effective_min_price(&skill_id), 10.0);
+        assert_eq!(market.get_effective_max_price(&skill_id), 50.0);
+
+        // Remove limits by setting both to None
+        market.set_per_skill_price_limits(&skill_id, None, None);
+        assert_eq!(market.get_effective_min_price(&skill_id), 1.0); // Back to global
+        assert_eq!(market.get_effective_max_price(&skill_id), 1000.0); // Back to global
     }
 }
