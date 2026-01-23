@@ -2901,13 +2901,15 @@ pub fn detect_business_cycles(volume_per_step: &[f64]) -> Option<BusinessCycleSt
 
         let duration = end_step - start_step;
 
-        // Calculate average, peak, and trough volume for this phase
-        let phase_volumes: Vec<f64> = volume_per_step[start_step..=end_step].to_vec();
-        let avg_volume = phase_volumes.iter().sum::<f64>() / phase_volumes.len() as f64;
-        let peak_volume = phase_volumes
-            .iter()
-            .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let trough_volume = phase_volumes.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        // Calculate average, peak, and trough volume for this phase in a single pass
+        let phase_slice = &volume_per_step[start_step..=end_step];
+        let (sum, peak, trough) = phase_slice.iter().fold(
+            (0.0, f64::NEG_INFINITY, f64::INFINITY),
+            |(sum, peak, trough), &val| (sum + val, peak.max(val), trough.min(val)),
+        );
+        let avg_volume = sum / phase_slice.len() as f64;
+        let peak_volume = peak;
+        let trough_volume = trough;
 
         detected_cycles.push(BusinessCycle {
             phase,
@@ -2979,7 +2981,7 @@ pub fn detect_business_cycles(volume_per_step: &[f64]) -> Option<BusinessCycleSt
 ///
 /// A new vector with smoothed values. Edge cases use smaller windows.
 fn smooth_data(data: &[f64], window: usize) -> Vec<f64> {
-    if window < 2 {
+    if window < 3 {
         return data.to_vec();
     }
 
