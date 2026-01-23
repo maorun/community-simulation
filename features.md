@@ -119,24 +119,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Wirtschaftliche Analysen
 
-#### 1.1 Konjunkturzyklen-Detektion
-**Beschreibung:** Automatische Identifikation und Analyse von Wirtschaftszyklen (Expansion, Peak, Rezession, Trough) in der Simulation.
-
-**Harmonien:**
-- **Zyklische Nachfrage:** Interagiert mit exogenen Zyklen
-- **Krisen-Events:** Unterscheidung von exogenen vs. endogenen Krisen
-- **Handelsvolumen:** Primärer Indikator für Konjunktur
-- **Preishistorie:** Pro-zyklisches Preisverhalten
-
-**Nutzen:** Verständnis endogener Zyklen, Krisenprogression und stabilisierender Mechanismen.
-
-**Implementierung:**
-- Hodrick-Prescott-Filter zur Trend-Zyklus-Zerlegung
-- Peak/Trough-Detektion mit NBER-Methodik
-- Zyklus-Charakterisierung: Dauer, Amplitude, Asymmetrie
-- Leading/Lagging Indikatoren-Analyse
-
-#### 1.2 Externalitäten-Analyse
+#### 1.1 Externalitäten-Analyse
 **Beschreibung:** Messung und Analyse von positiven und negativen Externalitäten zwischen Agenten und Aktivitäten.
 
 **Harmonien:**
@@ -288,10 +271,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 9. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
 10. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
 11. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
-12. **Konjunkturzyklen-Detektion** - Ausgefeilte Analyse
-13. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-14. **Simulation-Debugger** - Nice-to-have für Entwicklung
-15. **Spezielle Anwendungsfälle** - Domänenspezifisch
+12. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
+13. **Simulation-Debugger** - Nice-to-have für Entwicklung
+14. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
@@ -353,13 +335,12 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)
 9. Kausalanalyse-Framework
-10. Konjunkturzyklen-Detektion
-11. Externalitäten-Analyse
+10. Externalitäten-Analyse
 
 **Warum diese Reihenfolge?**
 - Analysen profitieren von den reicheren Daten aus Phasen 1-2
 - Kausalanalyse ist methodisch anspruchsvoll
-- Konjunktur- und Externalitäten-Analyse benötigen reife Simulation
+- Externalitäten-Analyse benötigt reife Simulation
 
 ### Kontinuierlich: Code-Qualität und Performance
 - Parallele Trade-Matching bei Bedarf (wenn N > 1000)
