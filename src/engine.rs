@@ -1346,6 +1346,7 @@ impl SimulationEngine {
             total_fees_collected: self.total_fees_collected,
             per_skill_trade_stats,
             skill_market_concentration,
+            business_cycle_statistics: crate::result::detect_business_cycles(&self.volume_per_step),
             failed_trade_statistics,
             failed_attempts_per_step: self.failed_attempts_per_step.clone(),
             black_market_statistics: if self.config.enable_black_market {
@@ -4166,6 +4167,7 @@ impl SimulationEngine {
             total_fees_collected: self.total_fees_collected,
             per_skill_trade_stats: vec![],    // Simplified
             skill_market_concentration: None, // Not calculated for current result
+            business_cycle_statistics: crate::result::detect_business_cycles(&self.volume_per_step),
             failed_trade_statistics: crate::result::FailedTradeStats {
                 total_failed_attempts: 0,
                 failure_rate: 0.0,

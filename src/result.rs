@@ -339,6 +339,108 @@ pub struct TradeVolumeStats {
     pub max_trades_per_step: usize,
 }
 
+/// Represents a detected business cycle phase (expansion or contraction).
+///
+/// Business cycles are periods of economic growth (expansion) or decline (contraction)
+/// identified by analyzing trade volume patterns. Each cycle is bounded by a peak
+/// (local maximum in trade activity) and a trough (local minimum).
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::result::{BusinessCycle, CyclePhase};
+///
+/// // An expansion phase from step 10 to step 50
+/// let expansion = BusinessCycle {
+///     phase: CyclePhase::Expansion,
+///     start_step: 10,
+///     end_step: 50,
+///     duration: 40,
+///     avg_volume: 1500.0,
+///     peak_volume: 2000.0,
+///     trough_volume: 1000.0,
+/// };
+///
+/// assert_eq!(expansion.duration, 40);
+/// ```
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct BusinessCycle {
+    /// The phase of this cycle (expansion or contraction)
+    pub phase: CyclePhase,
+    /// Simulation step where this phase started
+    pub start_step: usize,
+    /// Simulation step where this phase ended
+    pub end_step: usize,
+    /// Duration of this phase in steps
+    pub duration: usize,
+    /// Average trade volume during this phase
+    pub avg_volume: f64,
+    /// Peak trade volume in this phase
+    pub peak_volume: f64,
+    /// Trough trade volume in this phase
+    pub trough_volume: f64,
+}
+
+/// Represents the phase of a business cycle.
+///
+/// Business cycles alternate between expansion (increasing economic activity)
+/// and contraction (decreasing economic activity).
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+pub enum CyclePhase {
+    /// Expansion phase: Trade volume is increasing
+    Expansion,
+    /// Contraction phase: Trade volume is decreasing
+    Contraction,
+}
+
+/// Statistics about detected business cycles in the simulation.
+///
+/// Analyzes trade volume patterns to identify economic cycles, including
+/// periods of expansion (growth) and contraction (decline). This provides
+/// insights into the natural cyclical behavior of the simulated economy.
+///
+/// # Algorithm
+///
+/// Uses a simple peak/trough detection algorithm:
+/// 1. Identifies local maxima (peaks) and minima (troughs) in trade volume
+/// 2. Groups consecutive steps between peaks and troughs into phases
+/// 3. Classifies phases as expansion (increasing volume) or contraction (decreasing volume)
+///
+/// # Limitations
+///
+/// - Requires at least 10 simulation steps for meaningful analysis
+/// - Does not use advanced filtering (e.g., Hodrick-Prescott filter)
+/// - May detect noise as cycles in highly volatile simulations
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::result::BusinessCycleStats;
+///
+/// let stats = BusinessCycleStats {
+///     total_cycles: 3,
+///     avg_cycle_duration: 100.0,
+///     avg_expansion_duration: 60.0,
+///     avg_contraction_duration: 40.0,
+///     detected_cycles: vec![],
+/// };
+///
+/// assert_eq!(stats.total_cycles, 3);
+/// ```
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BusinessCycleStats {
+    /// Total number of complete cycles detected
+    pub total_cycles: usize,
+    /// Average duration of complete cycles (peak to peak)
+    pub avg_cycle_duration: f64,
+    /// Average duration of expansion phases
+    pub avg_expansion_duration: f64,
+    /// Average duration of contraction phases
+    pub avg_contraction_duration: f64,
+    /// List of all detected cycles with details
+    pub detected_cycles: Vec<BusinessCycle>,
+}
+
 /// Statistics about failed trade attempts (trades that failed due to insufficient funds).
 ///
 /// This provides insight into unmet demand and market accessibility issues.
@@ -753,6 +855,13 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skill_market_concentration: Option<Vec<SkillMarketConcentration>>,
 
+    /// Business cycle detection statistics (only present if simulation ran for at least 10 steps).
+    ///
+    /// Analyzes trade volume patterns to identify economic cycles of expansion and contraction.
+    /// Provides insights into the natural cyclical behavior of the simulated economy.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub business_cycle_statistics: Option<BusinessCycleStats>,
+
     /// Failed trade attempt statistics (trade attempts that failed due to insufficient funds)
     pub failed_trade_statistics: FailedTradeStats,
     /// Number of failed trade attempts at each step
@@ -907,6 +1016,7 @@ impl SimulationResult {
     /// #     total_fees_collected: 0.0,
     /// #     per_skill_trade_stats: vec![],
     /// #     skill_market_concentration: None,
+    /// #     business_cycle_statistics: None,
     /// #     failed_trade_statistics: simulation_framework::result::FailedTradeStats {
     /// #         total_failed_attempts: 0, failure_rate: 0.0,
     /// #         avg_failed_per_step: 0.0,
@@ -2706,6 +2816,187 @@ pub fn calculate_mobility_statistics(
     })
 }
 
+/// Detect business cycles (expansions and contractions) from trade volume data.
+///
+/// Uses a simple peak/trough detection algorithm to identify periods of economic
+/// expansion (increasing trade volume) and contraction (decreasing trade volume).
+///
+/// # Algorithm
+///
+/// 1. **Smoothing**: Apply a simple moving average to reduce noise (window size = 3)
+/// 2. **Peak/Trough Detection**: Identify local maxima and minima in smoothed data
+///    - A peak is a point higher than both neighbors
+///    - A trough is a point lower than both neighbors
+/// 3. **Cycle Classification**:
+///    - Expansion: From trough to peak (volume increasing)
+///    - Contraction: From peak to trough (volume decreasing)
+/// 4. **Statistics**: Calculate duration and volume metrics for each phase
+///
+/// # Arguments
+///
+/// * `volume_per_step` - Vector of trade volumes for each simulation step
+///
+/// # Returns
+///
+/// `Some(BusinessCycleStats)` if at least one complete cycle is detected,
+/// `None` if the simulation is too short (< 10 steps) or no cycles found.
+///
+/// # Limitations
+///
+/// - Requires at least 10 simulation steps for meaningful analysis
+/// - Simple algorithm may detect noise as cycles in highly volatile data
+/// - Does not use advanced filtering (e.g., Hodrick-Prescott filter)
+/// - Best suited for medium to long simulations (100+ steps)
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::result::detect_business_cycles;
+///
+/// // Simulate a simple cycle: low -> high -> low
+/// let volumes = vec![100.0, 120.0, 150.0, 180.0, 170.0, 140.0, 110.0, 90.0, 100.0, 120.0];
+/// let cycles = detect_business_cycles(&volumes);
+///
+/// // Should detect at least one cycle
+/// assert!(cycles.is_some());
+/// ```
+pub fn detect_business_cycles(volume_per_step: &[f64]) -> Option<BusinessCycleStats> {
+    // Need at least 10 steps for meaningful cycle detection
+    if volume_per_step.len() < 10 {
+        return None;
+    }
+
+    // Step 1: Apply simple moving average smoothing (window = 3)
+    let smoothed = smooth_data(volume_per_step, 3);
+
+    // Step 2: Detect peaks and troughs
+    let mut turning_points = Vec::new();
+
+    for i in 1..smoothed.len() - 1 {
+        let prev = smoothed[i - 1];
+        let curr = smoothed[i];
+        let next = smoothed[i + 1];
+
+        // Detect peak (local maximum)
+        if curr > prev && curr > next {
+            turning_points.push((i, curr, CyclePhase::Contraction)); // Peak starts contraction
+        }
+        // Detect trough (local minimum)
+        else if curr < prev && curr < next {
+            turning_points.push((i, curr, CyclePhase::Expansion)); // Trough starts expansion
+        }
+    }
+
+    // Need at least 2 turning points to form a cycle
+    if turning_points.len() < 2 {
+        return None;
+    }
+
+    // Step 3: Build cycles from turning points
+    let mut detected_cycles = Vec::new();
+
+    for i in 0..turning_points.len() - 1 {
+        let (start_step, _start_vol, phase) = turning_points[i];
+        let (end_step, _end_vol, _) = turning_points[i + 1];
+
+        let duration = end_step - start_step;
+
+        // Calculate average, peak, and trough volume for this phase
+        let phase_volumes: Vec<f64> = volume_per_step[start_step..=end_step].to_vec();
+        let avg_volume = phase_volumes.iter().sum::<f64>() / phase_volumes.len() as f64;
+        let peak_volume = phase_volumes
+            .iter()
+            .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let trough_volume = phase_volumes.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+
+        detected_cycles.push(BusinessCycle {
+            phase,
+            start_step,
+            end_step,
+            duration,
+            avg_volume,
+            peak_volume,
+            trough_volume,
+        });
+    }
+
+    // Step 4: Calculate cycle statistics
+    if detected_cycles.is_empty() {
+        return None;
+    }
+
+    let expansions: Vec<&BusinessCycle> = detected_cycles
+        .iter()
+        .filter(|c| c.phase == CyclePhase::Expansion)
+        .collect();
+
+    let contractions: Vec<&BusinessCycle> = detected_cycles
+        .iter()
+        .filter(|c| c.phase == CyclePhase::Contraction)
+        .collect();
+
+    let avg_expansion_duration = if expansions.is_empty() {
+        0.0
+    } else {
+        expansions.iter().map(|c| c.duration as f64).sum::<f64>() / expansions.len() as f64
+    };
+
+    let avg_contraction_duration = if contractions.is_empty() {
+        0.0
+    } else {
+        contractions.iter().map(|c| c.duration as f64).sum::<f64>() / contractions.len() as f64
+    };
+
+    // Complete cycles are expansion + contraction pairs
+    let total_cycles = std::cmp::min(expansions.len(), contractions.len());
+
+    let avg_cycle_duration = if total_cycles > 0 {
+        avg_expansion_duration + avg_contraction_duration
+    } else {
+        0.0
+    };
+
+    Some(BusinessCycleStats {
+        total_cycles,
+        avg_cycle_duration,
+        avg_expansion_duration,
+        avg_contraction_duration,
+        detected_cycles,
+    })
+}
+
+/// Apply simple moving average smoothing to a time series.
+///
+/// Reduces noise in the data by averaging each point with its neighbors.
+/// The window parameter controls how many neighbors to include on each side.
+///
+/// # Arguments
+///
+/// * `data` - The time series data to smooth
+/// * `window` - The smoothing window size (should be odd number, typically 3 or 5)
+///
+/// # Returns
+///
+/// A new vector with smoothed values. Edge cases use smaller windows.
+fn smooth_data(data: &[f64], window: usize) -> Vec<f64> {
+    if window < 2 {
+        return data.to_vec();
+    }
+
+    let half_window = window / 2;
+    let mut smoothed = Vec::with_capacity(data.len());
+
+    for i in 0..data.len() {
+        let start = i.saturating_sub(half_window);
+        let end = (i + half_window + 1).min(data.len());
+        let sum: f64 = data[start..end].iter().sum();
+        let count = (end - start) as f64;
+        smoothed.push(sum / count);
+    }
+
+    smoothed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2873,6 +3164,7 @@ mod tests {
             total_fees_collected: 0.0,
             per_skill_trade_stats: vec![],
             skill_market_concentration: None,
+            business_cycle_statistics: None,
             failed_trade_statistics: FailedTradeStats {
                 total_failed_attempts: 20,
                 failure_rate: 0.1667, // 20 / (100 + 20) = 0.1667
