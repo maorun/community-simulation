@@ -1406,146 +1406,228 @@ impl SimulationConfig {
     /// assert!(config.validate().is_err());
     /// ```
     pub fn validate(&self) -> Result<()> {
+        // Core simulation parameters
         if self.max_steps == 0 {
             return Err(SimulationError::ValidationError(
-                "max_steps must be greater than 0".to_string(),
+                "Configuration Error: max_steps must be greater than 0. \
+                 This parameter determines how many simulation steps to run. \
+                 Typical values: 100-500 for testing, 1000-10000 for analysis. \
+                 Current value: 0"
+                    .to_string(),
             ));
         }
 
         if self.entity_count == 0 {
             return Err(SimulationError::ValidationError(
-                "entity_count (number of persons) must be greater than 0".to_string(),
+                "Configuration Error: entity_count (number of persons) must be greater than 0. \
+                 This parameter sets how many economic agents participate in the simulation. \
+                 Typical values: 10-50 for quick tests, 100-500 for detailed analysis. \
+                 Current value: 0"
+                    .to_string(),
             ));
         }
 
+        // Economic parameters
         if self.initial_money_per_person.is_sign_negative() {
             return Err(SimulationError::ValidationError(format!(
-                "initial_money_per_person must be non-negative, got: {}",
+                "Configuration Error: initial_money_per_person must be non-negative. \
+                 This sets the starting capital for each agent. \
+                 Recommended range: 50.0-500.0 for balanced economies. \
+                 Current value: {}",
                 self.initial_money_per_person
             )));
         }
 
         if self.base_skill_price <= 0.0 {
             return Err(SimulationError::ValidationError(format!(
-                "base_skill_price must be greater than 0, got: {}",
+                "Configuration Error: base_skill_price must be greater than 0. \
+                 This sets the baseline price for skills in the market. \
+                 Recommended range: 5.0-20.0 for balanced markets. \
+                 Current value: {}",
                 self.base_skill_price
             )));
         }
 
         if self.min_skill_price <= 0.0 {
             return Err(SimulationError::ValidationError(format!(
-                "min_skill_price must be greater than 0, got: {}",
+                "Configuration Error: min_skill_price must be greater than 0. \
+                 This sets a price floor to prevent skills from becoming worthless. \
+                 Recommended range: 0.5-5.0 (typically 10-50% of base_skill_price). \
+                 Current value: {}",
                 self.min_skill_price
             )));
         }
 
         if self.min_skill_price > self.base_skill_price {
             return Err(SimulationError::ValidationError(format!(
-                "min_skill_price ({}) cannot exceed base_skill_price ({})",
+                "Configuration Error: min_skill_price ({}) cannot exceed base_skill_price ({}). \
+                 The price floor (min_skill_price) must be at or below the baseline price. \
+                 Suggestion: Set min_skill_price to 10-50% of base_skill_price.",
                 self.min_skill_price, self.base_skill_price
             )));
         }
 
+        // Time parameters
         if self.time_step <= 0.0 {
             return Err(SimulationError::ValidationError(format!(
-                "time_step must be greater than 0, got: {}",
+                "Configuration Error: time_step must be greater than 0. \
+                 This parameter controls the time granularity of the simulation. \
+                 Recommended: 1.0 (default) for most simulations. \
+                 Current value: {}",
                 self.time_step
             )));
         }
 
+        // Technology parameters
         if self.tech_growth_rate.is_sign_negative() {
             return Err(SimulationError::ValidationError(format!(
-                "tech_growth_rate must be non-negative, got: {}",
+                "Configuration Error: tech_growth_rate must be non-negative. \
+                 This parameter models technological advancement over time. \
+                 Recommended range: 0.0 (no growth) to 0.01 (1% per step). \
+                 Current value: {}",
                 self.tech_growth_rate
             )));
         }
 
+        // Seasonal parameters
         if !(0.0..=1.0).contains(&self.seasonal_amplitude) {
             return Err(SimulationError::ValidationError(format!(
-                "seasonal_amplitude must be between 0.0 and 1.0, got: {}",
+                "Configuration Error: seasonal_amplitude must be between 0.0 and 1.0. \
+                 This controls the strength of seasonal market fluctuations. \
+                 0.0 = no seasonality, 1.0 = maximum variation. \
+                 Recommended: 0.1-0.3 for realistic seasonality. \
+                 Current value: {}",
                 self.seasonal_amplitude
             )));
         }
 
         if self.seasonal_period == 0 {
             return Err(SimulationError::ValidationError(
-                "seasonal_period must be greater than 0".to_string(),
+                "Configuration Error: seasonal_period must be greater than 0. \
+                 This sets how many steps make up one seasonal cycle. \
+                 Recommended: 50-100 steps per season for typical simulations. \
+                 Current value: 0"
+                    .to_string(),
             ));
         }
 
+        // Fee and rate parameters
         if !(0.0..=1.0).contains(&self.transaction_fee) {
             return Err(SimulationError::ValidationError(format!(
-                "transaction_fee must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                "Configuration Error: transaction_fee must be between 0.0 and 1.0 (0% to 100%). \
+                 This parameter models market friction and transaction costs. \
+                 Recommended range: 0.0-0.1 (0-10%) for realistic markets. \
+                 Current value: {}",
                 self.transaction_fee
             )));
         }
 
         if !(0.0..=1.0).contains(&self.savings_rate) {
             return Err(SimulationError::ValidationError(format!(
-                "savings_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                "Configuration Error: savings_rate must be between 0.0 and 1.0 (0% to 100%). \
+                 This determines what fraction of income agents save vs. spend. \
+                 Recommended range: 0.1-0.3 (10-30%) for balanced economies. \
+                 Current value: {}",
                 self.savings_rate
             )));
         }
 
         if !(0.0..=1.0).contains(&self.loan_interest_rate) {
             return Err(SimulationError::ValidationError(format!(
-                "loan_interest_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                "Configuration Error: loan_interest_rate must be between 0.0 and 1.0 (0% to 100%). \
+                 This sets the interest rate charged on loans. \
+                 Recommended range: 0.05-0.2 (5-20%) for realistic lending markets. \
+                 Current value: {}",
                 self.loan_interest_rate
             )));
         }
 
         if self.loan_repayment_period == 0 {
             return Err(SimulationError::ValidationError(
-                "loan_repayment_period must be greater than 0".to_string(),
+                "Configuration Error: loan_repayment_period must be greater than 0. \
+                 This sets how many steps agents have to repay loans. \
+                 Recommended: 10-50 steps depending on simulation length. \
+                 Current value: 0"
+                    .to_string(),
             ));
         }
 
         if self.min_money_to_lend.is_sign_negative() {
             return Err(SimulationError::ValidationError(format!(
-                "min_money_to_lend must be non-negative, got: {}",
+                "Configuration Error: min_money_to_lend must be non-negative. \
+                 This sets the minimum wealth required for an agent to lend money. \
+                 Recommended: 50-200 for typical economies. \
+                 Current value: {}",
                 self.min_money_to_lend
             )));
         }
 
+        // Feature dependency validations
         // Credit rating system validation
         if self.enable_credit_rating && !self.enable_loans {
             return Err(SimulationError::ValidationError(
-                "enable_credit_rating requires enable_loans to be true".to_string(),
+                "Feature Dependency Error: enable_credit_rating requires enable_loans to be true. \
+                 Credit ratings are used to assess loan risk, so the loan system must be enabled. \
+                 Solution: Set enable_loans=true or disable credit ratings."
+                    .to_string(),
             ));
         }
 
-        // Additional sanity checks for extreme values
+        // Loans work better with savings
+        if self.enable_loans && self.savings_rate == 0.0 {
+            log::warn!(
+                "Configuration Notice: Loans are enabled but savings_rate is 0.0. \
+                 With no savings, agents cannot accumulate wealth to lend. \
+                 Recommendation: Set savings_rate to at least 0.1 (10%) for a functional lending market."
+            );
+        }
+
+        // Sanity checks for extreme values
         if self.max_steps > 1_000_000 {
             return Err(SimulationError::ValidationError(format!(
-                "max_steps is too large ({}), maximum recommended value is 1,000,000",
+                "Configuration Error: max_steps is too large ({}). \
+                 Values above 1,000,000 may cause performance issues and extremely long run times. \
+                 Recommended: Use 100-10,000 for typical simulations. \
+                 If you need long-term analysis, consider using checkpoint systems instead.",
                 self.max_steps
             )));
         }
 
         if self.entity_count > 100_000 {
             return Err(SimulationError::ValidationError(format!(
-                "entity_count is too large ({}), maximum recommended value is 100,000",
+                "Configuration Error: entity_count is too large ({}). \
+                 Values above 100,000 may cause memory and performance issues. \
+                 Recommended: Use 10-1,000 for typical simulations. \
+                 For large-scale analysis, consider parallel sweeps with smaller populations.",
                 self.entity_count
             )));
         }
 
         if self.tech_growth_rate > 1.0 {
             return Err(SimulationError::ValidationError(format!(
-                "tech_growth_rate is too large ({}), values above 1.0 (100% per step) are unrealistic",
+                "Configuration Error: tech_growth_rate is too large ({}). \
+                 Values above 1.0 mean 100%+ technological growth per step, which is economically implausible. \
+                 Recommended range: 0.0-0.01 (0-1% per step) for realistic scenarios.",
                 self.tech_growth_rate
             )));
         }
 
         if !(0.0..=1.0).contains(&self.tax_rate) {
             return Err(SimulationError::ValidationError(format!(
-                "tax_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                "Configuration Error: tax_rate must be between 0.0 and 1.0 (0% to 100%). \
+                 This parameter models the tax burden on economic activity. \
+                 Recommended range: 0.1-0.4 (10-40%) for realistic tax systems. \
+                 Current value: {}",
                 self.tax_rate
             )));
         }
 
         if self.black_market_price_multiplier < 0.0 || self.black_market_price_multiplier > 2.0 {
             return Err(SimulationError::ValidationError(format!(
-                "black_market_price_multiplier must be between 0.0 (exclusive) and 2.0, got: {}",
+                "Configuration Error: black_market_price_multiplier must be between 0.0 and 2.0. \
+                 This controls the price advantage/disadvantage in black markets. \
+                 Typical values: 0.5-1.5 (50% discount to 50% premium). \
+                 Current value: {}",
                 self.black_market_price_multiplier
             )));
         }
@@ -1647,28 +1729,39 @@ impl SimulationConfig {
         if self.enable_mentorship {
             if !self.enable_education {
                 return Err(SimulationError::ValidationError(
-                    "Mentorship requires education to be enabled (enable_education must be true)"
-                        .to_string(),
+                    "Feature Dependency Error: enable_mentorship requires enable_education to be true. \
+                     Mentorship is a mechanism that reduces learning costs, so the education system must be enabled. \
+                     Solution: Set enable_education=true or disable mentorship.".to_string(),
                 ));
             }
 
             if !(0.0..=1.0).contains(&self.mentorship_cost_reduction) {
                 return Err(SimulationError::ValidationError(format!(
-                    "mentorship_cost_reduction must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    "Configuration Error: mentorship_cost_reduction must be between 0.0 and 1.0 (0% to 100%). \
+                     This sets the discount on learning costs when using a mentor. \
+                     Recommended range: 0.2-0.5 (20-50% reduction) for balanced mentorship benefits. \
+                     Current value: {}",
                     self.mentorship_cost_reduction
                 )));
             }
 
             if self.min_mentor_quality < 0.0 || self.min_mentor_quality > 5.0 {
                 return Err(SimulationError::ValidationError(format!(
-                    "min_mentor_quality must be between 0.0 and 5.0 (quality scale), got: {}",
+                    "Configuration Error: min_mentor_quality must be between 0.0 and 5.0 (quality scale). \
+                     This sets the minimum quality level required to become a mentor. \
+                     0.0 = anyone can mentor, 5.0 = only masters can mentor. \
+                     Recommended: 2.0-3.0 for realistic mentorship requirements. \
+                     Current value: {}",
                     self.min_mentor_quality
                 )));
             }
 
             if self.mentor_reputation_bonus < 0.0 {
                 return Err(SimulationError::ValidationError(format!(
-                    "mentor_reputation_bonus must be non-negative, got: {}",
+                    "Configuration Error: mentor_reputation_bonus must be non-negative. \
+                     This rewards agents for being mentors with reputation gains. \
+                     Recommended: 0.1-1.0 for meaningful incentives without dominating reputation. \
+                     Current value: {}",
                     self.mentor_reputation_bonus
                 )));
             }
@@ -1735,29 +1828,41 @@ impl SimulationConfig {
         if self.enable_trade_agreements {
             if !(0.0..=1.0).contains(&self.trade_agreement_probability) {
                 return Err(SimulationError::ValidationError(format!(
-                    "trade_agreement_probability must be between 0.0 and 1.0, got: {}",
+                    "Configuration Error: trade_agreement_probability must be between 0.0 and 1.0. \
+                     This controls the chance of forming trade agreements between friends. \
+                     Recommended range: 0.05-0.2 (5-20%) for realistic agreement formation. \
+                     Current value: {}",
                     self.trade_agreement_probability
                 )));
             }
 
             if !(0.0..=1.0).contains(&self.trade_agreement_discount) {
                 return Err(SimulationError::ValidationError(format!(
-                    "trade_agreement_discount must be between 0.0 and 1.0, got: {}",
+                    "Configuration Error: trade_agreement_discount must be between 0.0 and 1.0. \
+                     This sets the price discount for trades under agreements. \
+                     Recommended range: 0.05-0.15 (5-15%) for meaningful but balanced benefits. \
+                     Current value: {}",
                     self.trade_agreement_discount
                 )));
             }
 
             if self.trade_agreement_duration == 0 {
                 return Err(SimulationError::ValidationError(
-                    "trade_agreement_duration must be greater than 0 when trade agreements are enabled"
-                        .to_string(),
+                    "Configuration Error: trade_agreement_duration must be greater than 0 when trade agreements are enabled. \
+                     This sets how many steps agreements last before expiring. \
+                     Recommended: 20-100 steps depending on simulation length. \
+                     Current value: 0".to_string(),
                 ));
             }
 
             // Trade agreements require friendships to function
             // Without friendships, no agreements can be formed
             if !self.enable_friendships {
-                log::warn!("Trade agreements are enabled but friendships are disabled. No trade agreements will be formed because agreements can only form between existing friends. Enable friendships for trade agreements to work.");
+                log::warn!(
+                    "Configuration Warning: Trade agreements are enabled but friendships are disabled. \
+                     No trade agreements will be formed because agreements can only form between existing friends. \
+                     Recommendation: Set enable_friendships=true for trade agreements to work effectively."
+                );
             }
         }
 
@@ -1766,8 +1871,9 @@ impl SimulationConfig {
             // Trust networks require friendships to be enabled
             if !self.enable_friendships {
                 return Err(SimulationError::ValidationError(
-                    "Trust networks require friendships to be enabled. Set enable_friendships to true when using trust networks."
-                        .to_string(),
+                    "Feature Dependency Error: enable_trust_networks requires enable_friendships to be true. \
+                     Trust networks are built on top of friendship relationships. \
+                     Solution: Set enable_friendships=true or disable trust networks.".to_string(),
                 ));
             }
         }
@@ -1907,20 +2013,28 @@ impl SimulationConfig {
         if self.enable_resource_pools {
             if self.num_groups.is_none() {
                 return Err(SimulationError::ValidationError(
-                    "enable_resource_pools requires num_groups to be set".to_string(),
+                    "Feature Dependency Error: enable_resource_pools requires num_groups to be set. \
+                     Resource pools are shared among group members, so groups must be defined. \
+                     Solution: Set num_groups to a positive integer or disable resource pools.".to_string(),
                 ));
             }
 
             if !(0.0..=0.5).contains(&self.pool_contribution_rate) {
                 return Err(SimulationError::ValidationError(format!(
-                    "pool_contribution_rate must be between 0.0 and 0.5 (0% to 50%), got: {}",
+                    "Configuration Error: pool_contribution_rate must be between 0.0 and 0.5 (0% to 50%). \
+                     This sets what fraction of income agents contribute to their group pool. \
+                     Recommended range: 0.05-0.2 (5-20%) for balanced solidarity vs. individual incentives. \
+                     Current value: {}",
                     self.pool_contribution_rate
                 )));
             }
 
             if self.pool_withdrawal_threshold < 0.0 || self.pool_withdrawal_threshold > 1000.0 {
                 return Err(SimulationError::ValidationError(format!(
-                    "pool_withdrawal_threshold must be between 0.0 and 1000.0, got: {}",
+                    "Configuration Error: pool_withdrawal_threshold must be between 0.0 and 1000.0. \
+                     This sets the minimum wealth needed before withdrawing from the pool. \
+                     Recommended: 10-100 based on initial_money_per_person and economy scale. \
+                     Current value: {}",
                     self.pool_withdrawal_threshold
                 )));
             }

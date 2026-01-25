@@ -80,17 +80,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Code-Qualität
 
-#### 3.1 Konfigurationsvalidierung und -dokumentation
-**Beschreibung:** Automatisch generierte Dokumentation aller Konfigurationsparameter mit Ranges, Defaults, Abhängigkeiten.
-
-**Nutzen:** Bessere Benutzererfahrung, weniger Konfigurationsfehler, selbstdokumentierender Code.
-
-**Implementierung:**
-- Schema-basierte Validierung mit detaillierten Fehlermeldungen
-- Automatische Generierung von Markdown-Dokumentation aus Code
-- Interactive Config-Builder (CLI Wizard)
-- Validierung von Feature-Dependencies (z.B. Loans benötigen Reputation)
-
 ### 4. Datenmanagement
 
 #### 4.1 Zeitreihen-Datenbank-Integration
@@ -280,7 +269,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - **Parallele Trade-Matching** - Performance bei großen Simulationen
 - **Inkrementelle Statistiken** - Skalierbarkeit
 - **Integration-Tests** - Qualitätssicherung
-- **Konfigurationsvalidierung** - Benutzererfahrung
 - **Zeitreihen-DB** - Enterprise-Integration
 - **Erweiterbare Architektur** - Langfristige Wartbarkeit
 
