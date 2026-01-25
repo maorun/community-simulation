@@ -40,6 +40,66 @@ impl Location {
     }
 }
 
+/// Defines specialization strategy for skill development in the simulation.
+/// Determines whether agents focus on mastering few skills (specialist) or learning many (generalist).
+///
+/// Specialists have higher quality in their few skills and can charge premium prices,
+/// but face a narrower market. Generalists have broader market access but standard quality.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum SpecializationStrategy {
+    /// Specialist: Focuses on few skills with higher quality and premium pricing.
+    /// Higher quality (+1.0 bonus), higher prices, but narrower market focus.
+    Specialist,
+    /// Balanced: Standard approach with moderate quality and pricing.
+    /// No quality or pricing adjustments, represents typical market participant.
+    #[default]
+    Balanced,
+    /// Generalist: Learns many skills with standard quality but broader market access.
+    /// No quality bonus, standard pricing, but more flexible in market participation.
+    Generalist,
+}
+
+impl SpecializationStrategy {
+    /// Returns the quality bonus for this specialization strategy.
+    /// This bonus is added to the base quality rating for skills.
+    ///
+    /// # Returns
+    /// * `Specialist`: +1.0 quality bonus
+    /// * `Balanced`: 0.0 (no bonus)
+    /// * `Generalist`: 0.0 (no bonus)
+    pub fn quality_bonus(&self) -> f64 {
+        match self {
+            SpecializationStrategy::Specialist => 1.0,
+            SpecializationStrategy::Balanced => 0.0,
+            SpecializationStrategy::Generalist => 0.0,
+        }
+    }
+
+    /// Returns the price multiplier for this specialization strategy.
+    /// This multiplier is applied to skill prices.
+    ///
+    /// # Returns
+    /// * `Specialist`: 1.15 (15% premium)
+    /// * `Balanced`: 1.0 (base price)
+    /// * `Generalist`: 1.0 (base price)
+    pub fn price_multiplier(&self) -> f64 {
+        match self {
+            SpecializationStrategy::Specialist => 1.15,
+            SpecializationStrategy::Balanced => 1.0,
+            SpecializationStrategy::Generalist => 1.0,
+        }
+    }
+
+    /// Returns all strategy variants for random distribution.
+    pub fn all_variants() -> [SpecializationStrategy; 3] {
+        [
+            SpecializationStrategy::Specialist,
+            SpecializationStrategy::Balanced,
+            SpecializationStrategy::Generalist,
+        ]
+    }
+}
+
 /// Defines different behavioral strategies for agents in the simulation.
 /// Each strategy affects how aggressively a person spends money on needed skills.
 ///
@@ -251,6 +311,9 @@ pub struct Person {
     /// Behavioral strategy that affects spending decisions.
     /// Determines how aggressively this person spends money to acquire needed skills.
     pub strategy: Strategy,
+    /// Specialization strategy affecting skill quality and pricing.
+    /// Determines whether this person focuses on few skills (specialist) or many (generalist).
+    pub specialization_strategy: SpecializationStrategy,
     /// Skills that this person has learned through education.
     /// These skills can also be provided to others in the market.
     pub learned_skills: Vec<Skill>,
@@ -315,6 +378,7 @@ impl Person {
             lent_loans: Vec::new(),
             active_investments: Vec::new(), // Start with no investments
             strategy,
+            specialization_strategy: SpecializationStrategy::default(), // Start with balanced
             learned_skills: Vec::new(), // Start with no learned skills
             friends: HashSet::new(),    // Start with no friends
             trade_agreement_ids: Vec::new(), // Start with no trade agreements
