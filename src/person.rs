@@ -1287,4 +1287,87 @@ mod tests {
         assert_eq!(person.strategy_params.successful_sells, 1);
         assert_eq!(person.strategy_params.total_successful_trades(), 3);
     }
+
+    #[test]
+    fn test_specialization_strategy_quality_bonus_specialist() {
+        let strategy = SpecializationStrategy::Specialist;
+        assert_eq!(
+            strategy.quality_bonus(),
+            1.0,
+            "Specialist should have +1.0 quality bonus"
+        );
+    }
+
+    #[test]
+    fn test_specialization_strategy_quality_bonus_balanced() {
+        let strategy = SpecializationStrategy::Balanced;
+        assert_eq!(
+            strategy.quality_bonus(),
+            0.0,
+            "Balanced should have no quality bonus"
+        );
+    }
+
+    #[test]
+    fn test_specialization_strategy_quality_bonus_generalist() {
+        let strategy = SpecializationStrategy::Generalist;
+        assert_eq!(
+            strategy.quality_bonus(),
+            0.0,
+            "Generalist should have no quality bonus"
+        );
+    }
+
+    #[test]
+    fn test_specialization_strategy_price_multiplier_specialist() {
+        let strategy = SpecializationStrategy::Specialist;
+        assert!(
+            (strategy.price_multiplier() - 1.15).abs() < 0.001,
+            "Specialist should have 1.15x price multiplier (15% premium)"
+        );
+    }
+
+    #[test]
+    fn test_specialization_strategy_price_multiplier_balanced() {
+        let strategy = SpecializationStrategy::Balanced;
+        assert_eq!(
+            strategy.price_multiplier(),
+            1.0,
+            "Balanced should have base price multiplier"
+        );
+    }
+
+    #[test]
+    fn test_specialization_strategy_price_multiplier_generalist() {
+        let strategy = SpecializationStrategy::Generalist;
+        assert_eq!(
+            strategy.price_multiplier(),
+            1.0,
+            "Generalist should have base price multiplier"
+        );
+    }
+
+    #[test]
+    fn test_specialization_strategy_all_variants() {
+        let variants = SpecializationStrategy::all_variants();
+        assert_eq!(
+            variants.len(),
+            3,
+            "Should have exactly 3 specialization strategy variants"
+        );
+        assert_eq!(variants[0], SpecializationStrategy::Specialist);
+        assert_eq!(variants[1], SpecializationStrategy::Balanced);
+        assert_eq!(variants[2], SpecializationStrategy::Generalist);
+    }
+
+    #[test]
+    fn test_person_specialization_strategy_initialization() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        assert_eq!(
+            person.specialization_strategy,
+            SpecializationStrategy::default(),
+            "Specialization strategy should be default (Balanced)"
+        );
+    }
 }

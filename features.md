@@ -33,23 +33,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 6. Verschiedene Agentenstrategien
 
-#### 6.1 Spezialisierung und Diversifikation
-**Beschreibung:** Agenten entscheiden strategisch, ob sie sich auf wenige Fähigkeiten spezialisieren (Experte) oder viele Fähigkeiten lernen (Generalist).
-
-**Harmonien:**
-- **Bildungssystem:** Spezialisierung erfordert intensivere Bildungsinvestition
-- **Qualität:** Spezialisierte Fähigkeiten haben höhere Qualität
-- **Risiko:** Diversifikation reduziert Einkommensrisiko
-- **Produktionssystem:** Spezialisten produzieren höherwertige Outputs
-
-**Nutzen:** Untersucht Trade-offs zwischen Spezialisierung und Diversifikation, Expertenbildung.
-
-**Implementierung:**
-- `SpecializationStrategy` Parameter pro Person
-- Spezialisten: Höhere Qualität, höhere Preise, aber engerer Markt
-- Generalisten: Breiterer Markt, flexibler, aber niedrigere Preise
-- Dynamische Entscheidung basierend auf Marktnachfrage
-
 ## 🔧 Code-Verbesserungen
 
 ### 1. Architektur und Design
