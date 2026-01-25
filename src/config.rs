@@ -1575,9 +1575,11 @@ impl SimulationConfig {
 
         // Loans work better with savings
         if self.enable_loans && self.savings_rate == 0.0 {
-            log::warn!("Configuration Notice: Loans are enabled but savings_rate is 0.0. \
-                       With no savings, agents cannot accumulate wealth to lend. \
-                       Recommendation: Set savings_rate to at least 0.1 (10%) for a functional lending market.");
+            log::warn!(
+                "Configuration Notice: Loans are enabled but savings_rate is 0.0. \
+                 With no savings, agents cannot accumulate wealth to lend. \
+                 Recommendation: Set savings_rate to at least 0.1 (10%) for a functional lending market."
+            );
         }
 
         // Sanity checks for extreme values
@@ -1856,9 +1858,11 @@ impl SimulationConfig {
             // Trade agreements require friendships to function
             // Without friendships, no agreements can be formed
             if !self.enable_friendships {
-                log::warn!("Configuration Warning: Trade agreements are enabled but friendships are disabled. \
-                           No trade agreements will be formed because agreements can only form between existing friends. \
-                           Recommendation: Set enable_friendships=true for trade agreements to work effectively.");
+                log::warn!(
+                    "Configuration Warning: Trade agreements are enabled but friendships are disabled. \
+                     No trade agreements will be formed because agreements can only form between existing friends. \
+                     Recommendation: Set enable_friendships=true for trade agreements to work effectively."
+                );
             }
         }
 
