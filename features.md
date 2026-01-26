@@ -232,7 +232,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ### Code-Verbesserungen (Kontinuierlich)
 
 - **Parallele Trade-Matching** - Performance bei großen Simulationen
-- **Inkrementelle Statistiken** - Skalierbarkeit
 - **Integration-Tests** - Qualitätssicherung
 - **Zeitreihen-DB** - Enterprise-Integration
 - **Erweiterbare Architektur** - Langfristige Wartbarkeit
@@ -295,7 +294,6 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 
 ### Kontinuierlich: Code-Qualität und Performance
 - Parallele Trade-Matching bei Bedarf (wenn N > 1000)
-- Inkrementelle Statistiken bei Performance-Problemen
 - Integration-Tests für jedes neue Feature
 - Refactoring zu komponenten-basierter Architektur
 - Dokumentations-Updates

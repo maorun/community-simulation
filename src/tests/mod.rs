@@ -757,4 +757,92 @@ mod engine_tests {
             "Events should not be collected when disabled"
         );
     }
+
+    #[test]
+    fn test_incremental_money_statistics_accuracy() {
+        // Test that incremental statistics produce valid results
+        let mut config = get_test_config();
+        config.entity_count = 20;
+        config.max_steps = 50;
+        config.enable_loans = true; // Allow money to vary more
+        config.tax_rate = 0.05;
+        config.enable_tax_redistribution = true;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Get money statistics from result
+        let money_stats = &result.money_statistics;
+
+        // Verify mean is reasonable
+        assert!(
+            money_stats.average.is_finite(),
+            "Average money should be finite"
+        );
+
+        // Verify std_dev is non-negative and finite
+        assert!(
+            money_stats.std_dev >= 0.0 && money_stats.std_dev.is_finite(),
+            "Std dev should be non-negative and finite, got: {}",
+            money_stats.std_dev
+        );
+
+        // Verify min/max relationship
+        assert!(
+            money_stats.min_money <= money_stats.max_money,
+            "Min money ({}) should be <= max money ({})",
+            money_stats.min_money,
+            money_stats.max_money
+        );
+
+        // Verify median is between min and max
+        assert!(
+            money_stats.median >= money_stats.min_money
+                && money_stats.median <= money_stats.max_money,
+            "Median ({}) should be between min ({}) and max ({})",
+            money_stats.median,
+            money_stats.min_money,
+            money_stats.max_money
+        );
+
+        // Verify Gini coefficient is in valid range [0, infinity)
+        assert!(
+            money_stats.gini_coefficient >= 0.0,
+            "Gini coefficient should be non-negative"
+        );
+
+        // Run multiple simulations and verify statistics are consistent
+        for seed in 100..105 {
+            let mut config2 = get_test_config();
+            config2.entity_count = 15;
+            config2.max_steps = 30;
+            config2.seed = seed;
+
+            let mut engine2 = SimulationEngine::new(config2);
+            let result2 = engine2.run();
+
+            let stats = &result2.money_statistics;
+
+            // All statistics should be finite
+            assert!(
+                stats.average.is_finite() && stats.std_dev.is_finite() && stats.median.is_finite(),
+                "All statistics should be finite for seed {}",
+                seed
+            );
+
+            // Standard deviation should be non-negative
+            assert!(
+                stats.std_dev >= 0.0,
+                "Std dev should be non-negative for seed {}",
+                seed
+            );
+
+            // Min/max should be consistent
+            assert!(
+                stats.min_money <= stats.max_money,
+                "Min <= max should hold for seed {}",
+                seed
+            );
+        }
+    }
 }

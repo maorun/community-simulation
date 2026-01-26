@@ -87,6 +87,10 @@ pub struct SimulationCheckpoint {
     pub total_contracts_completed: usize,
     /// Time-series of wealth distribution statistics
     pub wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
+    /// Incremental money statistics for O(1) retrieval
+    pub money_incremental_stats: crate::result::IncrementalStats,
+    pub min_money: f64,
+    pub max_money: f64,
     /// Social mobility tracking: person_id -> Vec of quintile assignments at each step
     pub mobility_quintiles: HashMap<usize, Vec<usize>>,
     /// Environmental resource tracking (if enabled)
@@ -170,6 +174,10 @@ pub struct SimulationEngine {
     total_certification_cost: f64,
     // Wealth statistics history tracking
     wealth_stats_history: Vec<crate::result::WealthStatsSnapshot>,
+    // Incremental money statistics tracking for O(1) retrieval
+    money_incremental_stats: crate::result::IncrementalStats,
+    min_money: f64,
+    max_money: f64,
     // Social mobility tracking: person_id -> Vec of quintile assignments (0-4) at each step
     mobility_quintiles: HashMap<usize, Vec<usize>>,
     // Plugin system for extending simulation
@@ -407,6 +415,9 @@ impl SimulationEngine {
             total_certifications_expired: 0,
             total_certification_cost: 0.0,
             wealth_stats_history: Vec::new(),
+            money_incremental_stats: crate::result::IncrementalStats::new(),
+            min_money: f64::INFINITY,
+            max_money: f64::NEG_INFINITY,
             mobility_quintiles: HashMap::new(),
             plugin_registry: PluginRegistry::new(),
             resource_pools,
@@ -1022,7 +1033,12 @@ impl SimulationEngine {
         let money_stats = if !final_money_distribution.is_empty() {
             let sum: f64 = final_money_distribution.iter().sum();
             let count = final_money_distribution.len() as f64;
-            let average = sum / count;
+
+            // Use incremental statistics for mean, variance, std_dev (O(1) retrieval)
+            let average = self.money_incremental_stats.mean();
+            let std_dev = self.money_incremental_stats.std_dev();
+
+            // Median requires sorted data (cannot be incremental)
             let median = if count > 0.0 {
                 if count as usize % 2 == 1 {
                     final_money_distribution[count as usize / 2]
@@ -1034,15 +1050,6 @@ impl SimulationEngine {
             } else {
                 0.0
             };
-            let variance = final_money_distribution
-                .iter()
-                .map(|value| {
-                    let diff = average - value;
-                    diff * diff
-                })
-                .sum::<f64>()
-                / count;
-            let std_dev = variance.sqrt();
 
             // Calculate Gini coefficient using the shared utility function
             let gini_coefficient =
@@ -1060,8 +1067,9 @@ impl SimulationEngine {
                 average,
                 median,
                 std_dev,
-                min_money: *final_money_distribution.first().unwrap_or(&0.0),
-                max_money: *final_money_distribution.last().unwrap_or(&0.0),
+                // Use incrementally tracked min/max (O(1) retrieval)
+                min_money: self.min_money,
+                max_money: self.max_money,
                 gini_coefficient,
                 herfindahl_index,
                 top_10_percent_share,
@@ -3521,7 +3529,54 @@ impl SimulationEngine {
         self.event_bus
             .emit_step_completed(self.current_step, trades_this_step, volume_this_step);
 
+        // Update incremental money statistics
+        self.update_money_statistics();
+
         self.current_step += 1;
+    }
+
+    /// Update incremental money statistics for efficient retrieval.
+    ///
+    /// This method recalculates incremental statistics from scratch each step
+    /// by iterating through all active entities. The key benefit is enabling
+    /// O(1) retrieval of mean, variance, std_dev, min, and max values, which
+    /// is especially useful in interactive mode and for frequent statistics queries.
+    ///
+    /// # Performance Trade-offs
+    ///
+    /// - **Per-step cost:** O(n) to iterate all entities (unavoidable anyway for other step operations)
+    /// - **Statistics retrieval:** O(1) instead of O(n) recalculation on demand
+    /// - **Total simulation cost:** O(n × steps) for updates, but avoids O(n) cost per statistics query
+    ///
+    /// This approach was chosen over tracking individual entity money changes because:
+    /// - Simpler implementation with lower bug risk
+    /// - Money changes occur in many places throughout the codebase
+    /// - The O(n) iteration per step is acceptable since we already iterate entities for other operations
+    /// - The primary benefit is O(1) retrieval, not reducing per-step cost
+    ///
+    /// # Notes
+    ///
+    /// Median, Gini coefficient, and concentration metrics still require sorting
+    /// and remain as post-processing operations, as they cannot be calculated incrementally.
+    fn update_money_statistics(&mut self) {
+        // Reset incremental stats
+        self.money_incremental_stats = crate::result::IncrementalStats::new();
+        self.min_money = f64::INFINITY;
+        self.max_money = f64::NEG_INFINITY;
+
+        // Update with current money values
+        for entity in self.entities.iter().filter(|e| e.active) {
+            let money = entity.person_data.money;
+            self.money_incremental_stats.update(money);
+            self.min_money = self.min_money.min(money);
+            self.max_money = self.max_money.max(money);
+        }
+
+        // Handle edge case: no active entities
+        if self.money_incremental_stats.count() == 0 {
+            self.min_money = 0.0;
+            self.max_money = 0.0;
+        }
     }
 
     /// Apply quality decay for unused skills.
@@ -4016,7 +4071,12 @@ impl SimulationEngine {
         let money_stats = if !final_money_distribution.is_empty() {
             let sum: f64 = final_money_distribution.iter().sum();
             let count = final_money_distribution.len() as f64;
-            let average = sum / count;
+
+            // Use incremental statistics for mean and std_dev (O(1) retrieval)
+            let average = self.money_incremental_stats.mean();
+            let std_dev = self.money_incremental_stats.std_dev();
+
+            // Median requires sorted data
             let median = if count as usize > 0 {
                 if count as usize % 2 == 1 {
                     final_money_distribution[count as usize / 2]
@@ -4031,9 +4091,10 @@ impl SimulationEngine {
             crate::result::MoneyStats {
                 average,
                 median,
-                std_dev: 0.0, // Simplified
-                min_money: *final_money_distribution.first().unwrap_or(&0.0),
-                max_money: *final_money_distribution.last().unwrap_or(&0.0),
+                std_dev, // Now computed incrementally instead of being 0.0
+                // Use incrementally tracked min/max
+                min_money: self.min_money,
+                max_money: self.max_money,
                 gini_coefficient: crate::result::calculate_gini_coefficient(
                     &final_money_distribution,
                     sum,
@@ -4329,6 +4390,9 @@ impl SimulationEngine {
             total_contracts_created: self.total_contracts_created,
             total_contracts_completed: self.total_contracts_completed,
             wealth_stats_history: self.wealth_stats_history.clone(),
+            money_incremental_stats: self.money_incremental_stats.clone(),
+            min_money: self.min_money,
+            max_money: self.max_money,
             mobility_quintiles: self.mobility_quintiles.clone(),
             environment: self.environment.clone(),
             voting_system: self.voting_system.clone(),
@@ -4477,6 +4541,9 @@ impl SimulationEngine {
             total_certifications_expired: checkpoint.total_certifications_expired,
             total_certification_cost: checkpoint.total_certification_cost,
             wealth_stats_history: checkpoint.wealth_stats_history,
+            money_incremental_stats: checkpoint.money_incremental_stats,
+            min_money: checkpoint.min_money,
+            max_money: checkpoint.max_money,
             mobility_quintiles: checkpoint.mobility_quintiles,
             plugin_registry: PluginRegistry::new(),
             resource_pools: checkpoint.resource_pools,
