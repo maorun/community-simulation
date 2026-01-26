@@ -1066,6 +1066,27 @@ pub struct SimulationConfig {
     /// Valid range: 0.0-1.0 (0% to 100%)
     #[serde(default = "default_exploration_rate")]
     pub exploration_rate: f64,
+
+    /// Enable specialization and diversification strategies for skill development.
+    ///
+    /// When enabled, persons are assigned specialization strategies that affect their
+    /// skill quality and pricing:
+    /// - Specialists: Focus on few skills with higher quality (+1.0 bonus) and premium prices (+15%)
+    /// - Balanced: Standard approach with moderate quality and pricing (no adjustments)
+    /// - Generalists: Learn many skills with standard quality but broader market access
+    ///
+    /// Strategies are distributed evenly across the population using round-robin assignment.
+    ///
+    /// This enables studying:
+    /// - Trade-offs between specialization and diversification
+    /// - Expert vs. generalist market dynamics
+    /// - Quality competition and skill differentiation
+    /// - Income risk vs. market flexibility
+    ///
+    /// Only has visible effect when enable_quality is also true (quality bonuses require quality system).
+    /// Set to false to disable specialization strategies (default).
+    #[serde(default)]
+    pub enable_specialization: bool,
 }
 
 fn default_pool_contribution_rate() -> f64 {
@@ -1374,6 +1395,7 @@ impl Default for SimulationConfig {
             enable_adaptive_strategies: false,    // Disabled by default
             adaptation_rate: 0.1,                 // 10% adaptation rate
             exploration_rate: 0.05,               // 5% exploration (ε-greedy)
+            enable_specialization: false,         // Disabled by default
         }
     }
 }

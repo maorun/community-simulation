@@ -917,6 +917,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             enable_adaptive_strategies: SimulationConfig::default().enable_adaptive_strategies,
             adaptation_rate: SimulationConfig::default().adaptation_rate,
             exploration_rate: SimulationConfig::default().exploration_rate,
+            enable_specialization: SimulationConfig::default().enable_specialization,
         }
     };
 

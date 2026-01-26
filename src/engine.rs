@@ -515,13 +515,22 @@ impl SimulationEngine {
                 rng.random_range(0.0..=100.0),
             );
 
-            let entity = Entity::new(
+            let mut entity = Entity::new(
                 i,
                 config.initial_money_per_person,
                 person_skills,
                 strategy,
                 location,
             );
+
+            // Assign specialization strategy if enabled
+            if config.enable_specialization {
+                let all_specialization_strategies =
+                    crate::person::SpecializationStrategy::all_variants();
+                entity.person_data.specialization_strategy =
+                    all_specialization_strategies[i % all_specialization_strategies.len()];
+            }
+
             entities.push(entity);
         }
 
@@ -2475,19 +2484,49 @@ impl SimulationEngine {
                                 .skill_qualities
                                 .get(needed_skill_id)
                             {
+                                // Apply specialization strategy quality bonus if enabled
+                                let effective_quality = if self.config.enable_specialization {
+                                    let specialization_bonus = self.entities[seller_id]
+                                        .person_data
+                                        .specialization_strategy
+                                        .quality_bonus();
+                                    (quality + specialization_bonus).min(5.0) // Cap at max quality
+                                } else {
+                                    quality
+                                };
+
                                 // Quality ranges from 0.0-5.0, with 3.0 as average
                                 // Price adjustment: +10% per quality point above/below 3.0
                                 // Quality 5.0 -> +20% price, Quality 3.0 -> base price, Quality 1.0 -> -20% price
-                                let quality_multiplier = 1.0 + (quality - 3.0) * 0.1;
+                                let quality_multiplier = 1.0 + (effective_quality - 3.0) * 0.1;
                                 final_price *= quality_multiplier;
                                 trace!(
-                                    "Quality price adjustment: Person {} skill '{}' quality {:.2}, price adjusted by {:.1}% to ${:.2}",
+                                    "Quality price adjustment: Person {} skill '{}' quality {:.2} (effective {:.2}), price adjusted by {:.1}% to ${:.2}",
                                     self.entities[seller_id].id,
                                     needed_skill_id,
                                     quality,
+                                    effective_quality,
                                     (quality_multiplier - 1.0) * 100.0,
                                     final_price
                                 );
+                            }
+
+                            // Apply specialization strategy price multiplier if enabled
+                            if self.config.enable_specialization {
+                                let spec_price_multiplier = self.entities[seller_id]
+                                    .person_data
+                                    .specialization_strategy
+                                    .price_multiplier();
+                                final_price *= spec_price_multiplier;
+                                if spec_price_multiplier != 1.0 {
+                                    trace!(
+                                        "Specialization price multiplier: Person {} strategy {:?}, price adjusted by {:.1}% to ${:.2}",
+                                        self.entities[seller_id].id,
+                                        self.entities[seller_id].person_data.specialization_strategy,
+                                        (spec_price_multiplier - 1.0) * 100.0,
+                                        final_price
+                                    );
+                                }
                             }
                         }
                     }
