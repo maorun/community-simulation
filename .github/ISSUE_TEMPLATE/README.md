@@ -33,23 +33,24 @@ This directory contains issue templates for the Community Simulation project.
 
 ### 2. Copilot Code Improvements (`copilot-code-improvements.md`)
 
-**Purpose:** This template is specifically designed for GitHub Copilot to autonomously perform code improvements and test enhancements from the `features.md` file.
+**Purpose:** This template is specifically designed for GitHub Copilot to autonomously analyze the codebase and perform code improvements and test enhancements.
 
 **When to use:**
-- When you want GitHub Copilot to improve code quality or performance
+- When you want GitHub Copilot to autonomously identify and improve code quality or performance
 - When you need test coverage improvements
 - When you want to refactor code without changing behavior
-- When you want to implement code improvements from the "🔧 Code-Verbesserungen" section
+- When you want Copilot to find and fix code duplication, error handling issues, or other quality problems
 
 **How to use:**
 1. Create a new issue using this template
-2. Select a code improvement from `features.md` (Code-Verbesserungen section)
-3. Copilot will analyze the code and implement the improvement
-4. Copilot will ensure no behavior changes and all tests pass
-5. Follow the implementation checklist step-by-step
+2. Copilot will autonomously analyze the codebase using grep, glob, and code exploration
+3. Copilot will identify ONE specific improvement opportunity
+4. Copilot will implement the improvement with minimal changes
+5. Copilot will ensure no behavior changes and all tests pass
 
 **Key sections:**
-- Improvement selection and analysis
+- Autonomous codebase analysis instructions
+- Analysis tools and techniques (grep, glob, clippy)
 - Implementation requirements (no behavior changes)
 - Testing and validation requirements
 - Performance measurement (if applicable)
@@ -58,11 +59,12 @@ This directory contains issue templates for the Community Simulation project.
 - Success criteria
 
 **Focus areas:**
-- Architecture and Design improvements
-- Performance Optimizations
-- Code Quality enhancements
-- Testing improvements
-- Data Management optimizations
+- Code duplication reduction
+- Error handling improvements (replace unwrap/expect)
+- Performance optimizations
+- Test coverage gaps
+- Documentation improvements
+- Architecture and design enhancements
 
 ### 3. Bug Report (`bug_report.md`)
 
@@ -116,16 +118,20 @@ Both the **Copilot Feature Development** and **Copilot Code Improvements** templ
 ### Differences Between Templates
 
 **Copilot Feature Development:**
-- For implementing NEW features (🚀 Neue Features section)
+- For implementing NEW features from features.md (🚀 Neue Features section)
 - Adds new functionality and behavior
 - May require new data structures and APIs
 - Focus on value-add for users
+- Uses predefined feature list from features.md
 
 **Copilot Code Improvements:**
-- For improving EXISTING code (🔧 Code-Verbesserungen section)
+- For improving EXISTING code through autonomous analysis
+- Analyzes codebase to identify improvement opportunities
 - No external behavior changes
 - Focus on performance, quality, and maintainability
+- Uses grep, glob, and code analysis tools
 - May improve tests and documentation
+- Does NOT use features.md - finds improvements independently
 
 ### Example Workflow with Copilot - Feature Development
 
@@ -148,10 +154,14 @@ Both the **Copilot Feature Development** and **Copilot Code Improvements** templ
 
 ```bash
 # 1. Create issue using the Copilot Code Improvements template
-# 2. Copilot selects an improvement (e.g., "Parallele Trade-Matching")
-# 3. Copilot analyzes existing code to understand current implementation
+# 2. Copilot analyzes the codebase using grep, glob, and exploration tools
+#    Example: grep -r "\.unwrap()" src/ to find error handling issues
+#    Example: Look for code duplication patterns
+#    Example: Analyze test coverage gaps
+# 3. Copilot identifies ONE specific improvement opportunity
+#    Example: "Found 15 .unwrap() calls in file I/O, should use proper error handling"
 # 4. Copilot implements the improvement following the checklist:
-#    - Phase 1: Analysis & Planning
+#    - Phase 1: Analysis & Planning (document findings)
 #    - Phase 2: Core Refactoring/Optimization
 #    - Phase 3: Testing (ensure no behavior changes)
 #    - Phase 4: Code Quality & Documentation

@@ -1,35 +1,39 @@
 ---
-name: Copilot Code Improvements (Auto-Select)
-about: GitHub Copilot autonomously performs code improvements and test enhancements
-title: '[CODE-IMPROVEMENT] Auto-implement from features.md'
+name: Copilot Code Improvements (Autonomous Analysis)
+about: GitHub Copilot autonomously analyzes codebase and implements improvements
+title: '[CODE-IMPROVEMENT] Autonomous analysis and improvement'
 labels: ['refactoring', 'copilot', 'code-quality', 'auto-implementation']
 assignees: ''
 ---
 
 ## Autonomous Code Improvement and Test Enhancement
 
-**GitHub Copilot: This issue template is designed for autonomous code improvement implementation.**
+**GitHub Copilot: This issue template is designed for autonomous code analysis and improvement implementation.**
 
 ### Instructions for Copilot
 
-You are tasked with autonomously selecting and implementing a code improvement or test enhancement from the features.md file. Follow these steps:
+You are tasked with autonomously analyzing the codebase, identifying areas for improvement, and implementing ONE code improvement or test enhancement. Follow these steps:
 
-1. **Improvement Selection:**
-   - Review `/home/runner/work/community-simulation/community-simulation/features.md`
-   - Select ONE code improvement to implement based on the following criteria (in priority order):
-     a) Code improvements from the "🔧 Code-Verbesserungen" section
-     b) Improvements that enhance code quality, maintainability, or performance
-     c) Test improvements that increase code coverage or test quality
-     d) Refactorings that simplify code without changing external behavior
-     e) Improvements that don't require new external dependencies
-     f) Focus on items listed under "Code-Verbesserungen (Kontinuierlich)"
-   - Document your selection clearly in the PR description
+1. **Codebase Analysis and Improvement Selection:**
+   - **Analyze the codebase** to identify areas that need improvement
+   - Use tools like `grep`, `glob`, and code exploration to find:
+     a) Code duplication or similar patterns that could be refactored
+     b) Complex functions that could be simplified
+     c) Missing or inadequate error handling
+     d) Performance bottlenecks (based on code analysis or profiling)
+     e) Missing tests or low test coverage areas
+     f) Poor code organization or structure
+     g) Inconsistent patterns or style issues
+     h) Missing documentation for public APIs
+   - **Select ONE improvement** to implement based on impact and feasibility
+   - Document your analysis and selection clearly in the PR description
 
 2. **Before Implementation:**
-   - State which improvement you selected (Section and Item Name)
-   - Explain why you selected this improvement
-   - Analyze the current code to understand what needs to be improved
+   - State which improvement you identified and why it's important
+   - Explain what you analyzed to identify this improvement
+   - Show examples of the current problematic code (if applicable)
    - Outline your implementation plan as a checklist
+   - Estimate the expected benefits (e.g., reduced duplication, improved performance, better test coverage)
 
 3. **Implementation Requirements:**
    - Follow all guidelines in `copilot-instructions.md`
@@ -41,20 +45,17 @@ You are tasked with autonomously selecting and implementing a code improvement o
    - Run benchmarks if the improvement affects performance
 
 4. **After Implementation:**
-   - **CRITICAL: COMPLETELY REMOVE the implemented improvement from `features.md`**
-     - Do NOT comment it out with `<!-- -->` tags
-     - Do NOT mark it as "IMPLEMENTED" 
-     - DELETE the entire improvement section (title, description, benefits, implementation notes)
-     - Renumber subsequent items if needed to maintain sequential numbering
    - Update the PR description with implementation details
    - Include performance metrics if applicable (before/after comparisons)
    - Document any trade-offs or limitations
+   - Show concrete examples of what was improved (e.g., before/after code snippets, coverage metrics)
 
 ### Success Criteria
 
 The code improvement is complete when:
 
-- [ ] Improvement selected and documented in PR
+- [ ] Codebase analyzed and improvement identified
+- [ ] Analysis documented in PR (what was analyzed, why this improvement was chosen)
 - [ ] Code compiles without errors: `cargo build --verbose`
 - [ ] All tests pass: `cargo test --verbose`
 - [ ] All doctests pass: `cargo test --doc --verbose`
@@ -62,9 +63,9 @@ The code improvement is complete when:
 - [ ] Code linted: `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass without errors)
 - [ ] Improvement tested manually (if applicable)
 - [ ] Documentation updated (doc comments for affected code)
-- [ ] Improvement **completely removed** from `features.md` (not commented out, not marked as implemented - DELETED)
 - [ ] No regressions in existing functionality
 - [ ] Performance metrics documented (if applicable)
+- [ ] Concrete improvements shown (before/after examples, metrics)
 - [ ] Code review requested and feedback addressed
 
 ### Build, Test, and Validation Commands
@@ -97,35 +98,36 @@ cargo bench
 
 ### Code Improvement Categories
 
-**Select improvements from these categories:**
+**Look for improvements in these categories:**
 
 1. **Architecture and Design:**
-   - Erweiterbare Agentenarchitektur (Component-based architecture)
+   - Component-based architecture opportunities
    - Better separation of concerns
    - Reduced coupling between modules
    - Improved abstraction layers
+   - Module organization improvements
 
 2. **Performance Optimizations:**
-   - Parallele Trade-Matching (Parallel trade matching)
-   - Inkrementelle Statistiken (Incremental statistics)
+   - Parallel processing opportunities (e.g., parallel trade matching)
+   - Incremental statistics instead of recomputing
    - Memory usage optimization
    - Algorithmic improvements
+   - Caching opportunities
 
 3. **Code Quality:**
-   - Reduced code duplication
-   - Improved error handling
+   - Reduced code duplication (look for similar patterns)
+   - Improved error handling (check for unwrap(), expect() usage)
    - Better naming conventions
-   - Simplified complex functions
+   - Simplified complex functions (high cyclomatic complexity)
    - Enhanced type safety
 
 4. **Testing:**
-   - Integration-Tests (Integration tests)
-   - Erweiterte Tests (Extended tests)
-   - Property-based testing enhancements
+   - Missing test coverage (use `cargo tarpaulin` or analyze test files)
+   - Property-based testing opportunities
+   - Integration test gaps
    - Fuzz testing improvements
-   - Doctest coverage
-   - Test helper functions
-   - Mock/stub improvements
+   - Missing doctest examples for public APIs
+   - Test helper functions to reduce duplication
 
 5. **Data Management:**
    - Better serialization/deserialization
@@ -133,33 +135,37 @@ cargo bench
    - More efficient data handling
    - Better configuration management
 
-### Priority Code Improvements (from features.md)
+### Analysis Tools and Techniques
 
-**High Priority (Continuous):**
-1. **Parallele Trade-Matching** - Performance for large simulations (>1000 persons)
-2. **Inkrementelle Statistiken** - Scalability improvements
-3. **Integration-Tests** - Quality assurance
-4. **Erweiterbare Architektur** - Long-term maintainability
+**Use these tools to identify improvements:**
 
-**Quality Improvements:**
-- Reduce code duplication
-- Improve error handling
-- Enhance documentation
-- Simplify complex logic
+1. **Code Search and Analysis:**
+   - `grep` - Find patterns like `.unwrap()`, `.expect()`, duplicated code
+   - `glob` - Find files by type to analyze structure
+   - `view` - Examine individual files for complexity
+   - Look for functions >50 lines or >10 parameters
 
-**Test Improvements:**
-- Increase test coverage
-- Add property-based tests
-- Improve test organization
-- Add integration tests
-- Enhance doctest examples
+2. **Linting and Quality:**
+   - Run `cargo clippy` to find suggested improvements
+   - Check for deprecated APIs or patterns
+   - Look for TODO/FIXME comments
+
+3. **Test Coverage:**
+   - Analyze test files vs source files ratio
+   - Look for modules without corresponding test modules
+   - Check for untested error paths
+
+4. **Performance:**
+   - Review algorithmic complexity (O(n²) → O(n log n))
+   - Look for unnecessary clones or allocations
+   - Identify sequential operations that could be parallel
 
 ### Implementation Workflow
 
 1. **Explore & Analyze** (use `report_progress` to share your plan)
-   - Read features.md and select ONE improvement
-   - Analyze existing code to understand what needs improvement
-   - Identify specific files and functions to modify
+   - Use `grep`, `glob`, and code exploration to analyze the codebase
+   - Identify ONE specific improvement opportunity
+   - Document what you found and why it needs improvement
    - Create implementation checklist
    
 2. **Core Implementation**
@@ -182,7 +188,6 @@ cargo bench
    - Run `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass)
    - Update doc comments
    - Document trade-offs or limitations
-   - **COMPLETELY REMOVE improvement from features.md** (delete the entire section)
 
 5. **Validation & Review**
    - Build release: `cargo build --release`
@@ -226,35 +231,35 @@ Even minor changes require full validation to ensure no regressions are introduc
 
 **Read these carefully before starting:**
 
-1. **No Behavior Changes:** Code improvements should NOT change external behavior. Tests should pass without modification (except for internal implementation details).
+1. **Autonomous Analysis Required:** You must analyze the codebase yourself to identify improvements. Do NOT rely on features.md or external suggestions. Use grep, glob, and code exploration tools.
 
-2. **Minimal Scope:** Focus on one specific improvement. Don't try to refactor the entire codebase at once.
+2. **No Behavior Changes:** Code improvements should NOT change external behavior. Tests should pass without modification (except for internal implementation details).
 
-3. **Existing Patterns:** Study and maintain existing code patterns:
+3. **Minimal Scope:** Focus on one specific improvement. Don't try to refactor the entire codebase at once.
+
+4. **Existing Patterns:** Study and maintain existing code patterns:
    - Module organization: See `src/` structure
    - Error handling patterns: Check existing `Result<T, E>` usage
    - Testing patterns: See `#[cfg(test)] mod tests { ... }` blocks
    - Documentation style: Follow existing doc comment style
 
-4. **Performance Validation:** If claiming performance improvements:
+5. **Performance Validation:** If claiming performance improvements:
    - Run benchmarks BEFORE and AFTER changes
    - Document the performance gain with actual numbers
    - Test with different simulation sizes (small, medium, large)
 
-5. **Testing Improvements:** When adding tests:
+6. **Testing Improvements:** When adding tests:
    - Follow existing test organization
    - Use deterministic seeds for reproducibility
    - Add doctests for public API examples
    - Test edge cases and error conditions
 
-6. **Backward Compatibility:** Ensure all changes maintain backward compatibility:
+7. **Backward Compatibility:** Ensure all changes maintain backward compatibility:
    - JSON output format should remain compatible
    - CLI interface should remain compatible
    - Configuration file format should remain compatible
 
-7. **Progress Reporting:** Use `report_progress` tool frequently to commit changes.
-
-8. **Improvement Removal:** After successful implementation, **COMPLETELY DELETE** the improvement section from `features.md`. Do NOT comment it out or mark as "IMPLEMENTED". Mention the removal in your commit message.
+8. **Progress Reporting:** Use `report_progress` tool frequently to commit changes.
 
 9. **Documentation:** Update relevant documentation if the improvement affects usage or understanding of the code.
 
@@ -287,43 +292,60 @@ Improvement: Z% faster
 
 - **Project Architecture:** See `.github/copilot-instructions.md`
 - **Build/Test Commands:** See `.github/copilot-instructions.md`
-- **Code Improvements List:** See `features.md` (🔧 Code-Verbesserungen section)
 - **Example Implementation:** See `.github/ISSUE_TEMPLATE/EXAMPLE.md`
 
-### Example Code Improvement Selection
+### Example Code Improvement Analysis
 
-**Good Selection Example:**
+**Good Analysis Example 1:**
 ```markdown
-Selected Improvement: Parallele Trade-Matching
-- Section: 2.1 Performance-Optimierungen
-- Category: Performance
-- Why: Current trade matching is sequential; parallel execution can significantly improve performance for large simulations
-- Impact: Expected 2-4x speedup for simulations with >1000 persons
-- Implementation: Use Rayon to parallelize conflict-free trades
+Analysis: Identified code duplication in trade matching
+- Tool used: grep -r "fn match_trade" src/
+- Found: 3 similar implementations in engine.rs (lines 145-178, 234-267, 412-445)
+- Issue: ~90 lines of duplicated logic with only minor variations
+- Impact: Hard to maintain, bug fixes need to be applied in multiple places
+- Solution: Extract common logic into a shared function with configuration parameters
+- Expected benefit: Reduce code by ~70 lines, improve maintainability
 ```
 
-**Another Good Example:**
+**Good Analysis Example 2:**
 ```markdown
-Selected Improvement: Integration-Tests
-- Section: 3. Code-Qualität
-- Category: Testing
-- Why: Current tests are mostly unit tests; integration tests would catch more real-world issues
-- Impact: Better quality assurance, fewer bugs in production
-- Implementation: Add integration tests that run full simulation scenarios and validate output
+Analysis: Missing error handling in file operations
+- Tool used: grep -n "\.unwrap()" src/
+- Found: 15 instances of .unwrap() calls, 8 in file I/O operations
+- Issue: Program panics instead of handling errors gracefully
+- Files affected: src/result.rs (lines 87, 123, 256), src/config.rs (line 42)
+- Impact: Poor user experience, crashes instead of helpful error messages
+- Solution: Replace unwrap() with proper error handling and Result types
+- Expected benefit: More robust error handling, better user experience
+```
+
+**Good Analysis Example 3:**
+```markdown
+Analysis: Missing test coverage for error paths
+- Tool used: Analyzed test files vs source files
+- Found: src/market.rs has 450 lines but only 120 lines of tests (~27% coverage)
+- Issue: Error handling code paths are not tested (update_prices failure scenarios)
+- Impact: Bugs in error handling might not be caught
+- Solution: Add tests for error conditions and edge cases
+- Expected benefit: Increase test coverage to >80%, catch bugs earlier
 ```
 
 ### Important Notes
 
-1. **Refactoring vs. Features:** This template is for code improvements, not new features. The goal is to improve existing code, not add new functionality.
+1. **Autonomous Analysis Required:** This template requires you to analyze the codebase yourself. Do NOT look for predefined lists of improvements. Use code analysis tools and techniques.
 
-2. **Test-Driven:** Write or update tests FIRST to ensure you understand the expected behavior before refactoring.
+2. **Refactoring vs. Features:** This template is for code improvements, not new features. The goal is to improve existing code, not add new functionality.
 
-3. **Incremental Changes:** Make small, incremental improvements. Large refactorings are harder to review and more likely to introduce bugs.
+3. **Test-Driven:** Write or update tests FIRST to ensure you understand the expected behavior before refactoring.
 
-4. **Measure Impact:** For performance improvements, always measure the actual impact with benchmarks. Don't assume an optimization is faster without proof.
+4. **Incremental Changes:** Make small, incremental improvements. Large refactorings are harder to review and more likely to introduce bugs.
+
+5. **Measure Impact:** For performance improvements, always measure the actual impact with benchmarks. Don't assume an optimization is faster without proof.
+
+6. **Document Your Analysis:** Always explain what you analyzed and how you identified the improvement opportunity.
 
 5. **Backward Compatibility:** Never break existing APIs or change output formats without explicit approval.
 
 ---
 
-**Note:** This template enables autonomous code improvement implementation by Copilot. No manual specification is required - Copilot will select and implement an improvement from features.md automatically.
+**Note:** This template enables autonomous code improvement implementation by Copilot. No manual specification is required - Copilot will analyze the codebase and identify improvements autonomously.
