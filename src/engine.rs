@@ -3399,7 +3399,11 @@ impl SimulationEngine {
                     price: skill.current_price,
                 })
                 .collect();
-            skill_prices.sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap());
+            skill_prices.sort_by(|a, b| {
+                b.price
+                    .partial_cmp(&a.price)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
             skill_prices.truncate(5);
 
             let step_data = StepData {

@@ -1411,7 +1411,7 @@ impl SimulationResult {
 
         // Sort money values to create percentile buckets
         let mut sorted_money = self.final_money_distribution.clone();
-        sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
         // Create 10 buckets (deciles)
         let num_buckets = 10;
@@ -3214,6 +3214,31 @@ mod tests {
         result.print_summary(true);
         // Test with histogram disabled
         result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_nan_values() {
+        // Test that NaN values don't cause panics when sorting in print_wealth_histogram
+        let mut result = get_test_result();
+
+        // Add some NaN values to the money distribution
+        result.final_money_distribution = vec![100.0, 200.0, f64::NAN, 300.0, f64::NAN, 400.0];
+
+        // This should not panic - NaN values should be handled gracefully
+        result.print_summary(true);
+    }
+
+    #[test]
+    fn test_print_summary_with_infinity_values() {
+        // Test that Infinity values don't cause panics when sorting
+        let mut result = get_test_result();
+
+        // Add some Infinity values to the money distribution
+        result.final_money_distribution =
+            vec![100.0, f64::INFINITY, 200.0, f64::NEG_INFINITY, 300.0];
+
+        // This should not panic - Infinity values should be handled gracefully
+        result.print_summary(true);
     }
 
     #[test]
