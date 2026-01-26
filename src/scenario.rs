@@ -40,6 +40,16 @@ mod tests {
     use rand::rngs::mock::StepRng;
 
     /// Helper function to create a market with common test defaults
+    ///
+    /// # Parameters
+    /// * `scenario` - The pricing scenario to use
+    /// * `base_price` - Base price for skills (min_skill_price parameter)
+    ///
+    /// # Returns
+    /// A Market configured for deterministic testing with:
+    /// * `price_change_factor` = 1.0 (default multiplier for price changes)
+    /// * `price_elasticity_factor` = 0.1 (sensitivity to supply/demand)
+    /// * `volatility_percentage` = 0.0 (disabled for predictable tests)
     fn create_test_market(scenario: Scenario, base_price: f64) -> Market {
         let mut market = Market::new(base_price, 1.0, 0.1, 0.02, PriceUpdater::from(scenario));
         market.price_elasticity_factor = 0.1;
@@ -271,14 +281,7 @@ mod tests {
     #[test]
     fn test_per_skill_price_limits_enforcement() {
         // Test that per-skill price limits are enforced during price updates
-        let mut market = Market::new(
-            10.0,
-            1.0,
-            0.1,
-            0.0, // No volatility for deterministic test
-            PriceUpdater::from(Scenario::Original),
-        );
-
+        let mut market = create_test_market(Scenario::Original, 10.0);
         let skill_id = setup_skill_in_market(&mut market, 50.0);
 
         // Set per-skill limits: min 30.0, max 70.0
