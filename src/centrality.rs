@@ -215,7 +215,11 @@ pub fn calculate_centrality(nodes: &[NetworkNode], edges: &[NetworkEdge]) -> Cen
         .map(|nc| nc.node_id.clone())
         .collect();
 
-    node_centralities.sort_by(|a, b| b.pagerank.partial_cmp(&a.pagerank).unwrap());
+    node_centralities.sort_by(|a, b| {
+        b.pagerank
+            .partial_cmp(&a.pagerank)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let top_pagerank: Vec<String> = node_centralities
         .iter()
         .take(5)
@@ -672,5 +676,46 @@ mod tests {
         let analysis = calculate_centrality(&nodes, &edges);
         // Should have 2 connected components
         assert_eq!(analysis.network_metrics.connected_components, 2);
+    }
+
+    #[test]
+    fn test_nan_handling_in_sorting() {
+        // Test that NaN values in centrality scores don't cause panics
+        let nodes = vec![
+            NetworkNode {
+                id: "Person1".to_string(),
+                money: 100.0,
+                reputation: 1.0,
+                trade_count: 5,
+                unique_partners: 2,
+            },
+            NetworkNode {
+                id: "Person2".to_string(),
+                money: f64::NAN, // NaN value
+                reputation: f64::NAN,
+                trade_count: 3,
+                unique_partners: 1,
+            },
+            NetworkNode {
+                id: "Person3".to_string(),
+                money: 200.0,
+                reputation: 2.0,
+                trade_count: 4,
+                unique_partners: 2,
+            },
+        ];
+
+        let edges = vec![NetworkEdge {
+            source: "Person1".to_string(),
+            target: "Person3".to_string(),
+            weight: 1,
+            total_value: 100.0,
+        }];
+
+        // This should not panic even with NaN values
+        let analysis = calculate_centrality(&nodes, &edges);
+
+        // Verify that analysis completes without panic
+        assert_eq!(analysis.node_centralities.len(), 3);
     }
 }
