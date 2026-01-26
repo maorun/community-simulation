@@ -60,6 +60,7 @@
 //!
 //! ## Modules
 //!
+//! - [`causal_analysis`] - Causal inference framework for policy evaluation
 //! - [`centrality`] - Network centrality analysis for trading networks
 //! - [`config`] - Simulation configuration parameters
 //! - [`contract`] - Contract system for long-term agreements
@@ -85,6 +86,7 @@
 //! - [`trust_network`] - Trust network system for transitive trust relationships
 //! - [`voting`] - Voting system for governance and collective decision-making
 
+pub mod causal_analysis;
 pub mod centrality;
 pub mod config;
 pub mod contract;
@@ -115,6 +117,7 @@ pub mod trade_agreement;
 pub mod trust_network;
 pub mod voting;
 
+pub use causal_analysis::{CausalAnalysisConfig, CausalAnalysisResult, StatisticalTest};
 pub use centrality::{calculate_centrality, CentralityAnalysis, NodeCentrality};
 pub use config::{PresetName, SimulationConfig};
 pub use contract::{Contract, ContractId};
