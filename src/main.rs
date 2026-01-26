@@ -84,6 +84,26 @@ struct Args {
     #[arg(long)]
     tech_growth_rate: Option<f64>,
 
+    /// Enable technology breakthrough events (sudden positive innovations)
+    /// When enabled, random breakthroughs boost specific skill efficiencies
+    #[arg(long, default_value_t = false)]
+    enable_technology_breakthroughs: bool,
+
+    /// Probability per step that a technology breakthrough occurs (0.0-1.0, e.g., 0.01 = 1%)
+    /// Only used when --enable-technology-breakthroughs is set
+    #[arg(long)]
+    tech_breakthrough_probability: Option<f64>,
+
+    /// Minimum efficiency boost from a breakthrough (e.g., 1.2 = 20% boost)
+    /// Only used when --enable-technology-breakthroughs is set
+    #[arg(long)]
+    tech_breakthrough_min_effect: Option<f64>,
+
+    /// Maximum efficiency boost from a breakthrough (e.g., 1.5 = 50% boost)
+    /// Only used when --enable-technology-breakthroughs is set
+    #[arg(long)]
+    tech_breakthrough_max_effect: Option<f64>,
+
     /// Seasonal demand amplitude (0.0 = no seasonality, 0.0-1.0 = variation strength)
     /// Controls strength of seasonal fluctuations in skill demand
     #[arg(long)]
@@ -483,6 +503,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(tech_growth_rate) = args.tech_growth_rate {
             cfg.tech_growth_rate = tech_growth_rate;
         }
+        if args.enable_technology_breakthroughs {
+            cfg.enable_technology_breakthroughs = true;
+        }
+        if let Some(tech_breakthrough_probability) = args.tech_breakthrough_probability {
+            cfg.tech_breakthrough_probability = tech_breakthrough_probability;
+        }
+        if let Some(tech_breakthrough_min_effect) = args.tech_breakthrough_min_effect {
+            cfg.tech_breakthrough_min_effect = tech_breakthrough_min_effect;
+        }
+        if let Some(tech_breakthrough_max_effect) = args.tech_breakthrough_max_effect {
+            cfg.tech_breakthrough_max_effect = tech_breakthrough_max_effect;
+        }
         if let Some(seasonal_amplitude) = args.seasonal_amplitude {
             cfg.seasonal_amplitude = seasonal_amplitude;
         }
@@ -607,6 +639,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Some(tech_growth_rate) = args.tech_growth_rate {
                 cfg.tech_growth_rate = tech_growth_rate;
+            }
+            if args.enable_technology_breakthroughs {
+                cfg.enable_technology_breakthroughs = true;
+            }
+            if let Some(tech_breakthrough_probability) = args.tech_breakthrough_probability {
+                cfg.tech_breakthrough_probability = tech_breakthrough_probability;
+            }
+            if let Some(tech_breakthrough_min_effect) = args.tech_breakthrough_min_effect {
+                cfg.tech_breakthrough_min_effect = tech_breakthrough_min_effect;
+            }
+            if let Some(tech_breakthrough_max_effect) = args.tech_breakthrough_max_effect {
+                cfg.tech_breakthrough_max_effect = tech_breakthrough_max_effect;
             }
             if let Some(seasonal_amplitude) = args.seasonal_amplitude {
                 cfg.seasonal_amplitude = seasonal_amplitude;
@@ -763,6 +807,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             tech_growth_rate: args
                 .tech_growth_rate
                 .unwrap_or(SimulationConfig::default().tech_growth_rate),
+            enable_technology_breakthroughs: args.enable_technology_breakthroughs,
+            tech_breakthrough_probability: args
+                .tech_breakthrough_probability
+                .unwrap_or(SimulationConfig::default().tech_breakthrough_probability),
+            tech_breakthrough_min_effect: args
+                .tech_breakthrough_min_effect
+                .unwrap_or(SimulationConfig::default().tech_breakthrough_min_effect),
+            tech_breakthrough_max_effect: args
+                .tech_breakthrough_max_effect
+                .unwrap_or(SimulationConfig::default().tech_breakthrough_max_effect),
             seasonal_amplitude: args
                 .seasonal_amplitude
                 .unwrap_or(SimulationConfig::default().seasonal_amplitude),

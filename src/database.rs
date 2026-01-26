@@ -410,6 +410,7 @@ mod tests {
             trust_network_statistics: None,
             trade_agreement_statistics: None,
             insurance_statistics: None,
+            technology_breakthrough_statistics: None,
             group_statistics: None,
             quality_statistics: None,
             events: None,

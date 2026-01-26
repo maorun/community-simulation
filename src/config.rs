@@ -149,6 +149,44 @@ pub struct SimulationConfig {
     #[serde(default)]
     pub tech_growth_rate: f64,
 
+    /// Enable technology breakthrough events (sudden positive innovations).
+    ///
+    /// When enabled, random breakthrough events can occur that suddenly boost
+    /// the efficiency of specific skills. These represent disruptive innovations,
+    /// major discoveries, or breakthrough technologies (e.g., AI tools boosting
+    /// programmer productivity). Complements the gradual tech_growth_rate with
+    /// sudden step-changes. Set to false to disable breakthroughs (default).
+    #[serde(default)]
+    pub enable_technology_breakthroughs: bool,
+
+    /// Probability per step that a technology breakthrough occurs (0.0-1.0).
+    ///
+    /// Each simulation step has this probability of a breakthrough happening.
+    /// Only used when enable_technology_breakthroughs is true.
+    /// A value of 0.01 means a 1% chance per step (~5 breakthroughs in 500 steps).
+    /// Valid range: 0.0 to 1.0 (0% to 100%)
+    #[serde(default = "default_tech_breakthrough_probability")]
+    pub tech_breakthrough_probability: f64,
+
+    /// Minimum efficiency boost from a technology breakthrough (e.g., 1.2 = 20% boost).
+    ///
+    /// When a breakthrough occurs, the affected skill's efficiency multiplier is
+    /// increased by at least this factor. For example, 1.2 means a 20% improvement.
+    /// Only used when enable_technology_breakthroughs is true.
+    /// Valid range: 1.0 (no effect) to 2.0 (100% improvement)
+    #[serde(default = "default_tech_breakthrough_min_effect")]
+    pub tech_breakthrough_min_effect: f64,
+
+    /// Maximum efficiency boost from a technology breakthrough (e.g., 1.5 = 50% boost).
+    ///
+    /// When a breakthrough occurs, the affected skill's efficiency multiplier is
+    /// increased by at most this factor. For example, 1.5 means a 50% improvement.
+    /// Must be >= tech_breakthrough_min_effect.
+    /// Only used when enable_technology_breakthroughs is true.
+    /// Valid range: 1.0 (no effect) to 2.0 (100% improvement)
+    #[serde(default = "default_tech_breakthrough_max_effect")]
+    pub tech_breakthrough_max_effect: f64,
+
     /// Seasonal demand amplitude (0.0 = no seasonality, 0.0-1.0 = variation strength).
     ///
     /// Controls the strength of seasonal fluctuations in skill demand.
@@ -1129,6 +1167,18 @@ fn default_seasonal_period() -> usize {
     100
 }
 
+fn default_tech_breakthrough_probability() -> f64 {
+    0.01 // 1% chance per step
+}
+
+fn default_tech_breakthrough_min_effect() -> f64 {
+    1.2 // 20% minimum boost
+}
+
+fn default_tech_breakthrough_max_effect() -> f64 {
+    1.5 // 50% maximum boost
+}
+
 fn default_min_skill_price() -> f64 {
     1.0 // Minimum price floor to prevent market crashes
 }
@@ -1310,13 +1360,17 @@ impl Default for SimulationConfig {
             time_step: 1.0,                         // Represents one discrete step or turn
             scenario: Scenario::Original,
             demand_strategy: DemandStrategy::default(),
-            tech_growth_rate: 0.0,       // Disabled by default
-            seasonal_amplitude: 0.0,     // Disabled by default
-            seasonal_period: 100,        // Default cycle length
-            transaction_fee: 0.0,        // Disabled by default
-            savings_rate: 0.0,           // Disabled by default
-            enable_loans: false,         // Disabled by default
-            enable_credit_rating: false, // Disabled by default
+            tech_growth_rate: 0.0,                  // Disabled by default
+            enable_technology_breakthroughs: false, // Disabled by default
+            tech_breakthrough_probability: 0.01,    // 1% chance per step
+            tech_breakthrough_min_effect: 1.2,      // 20% minimum boost
+            tech_breakthrough_max_effect: 1.5,      // 50% maximum boost
+            seasonal_amplitude: 0.0,                // Disabled by default
+            seasonal_period: 100,                   // Default cycle length
+            transaction_fee: 0.0,                   // Disabled by default
+            savings_rate: 0.0,                      // Disabled by default
+            enable_loans: false,                    // Disabled by default
+            enable_credit_rating: false,            // Disabled by default
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
@@ -1508,6 +1562,46 @@ impl SimulationConfig {
                  Recommended range: 0.0 (no growth) to 0.01 (1% per step). \
                  Current value: {}",
                 self.tech_growth_rate
+            )));
+        }
+
+        // Technology breakthrough parameters
+        if !(0.0..=1.0).contains(&self.tech_breakthrough_probability) {
+            return Err(SimulationError::ValidationError(format!(
+                "Configuration Error: tech_breakthrough_probability must be between 0.0 and 1.0. \
+                 This controls the chance of breakthrough innovations occurring. \
+                 Recommended: 0.005-0.02 (0.5%-2% per step) for realistic innovation rates. \
+                 Current value: {}",
+                self.tech_breakthrough_probability
+            )));
+        }
+
+        if self.tech_breakthrough_min_effect < 1.0 || self.tech_breakthrough_min_effect > 2.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "Configuration Error: tech_breakthrough_min_effect must be between 1.0 and 2.0. \
+                 This sets the minimum efficiency boost from breakthroughs (1.0 = no effect, 2.0 = 100% boost). \
+                 Recommended: 1.1-1.3 (10%-30% boost) for realistic improvements. \
+                 Current value: {}",
+                self.tech_breakthrough_min_effect
+            )));
+        }
+
+        if self.tech_breakthrough_max_effect < 1.0 || self.tech_breakthrough_max_effect > 2.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "Configuration Error: tech_breakthrough_max_effect must be between 1.0 and 2.0. \
+                 This sets the maximum efficiency boost from breakthroughs (1.0 = no effect, 2.0 = 100% boost). \
+                 Recommended: 1.3-1.6 (30%-60% boost) for major innovations. \
+                 Current value: {}",
+                self.tech_breakthrough_max_effect
+            )));
+        }
+
+        if self.tech_breakthrough_max_effect < self.tech_breakthrough_min_effect {
+            return Err(SimulationError::ValidationError(format!(
+                "Configuration Error: tech_breakthrough_max_effect ({}) must be >= tech_breakthrough_min_effect ({}). \
+                 The maximum boost cannot be less than the minimum boost. \
+                 Please adjust these values so max >= min.",
+                self.tech_breakthrough_max_effect, self.tech_breakthrough_min_effect
             )));
         }
 

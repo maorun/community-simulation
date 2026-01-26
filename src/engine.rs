@@ -29,6 +29,21 @@ use std::time::Instant;
 const TECH_SHOCK_MIN_AFFECTED_PERCENTAGE: f64 = 0.20; // Minimum 20% of skills affected
 const TECH_SHOCK_SEVERITY_RANGE: f64 = 0.20; // Additional 20% based on severity
 
+/// Represents a positive technology breakthrough event.
+///
+/// Breakthroughs are sudden innovations that boost the efficiency of specific skills,
+/// representing disruptive technologies, major discoveries, or breakthrough innovations
+/// (e.g., AI tools boosting programmer productivity, new manufacturing techniques).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TechnologyBreakthrough {
+    /// The skill ID that received the breakthrough
+    pub skill_id: SkillId,
+    /// The efficiency multiplier applied (e.g., 1.3 = 30% boost)
+    pub efficiency_boost: f64,
+    /// The simulation step when this breakthrough occurred
+    pub step_occurred: usize,
+}
+
 /// Checkpoint structure for saving and restoring simulation state.
 ///
 /// This structure captures all the stateful information needed to resume
@@ -117,6 +132,8 @@ pub struct SimulationCheckpoint {
     pub total_insurance_claims_paid: usize,
     pub total_premiums_collected: f64,
     pub total_payouts_made: f64,
+    /// Technology breakthrough tracking
+    pub technology_breakthroughs: Vec<TechnologyBreakthrough>,
 }
 
 pub struct SimulationEngine {
@@ -206,6 +223,8 @@ pub struct SimulationEngine {
     total_insurance_claims_paid: usize,
     total_premiums_collected: f64,
     total_payouts_made: f64,
+    // Technology breakthrough tracking
+    technology_breakthroughs: Vec<TechnologyBreakthrough>,
 }
 
 impl SimulationEngine {
@@ -436,6 +455,7 @@ impl SimulationEngine {
             total_insurance_claims_paid: 0,
             total_premiums_collected: 0.0,
             total_payouts_made: 0.0,
+            technology_breakthroughs: Vec::new(),
         }
     }
 
@@ -1256,6 +1276,61 @@ impl SimulationEngine {
             None
         };
 
+        // Calculate technology breakthrough statistics if enabled
+        let technology_breakthrough_statistics = if self.config.enable_technology_breakthroughs
+            && !self.technology_breakthroughs.is_empty()
+        {
+            let total_breakthroughs = self.technology_breakthroughs.len();
+            let unique_skills_affected = self
+                .technology_breakthroughs
+                .iter()
+                .map(|b| &b.skill_id)
+                .collect::<std::collections::HashSet<_>>()
+                .len();
+
+            let average_efficiency_boost = self
+                .technology_breakthroughs
+                .iter()
+                .map(|b| b.efficiency_boost)
+                .sum::<f64>()
+                / total_breakthroughs as f64;
+
+            let min_efficiency_boost = self
+                .technology_breakthroughs
+                .iter()
+                .map(|b| b.efficiency_boost)
+                .min_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap_or(1.0);
+
+            let max_efficiency_boost = self
+                .technology_breakthroughs
+                .iter()
+                .map(|b| b.efficiency_boost)
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap_or(1.0);
+
+            let breakthrough_events = self
+                .technology_breakthroughs
+                .iter()
+                .map(|b| crate::result::BreakthroughEvent {
+                    skill_id: b.skill_id.clone(),
+                    efficiency_boost: b.efficiency_boost,
+                    step: b.step_occurred,
+                })
+                .collect();
+
+            Some(crate::result::TechnologyBreakthroughStats {
+                total_breakthroughs,
+                unique_skills_affected,
+                average_efficiency_boost,
+                min_efficiency_boost,
+                max_efficiency_boost,
+                breakthrough_events,
+            })
+        } else {
+            None
+        };
+
         // Calculate failed trade attempt statistics
         let failed_trade_statistics = {
             let total_attempts = total_trades + self.failed_trade_attempts;
@@ -1712,6 +1787,7 @@ impl SimulationEngine {
                 None
             },
             insurance_statistics,
+            technology_breakthrough_statistics,
             group_statistics: if let Some(num_groups) = self.config.num_groups {
                 // Calculate group statistics
                 let mut group_data: HashMap<usize, Vec<&Entity>> = HashMap::new();
@@ -3326,6 +3402,51 @@ impl SimulationEngine {
             }
         }
 
+        // Apply technology breakthroughs - sudden positive innovations
+        if self.config.enable_technology_breakthroughs {
+            // Check if a breakthrough occurs this step
+            if self.rng.random_range(0.0..1.0) < self.config.tech_breakthrough_probability {
+                // Randomly select a skill to receive the breakthrough
+                if !self.all_skill_ids.is_empty() {
+                    let skill_index = self.rng.random_range(0..self.all_skill_ids.len());
+                    let breakthrough_skill_id = &self.all_skill_ids[skill_index];
+
+                    // Calculate the efficiency boost
+                    let boost_range = self.config.tech_breakthrough_max_effect
+                        - self.config.tech_breakthrough_min_effect;
+                    let efficiency_boost = self.config.tech_breakthrough_min_effect
+                        + (self.rng.random_range(0.0..1.0) * boost_range);
+
+                    // Apply breakthrough to main market
+                    if let Some(skill) = self.market.skills.get_mut(breakthrough_skill_id) {
+                        let old_efficiency = skill.efficiency_multiplier;
+                        skill.efficiency_multiplier *= efficiency_boost;
+                        info!(
+                            "Technology breakthrough for skill '{}': efficiency {:.2}x -> {:.2}x ({:.0}% boost)",
+                            skill.id,
+                            old_efficiency,
+                            skill.efficiency_multiplier,
+                            (efficiency_boost - 1.0) * 100.0
+                        );
+
+                        // Record the breakthrough event
+                        self.technology_breakthroughs.push(TechnologyBreakthrough {
+                            skill_id: breakthrough_skill_id.clone(),
+                            efficiency_boost,
+                            step_occurred: self.current_step,
+                        });
+                    }
+
+                    // Apply same breakthrough to black market if enabled
+                    if let Some(ref mut bm) = self.black_market {
+                        if let Some(skill) = bm.skills.get_mut(breakthrough_skill_id) {
+                            skill.efficiency_multiplier *= efficiency_boost;
+                        }
+                    }
+                }
+            }
+        }
+
         // Attempt production - persons combine skills to create new ones
         if self.config.enable_production {
             let _productions_count = self.attempt_production();
@@ -4304,6 +4425,7 @@ impl SimulationEngine {
             trust_network_statistics: None, // Simplified
             trade_agreement_statistics: None, // Simplified
             insurance_statistics: None,   // Simplified
+            technology_breakthrough_statistics: None, // Simplified
             group_statistics: None,
             trading_partner_statistics: crate::result::TradingPartnerStats {
                 per_person: vec![],
@@ -4411,6 +4533,7 @@ impl SimulationEngine {
             total_insurance_claims_paid: self.total_insurance_claims_paid,
             total_premiums_collected: self.total_premiums_collected,
             total_payouts_made: self.total_payouts_made,
+            technology_breakthroughs: self.technology_breakthroughs.clone(),
         };
 
         let file = File::create(path)?;
@@ -4562,6 +4685,7 @@ impl SimulationEngine {
             total_insurance_claims_paid: checkpoint.total_insurance_claims_paid,
             total_premiums_collected: checkpoint.total_premiums_collected,
             total_payouts_made: checkpoint.total_payouts_made,
+            technology_breakthroughs: checkpoint.technology_breakthroughs,
         })
     }
 
