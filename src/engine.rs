@@ -3535,15 +3535,29 @@ impl SimulationEngine {
         self.current_step += 1;
     }
 
-    /// Update incremental money statistics for O(1) retrieval.
+    /// Update incremental money statistics for efficient retrieval.
     ///
     /// This method recalculates incremental statistics from scratch each step
-    /// by iterating through all active entities. While this is O(n) per step,
-    /// it enables O(1) retrieval of mean and variance, which is beneficial
-    /// for interactive mode and reduces computation at simulation end.
+    /// by iterating through all active entities. The key benefit is enabling
+    /// O(1) retrieval of mean, variance, std_dev, min, and max values, which
+    /// is especially useful in interactive mode and for frequent statistics queries.
     ///
-    /// Median, Gini, and concentration metrics still require sorting,
-    /// so they remain as post-processing operations.
+    /// # Performance Trade-offs
+    ///
+    /// - **Per-step cost:** O(n) to iterate all entities (unavoidable anyway for other step operations)
+    /// - **Statistics retrieval:** O(1) instead of O(n) recalculation on demand
+    /// - **Total simulation cost:** O(n × steps) for updates, but avoids O(n) cost per statistics query
+    ///
+    /// This approach was chosen over tracking individual entity money changes because:
+    /// - Simpler implementation with lower bug risk
+    /// - Money changes occur in many places throughout the codebase
+    /// - The O(n) iteration per step is acceptable since we already iterate entities for other operations
+    /// - The primary benefit is O(1) retrieval, not reducing per-step cost
+    ///
+    /// # Notes
+    ///
+    /// Median, Gini coefficient, and concentration metrics still require sorting
+    /// and remain as post-processing operations, as they cannot be calculated incrementally.
     fn update_money_statistics(&mut self) {
         // Reset incremental stats
         self.money_incremental_stats = crate::result::IncrementalStats::new();
