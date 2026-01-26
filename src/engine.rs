@@ -1299,15 +1299,13 @@ impl SimulationEngine {
                 .technology_breakthroughs
                 .iter()
                 .map(|b| b.efficiency_boost)
-                .min_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap_or(1.0);
+                .fold(f64::INFINITY, f64::min);
 
             let max_efficiency_boost = self
                 .technology_breakthroughs
                 .iter()
                 .map(|b| b.efficiency_boost)
-                .max_by(|a, b| a.partial_cmp(b).unwrap())
-                .unwrap_or(1.0);
+                .fold(f64::NEG_INFINITY, f64::max);
 
             let breakthrough_events = self
                 .technology_breakthroughs
