@@ -48,6 +48,9 @@ use crate::result::SimulationResult;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 
+// Small epsilon value for avoiding division by zero in numerical calculations
+const EPSILON: f64 = 1e-10;
+
 /// Configuration for causal analysis experiments
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CausalAnalysisConfig {
@@ -271,20 +274,20 @@ impl CausalAnalysisResult {
         // Welch's t-test (unequal variances)
         let standard_error = ((treatment_var / n1) + (control_var / n2)).sqrt();
         let effect_size = treatment_mean - control_mean;
-        let relative_effect = if control_mean.abs() > 1e-10 {
+        let relative_effect = if control_mean.abs() > EPSILON {
             effect_size / control_mean
         } else {
             0.0
         };
 
-        let t_statistic = if standard_error > 1e-10 {
+        let t_statistic = if standard_error > EPSILON {
             effect_size / standard_error
         } else {
             0.0
         };
 
         // Welch-Satterthwaite degrees of freedom
-        let df = if treatment_var > 1e-10 && control_var > 1e-10 {
+        let df = if treatment_var > EPSILON && control_var > EPSILON {
             let numerator = ((treatment_var / n1) + (control_var / n2)).powi(2);
             let denominator = ((treatment_var / n1).powi(2) / (n1 - 1.0))
                 + ((control_var / n2).powi(2) / (n2 - 1.0));
@@ -294,7 +297,9 @@ impl CausalAnalysisResult {
         };
 
         // Simple p-value approximation using normal distribution
-        // For large samples, t-distribution ≈ normal distribution
+        // For small samples (n<30 per group), this is an approximation.
+        // For rigorous small-sample analysis, consider using Student's t-distribution.
+        // For large samples (n≥30), t-distribution ≈ normal distribution
         let p_value = 2.0 * (1.0 - normal_cdf(t_statistic.abs()));
 
         // Confidence interval
@@ -349,8 +354,10 @@ impl CausalAnalysisResult {
                 test.relative_effect * 100.0
             );
             println!(
-                "  95% CI:         [{:.4}, {:.4}]",
-                test.ci_lower, test.ci_upper
+                "  {}% CI:         [{:.4}, {:.4}]",
+                (self.config.confidence_level * 100.0) as usize,
+                test.ci_lower,
+                test.ci_upper
             );
             println!("  t-statistic:    {:.4}", test.t_statistic);
             println!("  p-value:        {:.4}", test.p_value);

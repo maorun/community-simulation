@@ -19,30 +19,36 @@ fn main() {
 
     // Configure treatment group: 20% savings rate
     println!("🔬 Running treatment group (20% savings rate)...");
-    let mut treatment_config = SimulationConfig::default();
-    treatment_config.max_steps = 100;
-    treatment_config.entity_count = 20;
-    treatment_config.savings_rate = 0.2;
+    let treatment_config = SimulationConfig {
+        max_steps: 100,
+        entity_count: 20,
+        savings_rate: 0.2,
+        ..Default::default()
+    };
 
     let mut treatment_results = vec![];
     for seed in 0..5 {
-        treatment_config.seed = seed;
-        let mut engine = SimulationEngine::new(treatment_config.clone());
+        let mut config = treatment_config.clone();
+        config.seed = seed;
+        let mut engine = SimulationEngine::new(config);
         treatment_results.push(engine.run());
     }
     println!("✓ Completed {} treatment runs\n", treatment_results.len());
 
     // Configure control group: No savings
     println!("🔬 Running control group (no savings)...");
-    let mut control_config = SimulationConfig::default();
-    control_config.max_steps = 100;
-    control_config.entity_count = 20;
-    control_config.savings_rate = 0.0;
+    let control_config = SimulationConfig {
+        max_steps: 100,
+        entity_count: 20,
+        savings_rate: 0.0,
+        ..Default::default()
+    };
 
     let mut control_results = vec![];
     for seed in 0..5 {
-        control_config.seed = seed;
-        let mut engine = SimulationEngine::new(control_config.clone());
+        let mut config = control_config.clone();
+        config.seed = seed;
+        let mut engine = SimulationEngine::new(config);
         control_results.push(engine.run());
     }
     println!("✓ Completed {} control runs\n", control_results.len());
