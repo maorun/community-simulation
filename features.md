@@ -14,23 +14,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 5. Erweiterte Analyse
 
-#### 5.1 Kausalanalyse-Framework
-**Beschreibung:** Eingebautes Framework für kausale Inferenz: A/B-Tests mit Kontrollgruppen, synthetische Kontrollmethoden, Difference-in-Differences Analyse.
-
-**Harmonien:**
-- **Parameter-Sweeps:** Erweitert Sweeps mit kausaler Interpretation
-- **Szenario-Vergleich:** Ermöglicht rigorose Wirkungsanalyse
-- **Monte-Carlo-Simulation:** Statistische Signifikanz für Kausalschätzungen
-- **Gruppen:** Gruppen können als Treatment/Control dienen
-
-**Nutzen:** Rigoros wissenschaftliche Evaluation von Policy-Interventionen und Mechanismus-Designs.
-
-**Implementierung:**
-- `CausalAnalysis` Modul mit verschiedenen Methoden
-- Automatische Behandlungs-/Kontrollgruppen-Zuweisung
-- Statistische Tests für kausale Effekte
-- Confounder-Kontrolle durch Randomisierung oder Matching
-
 ### 6. Verschiedene Agentenstrategien
 
 ## 🔧 Code-Verbesserungen
@@ -242,10 +225,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 8. **Technologieschocks** - Interessant aber komplex
 9. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
 10. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
-11. **Kausalanalyse-Framework** - Fortgeschrittenes Research-Tool
-12. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-13. **Simulation-Debugger** - Nice-to-have für Entwicklung
-14. **Spezielle Anwendungsfälle** - Domänenspezifisch
+11. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
+12. **Simulation-Debugger** - Nice-to-have für Entwicklung
+13. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
@@ -305,12 +287,10 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - Handelsabkommen bauen auf Freundschaften und Verträgen auf
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)
-9. Kausalanalyse-Framework
-10. Externalitäten-Analyse
+9. Externalitäten-Analyse
 
 **Warum diese Reihenfolge?**
 - Analysen profitieren von den reicheren Daten aus Phasen 1-2
-- Kausalanalyse ist methodisch anspruchsvoll
 - Externalitäten-Analyse benötigt reife Simulation
 
 ### Kontinuierlich: Code-Qualität und Performance
