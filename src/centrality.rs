@@ -185,7 +185,7 @@ pub fn calculate_centrality(nodes: &[NetworkNode], edges: &[NetworkEdge]) -> Cen
     node_centralities.sort_by(|a, b| {
         b.degree_centrality
             .partial_cmp(&a.degree_centrality)
-            .unwrap()
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
     let top_degree: Vec<String> = node_centralities
         .iter()
@@ -196,7 +196,7 @@ pub fn calculate_centrality(nodes: &[NetworkNode], edges: &[NetworkEdge]) -> Cen
     node_centralities.sort_by(|a, b| {
         b.betweenness_centrality
             .partial_cmp(&a.betweenness_centrality)
-            .unwrap()
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
     let top_betweenness: Vec<String> = node_centralities
         .iter()
@@ -207,7 +207,7 @@ pub fn calculate_centrality(nodes: &[NetworkNode], edges: &[NetworkEdge]) -> Cen
     node_centralities.sort_by(|a, b| {
         b.eigenvector_centrality
             .partial_cmp(&a.eigenvector_centrality)
-            .unwrap()
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
     let top_eigenvector: Vec<String> = node_centralities
         .iter()
