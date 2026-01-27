@@ -146,23 +146,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Time-Travel: Zurückspulen zu früheren Steps via Checkpoints
 - Conditional Breakpoints mit Expression-Evaluator
 
-#### 2.2 Simulation-Recorder und Playback
-**Beschreibung:** Aufzeichnung aller Aktionen für exakte Replay-Funktionalität, nützlich für Bug-Reports und Demonstrations.
-
-**Harmonien:**
-- **Event-System:** Events als Aufzeichnungsformat
-- **Checkpoint-System:** Snapshots für schnelles Spulen
-- **Streaming-Output:** Parallele Aufzeichnung
-- **Reproduzierbarkeit:** Deterministisches Replay
-
-**Nutzen:** Bug-Reproduktion, Demos, Lehre, Regression-Testing.
-
-**Implementierung:**
-- Binäres Aufzeichnungsformat für Effizienz
-- Playback mit variablen Geschwindigkeiten
-- Annotations/Kommentare während Aufzeichnung
-- Export zu Video (ASCII-Cast Format)
-
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
 #### 1. Epidemiologie-Integration
