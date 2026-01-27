@@ -194,16 +194,29 @@ mod tests {
     };
     use tempfile::NamedTempFile;
 
-    #[test]
-    fn test_export_to_sqlite_creates_database() {
+    /// Helper function to set up a test database with sample data.
+    ///
+    /// Creates a temporary SQLite database, exports test data to it, and returns
+    /// both the connection and the temporary file (which must be kept alive to
+    /// prevent the file from being deleted).
+    ///
+    /// # Returns
+    ///
+    /// A tuple of (Connection, NamedTempFile) for test assertions.
+    fn setup_test_database() -> (Connection, NamedTempFile) {
         let temp_file = NamedTempFile::new().unwrap();
         let db_path = temp_file.path().to_str().unwrap();
 
         let result = create_test_result();
         export_to_sqlite(&result, db_path).unwrap();
 
-        // Verify database was created
         let conn = Connection::open(db_path).unwrap();
+        (conn, temp_file)
+    }
+
+    #[test]
+    fn test_export_to_sqlite_creates_database() {
+        let (conn, _temp_file) = setup_test_database();
 
         // Check that tables exist
         let table_count: i64 = conn
@@ -218,13 +231,7 @@ mod tests {
 
     #[test]
     fn test_export_to_sqlite_inserts_summary_stats() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let db_path = temp_file.path().to_str().unwrap();
-
-        let result = create_test_result();
-        export_to_sqlite(&result, db_path).unwrap();
-
-        let conn = Connection::open(db_path).unwrap();
+        let (conn, _temp_file) = setup_test_database();
 
         // Verify summary statistics were inserted
         let (total_steps, active_persons): (i64, i64) = conn
@@ -241,13 +248,7 @@ mod tests {
 
     #[test]
     fn test_export_to_sqlite_inserts_money_distribution() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let db_path = temp_file.path().to_str().unwrap();
-
-        let result = create_test_result();
-        export_to_sqlite(&result, db_path).unwrap();
-
-        let conn = Connection::open(db_path).unwrap();
+        let (conn, _temp_file) = setup_test_database();
 
         // Verify money distribution was inserted
         let count: i64 = conn
@@ -261,13 +262,7 @@ mod tests {
 
     #[test]
     fn test_export_to_sqlite_inserts_reputation_distribution() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let db_path = temp_file.path().to_str().unwrap();
-
-        let result = create_test_result();
-        export_to_sqlite(&result, db_path).unwrap();
-
-        let conn = Connection::open(db_path).unwrap();
+        let (conn, _temp_file) = setup_test_database();
 
         // Verify reputation distribution was inserted
         let count: i64 = conn
@@ -281,13 +276,7 @@ mod tests {
 
     #[test]
     fn test_export_to_sqlite_inserts_skill_prices() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let db_path = temp_file.path().to_str().unwrap();
-
-        let result = create_test_result();
-        export_to_sqlite(&result, db_path).unwrap();
-
-        let conn = Connection::open(db_path).unwrap();
+        let (conn, _temp_file) = setup_test_database();
 
         // Verify skill prices were inserted
         let count: i64 = conn
