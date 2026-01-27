@@ -72,6 +72,7 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
 - **Input Validation:** Comprehensive validation of all configuration parameters with clear error messages. Ensures parameters are within acceptable ranges (e.g., positive values for steps/persons, valid ranges for rates/amplitudes) to prevent crashes and provide immediate feedback on configuration errors.
 - **Configuration Files:** Support for YAML and TOML configuration files to easily define complex simulation scenarios without lengthy command lines.
+- **Interactive Configuration Wizard:** User-friendly command-line wizard (`--wizard` flag) that guides users through creating simulation configurations step-by-step. Features include preset selection with descriptions, customization options for basic parameters (steps, persons, money), pricing scenario selection, advanced feature toggles with automatic dependency checking (e.g., credit rating requires loans), and configuration file export to YAML or TOML formats. The wizard provides help text for each option and validates inputs in real-time. Perfect for new users, teaching, and quickly exploring different simulation configurations without manually editing config files. After configuration, the wizard offers to run the simulation immediately or save the config for later use.
 - **Progress Bar:** Visual progress indicator with real-time statistics during long simulations (can be disabled with `--no-progress` flag).
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **Trace Mode:** Comprehensive debug logging for problem diagnosis. Enable detailed logging of all simulation actions including trade attempts, price updates, reputation changes, loan payments, and tax redistribution. Use environment variable `RUST_LOG=debug` for detailed logs or `RUST_LOG=trace` for extremely detailed output. Ideal for debugging simulation behavior, understanding agent decision-making, and diagnosing unexpected results.
@@ -222,6 +223,72 @@ This repository contains a configurable economic simulation written in Rust. It 
     ```bash
     ./target/release/simulation-framework -o results.json
     ```
+
+### Interactive Configuration Wizard
+
+For new users or when setting up complex simulations, use the **interactive configuration wizard** to create simulation configurations step-by-step with guided help text and validation:
+
+```bash
+./target/release/simulation-framework --wizard
+```
+
+The wizard provides:
+- **Preset Selection**: Choose from predefined configurations (small economy, crisis scenario, tech growth, etc.)
+- **Customization Options**: Adjust basic parameters (steps, persons, initial money)
+- **Scenario Selection**: Choose pricing mechanisms (Original, DynamicPricing, AdaptivePricing, AuctionPricing)
+- **Advanced Features**: Enable optional features (quality, loans, credit rating, contracts, friendships, trade agreements, taxes) with dependency checking (e.g., credit rating requires loans to be enabled)
+- **Configuration Export**: Save your configuration to YAML or TOML files for future use
+- **Run Now Option**: Optionally run the simulation immediately after configuration
+
+**Example Wizard Session:**
+```bash
+$ ./target/release/simulation-framework --wizard
+
+🎯 Interactive Simulation Configuration Wizard
+═══════════════════════════════════════════════
+
+This wizard will help you create a simulation configuration.
+
+? How would you like to start?
+  > Use a preset configuration
+    Create a custom configuration from scratch
+
+? Select a preset:
+  > default: Standard economy with 100 persons, 500 steps
+    small_economy: Small economy with 20 persons for quick testing
+    large_economy: Large economy with 500 persons for detailed analysis
+
+✅ Loaded preset: Standard economy with 100 persons, 500 steps
+
+? Would you like to customize this preset? Yes
+? Would you like to change basic parameters (steps, persons)? Yes
+? Number of simulation steps: 1000
+? Would you like to configure advanced features? Yes
+? Enable quality rating system? Yes
+? Enable loan system? Yes
+? Enable credit rating system? Yes
+
+? Would you like to save this configuration to a file? Yes
+? Choose configuration file format: YAML
+? Enter file path: my_simulation.yaml
+
+✅ Configuration saved to: my_simulation.yaml
+
+? Would you like to run the simulation now? Yes
+
+[Simulation runs...]
+```
+
+This feature is perfect for:
+- **New users** learning the simulation's capabilities
+- **Experiment design** when exploring parameter combinations
+- **Teaching** and demonstrations
+- **Quick prototyping** without manually editing config files
+
+After creating a configuration file with the wizard, you can run it later:
+```bash
+./target/release/simulation-framework --config my_simulation.yaml -o results.json
+```
 
 ### Running the Simulation
 
