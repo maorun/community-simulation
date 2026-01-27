@@ -542,7 +542,7 @@ impl SimulationEngine {
         } else {
             Err(crate::error::SimulationError::ActionLogWrite(
                 std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
+                    std::io::ErrorKind::InvalidInput,
                     "Action recording is not enabled",
                 ),
             ))
@@ -2339,21 +2339,21 @@ impl SimulationEngine {
 
         // Capture prices before update for event emission and action recording
         // Use Vec instead of HashMap for better performance with small to medium number of skills
-        let prices_before: Vec<(SkillId, f64)> =
-            if self.event_bus.is_enabled() || self.action_log.is_some() {
-                self.market
-                    .skills
-                    .iter()
-                    .map(|(id, skill)| (id.clone(), skill.current_price))
-                    .collect()
-            } else {
-                Vec::new()
-            };
+        let should_track_prices = self.event_bus.is_enabled() || self.action_log.is_some();
+        let prices_before: Vec<(SkillId, f64)> = if should_track_prices {
+            self.market
+                .skills
+                .iter()
+                .map(|(id, skill)| (id.clone(), skill.current_price))
+                .collect()
+        } else {
+            Vec::new()
+        };
 
         self.market.update_prices(&mut self.rng);
 
         // Emit price update events and record actions for changed prices
-        if self.event_bus.is_enabled() || self.action_log.is_some() {
+        if should_track_prices {
             // Use a tolerance appropriate for currency comparisons (0.01 = 1 cent)
             const PRICE_CHANGE_TOLERANCE: f64 = 0.01;
 
