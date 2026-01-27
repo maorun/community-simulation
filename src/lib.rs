@@ -85,6 +85,7 @@
 //! - [`trade_agreement`] - Trade agreements between persons for preferential trading
 //! - [`trust_network`] - Trust network system for transitive trust relationships
 //! - [`voting`] - Voting system for governance and collective decision-making
+//! - [`wizard`] - Interactive configuration wizard for guided setup
 
 pub mod causal_analysis;
 pub mod centrality;
@@ -116,6 +117,7 @@ pub mod skill;
 pub mod trade_agreement;
 pub mod trust_network;
 pub mod voting;
+pub mod wizard;
 
 pub use causal_analysis::{CausalAnalysisConfig, CausalAnalysisResult, StatisticalTest};
 pub use centrality::{calculate_centrality, CentralityAnalysis, NodeCentrality};

@@ -27,6 +27,10 @@ struct Args {
     #[arg(long, default_value_t = false)]
     list_presets: bool,
 
+    /// Start interactive configuration wizard to create a simulation configuration
+    #[arg(long, default_value_t = false)]
+    wizard: bool,
+
     #[arg(short, long)]
     steps: Option<usize>,
 
@@ -460,6 +464,67 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             println!();
         }
+        return Ok(());
+    }
+
+    // Handle --wizard flag to run interactive configuration wizard
+    if args.wizard {
+        let (config, output_path) = simulation_framework::wizard::run_wizard()?;
+
+        // Save config if requested
+        if let Some(path) = &output_path {
+            let content = if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+                toml::to_string_pretty(&config)
+                    .map_err(|e| format!("Failed to serialize config to TOML: {}", e))?
+            } else {
+                // Default to YAML
+                serde_yaml::to_string(&config)
+                    .map_err(|e| format!("Failed to serialize config to YAML: {}", e))?
+            };
+
+            std::fs::write(path, content)
+                .map_err(|e| format!("Failed to write config file: {}", e))?;
+            println!("\n✅ Configuration saved to: {}", path.display());
+        }
+
+        // Ask if user wants to run the simulation now
+        use inquire::Confirm;
+        let run_now = Confirm::new("Would you like to run the simulation now?")
+            .with_default(false)
+            .prompt()
+            .map_err(|e| format!("Failed to get confirmation: {}", e))?;
+
+        if !run_now {
+            println!("\n👋 Configuration complete! You can run the simulation later using:");
+            if let Some(path) = output_path {
+                println!("   cargo run -- --config {}", path.display());
+            } else {
+                println!("   cargo run -- [with your chosen parameters]");
+            }
+            return Ok(());
+        }
+
+        // Continue with simulation using the wizard-generated config
+        let mut engine = SimulationEngine::new(config.clone());
+
+        // Run the simulation
+        let start = Instant::now();
+        let result = engine.run_with_progress(!args.no_progress);
+        let duration = start.elapsed();
+
+        // Print results
+        result.print_summary(true); // Show histogram
+
+        println!(
+            "\nPerformance: {:.2} steps/second",
+            config.max_steps as f64 / duration.as_secs_f64()
+        );
+
+        if let Some(output_path) = &args.output {
+            result.save_to_file(output_path, args.compress)?;
+            println!("Results saved to: {}", output_path);
+        }
+
         return Ok(());
     }
 
