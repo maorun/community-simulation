@@ -65,31 +65,13 @@ mod tests {
         skill_id
     }
 
-    /// Helper enum to specify which price updater to test
-    enum TestUpdater {
-        Original(OriginalPriceUpdater),
-        DynamicPricing(DynamicPricingUpdater),
-        AdaptivePricing(AdaptivePricingUpdater),
-        AuctionPricing(AuctionPricingUpdater),
-    }
-
-    impl TestUpdater {
-        fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
-            match self {
-                TestUpdater::Original(u) => u.update_prices(market, rng),
-                TestUpdater::DynamicPricing(u) => u.update_prices(market, rng),
-                TestUpdater::AdaptivePricing(u) => u.update_prices(market, rng),
-                TestUpdater::AuctionPricing(u) => u.update_prices(market, rng),
-            }
-        }
-    }
+    /// Base price used for all test markets to ensure consistency
+    const TEST_BASE_PRICE: f64 = 10.0;
 
     /// Configuration for a price updater test
     struct PriceUpdateTestConfig {
-        scenario: Scenario,
-        base_price: f64,
         initial_price: f64,
-        updater: TestUpdater,
+        updater: PriceUpdater,
         demand: Option<usize>,
         supply: Option<usize>,
         sales: Option<usize>,
@@ -98,10 +80,8 @@ mod tests {
     impl PriceUpdateTestConfig {
         fn original(initial_price: f64, demand: usize, supply: usize) -> Self {
             Self {
-                scenario: Scenario::Original,
-                base_price: 10.0,
                 initial_price,
-                updater: TestUpdater::Original(OriginalPriceUpdater),
+                updater: PriceUpdater::Original(OriginalPriceUpdater),
                 demand: Some(demand),
                 supply: Some(supply),
                 sales: None,
@@ -110,10 +90,8 @@ mod tests {
 
         fn dynamic_pricing(initial_price: f64, sales: Option<usize>) -> Self {
             Self {
-                scenario: Scenario::DynamicPricing,
-                base_price: 10.0,
                 initial_price,
-                updater: TestUpdater::DynamicPricing(DynamicPricingUpdater),
+                updater: PriceUpdater::DynamicPricing(DynamicPricingUpdater),
                 demand: None,
                 supply: None,
                 sales,
@@ -122,10 +100,8 @@ mod tests {
 
         fn adaptive_pricing(initial_price: f64, sales: Option<usize>) -> Self {
             Self {
-                scenario: Scenario::AdaptivePricing,
-                base_price: 10.0,
                 initial_price,
-                updater: TestUpdater::AdaptivePricing(AdaptivePricingUpdater),
+                updater: PriceUpdater::AdaptivePricing(AdaptivePricingUpdater),
                 demand: None,
                 supply: None,
                 sales,
@@ -134,13 +110,21 @@ mod tests {
 
         fn auction_pricing(initial_price: f64, demand: usize, supply: usize) -> Self {
             Self {
-                scenario: Scenario::AuctionPricing,
-                base_price: 10.0,
                 initial_price,
-                updater: TestUpdater::AuctionPricing(AuctionPricingUpdater),
+                updater: PriceUpdater::AuctionPricing(AuctionPricingUpdater),
                 demand: Some(demand),
                 supply: Some(supply),
                 sales: None,
+            }
+        }
+
+        /// Derive the scenario from the updater type
+        fn scenario(&self) -> Scenario {
+            match self.updater {
+                PriceUpdater::Original(_) => Scenario::Original,
+                PriceUpdater::DynamicPricing(_) => Scenario::DynamicPricing,
+                PriceUpdater::AdaptivePricing(_) => Scenario::AdaptivePricing,
+                PriceUpdater::AuctionPricing(_) => Scenario::AuctionPricing,
             }
         }
     }
@@ -155,7 +139,7 @@ mod tests {
     /// 5. Execute price update
     /// 6. Return the new price
     fn execute_price_update_test(config: PriceUpdateTestConfig) -> f64 {
-        let mut market = create_test_market(config.scenario, config.base_price);
+        let mut market = create_test_market(config.scenario(), TEST_BASE_PRICE);
         let skill_id = setup_skill_in_market(&mut market, config.initial_price);
 
         // Configure market conditions
