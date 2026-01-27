@@ -65,89 +65,157 @@ mod tests {
         skill_id
     }
 
+    /// Helper enum to specify which price updater to test
+    enum TestUpdater {
+        Original(OriginalPriceUpdater),
+        DynamicPricing(DynamicPricingUpdater),
+        AdaptivePricing(AdaptivePricingUpdater),
+        AuctionPricing(AuctionPricingUpdater),
+    }
+
+    impl TestUpdater {
+        fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
+            match self {
+                TestUpdater::Original(u) => u.update_prices(market, rng),
+                TestUpdater::DynamicPricing(u) => u.update_prices(market, rng),
+                TestUpdater::AdaptivePricing(u) => u.update_prices(market, rng),
+                TestUpdater::AuctionPricing(u) => u.update_prices(market, rng),
+            }
+        }
+    }
+
+    /// Configuration for a price updater test
+    struct PriceUpdateTestConfig {
+        scenario: Scenario,
+        base_price: f64,
+        initial_price: f64,
+        updater: TestUpdater,
+        demand: Option<usize>,
+        supply: Option<usize>,
+        sales: Option<usize>,
+    }
+
+    impl PriceUpdateTestConfig {
+        fn original(initial_price: f64, demand: usize, supply: usize) -> Self {
+            Self {
+                scenario: Scenario::Original,
+                base_price: 10.0,
+                initial_price,
+                updater: TestUpdater::Original(OriginalPriceUpdater),
+                demand: Some(demand),
+                supply: Some(supply),
+                sales: None,
+            }
+        }
+
+        fn dynamic_pricing(initial_price: f64, sales: Option<usize>) -> Self {
+            Self {
+                scenario: Scenario::DynamicPricing,
+                base_price: 10.0,
+                initial_price,
+                updater: TestUpdater::DynamicPricing(DynamicPricingUpdater),
+                demand: None,
+                supply: None,
+                sales,
+            }
+        }
+
+        fn adaptive_pricing(initial_price: f64, sales: Option<usize>) -> Self {
+            Self {
+                scenario: Scenario::AdaptivePricing,
+                base_price: 10.0,
+                initial_price,
+                updater: TestUpdater::AdaptivePricing(AdaptivePricingUpdater),
+                demand: None,
+                supply: None,
+                sales,
+            }
+        }
+
+        fn auction_pricing(initial_price: f64, demand: usize, supply: usize) -> Self {
+            Self {
+                scenario: Scenario::AuctionPricing,
+                base_price: 10.0,
+                initial_price,
+                updater: TestUpdater::AuctionPricing(AuctionPricingUpdater),
+                demand: Some(demand),
+                supply: Some(supply),
+                sales: None,
+            }
+        }
+    }
+
+    /// Execute a price update test with the given configuration and return the new price
+    ///
+    /// This helper reduces test code duplication by encapsulating the common pattern:
+    /// 1. Create market with scenario
+    /// 2. Setup skill with initial price
+    /// 3. Configure market conditions (demand, supply, sales)
+    /// 4. Create deterministic RNG
+    /// 5. Execute price update
+    /// 6. Return the new price
+    fn execute_price_update_test(config: PriceUpdateTestConfig) -> f64 {
+        let mut market = create_test_market(config.scenario, config.base_price);
+        let skill_id = setup_skill_in_market(&mut market, config.initial_price);
+
+        // Configure market conditions
+        if let Some(demand) = config.demand {
+            market.demand_counts.insert(skill_id.clone(), demand);
+        }
+        if let Some(supply) = config.supply {
+            market.supply_counts.insert(skill_id.clone(), supply);
+        }
+        if let Some(sales) = config.sales {
+            market.sales_this_step.insert(skill_id.clone(), sales);
+        }
+
+        // Execute price update with deterministic RNG
+        let mut rng = StepRng::new(2, 1);
+        config.updater.update_prices(&mut market, &mut rng);
+
+        // Return new price
+        market.get_price(&skill_id).unwrap()
+    }
+
     #[test]
     fn test_original_price_updater_price_increase() {
-        let mut market = create_test_market(Scenario::Original, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-
-        market.demand_counts.insert(skill_id.clone(), 10);
-        market.supply_counts.insert(skill_id.clone(), 5);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = OriginalPriceUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::original(50.0, 10, 5);
+        let new_price = execute_price_update_test(config);
         assert!(new_price > 50.0);
     }
 
     #[test]
     fn test_original_price_updater_price_decrease() {
-        let mut market = create_test_market(Scenario::Original, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-
-        market.demand_counts.insert(skill_id.clone(), 5);
-        market.supply_counts.insert(skill_id.clone(), 10);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = OriginalPriceUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::original(50.0, 5, 10);
+        let new_price = execute_price_update_test(config);
         assert!(new_price < 50.0);
     }
 
     #[test]
     fn test_dynamic_pricing_updater_price_increase() {
-        let mut market = create_test_market(Scenario::DynamicPricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-        market.sales_this_step.insert(skill_id.clone(), 1);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = DynamicPricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::dynamic_pricing(50.0, Some(1));
+        let new_price = execute_price_update_test(config);
         assert_eq!(new_price, 52.5);
     }
 
     #[test]
     fn test_dynamic_pricing_updater_price_decrease() {
-        let mut market = create_test_market(Scenario::DynamicPricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = DynamicPricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::dynamic_pricing(50.0, None);
+        let new_price = execute_price_update_test(config);
         assert_eq!(new_price, 47.5);
     }
 
     #[test]
     fn test_dynamic_pricing_updater_price_clamp() {
-        let mut market = create_test_market(Scenario::DynamicPricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 1.0);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = DynamicPricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::dynamic_pricing(1.0, None);
+        let new_price = execute_price_update_test(config);
         assert_eq!(new_price, 1.0);
     }
 
     #[test]
     fn test_adaptive_pricing_updater_price_increase() {
-        let mut market = create_test_market(Scenario::AdaptivePricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-        market.sales_this_step.insert(skill_id.clone(), 1);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = AdaptivePricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::adaptive_pricing(50.0, Some(1));
+        let new_price = execute_price_update_test(config);
         // With learning rate 0.2, target is 55.0 (50 * 1.1)
         // new_price = 50 + 0.2 * (55 - 50) = 50 + 1 = 51.0
         assert_eq!(new_price, 51.0);
@@ -155,14 +223,8 @@ mod tests {
 
     #[test]
     fn test_adaptive_pricing_updater_price_decrease() {
-        let mut market = create_test_market(Scenario::AdaptivePricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = AdaptivePricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::adaptive_pricing(50.0, None);
+        let new_price = execute_price_update_test(config);
         // With learning rate 0.2, target is 45.0 (50 * 0.9)
         // new_price = 50 + 0.2 * (45 - 50) = 50 - 1 = 49.0
         assert_eq!(new_price, 49.0);
@@ -190,32 +252,17 @@ mod tests {
 
     #[test]
     fn test_adaptive_pricing_updater_price_clamp() {
-        let mut market = create_test_market(Scenario::AdaptivePricing, 1.0);
-        let skill_id = setup_skill_in_market(&mut market, 1.0);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = AdaptivePricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::adaptive_pricing(1.0, None);
+        let new_price = execute_price_update_test(config);
         // Should be clamped to min_skill_price (1.0)
         assert_eq!(new_price, 1.0);
     }
 
     #[test]
     fn test_auction_pricing_competitive_demand() {
-        let mut market = create_test_market(Scenario::AuctionPricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-
         // High demand (10) vs low supply (2) = competitive bidding
-        market.demand_counts.insert(skill_id.clone(), 10);
-        market.supply_counts.insert(skill_id.clone(), 2);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = AuctionPricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::auction_pricing(50.0, 10, 2);
+        let new_price = execute_price_update_test(config);
         // Price should increase significantly due to competitive bidding
         assert!(new_price > 50.0);
         assert!(new_price > 55.0); // Should be at least 10% increase
@@ -223,18 +270,9 @@ mod tests {
 
     #[test]
     fn test_auction_pricing_no_demand() {
-        let mut market = create_test_market(Scenario::AuctionPricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-
         // No demand at all
-        market.demand_counts.insert(skill_id.clone(), 0);
-        market.supply_counts.insert(skill_id.clone(), 5);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = AuctionPricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::auction_pricing(50.0, 0, 5);
+        let new_price = execute_price_update_test(config);
         // Price should decrease faster (8%) when no demand
         assert!(new_price < 50.0);
         assert!(new_price < 47.0); // Should be roughly 8% decrease
@@ -242,18 +280,9 @@ mod tests {
 
     #[test]
     fn test_auction_pricing_low_demand() {
-        let mut market = create_test_market(Scenario::AuctionPricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 50.0);
-
         // Low demand (2) vs supply (5) = no competition
-        market.demand_counts.insert(skill_id.clone(), 2);
-        market.supply_counts.insert(skill_id.clone(), 5);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = AuctionPricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::auction_pricing(50.0, 2, 5);
+        let new_price = execute_price_update_test(config);
         // Price should decrease gently (3%) when demand < supply but > 0
         // Account for 2% random volatility (max ±1.0 from 48.5)
         assert!(new_price < 50.0);
@@ -262,18 +291,9 @@ mod tests {
 
     #[test]
     fn test_auction_pricing_price_clamp() {
-        let mut market = create_test_market(Scenario::AuctionPricing, 10.0);
-        let skill_id = setup_skill_in_market(&mut market, 1.0);
-
         // No demand, should decrease but be clamped at min_skill_price
-        market.demand_counts.insert(skill_id.clone(), 0);
-        market.supply_counts.insert(skill_id.clone(), 5);
-
-        let mut rng = StepRng::new(2, 1);
-        let updater = AuctionPricingUpdater;
-        updater.update_prices(&mut market, &mut rng);
-
-        let new_price = market.get_price(&skill_id).unwrap();
+        let config = PriceUpdateTestConfig::auction_pricing(1.0, 0, 5);
+        let new_price = execute_price_update_test(config);
         // Should be clamped to min_skill_price (1.0)
         assert_eq!(new_price, 1.0);
     }
