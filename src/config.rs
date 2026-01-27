@@ -1128,20 +1128,26 @@ pub struct SimulationConfig {
 
     /// Enable parallel trade execution for improved performance with large simulations.
     ///
-    /// When enabled, trades that don't conflict (i.e., involve different buyers and sellers)
-    /// are executed in parallel using Rayon, significantly improving performance for
-    /// simulations with >1000 persons. The conflict detection algorithm ensures correctness
-    /// by identifying and properly handling trades that share participants.
+    /// **Current Status:** Infrastructure only - trades are currently executed sequentially
+    /// to maintain deterministic results. The configuration flag is in place for future
+    /// enhancement when true parallelization can be implemented without affecting determinism.
     ///
-    /// Performance benefits:
-    /// - Small simulations (<100 persons): Minimal or slight overhead due to conflict checking
-    /// - Medium simulations (100-1000 persons): Moderate speedup (10-30%)
-    /// - Large simulations (>1000 persons): Significant speedup (30-60%)
+    /// **Future Enhancement:** When enabled, trades that don't conflict (i.e., involve
+    /// different buyers and sellers) will be executed in parallel using Rayon, significantly
+    /// improving performance for simulations with >1000 persons.
     ///
-    /// The implementation uses a conflict graph to partition trades into independent batches
-    /// that can be executed simultaneously without data races or consistency issues.
+    /// **Why Sequential Now:**
+    /// - Changing trade execution order affects RNG state (used in friendship formation, etc.)
+    /// - Different RNG state leads to different simulation outcomes
+    /// - Maintaining determinism is critical for reproducible research
     ///
-    /// Set to false to use sequential trade execution (default).
+    /// **Future Performance Benefits (when implemented):**
+    /// - Small simulations (<100 persons): Minimal or slight overhead
+    /// - Medium simulations (100-1000 persons): Expected 10-30% speedup  
+    /// - Large simulations (>1000 persons): Expected 30-60% speedup
+    ///
+    /// Set to false to use standard sequential trade execution (default).
+    /// Set to true to prepare for future parallelization (currently has no performance impact).
     #[serde(default)]
     pub enable_parallel_trades: bool,
 }

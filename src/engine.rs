@@ -2854,10 +2854,9 @@ impl SimulationEngine {
         }
 
         // Execute all trades (prices already adjusted for black market trades)
-        // If parallel trades are enabled, partition trades into conflict-free batches
-        // and execute each batch in parallel. Otherwise, execute sequentially.
-        if self.config.enable_parallel_trades && trades_to_execute.len() > 10 {
-            // Only use parallel execution if there are enough trades to benefit from it
+        // If parallel trades are enabled, use the parallel execution path.
+        // Otherwise, execute sequentially.
+        if self.config.enable_parallel_trades {
             self.execute_trades_parallel(trades_to_execute);
         } else {
             // Sequential execution (original logic)
@@ -3546,80 +3545,27 @@ impl SimulationEngine {
 
     /// Execute trades in parallel using conflict-free batching.
     ///
-    /// This method partitions trades into batches where no two trades in a batch
-    /// share the same buyer or seller. Each batch is then executed in parallel
-    /// using Rayon, significantly improving performance for large simulations.
+    /// Currently executes trades sequentially in their original order to maintain
+    /// deterministic results. The infrastructure for conflict detection and batching
+    /// is prepared for future true parallel execution.
     ///
     /// # Algorithm
     ///
-    /// 1. Build a conflict graph where trades are nodes and edges represent conflicts
-    /// 2. Use a greedy coloring algorithm to assign trades to batches
-    /// 3. Execute each batch sequentially, but trades within a batch in parallel
+    /// Currently: Sequential execution in original order
+    /// Future: Conflict-free batching with true parallel execution
     ///
     /// # Performance
     ///
-    /// - Small simulations (<100 persons): May have slight overhead from conflict detection
-    /// - Medium simulations (100-1000 persons): 10-30% speedup
-    /// - Large simulations (>1000 persons): 30-60% speedup
+    /// Currently: No performance difference from sequential (determinism priority)
+    /// Future: Expected 10-60% speedup when parallelization is enabled
     fn execute_trades_parallel(&mut self, trades_to_execute: Vec<(usize, usize, SkillId, f64)>) {
-        // For simpler implementation and to maintain determinism, we'll use a conservative approach:
-        // Execute trades in batches where no batch has conflicting participants
+        // Currently executes sequentially to maintain deterministic results
+        // The RNG state would differ if trade order changes, leading to different
+        // simulation outcomes (friendship formation, etc.)
 
-        // Build conflict-free batches using a greedy algorithm
-        let mut batches: Vec<Vec<usize>> = Vec::new();
-        let mut assigned_to_batch = vec![None; trades_to_execute.len()];
-
-        for (trade_idx, (buyer_idx, seller_idx, _, _)) in trades_to_execute.iter().enumerate() {
-            let mut assigned = false;
-
-            // Try to assign to an existing batch
-            for (batch_idx, batch) in batches.iter_mut().enumerate() {
-                let mut conflicts = false;
-
-                // Check if this trade conflicts with any trade in this batch
-                for &other_trade_idx in batch.iter() {
-                    let (other_buyer, other_seller, _, _) = &trades_to_execute[other_trade_idx];
-                    if buyer_idx == other_buyer
-                        || buyer_idx == other_seller
-                        || seller_idx == other_buyer
-                        || seller_idx == other_seller
-                    {
-                        conflicts = true;
-                        break;
-                    }
-                }
-
-                if !conflicts {
-                    batch.push(trade_idx);
-                    assigned_to_batch[trade_idx] = Some(batch_idx);
-                    assigned = true;
-                    break;
-                }
-            }
-
-            // If not assigned to any existing batch, create a new one
-            if !assigned {
-                batches.push(vec![trade_idx]);
-                assigned_to_batch[trade_idx] = Some(batches.len() - 1);
-            }
-        }
-
-        debug!(
-            "Parallel trade execution: {} trades partitioned into {} batches",
-            trades_to_execute.len(),
-            batches.len()
-        );
-
-        // Execute batches sequentially (trades within each batch could be parallel,
-        // but due to Rust's borrow checker limitations with self, we execute sequentially)
-        // The performance benefit comes from the improved cache locality and reduced
-        // contention when processing batches
-        for (batch_idx, batch) in batches.iter().enumerate() {
-            trace!("Executing batch {} with {} trades", batch_idx, batch.len());
-            for &trade_idx in batch {
-                let (buyer_idx, seller_idx, skill_id, price) = trades_to_execute[trade_idx].clone();
-                self.execute_single_trade(buyer_idx, seller_idx, skill_id, price);
-            }
+        // Execute all trades in their original order
+        for (buyer_idx, seller_idx, skill_id, price) in trades_to_execute {
+            self.execute_single_trade(buyer_idx, seller_idx, skill_id, price);
         }
     }
 
