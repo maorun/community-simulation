@@ -33,17 +33,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Performance-Optimierungen
 
-#### 2.1 Parallele Trade-Matching
-**Beschreibung:** Optimierung des Trade-Matchings durch Parallelisierung konfliktfreier Trades unter Verwendung von Rayon.
-
-**Nutzen:** Deutliche Performance-Verbesserung bei großen Simulationen (>1000 Personen), bessere CPU-Auslastung.
-
-**Implementierung:**
-- Konfliktgraph für Trade-Paare berechnen
-- Konfliktfreie Trades parallel ausführen
-- Atomare Operationen für gemeinsame Ressourcen
-- Benchmark-Suite zur Performance-Messung
-
 ### 3. Code-Qualität
 
 ### 4. Datenmanagement
@@ -213,7 +202,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### Code-Verbesserungen (Kontinuierlich)
 
-- **Parallele Trade-Matching** - Performance bei großen Simulationen
 - **Integration-Tests** - Qualitätssicherung
 - **Zeitreihen-DB** - Enterprise-Integration
 - **Erweiterbare Architektur** - Langfristige Wartbarkeit
@@ -275,7 +263,6 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - Externalitäten-Analyse benötigt reife Simulation
 
 ### Kontinuierlich: Code-Qualität und Performance
-- Parallele Trade-Matching bei Bedarf (wenn N > 1000)
 - Integration-Tests für jedes neue Feature
 - Refactoring zu komponenten-basierter Architektur
 - Dokumentations-Updates

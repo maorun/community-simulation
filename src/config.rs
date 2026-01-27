@@ -1125,6 +1125,31 @@ pub struct SimulationConfig {
     /// Set to false to disable specialization strategies (default).
     #[serde(default)]
     pub enable_specialization: bool,
+
+    /// Enable parallel trade execution for improved performance with large simulations.
+    ///
+    /// **Current Status:** Infrastructure only - trades are currently executed sequentially
+    /// to maintain deterministic results. The configuration flag is in place for future
+    /// enhancement when true parallelization can be implemented without affecting determinism.
+    ///
+    /// **Future Enhancement:** When enabled, trades that don't conflict (i.e., involve
+    /// different buyers and sellers) will be executed in parallel using Rayon, significantly
+    /// improving performance for simulations with >1000 persons.
+    ///
+    /// **Why Sequential Now:**
+    /// - Changing trade execution order affects RNG state (used in friendship formation, etc.)
+    /// - Different RNG state leads to different simulation outcomes
+    /// - Maintaining determinism is critical for reproducible research
+    ///
+    /// **Future Performance Benefits (when implemented):**
+    /// - Small simulations (<100 persons): Minimal or slight overhead
+    /// - Medium simulations (100-1000 persons): Expected 10-30% speedup  
+    /// - Large simulations (>1000 persons): Expected 30-60% speedup
+    ///
+    /// Set to false to use standard sequential trade execution (default).
+    /// Set to true to prepare for future parallelization (currently has no performance impact).
+    #[serde(default)]
+    pub enable_parallel_trades: bool,
 }
 
 fn default_pool_contribution_rate() -> f64 {
@@ -1450,6 +1475,7 @@ impl Default for SimulationConfig {
             adaptation_rate: 0.1,                 // 10% adaptation rate
             exploration_rate: 0.05,               // 5% exploration (ε-greedy)
             enable_specialization: false,         // Disabled by default
+            enable_parallel_trades: false,        // Disabled by default
         }
     }
 }

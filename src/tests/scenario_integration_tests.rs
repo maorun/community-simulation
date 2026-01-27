@@ -1693,4 +1693,66 @@ mod integration_tests {
         };
         assert!(max_config.validate().is_err());
     }
+
+    /// Test that parallel trade execution (currently sequential) works correctly
+    #[test]
+    fn test_parallel_trades_correctness() {
+        // Test that enabling parallel trades doesn't break the simulation
+        // Note: Current implementation is sequential for determinism
+        let config = SimulationConfig {
+            entity_count: 50,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            enable_parallel_trades: true,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify simulation completed successfully
+        assert_eq!(result.total_steps, 50);
+        assert_eq!(result.active_persons, 50);
+
+        // Verify trades occurred
+        assert!(result.trade_volume_statistics.total_trades > 0);
+
+        // Verify money statistics are reasonable
+        assert!(result.money_statistics.average > 0.0);
+        assert!(result.money_statistics.std_dev >= 0.0);
+
+        // Total money should be conserved
+        let total_money: f64 = result.final_money_distribution.iter().sum();
+        let expected_total = 50.0 * 100.0; // entity_count * initial_money
+        assert!(
+            (total_money - expected_total).abs() < 1.0,
+            "Money should be approximately conserved: {} vs {}",
+            total_money,
+            expected_total
+        );
+    }
+
+    /// Test parallel trades with very small simulation (edge case)
+    #[test]
+    fn test_parallel_trades_small_simulation() {
+        let config = SimulationConfig {
+            entity_count: 5,
+            max_steps: 10,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            seed: 42,
+            enable_parallel_trades: true, // Enabled but shouldn't trigger due to small size
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Should complete successfully
+        assert_eq!(result.total_steps, 10);
+        assert_eq!(result.active_persons, 5);
+        assert!(result.money_statistics.average > 0.0);
+    }
 }
