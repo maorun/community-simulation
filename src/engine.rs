@@ -2870,27 +2870,6 @@ impl SimulationEngine {
             .push(black_market_trade_indices.len());
         self.black_market_volume_per_step.push(black_market_volume);
 
-        // Tax redistribution (if enabled)
-        if self.config.enable_tax_redistribution {
-            let taxes_collected_this_step = self.total_taxes_collected - step_taxes_collected_start;
-            if taxes_collected_this_step > 0.0 && !self.entities.is_empty() {
-                let redistribution_per_person =
-                    taxes_collected_this_step / self.entities.len() as f64;
-                for entity in self.entities.iter_mut() {
-                    if entity.active {
-                        entity.person_data.money += redistribution_per_person;
-                    }
-                }
-                self.total_taxes_redistributed += taxes_collected_this_step;
-                debug!(
-                    "Tax redistribution: ${:.2} collected, ${:.2} per person to {} active persons",
-                    taxes_collected_this_step,
-                    redistribution_per_person,
-                    self.entities.iter().filter(|e| e.active).count()
-                );
-            }
-        }
-
         // Apply reputation decay for all active entities
         for entity in &mut self.entities {
             if entity.active {
