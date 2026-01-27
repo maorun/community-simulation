@@ -619,6 +619,34 @@ pub struct MentorshipStats {
     pub unique_mentees: usize,
 }
 
+/// Statistics about technology breakthrough events
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TechnologyBreakthroughStats {
+    /// Total number of breakthrough events during the simulation
+    pub total_breakthroughs: usize,
+    /// Number of unique skills that received breakthroughs
+    pub unique_skills_affected: usize,
+    /// Average efficiency boost across all breakthroughs (e.g., 1.3 = 30% average boost)
+    pub average_efficiency_boost: f64,
+    /// Minimum efficiency boost observed
+    pub min_efficiency_boost: f64,
+    /// Maximum efficiency boost observed
+    pub max_efficiency_boost: f64,
+    /// List of all breakthrough events with details
+    pub breakthrough_events: Vec<BreakthroughEvent>,
+}
+
+/// Details of a single technology breakthrough event
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BreakthroughEvent {
+    /// The skill that received the breakthrough
+    pub skill_id: String,
+    /// The efficiency multiplier applied (e.g., 1.3 = 30% boost)
+    pub efficiency_boost: f64,
+    /// The simulation step when the breakthrough occurred
+    pub step: usize,
+}
+
 /// Statistics about certification system activity
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CertificationStats {
@@ -923,6 +951,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub insurance_statistics: Option<InsuranceStats>,
 
+    /// Technology breakthrough statistics (only present if breakthroughs are enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub technology_breakthrough_statistics: Option<TechnologyBreakthroughStats>,
+
     /// Group/organization statistics (only present if groups are configured)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_statistics: Option<GroupStats>,
@@ -1037,6 +1069,7 @@ impl SimulationResult {
     /// #     trust_network_statistics: None,
     /// #     trade_agreement_statistics: None,
     /// #     insurance_statistics: None,
+    /// #     technology_breakthrough_statistics: None,
     /// #     group_statistics: None,
     /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
     /// #         per_person: vec![],
@@ -3189,6 +3222,7 @@ mod tests {
             trust_network_statistics: None,
             trade_agreement_statistics: None,
             insurance_statistics: None,
+            technology_breakthrough_statistics: None,
             group_statistics: None,
             trading_partner_statistics: TradingPartnerStats {
                 per_person: vec![],

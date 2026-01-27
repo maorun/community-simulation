@@ -222,12 +222,11 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
-8. **Technologieschocks** - Interessant aber komplex
-9. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
-10. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
-11. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-12. **Simulation-Debugger** - Nice-to-have für Entwicklung
-13. **Spezielle Anwendungsfälle** - Domänenspezifisch
+8. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
+9. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
+10. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
+11. **Simulation-Debugger** - Nice-to-have für Entwicklung
+12. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
