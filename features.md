@@ -84,23 +84,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. CLI-Verbesserungen
 
-#### 1.1 Interaktive Szenario-Konfiguration
-**Beschreibung:** Erweiterte interaktive Konfiguration mit Vorschlägen, Validierung in Echtzeit und Feature-Dependency-Resolution.
-
-**Harmonien:**
-- **Interaktiver Modus:** Ergänzt REPL mit Setup-Phase
-- **Konfigurationsdateien:** Generiert YAML/TOML aus interaktiver Session
-- **Presets:** Bietet Presets als Startpunkt
-
-**Nutzen:** Niedrigere Einstiegshürde für neue Benutzer, weniger Fehler durch geführte Konfiguration.
-
-**Implementierung:**
-- Inquire-basierter CLI-Wizard
-- Kontext-sensitive Hilfe und Dokumentation
-- Dependency-Checks (z.B. "Loans benötigt Reputation")
-- Config-Export am Ende des Wizards
-
-#### 1.2 Simulation-Dashboards
+#### 1.1 Simulation-Dashboards
 **Beschreibung:** Live-Dashboard im Terminal während der Simulation mit Sparklines, Gauges und Histogrammen für Schlüsselmetriken.
 
 **Harmonien:**
