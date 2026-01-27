@@ -23,6 +23,7 @@ rustyline = "17.0"
 petgraph = { version = "0.8", features = ["serde-1"] }
 inquire = "0.7"
 chrono = { version = "0.4", features = ["serde"] }
+inquire = "0.9"
 
 [dev-dependencies]
 tempfile = "3.10.1"
