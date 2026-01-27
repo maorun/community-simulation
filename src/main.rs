@@ -978,6 +978,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             adaptation_rate: SimulationConfig::default().adaptation_rate,
             exploration_rate: SimulationConfig::default().exploration_rate,
             enable_specialization: SimulationConfig::default().enable_specialization,
+            enable_parallel_trades: SimulationConfig::default().enable_parallel_trades,
         }
     };
 
