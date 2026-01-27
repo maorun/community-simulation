@@ -48,17 +48,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Vordefinierte Dashboards für Grafana
 - Retention-Policies für große Datensätze
 
-#### 4.2 Daten-Versionierung und Reproduzierbarkeit
-**Beschreibung:** Vollständige Versionierung aller Simulationsläufe mit Git-ähnlichem Modell für Reproduzierbarkeit und Vergleichbarkeit.
-
-**Nutzen:** Wissenschaftliche Reproduzierbarkeit, Audit-Trail, einfache Vergleiche zwischen Läufen.
-
-**Implementierung:**
-- Content-addressable Storage für Simulationsstates
-- Metadaten-Tracking (Git-Hash, Parameter, Timestamp)
-- Diff-Tool für Simulationsvergleiche
-- Export zu standardisierten Formaten (Frictionless Data Package)
-
 ## 📊 Analyse und Forschung
 
 ### 1. Wirtschaftliche Analysen
