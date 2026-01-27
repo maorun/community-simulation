@@ -134,6 +134,8 @@ pub struct SimulationCheckpoint {
     pub total_payouts_made: f64,
     /// Technology breakthrough tracking
     pub technology_breakthroughs: Vec<TechnologyBreakthrough>,
+    /// Action log for replay recording (optional)
+    pub action_log: Option<crate::replay::ActionLog>,
 }
 
 pub struct SimulationEngine {
@@ -225,6 +227,8 @@ pub struct SimulationEngine {
     total_payouts_made: f64,
     // Technology breakthrough tracking
     technology_breakthroughs: Vec<TechnologyBreakthrough>,
+    // Action log for replay recording (optional)
+    action_log: Option<crate::replay::ActionLog>,
 }
 
 impl SimulationEngine {
@@ -456,6 +460,7 @@ impl SimulationEngine {
             total_premiums_collected: 0.0,
             total_payouts_made: 0.0,
             technology_breakthroughs: Vec::new(),
+            action_log: None, // Will be set via enable_action_recording if needed
         }
     }
 
@@ -497,6 +502,51 @@ impl SimulationEngine {
     /// This allows external code to interact with plugins.
     pub fn plugin_registry_mut(&mut self) -> &mut PluginRegistry {
         &mut self.plugin_registry
+    }
+
+    /// Enable action recording for replay and debugging.
+    ///
+    /// When enabled, all simulation actions (trades, price updates, crisis events)
+    /// are logged to an ActionLog that can be saved to a file.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use simulation_framework::{SimulationEngine, SimulationConfig};
+    ///
+    /// let config = SimulationConfig::default();
+    /// let mut engine = SimulationEngine::new(config);
+    /// engine.enable_action_recording();
+    /// ```
+    pub fn enable_action_recording(&mut self) {
+        self.action_log = Some(crate::replay::ActionLog::new(
+            self.config.seed,
+            self.config.entity_count,
+            self.config.max_steps,
+        ));
+        debug!("Action recording enabled for replay and debugging");
+    }
+
+    /// Save the action log to a file.
+    ///
+    /// Returns Ok(()) if successful, or an error if action recording is not enabled
+    /// or if file I/O fails.
+    pub fn save_action_log<P: AsRef<std::path::Path>>(&self, path: P) -> crate::error::Result<()> {
+        if let Some(ref log) = self.action_log {
+            log.save_to_file(path)?;
+            info!(
+                "Action log saved successfully ({} actions recorded)",
+                log.len()
+            );
+            Ok(())
+        } else {
+            Err(crate::error::SimulationError::ActionLogWrite(
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Action recording is not enabled",
+                ),
+            ))
+        }
     }
 
     // This is the version from feat/economic-simulation-model
@@ -660,6 +710,15 @@ impl SimulationEngine {
             crisis.name(),
             crisis.description()
         );
+
+        // Record crisis event action for replay (if enabled)
+        if let Some(ref mut action_log) = self.action_log {
+            action_log.record(crate::replay::SimulationAction::CrisisEvent {
+                step: self.current_step,
+                event_type: crisis.name().to_string(),
+                severity: self.config.crisis_severity,
+            });
+        }
 
         // Apply crisis effects based on type
         match crisis {
@@ -2278,9 +2337,10 @@ impl SimulationEngine {
             }
         }
 
-        // Capture prices before update for event emission
+        // Capture prices before update for event emission and action recording
         // Use Vec instead of HashMap for better performance with small to medium number of skills
-        let prices_before: Vec<(SkillId, f64)> = if self.event_bus.is_enabled() {
+        let should_track_prices = self.event_bus.is_enabled() || self.action_log.is_some();
+        let prices_before: Vec<(SkillId, f64)> = if should_track_prices {
             self.market
                 .skills
                 .iter()
@@ -2292,20 +2352,32 @@ impl SimulationEngine {
 
         self.market.update_prices(&mut self.rng);
 
-        // Emit price update events for changed prices
-        if self.event_bus.is_enabled() {
+        // Emit price update events and record actions for changed prices
+        if should_track_prices {
             // Use a tolerance appropriate for currency comparisons (0.01 = 1 cent)
             const PRICE_CHANGE_TOLERANCE: f64 = 0.01;
 
             for (skill_id, old_price) in prices_before {
                 if let Some(skill) = self.market.skills.get(&skill_id) {
                     if (old_price - skill.current_price).abs() > PRICE_CHANGE_TOLERANCE {
-                        self.event_bus.emit_price_update(
-                            self.current_step,
-                            skill_id,
-                            old_price,
-                            skill.current_price,
-                        );
+                        // Emit event if enabled
+                        if self.event_bus.is_enabled() {
+                            self.event_bus.emit_price_update(
+                                self.current_step,
+                                skill_id.clone(),
+                                old_price,
+                                skill.current_price,
+                            );
+                        }
+                        // Record action if enabled
+                        if let Some(ref mut action_log) = self.action_log {
+                            action_log.record(crate::replay::SimulationAction::PriceUpdate {
+                                step: self.current_step,
+                                skill_id: skill_id.clone(),
+                                old_price,
+                                new_price: skill.current_price,
+                            });
+                        }
                     }
                 }
             }
@@ -2710,6 +2782,19 @@ impl SimulationEngine {
                             self.entities[buyer_idx].person_data.money,
                             self.entities[buyer_idx].person_data.money * self.entities[buyer_idx].person_data.strategy.spending_multiplier()
                         );
+
+                        // Record failed trade action for replay (if enabled and seller exists)
+                        if let Some(ref mut action_log) = self.action_log {
+                            if let Some(seller_id) = seller_id_opt {
+                                action_log.record(crate::replay::SimulationAction::FailedTrade {
+                                    step: self.current_step,
+                                    buyer_id: self.entities[buyer_idx].id,
+                                    seller_id,
+                                    skill_id: needed_skill_id.clone(),
+                                    price: final_price,
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -2895,6 +2980,17 @@ impl SimulationEngine {
                 skill_id.clone(),
                 price,
             );
+
+            // Record trade action for replay (if enabled)
+            if let Some(ref mut action_log) = self.action_log {
+                action_log.record(crate::replay::SimulationAction::Trade {
+                    step: self.current_step,
+                    buyer_id: buyer_entity_id,
+                    seller_id: seller_entity_id,
+                    skill_id: skill_id.clone(),
+                    price,
+                });
+            }
 
             // Improve skill quality for seller (if quality system enabled)
             if self.config.enable_quality {
@@ -4532,6 +4628,7 @@ impl SimulationEngine {
             total_premiums_collected: self.total_premiums_collected,
             total_payouts_made: self.total_payouts_made,
             technology_breakthroughs: self.technology_breakthroughs.clone(),
+            action_log: self.action_log.clone(),
         };
 
         let file = File::create(path)?;
@@ -4684,6 +4781,7 @@ impl SimulationEngine {
             total_premiums_collected: checkpoint.total_premiums_collected,
             total_payouts_made: checkpoint.total_payouts_made,
             technology_breakthroughs: checkpoint.technology_breakthroughs,
+            action_log: checkpoint.action_log,
         })
     }
 

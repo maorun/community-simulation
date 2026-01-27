@@ -85,6 +85,13 @@ This repository contains a configurable economic simulation written in Rust. It 
   - `exit`/`quit` - Exit interactive mode
   
   Features include command history (navigate with arrow keys), graceful handling of Ctrl+C and Ctrl+D, color-coded output, and real-time performance metrics. Perfect for debugging, exploring simulation behavior, teaching, demonstrations, and iterative testing of parameter changes. Example: `./simulation-framework --interactive -s 100 -p 10`
+- **Action Recording for Replay:** Record all simulation actions (trades, failed trades, price updates, crisis events) to a JSON file for replay analysis, debugging, and regression testing. Enable with `--record-actions <path>` flag. The action log captures:
+  - **Successful Trades:** Buyer/seller IDs, skill traded, and final price
+  - **Failed Trades:** Trade attempts that failed due to insufficient funds
+  - **Price Updates:** All skill price changes (> 1 cent threshold)
+  - **Crisis Events:** Crisis type and severity when they occur
+  
+  The JSON format includes simulation metadata (seed, entity count, max steps) and a chronological list of all actions, enabling deterministic replay and detailed analysis of simulation behavior. Action logs integrate with the checkpoint system for persistence across simulation restarts. Minimal performance overhead when disabled (default). Example: `./simulation-framework -s 500 -p 100 --record-actions actions.json`
 - **Colored Terminal Output:** Enhanced terminal output with color-coded statistics and messages for improved readability. Automatically detects terminal capabilities and can be disabled with `--no-color` flag.
 - **Wealth Inequality Analysis:** Comprehensive wealth distribution analysis including:
   - **Gini Coefficient:** Measures overall inequality (0 = perfect equality, 1 = perfect inequality)
