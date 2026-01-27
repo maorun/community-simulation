@@ -345,6 +345,12 @@ struct Args {
     #[arg(long, default_value_t = false)]
     interactive: bool,
 
+    /// Record simulation actions to a JSON file for replay and debugging
+    /// When enabled, logs all trades, failed trades, price updates, and crisis events
+    /// The action log can be used for bug reproduction, debugging, and analysis
+    #[arg(long)]
+    record_actions: Option<String>,
+
     /// Enable quality rating system for skills (0.0-5.0 scale)
     /// Skills have quality that improves with successful trades and decays when not used
     /// Higher quality enables higher prices, creating quality competition in the market
@@ -1066,6 +1072,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             SimulationEngine::new(config)
         };
 
+        // Enable action recording if requested
+        if args.record_actions.is_some() {
+            engine.enable_action_recording();
+        }
+
         let show_progress = !args.no_progress;
         let result = engine.run_with_progress(show_progress);
         let duration = start_time.elapsed();
@@ -1104,6 +1115,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!(
                 "{}",
                 format!("CSV results saved with prefix: {}", csv_prefix).bright_blue()
+            );
+        }
+
+        if let Some(action_log_path) = args.record_actions {
+            engine.save_action_log(&action_log_path)?;
+            info!(
+                "{}",
+                format!("Action log saved to: {}", action_log_path).bright_blue()
             );
         }
 
