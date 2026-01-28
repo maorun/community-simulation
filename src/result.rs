@@ -8,6 +8,134 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::process::Command;
+
+/// Metadata about a simulation run for reproducibility and audit trail.
+///
+/// This structure captures key information about when and how a simulation was executed,
+/// enabling scientific reproducibility, comparison of runs, and audit trails.
+///
+/// # Example
+///
+/// ```
+/// use simulation_framework::result::SimulationMetadata;
+///
+/// let metadata = SimulationMetadata::capture(42, 100, 500);
+///
+/// assert_eq!(metadata.seed, 42);
+/// assert_eq!(metadata.entity_count, 100);
+/// assert_eq!(metadata.max_steps, 500);
+/// assert!(!metadata.timestamp.is_empty());
+/// assert!(!metadata.rust_version.is_empty());
+/// assert!(!metadata.framework_version.is_empty());
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SimulationMetadata {
+    /// ISO 8601 timestamp when the simulation was created
+    pub timestamp: String,
+
+    /// Git commit hash of the simulation framework (if available)
+    ///
+    /// This field will be `None` if:
+    /// - The code is not in a git repository
+    /// - Git is not installed
+    /// - The git command fails
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git_commit_hash: Option<String>,
+
+    /// Random seed used for the simulation (for reproducibility)
+    pub seed: u64,
+
+    /// Number of entities (persons) in the simulation
+    pub entity_count: usize,
+
+    /// Maximum number of simulation steps
+    pub max_steps: usize,
+
+    /// Rust compiler version used to build the simulation
+    pub rust_version: String,
+
+    /// Version of the simulation framework
+    pub framework_version: String,
+}
+
+impl SimulationMetadata {
+    /// Capture metadata for the current simulation run.
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - Random seed for reproducibility
+    /// * `entity_count` - Number of entities in the simulation
+    /// * `max_steps` - Maximum number of simulation steps
+    ///
+    /// # Returns
+    ///
+    /// A `SimulationMetadata` struct with captured metadata
+    pub fn capture(seed: u64, entity_count: usize, max_steps: usize) -> Self {
+        // Get current timestamp in ISO 8601 format
+        let timestamp = chrono::Utc::now().to_rfc3339();
+
+        // Try to get git commit hash
+        let git_commit_hash = Self::get_git_commit_hash();
+
+        // Get Rust version from RUSTC environment variable or fallback
+        let rust_version = Self::get_rust_version();
+
+        // Get framework version from Cargo.toml
+        let framework_version = env!("CARGO_PKG_VERSION").to_string();
+
+        Self {
+            timestamp,
+            git_commit_hash,
+            seed,
+            entity_count,
+            max_steps,
+            rust_version,
+            framework_version,
+        }
+    }
+
+    /// Attempt to get the current git commit hash.
+    ///
+    /// Returns `None` if git is not available, the directory is not a git repository,
+    /// or the command fails.
+    fn get_git_commit_hash() -> Option<String> {
+        Command::new("git")
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .ok()
+            .and_then(|output| {
+                if output.status.success() {
+                    String::from_utf8(output.stdout)
+                        .ok()
+                        .map(|s| s.trim().to_string())
+                } else {
+                    None
+                }
+            })
+    }
+
+    /// Get the Rust version string.
+    ///
+    /// Returns rustc version string by calling rustc at runtime if available,
+    /// or a fallback message if rustc is not accessible.
+    fn get_rust_version() -> String {
+        Command::new("rustc")
+            .arg("--version")
+            .output()
+            .ok()
+            .and_then(|output| {
+                if output.status.success() {
+                    String::from_utf8(output.stdout)
+                        .ok()
+                        .map(|s| s.trim().to_string())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| "Rust (version unknown)".to_string())
+    }
+}
 
 /// Incremental statistics calculator using Welford's online algorithm.
 ///
@@ -831,6 +959,9 @@ pub struct MobilityStatistics {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
+    /// Metadata about this simulation run for reproducibility
+    pub metadata: SimulationMetadata,
+
     // Core simulation metrics
     pub total_steps: usize,
     pub total_duration: f64,
@@ -1009,7 +1140,9 @@ impl SimulationResult {
     /// # Examples
     /// ```no_run
     /// # use simulation_framework::result::SimulationResult;
+    /// # use simulation_framework::result::SimulationMetadata;
     /// # let result = SimulationResult {
+    /// #     metadata: SimulationMetadata::capture(42, 10, 100),
     /// #     total_steps: 0,
     /// #     total_duration: 0.0,
     /// #     step_times: vec![],
@@ -3143,6 +3276,7 @@ mod tests {
 
     fn get_test_result() -> SimulationResult {
         SimulationResult {
+            metadata: SimulationMetadata::capture(42, 10, 100),
             total_steps: 10,
             total_duration: 1.23,
             step_times: vec![0.1, 0.12, 0.1, 0.13, 0.1, 0.11, 0.1, 0.14, 0.1, 0.13],

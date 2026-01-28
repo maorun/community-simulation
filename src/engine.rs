@@ -1467,7 +1467,15 @@ impl SimulationEngine {
                 None
             };
 
+        // Capture metadata for this simulation run
+        let metadata = crate::result::SimulationMetadata::capture(
+            self.config.seed,
+            self.config.entity_count,
+            self.config.max_steps,
+        );
+
         let mut result = SimulationResult {
+            metadata,
             total_steps: self.config.max_steps,
             total_duration: total_duration.as_secs_f64(),
             step_times,
@@ -4508,7 +4516,15 @@ impl SimulationEngine {
                 price: info.price,
             });
 
+        // Capture metadata for this snapshot result
+        let metadata = crate::result::SimulationMetadata::capture(
+            self.config.seed,
+            self.config.entity_count,
+            self.config.max_steps,
+        );
+
         SimulationResult {
+            metadata,
             total_steps: self.current_step,
             total_duration: 0.0, // Not meaningful in interactive mode
             step_times: vec![],  // Not tracked in interactive mode

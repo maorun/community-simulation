@@ -287,7 +287,11 @@ mod tests {
     }
 
     fn create_test_result() -> SimulationResult {
+        // Capture metadata for this test result
+        let metadata = crate::result::SimulationMetadata::capture(42, 10, 100);
+
         SimulationResult {
+            metadata,
             total_steps: 100,
             total_duration: 1.5,
             step_times: vec![],

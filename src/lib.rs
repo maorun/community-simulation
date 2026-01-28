@@ -143,7 +143,8 @@ pub use replay::{ActionLog, SimulationAction};
 pub use result::{
     calculate_statistics, calculate_wealth_concentration, detect_business_cycles,
     write_step_to_stream, BusinessCycle, BusinessCycleStats, ContractStats, CyclePhase,
-    IncrementalStats, MonteCarloResult, MonteCarloStats, SimulationResult, StepData,
+    IncrementalStats, MonteCarloResult, MonteCarloStats, SimulationMetadata, SimulationResult,
+    StepData,
 };
 pub use scenario::{PriceUpdater, Scenario};
 pub use scenario_comparison::ScenarioComparisonResult;
