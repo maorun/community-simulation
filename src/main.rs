@@ -1385,6 +1385,30 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             "  {} - Show current simulation status",
                             "status".bright_green()
                         );
+                        println!(
+                            "  {} - Show detailed state of a specific person",
+                            "inspect <id>".bright_green()
+                        );
+                        println!(
+                            "  {} - List all persons with summary info",
+                            "persons/list-persons".bright_green()
+                        );
+                        println!(
+                            "  {} - Display current market state and prices",
+                            "market".bright_green()
+                        );
+                        println!(
+                            "  {} - Show top N wealthiest persons (default: 10)",
+                            "find-rich [N]".bright_green()
+                        );
+                        println!(
+                            "  {} - Show bottom N poorest persons (default: 10)",
+                            "find-poor [N]".bright_green()
+                        );
+                        println!(
+                            "  {} - List persons with a specific skill",
+                            "filter-by-skill <name>".bright_green()
+                        );
                         println!("  {}  - Show this help message", "help".bright_green());
                         println!("  {}  - Exit interactive mode", "exit/quit".bright_green());
                     }
@@ -1513,6 +1537,308 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 println!(
                                     "{}",
                                     format!("Error saving checkpoint: {}", e).bright_red()
+                                );
+                            }
+                        }
+                    }
+                    "inspect" => {
+                        if parts.len() < 2 {
+                            println!("{}", "Usage: inspect <person_id>".bright_red());
+                            continue;
+                        }
+
+                        let person_id: usize = match parts[1].parse() {
+                            Ok(id) => id,
+                            Err(_) => {
+                                println!("{}", "Invalid person ID".bright_red());
+                                continue;
+                            }
+                        };
+
+                        // Get entities from engine to inspect
+                        let entities = engine.get_entities();
+                        if let Some(entity) = entities.iter().find(|e| e.id == person_id) {
+                            let person = &entity.person_data;
+                            println!(
+                                "\n{}",
+                                format!("=== Person {} Details ===", person_id).bright_yellow()
+                            );
+                            println!("  {} {:.2}", "Money:".bright_cyan(), person.money);
+                            println!("  {} {:.2}", "Savings:".bright_cyan(), person.savings);
+                            println!("  {} {:.3}", "Reputation:".bright_cyan(), person.reputation);
+                            println!("  {} {:?}", "Strategy:".bright_cyan(), person.strategy);
+                            println!(
+                                "  {} {:?}",
+                                "Specialization:".bright_cyan(),
+                                person.specialization_strategy
+                            );
+                            println!(
+                                "  {} ({:.2}, {:.2})",
+                                "Location:".bright_cyan(),
+                                person.location.x,
+                                person.location.y
+                            );
+                            println!("  {} {}", "Friends:".bright_cyan(), person.friends.len());
+                            println!(
+                                "  {} {}",
+                                "Active:".bright_cyan(),
+                                if entity.active { "Yes" } else { "No" }
+                            );
+
+                            // Display skills
+                            println!("\n  {}:", "Own Skills".bright_green());
+                            for skill in &person.own_skills {
+                                let quality = person.skill_qualities.get(&skill.id);
+                                let quality_str = if let Some(q) = quality {
+                                    format!(" (quality: {:.2})", q)
+                                } else {
+                                    String::new()
+                                };
+                                println!(
+                                    "    - {}: ${:.2}{}",
+                                    skill.id, skill.current_price, quality_str
+                                );
+                            }
+
+                            if !person.learned_skills.is_empty() {
+                                println!("\n  {}:", "Learned Skills".bright_green());
+                                for skill in &person.learned_skills {
+                                    let quality = person.skill_qualities.get(&skill.id);
+                                    let quality_str = if let Some(q) = quality {
+                                        format!(" (quality: {:.2})", q)
+                                    } else {
+                                        String::new()
+                                    };
+                                    println!(
+                                        "    - {}: ${:.2}{}",
+                                        skill.id, skill.current_price, quality_str
+                                    );
+                                }
+                            }
+
+                            // Display needed skills
+                            if !person.needed_skills.is_empty() {
+                                println!("\n  {}:", "Needed Skills".bright_blue());
+                                for need in &person.needed_skills {
+                                    println!("    - {} (urgency: {})", need.id, need.urgency);
+                                }
+                            }
+
+                            // Display loans
+                            if !person.borrowed_loans.is_empty() || !person.lent_loans.is_empty() {
+                                println!("\n  {}:", "Loans".bright_magenta());
+                                if !person.borrowed_loans.is_empty() {
+                                    println!("    Borrowed: {} loans", person.borrowed_loans.len());
+                                }
+                                if !person.lent_loans.is_empty() {
+                                    println!("    Lent: {} loans", person.lent_loans.len());
+                                }
+                            }
+
+                            // Display recent transactions
+                            let recent_transactions: Vec<_> =
+                                person.transaction_history.iter().rev().take(5).collect();
+                            if !recent_transactions.is_empty() {
+                                println!("\n  {} (last 5):", "Recent Transactions".bright_yellow());
+                                for tx in recent_transactions.iter().rev() {
+                                    let tx_type = match tx.transaction_type {
+                                        simulation_framework::person::TransactionType::Buy => "Buy",
+                                        simulation_framework::person::TransactionType::Sell => {
+                                            "Sell"
+                                        }
+                                    };
+                                    println!(
+                                        "    Step {}: {} {} for ${:.2}",
+                                        tx.step, tx_type, tx.skill_id, tx.amount
+                                    );
+                                }
+                            }
+                        } else {
+                            println!("{}", format!("Person {} not found", person_id).bright_red());
+                        }
+                    }
+                    "persons" | "list-persons" => {
+                        let entities = engine.get_entities();
+                        println!(
+                            "\n{}",
+                            format!("=== All Persons ({} total) ===", entities.len())
+                                .bright_yellow()
+                        );
+                        println!(
+                            "{:>5} {:>10} {:>10} {:>10} {:>10} {:>8}",
+                            "ID", "Money", "Savings", "Reputation", "Skills", "Active"
+                        );
+                        println!("{}", "─".repeat(70));
+
+                        for entity in entities {
+                            let person = &entity.person_data;
+                            let total_skills =
+                                person.own_skills.len() + person.learned_skills.len();
+                            let active_str = if entity.active { "Yes" } else { "No" };
+                            println!(
+                                "{:>5} {:>10.2} {:>10.2} {:>10.3} {:>10} {:>8}",
+                                entity.id,
+                                person.money,
+                                person.savings,
+                                person.reputation,
+                                total_skills,
+                                active_str
+                            );
+                        }
+                    }
+                    "market" => {
+                        let market = engine.get_market();
+                        println!("\n{}", "=== Market State ===".bright_yellow());
+                        println!("  Base Price: ${:.2}", market.base_skill_price);
+                        println!("  Total Skills: {}", market.skills.len());
+                        println!("  Volatility: {:.1}%", market.volatility_percentage * 100.0);
+                        println!("  Price Elasticity: {:.2}", market.price_elasticity_factor);
+                        println!(
+                            "\n{:>20} {:>10} {:>10} {:>10}",
+                            "Skill", "Price", "Supply", "Demand"
+                        );
+                        println!("{}", "─".repeat(55));
+
+                        let mut skills: Vec<_> = market.skills.values().collect();
+                        skills
+                            .sort_by(|a, b| b.current_price.partial_cmp(&a.current_price).unwrap());
+
+                        for skill in skills.iter().take(20) {
+                            let supply = market.supply_counts.get(&skill.id).unwrap_or(&0);
+                            let demand = market.demand_counts.get(&skill.id).unwrap_or(&0);
+                            println!(
+                                "{:>20} {:>10.2} {:>10} {:>10}",
+                                &skill.id, skill.current_price, supply, demand
+                            );
+                        }
+
+                        if market.skills.len() > 20 {
+                            println!(
+                                "\n  (Showing top 20 by price, {} total skills)",
+                                market.skills.len()
+                            );
+                        }
+                    }
+                    "find-rich" => {
+                        let count: usize = if parts.len() > 1 {
+                            parts[1].parse().unwrap_or(10)
+                        } else {
+                            10
+                        };
+
+                        let mut entities: Vec<_> = engine.get_entities().iter().collect();
+                        entities.sort_by(|a, b| {
+                            b.person_data
+                                .money
+                                .partial_cmp(&a.person_data.money)
+                                .unwrap()
+                        });
+
+                        println!(
+                            "\n{}",
+                            format!("=== Top {} Wealthiest Persons ===", count).bright_yellow()
+                        );
+                        println!(
+                            "{:>5} {:>15} {:>10} {:>10}",
+                            "Rank", "Money", "Savings", "Skills"
+                        );
+                        println!("{}", "─".repeat(45));
+
+                        for (i, entity) in entities.iter().take(count).enumerate() {
+                            let person = &entity.person_data;
+                            let total_skills =
+                                person.own_skills.len() + person.learned_skills.len();
+                            println!(
+                                "{:>5} {:>15.2} {:>10.2} {:>10}",
+                                i + 1,
+                                person.money,
+                                person.savings,
+                                total_skills
+                            );
+                        }
+                    }
+                    "find-poor" => {
+                        let count: usize = if parts.len() > 1 {
+                            parts[1].parse().unwrap_or(10)
+                        } else {
+                            10
+                        };
+
+                        let mut entities: Vec<_> = engine.get_entities().iter().collect();
+                        entities.sort_by(|a, b| {
+                            a.person_data
+                                .money
+                                .partial_cmp(&b.person_data.money)
+                                .unwrap()
+                        });
+
+                        println!(
+                            "\n{}",
+                            format!("=== Bottom {} Poorest Persons ===", count).bright_yellow()
+                        );
+                        println!(
+                            "{:>5} {:>15} {:>10} {:>10}",
+                            "Rank", "Money", "Savings", "Skills"
+                        );
+                        println!("{}", "─".repeat(45));
+
+                        for (i, entity) in entities.iter().take(count).enumerate() {
+                            let person = &entity.person_data;
+                            let total_skills =
+                                person.own_skills.len() + person.learned_skills.len();
+                            println!(
+                                "{:>5} {:>15.2} {:>10.2} {:>10}",
+                                i + 1,
+                                person.money,
+                                person.savings,
+                                total_skills
+                            );
+                        }
+                    }
+                    "filter-by-skill" => {
+                        if parts.len() < 2 {
+                            println!("{}", "Usage: filter-by-skill <skill_name>".bright_red());
+                            continue;
+                        }
+
+                        let skill_name = parts[1..].join(" ");
+                        let entities = engine.get_entities();
+
+                        let matching: Vec<_> = entities
+                            .iter()
+                            .filter(|e| {
+                                e.person_data.own_skills.iter().any(|s| {
+                                    s.id.to_lowercase().contains(&skill_name.to_lowercase())
+                                }) || e.person_data.learned_skills.iter().any(|s| {
+                                    s.id.to_lowercase().contains(&skill_name.to_lowercase())
+                                })
+                            })
+                            .collect();
+
+                        if matching.is_empty() {
+                            println!(
+                                "{}",
+                                format!("No persons found with skill matching '{}'", skill_name)
+                                    .bright_yellow()
+                            );
+                        } else {
+                            println!(
+                                "\n{}",
+                                format!(
+                                    "=== Persons with '{}' ({} found) ===",
+                                    skill_name,
+                                    matching.len()
+                                )
+                                .bright_yellow()
+                            );
+                            println!("{:>5} {:>15} {:>10}", "ID", "Money", "Reputation");
+                            println!("{}", "─".repeat(35));
+
+                            for entity in matching {
+                                let person = &entity.person_data;
+                                println!(
+                                    "{:>5} {:>15.2} {:>10.3}",
+                                    entity.id, person.money, person.reputation
                                 );
                             }
                         }
