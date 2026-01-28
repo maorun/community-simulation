@@ -79,7 +79,7 @@ pub struct ExternalityStats {
     pub total_external_value: f64,
     /// Sum of all positive external values (benefits)
     pub total_positive_externalities: f64,
-    /// Sum of all negative external values (costs)
+    /// Sum of absolute values of negative external values (total cost magnitude)
     pub total_negative_externalities: f64,
     /// Sum of all social values (private + external)
     pub total_social_value: f64,
@@ -121,7 +121,8 @@ impl ExternalityStats {
         if externality.is_positive() {
             self.positive_count += 1;
             self.total_positive_externalities += externality.external_value;
-            self.optimal_pigovian_subsidy_total += -externality.external_value; // Subsidy is negative tax
+            // For positive externalities, optimal subsidy equals the external benefit
+            self.optimal_pigovian_subsidy_total += externality.external_value;
         } else if externality.is_negative() {
             self.negative_count += 1;
             self.total_negative_externalities += externality.external_value.abs();
@@ -133,10 +134,8 @@ impl ExternalityStats {
         self.total_social_value += externality.social_value;
 
         // Update per-skill statistics
-        let skill_stats = self
-            .per_skill_externalities
-            .entry(externality.skill_id.clone())
-            .or_default();
+        let skill_stats =
+            self.per_skill_externalities.entry(externality.skill_id.clone()).or_default();
 
         skill_stats.count += 1;
         skill_stats.total_private_value += externality.private_value;
@@ -241,6 +240,12 @@ mod tests {
 
         // Total negative: 15.0
         assert_eq!(stats.total_negative_externalities, 15.0);
+
+        // Optimal Pigovian tax should equal magnitude of negative externalities
+        assert_eq!(stats.optimal_pigovian_tax_total, 15.0);
+
+        // Optimal subsidy should equal total positive externalities
+        assert_eq!(stats.optimal_pigovian_subsidy_total, 32.0);
 
         // Average: 17.0 / 3 = 5.67 (approx)
         assert!((stats.avg_external_value - 5.666).abs() < 0.01);

@@ -1170,7 +1170,7 @@ pub struct SimulationConfig {
     #[serde(default)]
     pub enable_externalities: bool,
 
-    /// Default externality rate for all transactions (−1.0 to 1.0).
+    /// Default externality rate for all transactions (-1.0 to 1.0).
     ///
     /// This rate determines the magnitude of externality as a percentage of transaction value.
     /// - Positive values: Positive externalities (benefits to society)
