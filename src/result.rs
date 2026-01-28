@@ -465,6 +465,18 @@ pub struct TradeVolumeStats {
     pub min_trades_per_step: usize,
     /// Maximum trades in a single step
     pub max_trades_per_step: usize,
+    /// Velocity of money: how many times money changes hands on average
+    ///
+    /// Calculated as: Total Transaction Volume / Total Money Supply
+    ///
+    /// This metric indicates:
+    /// - Economic activity intensity (higher velocity = more active economy)
+    /// - How efficiently money circulates (hoarding reduces velocity)
+    /// - Relationship between money supply and economic output
+    ///
+    /// A value of 5.0 means each unit of money was used in transactions 5 times on average during the simulation.
+    /// Higher values indicate more dynamic trading, lower values suggest money is being hoarded.
+    pub velocity_of_money: f64,
 }
 
 /// Represents a detected business cycle phase (expansion or contraction).
@@ -1175,6 +1187,7 @@ impl SimulationResult {
     /// #         avg_trades_per_step: 0.0, avg_volume_per_step: 0.0,
     /// #         avg_transaction_value: 0.0,
     /// #         min_trades_per_step: 0, max_trades_per_step: 0,
+    /// #         velocity_of_money: 0.0,
     /// #     },
     /// #     trades_per_step: vec![],
     /// #     volume_per_step: vec![],
@@ -1408,6 +1421,11 @@ impl SimulationResult {
             file,
             "Max Trades Per Step,{}",
             self.trade_volume_statistics.max_trades_per_step
+        )?;
+        writeln!(
+            file,
+            "Velocity of Money,{:.4}",
+            self.trade_volume_statistics.velocity_of_money
         )?;
 
         writeln!(file)?;
@@ -1895,6 +1913,14 @@ impl SimulationResult {
             "Min/Max Trades Per Step:".bold(),
             self.trade_volume_statistics.min_trades_per_step,
             self.trade_volume_statistics.max_trades_per_step
+        );
+
+        // Display velocity of money
+        println!(
+            "{} {:.2} {}",
+            "Velocity of Money:".bold(),
+            self.trade_volume_statistics.velocity_of_money,
+            "(times money changed hands)".dimmed()
         );
 
         // Display failed trade attempt statistics
@@ -3325,6 +3351,7 @@ mod tests {
                 avg_transaction_value: 10.0,
                 min_trades_per_step: 5,
                 max_trades_per_step: 15,
+                velocity_of_money: 2.0,
             },
             trades_per_step: vec![10, 12, 8, 10, 15, 9, 11, 10, 5, 10],
             volume_per_step: vec![

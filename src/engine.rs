@@ -1276,6 +1276,19 @@ impl SimulationEngine {
             let min_trades_per_step = *self.trades_per_step.iter().min().unwrap_or(&0);
             let max_trades_per_step = *self.trades_per_step.iter().max().unwrap_or(&0);
 
+            // Calculate velocity of money: Total Transaction Volume / Total Money Supply
+            // Total money supply is the sum of all money held by all persons
+            let total_money_supply = if !final_money_distribution.is_empty() {
+                final_money_distribution.iter().sum::<f64>()
+            } else {
+                1.0 // Avoid division by zero
+            };
+            let velocity_of_money = if total_money_supply > 0.0 {
+                total_volume / total_money_supply
+            } else {
+                0.0
+            };
+
             crate::result::TradeVolumeStats {
                 total_trades,
                 total_volume,
@@ -1284,6 +1297,7 @@ impl SimulationEngine {
                 avg_transaction_value,
                 min_trades_per_step,
                 max_trades_per_step,
+                velocity_of_money,
             }
         } else {
             crate::result::TradeVolumeStats {
@@ -1294,6 +1308,7 @@ impl SimulationEngine {
                 avg_transaction_value: 0.0,
                 min_trades_per_step: 0,
                 max_trades_per_step: 0,
+                velocity_of_money: 0.0,
             }
         };
 
@@ -4554,6 +4569,7 @@ impl SimulationEngine {
                 avg_transaction_value: 0.0,
                 min_trades_per_step: 0,
                 max_trades_per_step: 0,
+                velocity_of_money: 0.0, // Simplified version doesn't calculate
             },
             trades_per_step: self.trades_per_step.clone(),
             volume_per_step: self.volume_per_step.clone(),

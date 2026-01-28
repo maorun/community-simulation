@@ -339,6 +339,7 @@ mod tests {
                 avg_transaction_value: 10.0,
                 min_trades_per_step: 2,
                 max_trades_per_step: 8,
+                velocity_of_money: 5.0,
             },
             trades_per_step: vec![],
             volume_per_step: vec![],
