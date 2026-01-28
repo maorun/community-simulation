@@ -52,23 +52,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Wirtschaftliche Analysen
 
-#### 1.1 Externalitäten-Analyse
-**Beschreibung:** Messung und Analyse von positiven und negativen Externalitäten zwischen Agenten und Aktivitäten.
-
-**Harmonien:**
-- **Umwelt-Ressourcen:** Negative Umwelt-Externalitäten
-- **Bildungssystem:** Positive Externalitäten durch Wissensverbreitung
-- **Produktionssystem:** Produktionsketten mit Spillover-Effekten
-- **Freundschaft/Netzwerke:** Soziale Externalitäten
-
-**Nutzen:** Bewertung von Marktversagen, optimaler Pigou-Steuern und Subventionen.
-
-**Implementierung:**
-- Tracking von Externalitäten pro Transaktion/Aktivität
-- Soziale vs. private Kosten-Nutzen-Analyse
-- Optimale Korrektursteuern-Berechnung (Pigou-Steuer)
-- Coase-Theorem-Experimente mit Verhandlungen
-
 ## 🛠️ Entwickler-Tools
 
 ### 1. CLI-Verbesserungen
