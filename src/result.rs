@@ -1246,6 +1246,7 @@ impl SimulationResult {
     /// #     centrality_analysis: None,
     /// #     mobility_statistics: None,
     /// #     quality_statistics: None,
+    /// #     externality_statistics: None,
     /// #     events: None,
     /// #     final_persons_data: vec![],
     /// # };
