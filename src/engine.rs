@@ -4313,7 +4313,9 @@ impl SimulationEngine {
             stats.min_money = self.min_money;
             stats.max_money = self.max_money;
 
-            // Simplified version: skip wealth concentration calculations for performance
+            // Simplified version: skip wealth concentration for intermediate snapshots
+            // Note: These are computed by calculate_money_stats but immediately discarded here.
+            // The overhead is minimal (O(n) after sorting) and avoids API complexity.
             stats.top_10_percent_share = 0.0;
             stats.top_1_percent_share = 0.0;
             stats.bottom_50_percent_share = 0.0;

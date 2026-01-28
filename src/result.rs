@@ -2641,14 +2641,10 @@ pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
     let count = sorted_money.len() as f64;
     let average = sum / count;
 
-    let median = if count > 0.0 {
-        if count as usize % 2 == 1 {
-            sorted_money[count as usize / 2]
-        } else {
-            (sorted_money[count as usize / 2 - 1] + sorted_money[count as usize / 2]) / 2.0
-        }
+    let median = if count as usize % 2 == 1 {
+        sorted_money[count as usize / 2]
     } else {
-        0.0
+        (sorted_money[count as usize / 2 - 1] + sorted_money[count as usize / 2]) / 2.0
     };
 
     let variance = sorted_money
