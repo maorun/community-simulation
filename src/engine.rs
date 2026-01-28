@@ -4474,6 +4474,18 @@ impl SimulationEngine {
         self.get_active_entity_count()
     }
 
+    /// Get read-only access to all entities in the simulation.
+    /// Useful for inspecting person state in interactive mode.
+    pub fn get_entities(&self) -> &Vec<crate::entity::Entity> {
+        &self.entities
+    }
+
+    /// Get read-only access to the market.
+    /// Useful for inspecting market state and prices in interactive mode.
+    pub fn get_market(&self) -> &crate::market::Market {
+        &self.market
+    }
+
     /// Get the current simulation result snapshot
     /// This creates a simplified SimulationResult for display in interactive mode
     /// Note: Some complex statistics are omitted for simplicity
