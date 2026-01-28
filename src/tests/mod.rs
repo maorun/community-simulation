@@ -900,7 +900,10 @@ mod engine_tests {
 
         // Velocity should still be a valid number (likely 0 or very low)
         assert!(
-            result_zero.trade_volume_statistics.velocity_of_money.is_finite(),
+            result_zero
+                .trade_volume_statistics
+                .velocity_of_money
+                .is_finite(),
             "Velocity should be finite even with minimal trading"
         );
         assert!(
