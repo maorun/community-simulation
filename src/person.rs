@@ -629,6 +629,7 @@ impl Person {
 mod tests {
     use super::*;
     use crate::skill::Skill;
+    use rand::SeedableRng;
 
     // Helper function for tests - creates a default test location
     fn test_location() -> Location {
@@ -1170,7 +1171,7 @@ mod tests {
     fn test_strategy_adaptation_positive_growth() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
-        let mut rng = rand::rngs::mock::StepRng::new(0, 1); // Deterministic RNG that avoids exploration
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0); // Deterministic RNG that avoids exploration
 
         // Simulate wealth growth
         person.money = 110.0; // 10% growth
@@ -1190,7 +1191,7 @@ mod tests {
     fn test_strategy_adaptation_negative_growth() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
-        let mut rng = rand::rngs::mock::StepRng::new(0, 1); // Deterministic RNG
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0); // Deterministic RNG
 
         // Simulate wealth decline
         person.money = 90.0; // -10% decline
@@ -1210,7 +1211,7 @@ mod tests {
     fn test_strategy_no_adaptation_small_change() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
-        let mut rng = rand::rngs::mock::StepRng::new(0, 1);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0);
 
         // Simulate very small wealth change (less than 1%)
         person.money = 100.5; // 0.5% growth
@@ -1232,7 +1233,7 @@ mod tests {
     fn test_strategy_adjustment_bounds() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
-        let mut rng = rand::rngs::mock::StepRng::new(0, 1);
+        let mut rng = rand::rngs::StdRng::seed_from_u64(0);
 
         // Simulate extreme wealth growth multiple times
         for _ in 0..20 {

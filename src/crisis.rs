@@ -135,7 +135,7 @@ impl CrisisEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::rngs::mock::StepRng;
+    use rand::{rngs::StdRng, SeedableRng};
 
     #[test]
     fn test_crisis_event_names() {
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_market_crash_effect() {
-        let mut rng = StepRng::new(5, 1); // Deterministic RNG
+        let mut rng = StdRng::seed_from_u64(5); // Deterministic RNG
         let base_price = 100.0;
         let severity = 0.5;
 
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_crisis_severity_clamping() {
-        let mut rng = StepRng::new(5, 1);
+        let mut rng = StdRng::seed_from_u64(5);
         let base_value = 100.0;
 
         // Test severity > 1.0 is clamped
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_currency_devaluation_effect() {
-        let mut rng = StepRng::new(5, 1);
+        let mut rng = StdRng::seed_from_u64(5);
         let base_money = 100.0;
         let severity = 0.5;
 
@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_technology_shock_effect() {
-        let mut rng = StepRng::new(5, 1);
+        let mut rng = StdRng::seed_from_u64(5);
         let base_price = 100.0;
         let severity = 0.5;
 
