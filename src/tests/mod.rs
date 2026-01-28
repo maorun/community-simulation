@@ -845,4 +845,94 @@ mod engine_tests {
             );
         }
     }
+
+    #[test]
+    fn test_velocity_of_money_integration() {
+        // Integration test to verify velocity of money is correctly calculated
+        // in the context of a real simulation
+        let mut config = get_test_config();
+        config.entity_count = 10;
+        config.max_steps = 50;
+        config.initial_money_per_person = 100.0;
+        config.base_skill_price = 10.0;
+        config.seed = 42;
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify velocity of money is calculated and is a valid number
+        let velocity = result.trade_volume_statistics.velocity_of_money;
+        assert!(velocity.is_finite(), "Velocity should be a finite number");
+        assert!(velocity >= 0.0, "Velocity should be non-negative");
+
+        // Verify the calculation: velocity = total_volume / total_money_supply
+        let total_volume = result.trade_volume_statistics.total_volume;
+        let total_money_supply: f64 = result.final_money_distribution.iter().sum();
+
+        if total_money_supply > 0.0 {
+            let expected_velocity = total_volume / total_money_supply;
+            assert!(
+                (velocity - expected_velocity).abs() < 1e-10,
+                "Velocity calculation should match formula: {} vs {}",
+                velocity,
+                expected_velocity
+            );
+        } else {
+            // If there's no money supply, velocity should be 0
+            assert_eq!(velocity, 0.0, "Velocity should be 0 when money supply is 0");
+        }
+
+        // Verify velocity makes economic sense
+        // For a typical simulation with active trading, velocity should be > 0
+        if result.trade_volume_statistics.total_trades > 0 {
+            assert!(
+                velocity > 0.0,
+                "Velocity should be positive when trades occur"
+            );
+        }
+
+        // Test with zero transactions (very short simulation)
+        let mut config_zero = get_test_config();
+        config_zero.max_steps = 1; // Very short, likely no trades
+        config_zero.entity_count = 2;
+        let mut engine_zero = SimulationEngine::new(config_zero);
+        let result_zero = engine_zero.run();
+
+        // Velocity should still be a valid number (likely 0 or very low)
+        assert!(
+            result_zero.trade_volume_statistics.velocity_of_money.is_finite(),
+            "Velocity should be finite even with minimal trading"
+        );
+        assert!(
+            result_zero.trade_volume_statistics.velocity_of_money >= 0.0,
+            "Velocity should be non-negative even with minimal trading"
+        );
+
+        // Test that velocity changes with economic activity
+        // More steps should generally lead to higher velocity
+        let mut config_long = get_test_config();
+        config_long.max_steps = 100;
+        config_long.entity_count = 20;
+        config_long.initial_money_per_person = 100.0;
+        let mut engine_long = SimulationEngine::new(config_long);
+        let result_long = engine_long.run();
+
+        let velocity_long = result_long.trade_volume_statistics.velocity_of_money;
+        assert!(
+            velocity_long.is_finite() && velocity_long >= 0.0,
+            "Long simulation should have valid velocity"
+        );
+
+        // If there were more total trades in the longer simulation,
+        // the velocity could be higher (but not guaranteed due to money distribution changes)
+        if result_long.trade_volume_statistics.total_trades
+            > result.trade_volume_statistics.total_trades
+        {
+            // Just verify it's a reasonable value, not necessarily higher
+            assert!(
+                velocity_long >= 0.0,
+                "Longer simulation with more trades should have non-negative velocity"
+            );
+        }
+    }
 }

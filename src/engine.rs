@@ -1278,15 +1278,15 @@ impl SimulationEngine {
 
             // Calculate velocity of money: Total Transaction Volume / Total Money Supply
             // Total money supply is the sum of all money held by all persons
-            let total_money_supply = if !final_money_distribution.is_empty() {
-                final_money_distribution.iter().sum::<f64>()
+            let velocity_of_money = if !final_money_distribution.is_empty() {
+                let total_money_supply = final_money_distribution.iter().sum::<f64>();
+                if total_money_supply > 0.0 {
+                    total_volume / total_money_supply
+                } else {
+                    0.0
+                }
             } else {
-                1.0 // Avoid division by zero
-            };
-            let velocity_of_money = if total_money_supply > 0.0 {
-                total_volume / total_money_supply
-            } else {
-                0.0
+                0.0 // No entities means no velocity
             };
 
             crate::result::TradeVolumeStats {
