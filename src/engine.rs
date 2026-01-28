@@ -136,6 +136,8 @@ pub struct SimulationCheckpoint {
     pub technology_breakthroughs: Vec<TechnologyBreakthrough>,
     /// Action log for replay recording (optional)
     pub action_log: Option<crate::replay::ActionLog>,
+    /// Externality tracking (if enabled)
+    pub externality_stats: crate::externality::ExternalityStats,
 }
 
 pub struct SimulationEngine {
@@ -229,6 +231,8 @@ pub struct SimulationEngine {
     technology_breakthroughs: Vec<TechnologyBreakthrough>,
     // Action log for replay recording (optional)
     action_log: Option<crate::replay::ActionLog>,
+    // Externality tracking (if enabled)
+    externality_stats: crate::externality::ExternalityStats,
 }
 
 impl SimulationEngine {
@@ -455,6 +459,7 @@ impl SimulationEngine {
             total_payouts_made: 0.0,
             technology_breakthroughs: Vec::new(),
             action_log: None, // Will be set via enable_action_recording if needed
+            externality_stats: crate::externality::ExternalityStats::new(),
         }
     }
 
@@ -1995,6 +2000,14 @@ impl SimulationEngine {
             } else {
                 None
             },
+            externality_statistics: if self.config.enable_externalities {
+                // Finalize externality statistics to calculate averages
+                let mut stats = self.externality_stats.clone();
+                stats.finalize();
+                Some(stats)
+            } else {
+                None
+            },
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {
@@ -3484,6 +3497,33 @@ impl SimulationEngine {
 
         self.total_taxes_collected += tax;
 
+        // Track externality if enabled
+        if self.config.enable_externalities {
+            // Get externality rate for this skill (per-skill rate overrides default)
+            let externality_rate = self
+                .config
+                .externality_rates_per_skill
+                .get(&skill_id)
+                .copied()
+                .unwrap_or(self.config.externality_rate);
+
+            if externality_rate != 0.0 {
+                let externality = crate::externality::Externality::new(
+                    skill_id.clone(),
+                    self.current_step,
+                    price,
+                    externality_rate,
+                );
+
+                debug!(
+                    "Externality recorded for skill {}: private ${:.2}, external ${:.2}, social ${:.2}",
+                    skill_id, externality.private_value, externality.external_value, externality.social_value
+                );
+
+                self.externality_stats.record(&externality);
+            }
+        }
+
         trace!(
             "Person {} balance: ${:.2} -> ${:.2} (received ${:.2}, tax ${:.2})",
             seller_entity_id,
@@ -4504,7 +4544,8 @@ impl SimulationEngine {
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
-            quality_statistics: None, // Simplified for interactive mode
+            quality_statistics: None,     // Simplified for interactive mode
+            externality_statistics: None, // Simplified for interactive mode
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {
@@ -4596,6 +4637,7 @@ impl SimulationEngine {
             total_payouts_made: self.total_payouts_made,
             technology_breakthroughs: self.technology_breakthroughs.clone(),
             action_log: self.action_log.clone(),
+            externality_stats: self.externality_stats.clone(),
         };
 
         let file = File::create(path)?;
@@ -4746,6 +4788,7 @@ impl SimulationEngine {
             total_payouts_made: checkpoint.total_payouts_made,
             technology_breakthroughs: checkpoint.technology_breakthroughs,
             action_log: checkpoint.action_log,
+            externality_stats: checkpoint.externality_stats,
         })
     }
 

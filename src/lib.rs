@@ -99,6 +99,7 @@ pub mod entity; // Represents a Person in the simulation
 pub mod environment;
 pub mod error;
 pub mod event;
+pub mod externality;
 pub mod insurance;
 pub mod investment;
 pub mod loan;
@@ -130,6 +131,7 @@ pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use environment::{Environment, Resource};
 pub use error::{Result, SimulationError};
 pub use event::{EventBus, EventType, SimulationEvent};
+pub use externality::{Externality, ExternalityStats, SkillExternalityStats};
 pub use insurance::{Insurance, InsuranceId, InsuranceType};
 pub use investment::{Investment, InvestmentId, InvestmentType};
 pub use loan::{Loan, LoanId};

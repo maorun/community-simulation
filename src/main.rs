@@ -1130,6 +1130,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             exploration_rate: SimulationConfig::default().exploration_rate,
             enable_specialization: SimulationConfig::default().enable_specialization,
             enable_parallel_trades: SimulationConfig::default().enable_parallel_trades,
+            enable_externalities: SimulationConfig::default().enable_externalities,
+            externality_rate: SimulationConfig::default().externality_rate,
+            externality_rates_per_skill: HashMap::new(), // Not configurable via CLI
         }
     };
 
