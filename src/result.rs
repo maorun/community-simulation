@@ -2581,6 +2581,106 @@ pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
     }
 }
 
+/// Calculate comprehensive money/wealth statistics for a distribution.
+///
+/// This function computes a complete set of wealth distribution metrics including:
+/// - Basic statistics (mean, median, standard deviation, min, max)
+/// - Inequality measures (Gini coefficient, Herfindahl-Hirschman Index)
+/// - Wealth concentration ratios (top 10%, top 1%, bottom 50%)
+///
+/// The function handles empty input by returning zero-initialized statistics.
+///
+/// # Arguments
+///
+/// * `money_values` - Slice of money/wealth values (does not need to be sorted)
+///
+/// # Returns
+///
+/// `MoneyStats` - Complete wealth distribution statistics
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::result::calculate_money_stats;
+///
+/// let money_values = vec![50.0, 100.0, 150.0, 200.0, 250.0];
+/// let stats = calculate_money_stats(&money_values);
+///
+/// assert_eq!(stats.average, 150.0);
+/// assert_eq!(stats.median, 150.0);
+/// assert_eq!(stats.min_money, 50.0);
+/// assert_eq!(stats.max_money, 250.0);
+/// assert!(stats.gini_coefficient >= 0.0 && stats.gini_coefficient <= 1.0);
+/// ```
+///
+/// # Performance
+///
+/// - Time complexity: O(n log n) due to sorting
+/// - Space complexity: O(n) for sorted copy
+/// - For empty input, returns in O(1)
+pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
+    if money_values.is_empty() {
+        return MoneyStats {
+            average: 0.0,
+            median: 0.0,
+            std_dev: 0.0,
+            min_money: 0.0,
+            max_money: 0.0,
+            gini_coefficient: 0.0,
+            herfindahl_index: 0.0,
+            top_10_percent_share: 0.0,
+            top_1_percent_share: 0.0,
+            bottom_50_percent_share: 0.0,
+        };
+    }
+
+    let mut sorted_money = money_values.to_vec();
+    sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    let sum: f64 = sorted_money.iter().sum();
+    let count = sorted_money.len() as f64;
+    let average = sum / count;
+
+    let median = if count as usize % 2 == 1 {
+        sorted_money[count as usize / 2]
+    } else {
+        (sorted_money[count as usize / 2 - 1] + sorted_money[count as usize / 2]) / 2.0
+    };
+
+    let variance = sorted_money
+        .iter()
+        .map(|value| {
+            let diff = average - value;
+            diff * diff
+        })
+        .sum::<f64>()
+        / count;
+    let std_dev = variance.sqrt();
+
+    // Calculate Gini coefficient using the shared utility function
+    let gini_coefficient = calculate_gini_coefficient(&sorted_money, sum);
+
+    // Calculate Herfindahl Index using the shared utility function
+    let herfindahl_index = calculate_herfindahl_index(&sorted_money);
+
+    // Calculate wealth concentration ratios
+    let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
+        calculate_wealth_concentration(&sorted_money, sum);
+
+    MoneyStats {
+        average,
+        median,
+        std_dev,
+        min_money: *sorted_money.first().unwrap_or(&0.0),
+        max_money: *sorted_money.last().unwrap_or(&0.0),
+        gini_coefficient,
+        herfindahl_index,
+        top_10_percent_share,
+        top_1_percent_share,
+        bottom_50_percent_share,
+    }
+}
+
 /// Calculate trading partner statistics from entities' transaction history
 ///
 /// This function analyzes the transaction history of all persons to identify
@@ -3540,73 +3640,6 @@ mod tests {
             compressed_size,
             uncompressed_size
         );
-    }
-
-    fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
-        if money_values.is_empty() {
-            return MoneyStats {
-                average: 0.0,
-                median: 0.0,
-                std_dev: 0.0,
-                min_money: 0.0,
-                max_money: 0.0,
-                gini_coefficient: 0.0,
-                herfindahl_index: 0.0,
-                top_10_percent_share: 0.0,
-                top_1_percent_share: 0.0,
-                bottom_50_percent_share: 0.0,
-            };
-        }
-
-        let mut sorted_money = money_values.to_vec();
-        sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-
-        let sum: f64 = sorted_money.iter().sum();
-        let count = sorted_money.len() as f64;
-        let average = sum / count;
-
-        let median = if count > 0.0 {
-            if count as usize % 2 == 1 {
-                sorted_money[count as usize / 2]
-            } else {
-                (sorted_money[count as usize / 2 - 1] + sorted_money[count as usize / 2]) / 2.0
-            }
-        } else {
-            0.0
-        };
-
-        let variance = sorted_money
-            .iter()
-            .map(|value| {
-                let diff = average - value;
-                diff * diff
-            })
-            .sum::<f64>()
-            / count;
-        let std_dev = variance.sqrt();
-
-        // Calculate Gini coefficient using the shared utility function
-        let gini_coefficient = calculate_gini_coefficient(&sorted_money, sum);
-
-        // Calculate Herfindahl Index using the shared utility function
-        let herfindahl_index = calculate_herfindahl_index(&sorted_money);
-
-        // Calculate wealth concentration ratios
-        let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
-            calculate_wealth_concentration(&sorted_money, sum);
-
-        MoneyStats {
-            average,
-            median,
-            std_dev,
-            min_money: *sorted_money.first().unwrap_or(&0.0),
-            max_money: *sorted_money.last().unwrap_or(&0.0),
-            gini_coefficient,
-            herfindahl_index,
-            top_10_percent_share,
-            top_1_percent_share,
-            bottom_50_percent_share,
-        }
     }
 
     #[test]
