@@ -27,6 +27,10 @@ struct Args {
     #[arg(long, default_value_t = false)]
     list_presets: bool,
 
+    /// List all available pricing scenarios and exit
+    #[arg(long, default_value_t = false)]
+    list_scenarios: bool,
+
     /// Start interactive configuration wizard to create a simulation configuration
     #[arg(long, default_value_t = false)]
     wizard: bool,
@@ -464,6 +468,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             println!();
         }
+        return Ok(());
+    }
+
+    // Handle --list-scenarios flag
+    if args.list_scenarios {
+        println!("Available pricing scenarios:\n");
+
+        println!("  Original (default)");
+        println!("    Description: Supply/demand-based pricing with volatility");
+        println!("    Mechanism: Prices adjust based on the ratio of buyers to sellers");
+        println!("    Best for: Studying natural market dynamics and equilibrium\n");
+
+        println!("  DynamicPricing");
+        println!("    Description: Sales-based pricing mechanism");
+        println!("    Mechanism: Prices increase 5% when sold, decrease 5% when not sold");
+        println!("    Best for: Studying price discovery and market feedback\n");
+
+        println!("  AdaptivePricing");
+        println!("    Description: Gradual price adaptation using exponential moving average");
+        println!("    Mechanism: Smooth price adjustments with 20% learning rate");
+        println!("    Best for: Modeling gradual market learning and stability\n");
+
+        println!("  AuctionPricing");
+        println!("    Description: Competitive bidding mechanism");
+        println!("    Mechanism: Prices increase aggressively when multiple buyers compete");
+        println!("    Best for: Studying auction dynamics and competitive markets\n");
+
+        println!("Usage: --scenario <SCENARIO>");
+        println!(
+            "Example: {} --scenario AdaptivePricing -s 500 -p 100",
+            std::env::args()
+                .next()
+                .unwrap_or_else(|| "simulation-framework".to_string())
+        );
+
         return Ok(());
     }
 
