@@ -492,7 +492,7 @@ mod tests {
         assert!(market.cache.average_price.is_some());
 
         // Update prices (which should invalidate cache)
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         market.update_prices(&mut rng);
 
         // Cache should be invalidated
@@ -580,7 +580,7 @@ mod tests {
         let _avg1 = market.get_average_price();
 
         // Invalidate and recompute multiple times
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for _ in 0..5 {
             market.update_prices(&mut rng);
             let _avg = market.get_average_price(); // Recompute after each invalidation

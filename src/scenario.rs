@@ -86,7 +86,7 @@ mod tests {
     use super::*;
     use crate::market::Market;
     use crate::skill::Skill;
-    use rand::rngs::mock::StepRng;
+    use rand::{rngs::StdRng, SeedableRng};
 
     /// Helper function to create a market with common test defaults
     ///
@@ -203,7 +203,7 @@ mod tests {
         }
 
         // Execute price update with deterministic RNG
-        let mut rng = StepRng::new(2, 1);
+        let mut rng = StdRng::seed_from_u64(2);
         config.updater.update_prices(&mut market, &mut rng);
 
         // Return new price
@@ -268,7 +268,7 @@ mod tests {
         let mut market = create_test_market(Scenario::AdaptivePricing, 10.0);
         let skill_id = setup_skill_in_market(&mut market, 50.0);
 
-        let mut rng = StepRng::new(2, 1);
+        let mut rng = StdRng::seed_from_u64(2);
         let updater = AdaptivePricingUpdater;
 
         // First step without sale
@@ -344,7 +344,7 @@ mod tests {
         market.demand_counts.insert(skill_id.clone(), 20);
         market.supply_counts.insert(skill_id.clone(), 1);
 
-        let mut rng = StepRng::new(2, 1);
+        let mut rng = StdRng::seed_from_u64(2);
         let updater = OriginalPriceUpdater;
         updater.update_prices(&mut market, &mut rng);
 
@@ -993,12 +993,12 @@ impl DemandGeneratorTrait for CyclicalDemandGenerator {
 #[cfg(test)]
 mod demand_tests {
     use super::*;
-    use rand::rngs::mock::StepRng;
+    use rand::{rngs::StdRng, SeedableRng};
 
     #[test]
     fn test_uniform_demand_generator_range() {
         let generator = UniformDemandGenerator;
-        let mut rng = StepRng::new(2, 1);
+        let mut rng = StdRng::seed_from_u64(2);
 
         // Test that generated values are always in valid range
         for _ in 0..100 {
@@ -1010,7 +1010,7 @@ mod demand_tests {
     #[test]
     fn test_concentrated_demand_generator_range() {
         let generator = ConcentratedDemandGenerator;
-        let mut rng = StepRng::new(2, 1);
+        let mut rng = StdRng::seed_from_u64(2);
 
         // Test that generated values are always in valid range
         for _ in 0..100 {
@@ -1022,7 +1022,7 @@ mod demand_tests {
     #[test]
     fn test_cyclical_demand_generator_range() {
         let generator = CyclicalDemandGenerator;
-        let mut rng = StepRng::new(2, 1);
+        let mut rng = StdRng::seed_from_u64(2);
 
         // Test across multiple steps to cover full cycle
         for step in 0..200 {
@@ -1034,7 +1034,7 @@ mod demand_tests {
     #[test]
     fn test_cyclical_demand_generator_varies_over_time() {
         let generator = CyclicalDemandGenerator;
-        let mut rng = StepRng::new(2, 1);
+        let mut rng = StdRng::seed_from_u64(2);
 
         let mut demands = Vec::new();
         for step in 0..100 {
@@ -1055,7 +1055,7 @@ mod demand_tests {
         let concentrated_gen = DemandGenerator::from(DemandStrategy::Concentrated);
         let cyclical_gen = DemandGenerator::from(DemandStrategy::Cyclical);
 
-        let mut rng = StepRng::new(2, 1);
+        let mut rng = StdRng::seed_from_u64(2);
 
         // Verify each generates valid values
         assert!(uniform_gen.generate_demand_count(0, 0, &mut rng) >= 2);

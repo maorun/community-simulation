@@ -89,7 +89,7 @@ mod proptests {
                     market.increment_skill_supply(&skill_id);
                 }
 
-                let mut rng = rand::thread_rng();
+                let mut rng = rand::rng();
                 market.update_prices(&mut rng);
                 market.reset_demand_counts();
             }
@@ -201,7 +201,7 @@ mod proptests {
 
             let initial_price = market.get_price(&skill_id).unwrap();
 
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             market.update_prices(&mut rng);
 
             let final_price = market.get_price(&skill_id).unwrap();
