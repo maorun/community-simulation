@@ -1,6 +1,7 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use simulation_framework::scenario::Scenario;
 use simulation_framework::{SimulationConfig, SimulationEngine};
+use std::hint::black_box;
 
 /// Benchmark the simulation engine initialization
 fn bench_engine_initialization(c: &mut Criterion) {

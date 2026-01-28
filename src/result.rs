@@ -4472,7 +4472,7 @@ mod tests {
 
         // Generate random test data
         for size in [0, 1, 3, 4, 5, 7, 8, 15, 16, 17, 100, 257, 1000, 2048] {
-            let values: Vec<f64> = (0..size).map(|_| rng.gen_range(-100.0..100.0)).collect();
+            let values: Vec<f64> = (0..size).map(|_| rng.random_range(-100.0..100.0)).collect();
 
             if values.is_empty() {
                 continue;
