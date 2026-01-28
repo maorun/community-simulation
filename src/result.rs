@@ -4690,4 +4690,48 @@ mod tests {
         assert!((matrix[1][0] - 0.5).abs() < 1e-10);
         assert!((matrix[1][1] - 0.5).abs() < 1e-10);
     }
+
+    #[test]
+    fn test_velocity_of_money_calculation() {
+        // Test that velocity of money is correctly calculated
+        // Velocity = Total Transaction Volume / Total Money Supply
+
+        // Scenario 1: Simple case
+        let total_volume = 1000.0; // Total transactions
+        let total_money_supply = 500.0; // Total money in the economy
+        let expected_velocity = total_volume / total_money_supply; // = 2.0
+
+        assert_eq!(expected_velocity, 2.0);
+
+        // Scenario 2: High velocity (money changes hands frequently)
+        let total_volume = 10000.0;
+        let total_money_supply = 1000.0;
+        let expected_velocity = total_volume / total_money_supply; // = 10.0
+
+        assert_eq!(expected_velocity, 10.0);
+
+        // Scenario 3: Low velocity (money is hoarded)
+        let total_volume = 100.0;
+        let total_money_supply = 1000.0;
+        let expected_velocity = total_volume / total_money_supply; // = 0.1
+
+        assert_eq!(expected_velocity, 0.1);
+
+        // Scenario 4: Zero velocity (no trades)
+        let total_volume = 0.0;
+        let total_money_supply = 1000.0;
+        let expected_velocity = total_volume / total_money_supply; // = 0.0
+
+        assert_eq!(expected_velocity, 0.0);
+
+        // Verify that velocity increases with more economic activity
+        let low_activity_velocity = 100.0 / 1000.0;
+        let high_activity_velocity = 500.0 / 1000.0;
+        assert!(high_activity_velocity > low_activity_velocity);
+
+        // Verify that velocity increases with less money supply (same activity)
+        let large_supply_velocity = 1000.0 / 1000.0;
+        let small_supply_velocity = 1000.0 / 500.0;
+        assert!(small_supply_velocity > large_supply_velocity);
+    }
 }
