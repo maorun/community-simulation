@@ -231,12 +231,7 @@ impl VotingSystem {
             return false; // Already voted
         }
 
-        let vote = Vote {
-            person_id,
-            in_favor,
-            voting_power,
-            step: current_step,
-        };
+        let vote = Vote { person_id, in_favor, voting_power, step: current_step };
 
         proposal.votes.push(vote);
         self.total_votes_cast += 1;
@@ -315,10 +310,7 @@ impl VotingSystem {
             .proposals
             .values()
             .filter(|p| {
-                p.active
-                    && p.expires_at
-                        .map(|expires| current_step >= expires)
-                        .unwrap_or(false)
+                p.active && p.expires_at.map(|expires| current_step >= expires).unwrap_or(false)
             })
             .map(|p| p.id)
             .collect();
@@ -410,9 +402,7 @@ mod tests {
     fn test_create_proposal() {
         let mut voting_system = VotingSystem::new(VotingMethod::SimpleMajority);
         let proposal_id = voting_system.create_proposal(
-            ProposalType::Generic {
-                description: "Test proposal".to_string(),
-            },
+            ProposalType::Generic { description: "Test proposal".to_string() },
             "Test description".to_string(),
             Some(10),
             0,
@@ -498,9 +488,7 @@ mod tests {
     fn test_duplicate_vote_prevention() {
         let mut voting_system = VotingSystem::new(VotingMethod::SimpleMajority);
         let proposal_id = voting_system.create_proposal(
-            ProposalType::Generic {
-                description: "Test".to_string(),
-            },
+            ProposalType::Generic { description: "Test".to_string() },
             "Test".to_string(),
             None,
             0,
@@ -520,9 +508,7 @@ mod tests {
     fn test_proposal_expiration() {
         let mut voting_system = VotingSystem::new(VotingMethod::SimpleMajority);
         let proposal_id = voting_system.create_proposal(
-            ProposalType::Generic {
-                description: "Test".to_string(),
-            },
+            ProposalType::Generic { description: "Test".to_string() },
             "Test".to_string(),
             Some(5), // Expires after 5 steps
             0,
@@ -541,18 +527,14 @@ mod tests {
 
         // Create two proposals with different expiration times
         let proposal1 = voting_system.create_proposal(
-            ProposalType::Generic {
-                description: "Proposal 1".to_string(),
-            },
+            ProposalType::Generic { description: "Proposal 1".to_string() },
             "First".to_string(),
             Some(5),
             0,
         );
 
         let proposal2 = voting_system.create_proposal(
-            ProposalType::Generic {
-                description: "Proposal 2".to_string(),
-            },
+            ProposalType::Generic { description: "Proposal 2".to_string() },
             "Second".to_string(),
             Some(10),
             0,
@@ -579,18 +561,14 @@ mod tests {
 
         // Create and vote on two proposals
         let proposal1 = voting_system.create_proposal(
-            ProposalType::Generic {
-                description: "Proposal 1".to_string(),
-            },
+            ProposalType::Generic { description: "Proposal 1".to_string() },
             "First".to_string(),
             None,
             0,
         );
 
         let proposal2 = voting_system.create_proposal(
-            ProposalType::Generic {
-                description: "Proposal 2".to_string(),
-            },
+            ProposalType::Generic { description: "Proposal 2".to_string() },
             "Second".to_string(),
             None,
             0,

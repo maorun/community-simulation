@@ -1,0 +1,36 @@
+# Rustfmt Configuration for Economic Simulation Framework
+# This configuration enforces consistent code style
+# Note: Only stable features are used for compatibility with stable Rust
+
+# Edition and basic settings
+edition = "2021"
+
+# Imports formatting
+reorder_imports = true
+
+# Code layout
+max_width = 100
+use_small_heuristics = "Default"
+tab_spaces = 4
+hard_tabs = false
+
+# Function and type formatting
+fn_call_width = 80
+struct_lit_width = 80
+struct_variant_width = 80
+array_width = 80
+chain_width = 80
+single_line_if_else_max_width = 50
+fn_params_layout = "Tall"
+
+# Control flow formatting
+match_block_trailing_comma = true
+
+# Use formatting
+use_field_init_shorthand = true
+use_try_shorthand = true
+force_explicit_abi = true
+
+# Miscellaneous
+newline_style = "Unix"
+remove_nested_parens = true

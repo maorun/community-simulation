@@ -37,10 +37,7 @@ pub fn run_wizard() -> Result<(SimulationConfig, Option<PathBuf>)> {
     // Step 1: Choose between preset or custom configuration
     let start_mode = Select::new(
         "How would you like to start?",
-        vec![
-            "Use a preset configuration",
-            "Create a custom configuration from scratch",
-        ],
+        vec!["Use a preset configuration", "Create a custom configuration from scratch"],
     )
     .prompt()
     .map_err(|e| SimulationError::ValidationError(format!("Failed to get start mode: {}", e)))?;
@@ -48,16 +45,12 @@ pub fn run_wizard() -> Result<(SimulationConfig, Option<PathBuf>)> {
     let config = if start_mode == "Use a preset configuration" {
         // Show presets with descriptions
         let presets = PresetName::all();
-        let preset_choices: Vec<String> = presets
-            .iter()
-            .map(|p| format!("{}: {}", p.as_str(), p.description()))
-            .collect();
+        let preset_choices: Vec<String> =
+            presets.iter().map(|p| format!("{}: {}", p.as_str(), p.description())).collect();
 
-        let selected = Select::new("Select a preset:", preset_choices)
-            .prompt()
-            .map_err(|e| {
-                SimulationError::ValidationError(format!("Failed to select preset: {}", e))
-            })?;
+        let selected = Select::new("Select a preset:", preset_choices).prompt().map_err(|e| {
+            SimulationError::ValidationError(format!("Failed to select preset: {}", e))
+        })?;
 
         // Extract preset name from selection
         let preset_name = selected.split(':').next().unwrap();
@@ -94,29 +87,25 @@ pub fn run_wizard() -> Result<(SimulationConfig, Option<PathBuf>)> {
             SimulationError::ValidationError(format!("Failed to get save confirmation: {}", e))
         })?;
 
-    let output_path = if save_to_file {
-        let format = Select::new("Choose configuration file format:", vec!["YAML", "TOML"])
-            .prompt()
-            .map_err(|e| {
-                SimulationError::ValidationError(format!("Failed to select format: {}", e))
-            })?;
+    let output_path =
+        if save_to_file {
+            let format = Select::new("Choose configuration file format:", vec!["YAML", "TOML"])
+                .prompt()
+                .map_err(|e| {
+                    SimulationError::ValidationError(format!("Failed to select format: {}", e))
+                })?;
 
-        let default_name = format!(
-            "simulation_config.{}",
-            if format == "YAML" { "yaml" } else { "toml" }
-        );
+            let default_name =
+                format!("simulation_config.{}", if format == "YAML" { "yaml" } else { "toml" });
 
-        let path = Text::new("Enter file path:")
-            .with_default(&default_name)
-            .prompt()
-            .map_err(|e| {
-                SimulationError::ValidationError(format!("Failed to get file path: {}", e))
-            })?;
+            let path = Text::new("Enter file path:").with_default(&default_name).prompt().map_err(
+                |e| SimulationError::ValidationError(format!("Failed to get file path: {}", e)),
+            )?;
 
-        Some(PathBuf::from(path))
-    } else {
-        None
-    };
+            Some(PathBuf::from(path))
+        } else {
+            None
+        };
 
     println!("\n✅ Configuration complete!");
     println!("📊 Summary:");
@@ -181,9 +170,8 @@ fn customize_config(config: &mut SimulationConfig) -> Result<()> {
             "AuctionPricing (competitive bidding)",
         ];
 
-        let selected = Select::new("Select pricing scenario:", scenarios)
-            .prompt()
-            .map_err(|e| {
+        let selected =
+            Select::new("Select pricing scenario:", scenarios).prompt().map_err(|e| {
                 SimulationError::ValidationError(format!("Failed to select scenario: {}", e))
             })?;
 

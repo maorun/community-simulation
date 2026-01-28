@@ -183,8 +183,7 @@ impl Market {
     pub fn add_skill(&mut self, skill: Skill) {
         self.supply_counts.insert(skill.id.clone(), 0);
         self.demand_counts.insert(skill.id.clone(), 0);
-        self.skill_price_history
-            .insert(skill.id.clone(), Vec::new());
+        self.skill_price_history.insert(skill.id.clone(), Vec::new());
         self.skills.insert(skill.id.clone(), skill);
         // Invalidate cache since adding a skill changes aggregate statistics
         self.invalidate_cache();
@@ -249,10 +248,7 @@ impl Market {
     ///
     /// * `f64` - The efficiency multiplier (defaults to 1.0 if skill not found)
     pub fn get_skill_efficiency(&self, skill_id: &SkillId) -> f64 {
-        self.skills
-            .get(skill_id)
-            .map(|s| s.efficiency_multiplier)
-            .unwrap_or(1.0)
+        self.skills.get(skill_id).map(|s| s.efficiency_multiplier).unwrap_or(1.0)
     }
 
     /// Updates all skill prices based on current supply, demand, and the configured pricing strategy.
@@ -438,8 +434,7 @@ impl Market {
         max_price: Option<f64>,
     ) {
         if min_price.is_some() || max_price.is_some() {
-            self.per_skill_price_limits
-                .insert(skill_id.clone(), (min_price, max_price));
+            self.per_skill_price_limits.insert(skill_id.clone(), (min_price, max_price));
         } else {
             // If both are None, remove the entry
             self.per_skill_price_limits.remove(skill_id);

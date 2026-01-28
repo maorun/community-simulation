@@ -50,7 +50,7 @@ impl ParameterRange {
                     let step_size = (max - min) / (*steps - 1) as f64;
                     (0..*steps).map(|i| min + i as f64 * step_size).collect()
                 }
-            }
+            },
         }
     }
 
@@ -148,18 +148,12 @@ impl ParameterSweepResult {
                 // Calculate aggregated statistics
                 let avg_moneys: Vec<f64> =
                     results.iter().map(|r| r.money_statistics.average).collect();
-                let gini_coefficients: Vec<f64> = results
-                    .iter()
-                    .map(|r| r.money_statistics.gini_coefficient)
-                    .collect();
-                let total_trades: Vec<f64> = results
-                    .iter()
-                    .map(|r| r.trade_volume_statistics.total_trades as f64)
-                    .collect();
-                let avg_reputations: Vec<f64> = results
-                    .iter()
-                    .map(|r| r.reputation_statistics.average)
-                    .collect();
+                let gini_coefficients: Vec<f64> =
+                    results.iter().map(|r| r.money_statistics.gini_coefficient).collect();
+                let total_trades: Vec<f64> =
+                    results.iter().map(|r| r.trade_volume_statistics.total_trades as f64).collect();
+                let avg_reputations: Vec<f64> =
+                    results.iter().map(|r| r.reputation_statistics.average).collect();
 
                 info!(
                     "Completed {} = {:.4} (avg money: {:.2})",
@@ -182,13 +176,7 @@ impl ParameterSweepResult {
 
         let total_simulations = values.len() * runs_per_point;
 
-        Self {
-            parameter_name,
-            runs_per_point,
-            base_seed,
-            sweep_points,
-            total_simulations,
-        }
+        Self { parameter_name, runs_per_point, base_seed, sweep_points, total_simulations }
     }
 
     /// Save parameter sweep results to a JSON file
@@ -204,10 +192,7 @@ impl ParameterSweepResult {
 
     /// Print a summary of the parameter sweep results to the console
     pub fn print_summary(&self) {
-        println!(
-            "\n{}",
-            "=== Parameter Sweep Results ===".bright_cyan().bold()
-        );
+        println!("\n{}", "=== Parameter Sweep Results ===".bright_cyan().bold());
         println!("Parameter: {}", self.parameter_name);
         println!("Runs per point: {}", self.runs_per_point);
         println!("Total simulations: {}", self.total_simulations);
@@ -235,12 +220,11 @@ impl ParameterSweepResult {
         println!("\n{}", "Optimal Parameter Values:".bright_green());
 
         // Highest average money
-        if let Some(max_money_point) = self.sweep_points.iter().max_by(|a, b| {
-            a.avg_money_stats
-                .mean
-                .partial_cmp(&b.avg_money_stats.mean)
-                .unwrap()
-        }) {
+        if let Some(max_money_point) = self
+            .sweep_points
+            .iter()
+            .max_by(|a, b| a.avg_money_stats.mean.partial_cmp(&b.avg_money_stats.mean).unwrap())
+        {
             println!(
                 "  Highest avg money:  {} = {:.4} (${:.2})",
                 self.parameter_name,
@@ -266,10 +250,7 @@ impl ParameterSweepResult {
 
         // Highest trade volume
         if let Some(max_trades_point) = self.sweep_points.iter().max_by(|a, b| {
-            a.total_trades_stats
-                .mean
-                .partial_cmp(&b.total_trades_stats.mean)
-                .unwrap()
+            a.total_trades_stats.mean.partial_cmp(&b.total_trades_stats.mean).unwrap()
         }) {
             println!(
                 "  Highest trade volume: {} = {:.4} ({:.0} trades)",
@@ -288,11 +269,7 @@ mod tests {
 
     #[test]
     fn test_parameter_range_values_generation() {
-        let range = ParameterRange::InitialMoney {
-            min: 50.0,
-            max: 150.0,
-            steps: 3,
-        };
+        let range = ParameterRange::InitialMoney { min: 50.0, max: 150.0, steps: 3 };
 
         let values = range.values();
         assert_eq!(values.len(), 3);
@@ -303,11 +280,7 @@ mod tests {
 
     #[test]
     fn test_parameter_range_single_step() {
-        let range = ParameterRange::BasePrice {
-            min: 10.0,
-            max: 20.0,
-            steps: 1,
-        };
+        let range = ParameterRange::BasePrice { min: 10.0, max: 20.0, steps: 1 };
 
         let values = range.values();
         assert_eq!(values.len(), 1);
@@ -318,19 +291,11 @@ mod tests {
     fn test_parameter_range_apply_to_config() {
         let mut config = SimulationConfig::default();
 
-        let range = ParameterRange::InitialMoney {
-            min: 50.0,
-            max: 150.0,
-            steps: 2,
-        };
+        let range = ParameterRange::InitialMoney { min: 50.0, max: 150.0, steps: 2 };
         range.apply_to_config(&mut config, 75.0);
         assert_eq!(config.initial_money_per_person, 75.0);
 
-        let range = ParameterRange::SavingsRate {
-            min: 0.0,
-            max: 0.1,
-            steps: 2,
-        };
+        let range = ParameterRange::SavingsRate { min: 0.0, max: 0.1, steps: 2 };
         range.apply_to_config(&mut config, 0.05);
         assert_eq!(config.savings_rate, 0.05);
     }
@@ -338,39 +303,19 @@ mod tests {
     #[test]
     fn test_parameter_range_names() {
         assert_eq!(
-            ParameterRange::InitialMoney {
-                min: 0.0,
-                max: 100.0,
-                steps: 2
-            }
-            .name(),
+            ParameterRange::InitialMoney { min: 0.0, max: 100.0, steps: 2 }.name(),
             "initial_money"
         );
         assert_eq!(
-            ParameterRange::BasePrice {
-                min: 0.0,
-                max: 100.0,
-                steps: 2
-            }
-            .name(),
+            ParameterRange::BasePrice { min: 0.0, max: 100.0, steps: 2 }.name(),
             "base_price"
         );
         assert_eq!(
-            ParameterRange::SavingsRate {
-                min: 0.0,
-                max: 0.1,
-                steps: 2
-            }
-            .name(),
+            ParameterRange::SavingsRate { min: 0.0, max: 0.1, steps: 2 }.name(),
             "savings_rate"
         );
         assert_eq!(
-            ParameterRange::TransactionFee {
-                min: 0.0,
-                max: 0.1,
-                steps: 2
-            }
-            .name(),
+            ParameterRange::TransactionFee { min: 0.0, max: 0.1, steps: 2 }.name(),
             "transaction_fee"
         );
     }
@@ -438,11 +383,7 @@ mod tests {
             ..Default::default()
         };
 
-        let parameter_range = ParameterRange::InitialMoney {
-            min: 80.0,
-            max: 120.0,
-            steps: 2,
-        };
+        let parameter_range = ParameterRange::InitialMoney { min: 80.0, max: 120.0, steps: 2 };
 
         let result = ParameterSweepResult::run_sweep(config, parameter_range, 2, false);
 

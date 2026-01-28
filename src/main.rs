@@ -520,9 +520,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Usage: --scenario <SCENARIO>");
         println!(
             "Example: {} --scenario AdaptivePricing -s 500 -p 100",
-            std::env::args()
-                .next()
-                .unwrap_or_else(|| "simulation-framework".to_string())
+            std::env::args().next().unwrap_or_else(|| "simulation-framework".to_string())
         );
 
         return Ok(());
@@ -590,9 +588,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if let Some(num_threads) = args.threads {
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(num_threads)
-            .build_global()?;
+        rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global()?;
     } else {
         // Initialize Rayon with default number of threads (usually number of logical cores)
         rayon::ThreadPoolBuilder::new().build_global()?;
@@ -945,9 +941,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // No config file or preset, use CLI arguments or defaults
         SimulationConfig {
             max_steps: args.steps.unwrap_or(SimulationConfig::default().max_steps),
-            entity_count: args
-                .persons
-                .unwrap_or(SimulationConfig::default().entity_count),
+            entity_count: args.persons.unwrap_or(SimulationConfig::default().entity_count),
             time_step: SimulationConfig::default().time_step,
             seed: args.seed.unwrap_or(SimulationConfig::default().seed),
             initial_money_per_person: args
@@ -960,9 +954,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .min_skill_price
                 .unwrap_or(SimulationConfig::default().min_skill_price),
             per_skill_price_limits: HashMap::new(), // Not configurable via CLI
-            scenario: args
-                .scenario
-                .unwrap_or(SimulationConfig::default().scenario),
+            scenario: args.scenario.unwrap_or(SimulationConfig::default().scenario),
             demand_strategy: args
                 .demand_strategy
                 .unwrap_or(SimulationConfig::default().demand_strategy),
@@ -988,9 +980,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             transaction_fee: args
                 .transaction_fee
                 .unwrap_or(SimulationConfig::default().transaction_fee),
-            savings_rate: args
-                .savings_rate
-                .unwrap_or(SimulationConfig::default().savings_rate),
+            savings_rate: args.savings_rate.unwrap_or(SimulationConfig::default().savings_rate),
             enable_loans: args.enable_loans,
             enable_credit_rating: SimulationConfig::default().enable_credit_rating,
             loan_interest_rate: args
@@ -1012,9 +1002,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or(SimulationConfig::default().checkpoint_interval),
             checkpoint_file: args.checkpoint_file.clone(),
             resume_from_checkpoint: args.resume,
-            tax_rate: args
-                .tax_rate
-                .unwrap_or(SimulationConfig::default().tax_rate),
+            tax_rate: args.tax_rate.unwrap_or(SimulationConfig::default().tax_rate),
             enable_tax_redistribution: args.enable_tax_redistribution,
             skills_per_person: args
                 .skills_per_person
@@ -1193,13 +1181,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .bright_cyan()
         );
 
-        run_monte_carlo(
-            config,
-            num_runs,
-            args.output,
-            args.csv_output,
-            args.compress,
-        )?;
+        run_monte_carlo(config, num_runs, args.output, args.csv_output, args.compress)?;
     } else {
         // Single simulation run (original behavior)
         info!(
@@ -1220,10 +1202,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Initialize engine - either from checkpoint or fresh start
         let mut engine = if config.resume_from_checkpoint {
-            let checkpoint_path = config
-                .checkpoint_file
-                .clone()
-                .unwrap_or_else(|| "checkpoint.json".to_string());
+            let checkpoint_path =
+                config.checkpoint_file.clone().unwrap_or_else(|| "checkpoint.json".to_string());
 
             info!(
                 "{}",
@@ -1267,35 +1247,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     format!("Compressed results saved to {}.gz", output_path).bright_blue()
                 );
             } else {
-                info!(
-                    "{}",
-                    format!("Results saved to {}", output_path).bright_blue()
-                );
+                info!("{}", format!("Results saved to {}", output_path).bright_blue());
             }
         }
 
         if let Some(csv_prefix) = args.csv_output {
             result.save_to_csv(&csv_prefix)?;
-            info!(
-                "{}",
-                format!("CSV results saved with prefix: {}", csv_prefix).bright_blue()
-            );
+            info!("{}", format!("CSV results saved with prefix: {}", csv_prefix).bright_blue());
         }
 
         if let Some(action_log_path) = args.record_actions {
             engine.save_action_log(&action_log_path)?;
-            info!(
-                "{}",
-                format!("Action log saved to: {}", action_log_path).bright_blue()
-            );
+            info!("{}", format!("Action log saved to: {}", action_log_path).bright_blue());
         }
 
         if let Some(sqlite_path) = args.sqlite_output {
             simulation_framework::database::export_to_sqlite(&result, &sqlite_path)?;
-            info!(
-                "{}",
-                format!("SQLite database saved to: {}", sqlite_path).bright_blue()
-            );
+            info!("{}", format!("SQLite database saved to: {}", sqlite_path).bright_blue());
         }
 
         result.print_summary(!args.no_histogram);
@@ -1321,15 +1289,10 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
 
     // Initialize the simulation engine
     let mut engine = if config.resume_from_checkpoint {
-        let checkpoint_path = config
-            .checkpoint_file
-            .clone()
-            .unwrap_or_else(|| "checkpoint.json".to_string());
+        let checkpoint_path =
+            config.checkpoint_file.clone().unwrap_or_else(|| "checkpoint.json".to_string());
 
-        info!(
-            "{}",
-            format!("Resuming from checkpoint: {}", checkpoint_path).bright_cyan()
-        );
+        info!("{}", format!("Resuming from checkpoint: {}", checkpoint_path).bright_cyan());
 
         SimulationEngine::load_checkpoint(&checkpoint_path)
             .map_err(|e| format!("Failed to load checkpoint from {}: {}", checkpoint_path, e))?
@@ -1369,10 +1332,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                     "help" | "?" => {
                         println!("{}", "Available commands:".bright_yellow());
                         println!("  {}  - Execute one simulation step", "step".bright_green());
-                        println!(
-                            "  {} - Execute N simulation steps",
-                            "run <N>".bright_green()
-                        );
+                        println!("  {} - Execute N simulation steps", "run <N>".bright_green());
                         println!(
                             "  {}  - Show current simulation statistics",
                             "stats".bright_green()
@@ -1381,10 +1341,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             "  {} - Save current state to checkpoint file",
                             "save <path>".bright_green()
                         );
-                        println!(
-                            "  {} - Show current simulation status",
-                            "status".bright_green()
-                        );
+                        println!("  {} - Show current simulation status", "status".bright_green());
                         println!(
                             "  {} - Show detailed state of a specific person",
                             "inspect <id>".bright_green()
@@ -1411,7 +1368,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                         );
                         println!("  {}  - Show this help message", "help".bright_green());
                         println!("  {}  - Exit interactive mode", "exit/quit".bright_green());
-                    }
+                    },
                     "step" => {
                         if current_step >= max_steps {
                             println!(
@@ -1434,7 +1391,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             )
                             .bright_green()
                         );
-                    }
+                    },
                     "run" => {
                         if parts.len() < 2 {
                             println!("{}", "Usage: run <N>".bright_red());
@@ -1446,7 +1403,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             Err(_) => {
                                 println!("{}", "Invalid number of steps".bright_red());
                                 continue;
-                            }
+                            },
                         };
 
                         if num_steps == 0 {
@@ -1503,12 +1460,12 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             )
                             .bright_green()
                         );
-                    }
+                    },
                     "stats" => {
                         let result = engine.get_current_result();
                         println!("\n{}", "=== Current Statistics ===".bright_yellow());
                         result.print_summary(false); // Disable histogram in interactive mode
-                    }
+                    },
                     "status" => {
                         println!("\n{}", "=== Simulation Status ===".bright_yellow());
                         println!("  Current Step: {}/{}", current_step, max_steps);
@@ -1518,7 +1475,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                         );
                         println!("  Active Persons: {}", engine.get_active_persons());
                         println!("  Scenario: {:?}", engine.get_scenario());
-                    }
+                    },
                     "save" => {
                         if parts.len() < 2 {
                             println!("{}", "Usage: save <path>".bright_red());
@@ -1532,15 +1489,15 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                     "{}",
                                     format!("Checkpoint saved to {}", save_path).bright_green()
                                 );
-                            }
+                            },
                             Err(e) => {
                                 println!(
                                     "{}",
                                     format!("Error saving checkpoint: {}", e).bright_red()
                                 );
-                            }
+                            },
                         }
-                    }
+                    },
                     "inspect" => {
                         if parts.len() < 2 {
                             println!("{}", "Usage: inspect <person_id>".bright_red());
@@ -1552,7 +1509,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             Err(_) => {
                                 println!("{}", "Invalid person ID".bright_red());
                                 continue;
-                            }
+                            },
                         };
 
                         // Get entities from engine to inspect
@@ -1645,7 +1602,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                         simulation_framework::person::TransactionType::Buy => "Buy",
                                         simulation_framework::person::TransactionType::Sell => {
                                             "Sell"
-                                        }
+                                        },
                                     };
                                     println!(
                                         "    Step {}: {} {} for ${:.2}",
@@ -1656,7 +1613,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                         } else {
                             println!("{}", format!("Person {} not found", person_id).bright_red());
                         }
-                    }
+                    },
                     "persons" | "list-persons" => {
                         let entities = engine.get_entities();
                         println!(
@@ -1685,7 +1642,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 active_str
                             );
                         }
-                    }
+                    },
                     "market" => {
                         let market = engine.get_market();
                         println!("\n{}", "=== Market State ===".bright_yellow());
@@ -1721,7 +1678,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 market.skills.len()
                             );
                         }
-                    }
+                    },
                     "find-rich" => {
                         let count: usize = if parts.len() > 1 {
                             match parts[1].parse() {
@@ -1736,7 +1693,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                         .bright_yellow()
                                     );
                                     10
-                                }
+                                },
                             }
                         } else {
                             10
@@ -1773,7 +1730,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 total_skills
                             );
                         }
-                    }
+                    },
                     "find-poor" => {
                         let count: usize = if parts.len() > 1 {
                             match parts[1].parse() {
@@ -1788,7 +1745,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                         .bright_yellow()
                                     );
                                     10
-                                }
+                                },
                             }
                         } else {
                             10
@@ -1825,7 +1782,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 total_skills
                             );
                         }
-                    }
+                    },
                     "filter-by-skill" => {
                         if parts.len() < 2 {
                             println!("{}", "Usage: filter-by-skill <skill_name>".bright_red());
@@ -1873,11 +1830,11 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 );
                             }
                         }
-                    }
+                    },
                     "exit" | "quit" => {
                         println!("{}", "Exiting interactive mode...".bright_yellow());
                         break;
-                    }
+                    },
                     _ => {
                         println!(
                             "{}",
@@ -1887,25 +1844,22 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             )
                             .bright_red()
                         );
-                    }
+                    },
                 }
-            }
+            },
             Err(ReadlineError::Interrupted) => {
                 // Ctrl+C pressed
-                println!(
-                    "{}",
-                    "\nInterrupted. Type 'exit' or 'quit' to exit.".bright_yellow()
-                );
-            }
+                println!("{}", "\nInterrupted. Type 'exit' or 'quit' to exit.".bright_yellow());
+            },
             Err(ReadlineError::Eof) => {
                 // Ctrl+D pressed
                 println!("{}", "\nEOF received. Exiting...".bright_yellow());
                 break;
-            }
+            },
             Err(err) => {
                 println!("{}", format!("Error: {:?}", err).bright_red());
                 break;
-            }
+            },
         }
     }
 
@@ -1936,12 +1890,7 @@ fn run_monte_carlo(
             let mut config = base_config.clone();
             config.seed = base_seed + run_idx as u64;
 
-            info!(
-                "Starting run {}/{} (seed: {})",
-                run_idx + 1,
-                num_runs,
-                config.seed
-            );
+            info!("Starting run {}/{} (seed: {})", run_idx + 1, num_runs, config.seed);
 
             let mut engine = SimulationEngine::new(config);
             // Disable progress bar for individual runs in Monte Carlo mode
@@ -1956,19 +1905,13 @@ fn run_monte_carlo(
 
     info!(
         "{}",
-        format!(
-            "All Monte Carlo runs completed in {:.2}s",
-            total_duration.as_secs_f64()
-        )
-        .bright_green()
+        format!("All Monte Carlo runs completed in {:.2}s", total_duration.as_secs_f64())
+            .bright_green()
     );
     info!(
         "{}",
-        format!(
-            "Average time per run: {:.2}s",
-            total_duration.as_secs_f64() / num_runs as f64
-        )
-        .bright_yellow()
+        format!("Average time per run: {:.2}s", total_duration.as_secs_f64() / num_runs as f64)
+            .bright_yellow()
     );
 
     // Create aggregated results
@@ -1983,10 +1926,7 @@ fn run_monte_carlo(
                 format!("Compressed Monte Carlo results saved to {}.gz", output_path).bright_blue()
             );
         } else {
-            info!(
-                "{}",
-                format!("Monte Carlo results saved to {}", output_path).bright_blue()
-            );
+            info!("{}", format!("Monte Carlo results saved to {}", output_path).bright_blue());
         }
     }
 
@@ -2022,15 +1962,10 @@ fn run_parameter_sweep(
     }
 
     let parameter_name = parts[0];
-    let min: f64 = parts[1]
-        .parse()
-        .map_err(|_| format!("Invalid min value: '{}'", parts[1]))?;
-    let max: f64 = parts[2]
-        .parse()
-        .map_err(|_| format!("Invalid max value: '{}'", parts[2]))?;
-    let steps: usize = parts[3]
-        .parse()
-        .map_err(|_| format!("Invalid steps value: '{}'", parts[3]))?;
+    let min: f64 = parts[1].parse().map_err(|_| format!("Invalid min value: '{}'", parts[1]))?;
+    let max: f64 = parts[2].parse().map_err(|_| format!("Invalid max value: '{}'", parts[2]))?;
+    let steps: usize =
+        parts[3].parse().map_err(|_| format!("Invalid steps value: '{}'", parts[3]))?;
 
     if steps < 1 {
         return Err("Number of steps must be at least 1".into());
@@ -2052,7 +1987,7 @@ fn run_parameter_sweep(
                 parameter_name
             )
             .into());
-        }
+        },
     };
 
     info!(
@@ -2086,10 +2021,7 @@ fn run_parameter_sweep(
     // Save results if output path specified
     if let Some(output_path) = output {
         result.save_to_file(&output_path)?;
-        info!(
-            "{}",
-            format!("Parameter sweep results saved to {}", output_path).bright_blue()
-        );
+        info!("{}", format!("Parameter sweep results saved to {}", output_path).bright_blue());
     }
 
     // Print summary
@@ -2141,16 +2073,9 @@ fn run_scenario_comparison(
     );
     info!(
         "Scenarios to compare: {}",
-        scenarios
-            .iter()
-            .map(|s| format!("{:?}", s))
-            .collect::<Vec<_>>()
-            .join(", ")
+        scenarios.iter().map(|s| format!("{:?}", s)).collect::<Vec<_>>().join(", ")
     );
-    info!(
-        "Total simulations to run: {}",
-        scenarios.len() * runs_per_scenario
-    );
+    info!("Total simulations to run: {}", scenarios.len() * runs_per_scenario);
 
     let start_time = Instant::now();
 

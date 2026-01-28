@@ -56,10 +56,7 @@ impl<T> VecPool<T> {
     /// let pool: VecPool<i32> = VecPool::with_capacity(10);
     /// ```
     pub fn with_capacity(max_capacity: usize) -> Self {
-        VecPool {
-            pool: VecDeque::with_capacity(max_capacity),
-            max_capacity,
-        }
+        VecPool { pool: VecDeque::with_capacity(max_capacity), max_capacity }
     }
 
     /// Creates a new empty vector pool with default capacity (16).

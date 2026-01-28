@@ -50,12 +50,7 @@ impl Recipe {
         output_skill: SkillId,
         cost_multiplier: f64,
     ) -> Self {
-        Recipe {
-            input_skill_1,
-            input_skill_2,
-            output_skill,
-            cost_multiplier,
-        }
+        Recipe { input_skill_1, input_skill_2, output_skill, cost_multiplier }
     }
 
     /// Checks if the recipe can be crafted with the given skills.
@@ -231,11 +226,8 @@ mod tests {
             1.5,
         );
 
-        let available_skills = vec![
-            "Programming".to_string(),
-            "DataAnalysis".to_string(),
-            "Marketing".to_string(),
-        ];
+        let available_skills =
+            vec!["Programming".to_string(), "DataAnalysis".to_string(), "Marketing".to_string()];
 
         assert!(recipe.can_craft(&available_skills));
     }

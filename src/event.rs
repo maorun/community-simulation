@@ -121,10 +121,7 @@ impl EventBus {
     /// * `enabled` - Whether to actually collect events. If false, all emit
     ///   operations are no-ops for zero performance overhead.
     pub fn new(enabled: bool) -> Self {
-        Self {
-            events: Vec::new(),
-            enabled,
-        }
+        Self { events: Vec::new(), enabled }
     }
 
     /// Emit a trade executed event
@@ -151,12 +148,7 @@ impl EventBus {
         }
         self.events.push(SimulationEvent {
             step,
-            event_type: EventType::TradeExecuted {
-                buyer_id,
-                seller_id,
-                skill_id,
-                price,
-            },
+            event_type: EventType::TradeExecuted { buyer_id, seller_id, skill_id, price },
         });
     }
 
@@ -184,11 +176,7 @@ impl EventBus {
         if (old_price - new_price).abs() > f64::EPSILON {
             self.events.push(SimulationEvent {
                 step,
-                event_type: EventType::PriceUpdated {
-                    skill_id,
-                    old_price,
-                    new_price,
-                },
+                event_type: EventType::PriceUpdated { skill_id, old_price, new_price },
             });
         }
     }
@@ -246,11 +234,7 @@ impl EventBus {
         }
         self.events.push(SimulationEvent {
             step: step_number,
-            event_type: EventType::StepCompleted {
-                step_number,
-                trades_count,
-                trade_volume,
-            },
+            event_type: EventType::StepCompleted { step_number, trades_count, trade_volume },
         });
     }
 
@@ -331,17 +315,12 @@ mod tests {
         let events = bus.events();
         assert_eq!(events[0].step, 10);
         match &events[0].event_type {
-            EventType::TradeExecuted {
-                buyer_id,
-                seller_id,
-                skill_id,
-                price,
-            } => {
+            EventType::TradeExecuted { buyer_id, seller_id, skill_id, price } => {
                 assert_eq!(*buyer_id, buyer);
                 assert_eq!(*seller_id, seller);
                 assert_eq!(*skill_id, skill);
                 assert_eq!(*price, 15.0);
-            }
+            },
             _ => panic!("Expected TradeExecuted event"),
         }
     }
@@ -356,15 +335,11 @@ mod tests {
         assert_eq!(bus.len(), 1);
         let events = bus.events();
         match &events[0].event_type {
-            EventType::PriceUpdated {
-                skill_id,
-                old_price,
-                new_price,
-            } => {
+            EventType::PriceUpdated { skill_id, old_price, new_price } => {
                 assert_eq!(*skill_id, skill);
                 assert_eq!(*old_price, 10.0);
                 assert_eq!(*new_price, 12.0);
-            }
+            },
             _ => panic!("Expected PriceUpdated event"),
         }
     }
@@ -379,15 +354,11 @@ mod tests {
         assert_eq!(bus.len(), 1);
         let events = bus.events();
         match &events[0].event_type {
-            EventType::ReputationChanged {
-                person_id,
-                old_reputation,
-                new_reputation,
-            } => {
+            EventType::ReputationChanged { person_id, old_reputation, new_reputation } => {
                 assert_eq!(*person_id, person);
                 assert_eq!(*old_reputation, 1.0);
                 assert_eq!(*new_reputation, 1.05);
-            }
+            },
             _ => panic!("Expected ReputationChanged event"),
         }
     }
@@ -401,15 +372,11 @@ mod tests {
         assert_eq!(bus.len(), 1);
         let events = bus.events();
         match &events[0].event_type {
-            EventType::StepCompleted {
-                step_number,
-                trades_count,
-                trade_volume,
-            } => {
+            EventType::StepCompleted { step_number, trades_count, trade_volume } => {
                 assert_eq!(*step_number, 50);
                 assert_eq!(*trades_count, 25);
                 assert_eq!(*trade_volume, 300.0);
-            }
+            },
             _ => panic!("Expected StepCompleted event"),
         }
     }

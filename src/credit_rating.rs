@@ -338,10 +338,7 @@ mod tests {
         }
 
         score.calculate_score(0.0, 100.0, 100);
-        assert!(
-            score.score >= 750,
-            "Perfect payment history should yield high score"
-        );
+        assert!(score.score >= 750, "Perfect payment history should yield high score");
     }
 
     #[test]
@@ -358,10 +355,7 @@ mod tests {
         }
 
         score.calculate_score(0.0, 100.0, 100);
-        assert!(
-            score.score < 700,
-            "Missed payments should significantly lower score"
-        );
+        assert!(score.score < 700, "Missed payments should significantly lower score");
     }
 
     #[test]
@@ -378,10 +372,7 @@ mod tests {
         score.calculate_score(10.0, 100.0, 10); // 10 debt, 100 money
         let low_debt_score = score.score;
 
-        assert!(
-            low_debt_score > high_debt_score,
-            "Low debt should yield higher score"
-        );
+        assert!(low_debt_score > high_debt_score, "Low debt should yield higher score");
     }
 
     #[test]
@@ -410,31 +401,16 @@ mod tests {
     fn test_interest_rate_calculation() {
         let base_rate = 0.02; // 2% base interest
 
-        let excellent = CreditScore {
-            score: 820,
-            ..Default::default()
-        };
-        let good = CreditScore {
-            score: 700,
-            ..Default::default()
-        };
-        let poor = CreditScore {
-            score: 500,
-            ..Default::default()
-        };
+        let excellent = CreditScore { score: 820, ..Default::default() };
+        let good = CreditScore { score: 700, ..Default::default() };
+        let poor = CreditScore { score: 500, ..Default::default() };
 
         let excellent_rate = excellent.calculate_interest_rate(base_rate);
         let good_rate = good.calculate_interest_rate(base_rate);
         let poor_rate = poor.calculate_interest_rate(base_rate);
 
-        assert!(
-            excellent_rate < good_rate,
-            "Excellent credit should get better rate than good"
-        );
-        assert!(
-            good_rate < poor_rate,
-            "Good credit should get better rate than poor"
-        );
+        assert!(excellent_rate < good_rate, "Excellent credit should get better rate than good");
+        assert!(good_rate < poor_rate, "Good credit should get better rate than poor");
         assert_eq!(excellent_rate, base_rate * 0.5); // 50% of base
         assert_eq!(good_rate, base_rate * 1.0); // 100% of base
         assert_eq!(poor_rate, base_rate * 2.5); // 250% of base
@@ -442,46 +418,11 @@ mod tests {
 
     #[test]
     fn test_rating_category() {
-        assert_eq!(
-            CreditScore {
-                score: 820,
-                ..Default::default()
-            }
-            .rating_category(),
-            "Excellent"
-        );
-        assert_eq!(
-            CreditScore {
-                score: 750,
-                ..Default::default()
-            }
-            .rating_category(),
-            "Very Good"
-        );
-        assert_eq!(
-            CreditScore {
-                score: 700,
-                ..Default::default()
-            }
-            .rating_category(),
-            "Good"
-        );
-        assert_eq!(
-            CreditScore {
-                score: 620,
-                ..Default::default()
-            }
-            .rating_category(),
-            "Fair"
-        );
-        assert_eq!(
-            CreditScore {
-                score: 500,
-                ..Default::default()
-            }
-            .rating_category(),
-            "Poor"
-        );
+        assert_eq!(CreditScore { score: 820, ..Default::default() }.rating_category(), "Excellent");
+        assert_eq!(CreditScore { score: 750, ..Default::default() }.rating_category(), "Very Good");
+        assert_eq!(CreditScore { score: 700, ..Default::default() }.rating_category(), "Good");
+        assert_eq!(CreditScore { score: 620, ..Default::default() }.rating_category(), "Fair");
+        assert_eq!(CreditScore { score: 500, ..Default::default() }.rating_category(), "Poor");
     }
 
     #[test]
@@ -497,9 +438,6 @@ mod tests {
 
         // After 50 steps, recent loans should reset
         score.record_new_loan(60);
-        assert_eq!(
-            score.recent_loans_count, 1,
-            "Recent loans should reset after 50 steps"
-        );
+        assert_eq!(score.recent_loans_count, 1, "Recent loans should reset after 50 steps");
     }
 }

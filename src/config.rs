@@ -2220,10 +2220,8 @@ impl SimulationConfig {
     pub fn from_preset(preset: PresetName) -> Self {
         match preset {
             PresetName::Default => Self::default(),
-            PresetName::SmallEconomy => Self {
-                max_steps: 100,
-                entity_count: 20,
-                ..Self::default()
+            PresetName::SmallEconomy => {
+                Self { max_steps: 100, entity_count: 20, ..Self::default() }
             },
             PresetName::LargeEconomy => Self {
                 max_steps: 2000,
@@ -2264,11 +2262,7 @@ impl SimulationConfig {
                 volatility_percentage: 0.01, // Lower volatility for stable growth
                 ..Self::default()
             },
-            PresetName::QuickTest => Self {
-                max_steps: 50,
-                entity_count: 10,
-                ..Self::default()
-            },
+            PresetName::QuickTest => Self { max_steps: 50, entity_count: 10, ..Self::default() },
         }
     }
 
@@ -2301,15 +2295,13 @@ impl SimulationConfig {
                 let config: SimulationConfig = serde_yaml::from_str(&contents)
                     .map_err(|e| SimulationError::YamlParse(e.to_string()))?;
                 Ok(config)
-            }
+            },
             "toml" => {
                 let config: SimulationConfig = toml::from_str(&contents)
                     .map_err(|e| SimulationError::TomlParse(e.to_string()))?;
                 Ok(config)
-            }
-            _ => Err(SimulationError::UnsupportedConfigFormat(
-                extension.to_string(),
-            )),
+            },
+            _ => Err(SimulationError::UnsupportedConfigFormat(extension.to_string())),
         }
     }
 
@@ -2395,9 +2387,7 @@ scenario = "DynamicPricing"
         let result = SimulationConfig::from_file(temp_file.path());
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("Unsupported configuration file format"));
+        assert!(err.to_string().contains("Unsupported configuration file format"));
     }
 
     #[test]
@@ -2405,9 +2395,7 @@ scenario = "DynamicPricing"
         let result = SimulationConfig::from_file("/nonexistent/config.yaml");
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("Failed to read configuration file"));
+        assert!(err.to_string().contains("Failed to read configuration file"));
     }
 
     #[test]
@@ -2444,10 +2432,7 @@ scenario: Original
 
         assert_eq!(config.max_steps, default_config.max_steps);
         assert_eq!(config.entity_count, default_config.entity_count);
-        assert_eq!(
-            config.initial_money_per_person,
-            default_config.initial_money_per_person
-        );
+        assert_eq!(config.initial_money_per_person, default_config.initial_money_per_person);
     }
 
     #[test]
@@ -2497,22 +2482,10 @@ scenario: Original
 
     #[test]
     fn test_preset_name_from_str() {
-        assert_eq!(
-            PresetName::from_str("default").unwrap(),
-            PresetName::Default
-        );
-        assert_eq!(
-            PresetName::from_str("small_economy").unwrap(),
-            PresetName::SmallEconomy
-        );
-        assert_eq!(
-            PresetName::from_str("small").unwrap(),
-            PresetName::SmallEconomy
-        );
-        assert_eq!(
-            PresetName::from_str("crisis").unwrap(),
-            PresetName::CrisisScenario
-        );
+        assert_eq!(PresetName::from_str("default").unwrap(), PresetName::Default);
+        assert_eq!(PresetName::from_str("small_economy").unwrap(), PresetName::SmallEconomy);
+        assert_eq!(PresetName::from_str("small").unwrap(), PresetName::SmallEconomy);
+        assert_eq!(PresetName::from_str("crisis").unwrap(), PresetName::CrisisScenario);
         assert!(PresetName::from_str("nonexistent").is_err());
     }
 
@@ -2546,20 +2519,13 @@ scenario: Original
         // Ensure all preset configurations pass validation
         for preset in PresetName::all() {
             let config = SimulationConfig::from_preset(preset.clone());
-            assert!(
-                config.validate().is_ok(),
-                "Preset {:?} should pass validation",
-                preset
-            );
+            assert!(config.validate().is_ok(), "Preset {:?} should pass validation", preset);
         }
     }
 
     #[test]
     fn test_validate_zero_max_steps() {
-        let config = SimulationConfig {
-            max_steps: 0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { max_steps: 0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
         assert!(err.to_string().contains("max_steps must be greater than 0"));
@@ -2567,10 +2533,7 @@ scenario: Original
 
     #[test]
     fn test_validate_zero_entity_count() {
-        let config = SimulationConfig {
-            entity_count: 0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { entity_count: 0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
         assert!(err
@@ -2580,49 +2543,31 @@ scenario: Original
 
     #[test]
     fn test_validate_negative_initial_money() {
-        let config = SimulationConfig {
-            initial_money_per_person: -10.0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { initial_money_per_person: -10.0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("initial_money_per_person must be non-negative"));
+        assert!(err.to_string().contains("initial_money_per_person must be non-negative"));
     }
 
     #[test]
     fn test_validate_zero_base_skill_price() {
-        let config = SimulationConfig {
-            base_skill_price: 0.0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { base_skill_price: 0.0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("base_skill_price must be greater than 0"));
+        assert!(err.to_string().contains("base_skill_price must be greater than 0"));
     }
 
     #[test]
     fn test_validate_negative_base_skill_price() {
-        let config = SimulationConfig {
-            base_skill_price: -5.0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { base_skill_price: -5.0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("base_skill_price must be greater than 0"));
+        assert!(err.to_string().contains("base_skill_price must be greater than 0"));
     }
 
     #[test]
     fn test_validate_zero_time_step() {
-        let config = SimulationConfig {
-            time_step: 0.0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { time_step: 0.0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
         assert!(err.to_string().contains("time_step must be greater than 0"));
@@ -2630,23 +2575,15 @@ scenario: Original
 
     #[test]
     fn test_validate_negative_tech_growth_rate() {
-        let config = SimulationConfig {
-            tech_growth_rate: -0.1,
-            ..Default::default()
-        };
+        let config = SimulationConfig { tech_growth_rate: -0.1, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("tech_growth_rate must be non-negative"));
+        assert!(err.to_string().contains("tech_growth_rate must be non-negative"));
     }
 
     #[test]
     fn test_validate_excessive_tech_growth_rate() {
-        let config = SimulationConfig {
-            tech_growth_rate: 1.5,
-            ..Default::default()
-        };
+        let config = SimulationConfig { tech_growth_rate: 1.5, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
         assert!(err.to_string().contains("tech_growth_rate is too large"));
@@ -2654,42 +2591,26 @@ scenario: Original
 
     #[test]
     fn test_validate_seasonal_amplitude_out_of_range() {
-        let config = SimulationConfig {
-            seasonal_amplitude: 1.5,
-            ..Default::default()
-        };
+        let config = SimulationConfig { seasonal_amplitude: 1.5, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("seasonal_amplitude must be between 0.0 and 1.0"));
+        assert!(err.to_string().contains("seasonal_amplitude must be between 0.0 and 1.0"));
 
-        let config2 = SimulationConfig {
-            seasonal_amplitude: -0.1,
-            ..Default::default()
-        };
+        let config2 = SimulationConfig { seasonal_amplitude: -0.1, ..Default::default() };
         assert!(config2.validate().is_err());
     }
 
     #[test]
     fn test_validate_zero_seasonal_period() {
-        let config = SimulationConfig {
-            seasonal_period: 0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { seasonal_period: 0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("seasonal_period must be greater than 0"));
+        assert!(err.to_string().contains("seasonal_period must be greater than 0"));
     }
 
     #[test]
     fn test_validate_extreme_max_steps() {
-        let config = SimulationConfig {
-            max_steps: 2_000_000,
-            ..Default::default()
-        };
+        let config = SimulationConfig { max_steps: 2_000_000, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
         assert!(err.to_string().contains("max_steps is too large"));
@@ -2697,10 +2618,7 @@ scenario: Original
 
     #[test]
     fn test_validate_extreme_entity_count() {
-        let config = SimulationConfig {
-            entity_count: 200_000,
-            ..Default::default()
-        };
+        let config = SimulationConfig { entity_count: 200_000, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
         assert!(err.to_string().contains("entity_count is too large"));
@@ -2711,72 +2629,44 @@ scenario: Original
         // Test that boundary values are accepted
 
         // Max valid tech growth rate
-        let config1 = SimulationConfig {
-            tech_growth_rate: 1.0,
-            ..Default::default()
-        };
+        let config1 = SimulationConfig { tech_growth_rate: 1.0, ..Default::default() };
         assert!(config1.validate().is_ok());
 
         // Max valid seasonal amplitude
-        let config2 = SimulationConfig {
-            seasonal_amplitude: 1.0,
-            ..Default::default()
-        };
+        let config2 = SimulationConfig { seasonal_amplitude: 1.0, ..Default::default() };
         assert!(config2.validate().is_ok());
 
         // Min valid seasonal amplitude
-        let config3 = SimulationConfig {
-            seasonal_amplitude: 0.0,
-            ..Default::default()
-        };
+        let config3 = SimulationConfig { seasonal_amplitude: 0.0, ..Default::default() };
         assert!(config3.validate().is_ok());
 
         // Zero initial money (allowed - represents starting with no money)
-        let config4 = SimulationConfig {
-            initial_money_per_person: 0.0,
-            ..Default::default()
-        };
+        let config4 = SimulationConfig { initial_money_per_person: 0.0, ..Default::default() };
         assert!(config4.validate().is_ok());
 
         // Single person
-        let config5 = SimulationConfig {
-            entity_count: 1,
-            ..Default::default()
-        };
+        let config5 = SimulationConfig { entity_count: 1, ..Default::default() };
         assert!(config5.validate().is_ok());
 
         // Single step
-        let config6 = SimulationConfig {
-            max_steps: 1,
-            ..Default::default()
-        };
+        let config6 = SimulationConfig { max_steps: 1, ..Default::default() };
         assert!(config6.validate().is_ok());
     }
 
     #[test]
     fn test_validate_min_skill_price_zero() {
-        let config = SimulationConfig {
-            min_skill_price: 0.0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { min_skill_price: 0.0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("min_skill_price must be greater than 0"));
+        assert!(err.to_string().contains("min_skill_price must be greater than 0"));
     }
 
     #[test]
     fn test_validate_min_skill_price_negative() {
-        let config = SimulationConfig {
-            min_skill_price: -5.0,
-            ..Default::default()
-        };
+        let config = SimulationConfig { min_skill_price: -5.0, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("min_skill_price must be greater than 0"));
+        assert!(err.to_string().contains("min_skill_price must be greater than 0"));
     }
 
     #[test]
@@ -2805,38 +2695,25 @@ scenario: Original
 
     #[test]
     fn test_validate_min_skill_price_valid() {
-        let config = SimulationConfig {
-            base_skill_price: 10.0,
-            min_skill_price: 5.0,
-            ..Default::default()
-        };
+        let config =
+            SimulationConfig { base_skill_price: 10.0, min_skill_price: 5.0, ..Default::default() };
         assert!(config.validate().is_ok());
     }
 
     #[test]
     fn test_validate_price_elasticity_negative() {
-        let config = SimulationConfig {
-            price_elasticity_factor: -0.1,
-            ..Default::default()
-        };
+        let config = SimulationConfig { price_elasticity_factor: -0.1, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("price_elasticity_factor must be non-negative"));
+        assert!(err.to_string().contains("price_elasticity_factor must be non-negative"));
     }
 
     #[test]
     fn test_validate_price_elasticity_too_high() {
-        let config = SimulationConfig {
-            price_elasticity_factor: 1.5,
-            ..Default::default()
-        };
+        let config = SimulationConfig { price_elasticity_factor: 1.5, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("price_elasticity_factor should not exceed 1.0"));
+        assert!(err.to_string().contains("price_elasticity_factor should not exceed 1.0"));
     }
 
     #[test]
@@ -2844,42 +2721,25 @@ scenario: Original
         // Test various valid values
         let test_values = vec![0.0, 0.05, 0.1, 0.2, 0.5, 1.0];
         for value in test_values {
-            let config = SimulationConfig {
-                price_elasticity_factor: value,
-                ..Default::default()
-            };
-            assert!(
-                config.validate().is_ok(),
-                "Failed for elasticity value: {}",
-                value
-            );
+            let config = SimulationConfig { price_elasticity_factor: value, ..Default::default() };
+            assert!(config.validate().is_ok(), "Failed for elasticity value: {}", value);
         }
     }
 
     #[test]
     fn test_validate_volatility_negative() {
-        let config = SimulationConfig {
-            volatility_percentage: -0.01,
-            ..Default::default()
-        };
+        let config = SimulationConfig { volatility_percentage: -0.01, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("volatility_percentage must be non-negative"));
+        assert!(err.to_string().contains("volatility_percentage must be non-negative"));
     }
 
     #[test]
     fn test_validate_volatility_too_high() {
-        let config = SimulationConfig {
-            volatility_percentage: 0.6,
-            ..Default::default()
-        };
+        let config = SimulationConfig { volatility_percentage: 0.6, ..Default::default() };
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
-        assert!(err
-            .to_string()
-            .contains("volatility_percentage should not exceed 0.5"));
+        assert!(err.to_string().contains("volatility_percentage should not exceed 0.5"));
     }
 
     #[test]
@@ -2887,15 +2747,8 @@ scenario: Original
         // Test various valid values
         let test_values = vec![0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5];
         for value in test_values {
-            let config = SimulationConfig {
-                volatility_percentage: value,
-                ..Default::default()
-            };
-            assert!(
-                config.validate().is_ok(),
-                "Failed for volatility value: {}",
-                value
-            );
+            let config = SimulationConfig { volatility_percentage: value, ..Default::default() };
+            assert!(config.validate().is_ok(), "Failed for volatility value: {}", value);
         }
     }
 

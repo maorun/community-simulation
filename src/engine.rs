@@ -251,11 +251,8 @@ impl SimulationEngine {
         if !config.per_skill_price_limits.is_empty() {
             // Create mapping from skill name to skill ID (they're both Strings, so this is an identity mapping)
             // We do this upfront to avoid borrowing issues when setting limits
-            let skill_name_to_id: HashMap<String, SkillId> = market
-                .skills
-                .iter()
-                .map(|(id, skill)| (skill.id.clone(), id.clone()))
-                .collect();
+            let skill_name_to_id: HashMap<String, SkillId> =
+                market.skills.iter().map(|(id, skill)| (skill.id.clone(), id.clone())).collect();
 
             for (skill_name, (min_price, max_price)) in &config.per_skill_price_limits {
                 if let Some(skill_id) = skill_name_to_id.get(skill_name) {
@@ -308,7 +305,7 @@ impl SimulationEngine {
                         e
                     );
                     None
-                }
+                },
             }
         } else {
             None
@@ -338,7 +335,7 @@ impl SimulationEngine {
                         _ => {
                             warn!("Unknown resource type: {}, ignoring", resource_name);
                             continue;
-                        }
+                        },
                     };
                 }
                 Environment::new(reserves)
@@ -353,10 +350,7 @@ impl SimulationEngine {
 
         // Initialize voting system if enabled
         let voting_system = if config.enable_voting {
-            debug!(
-                "Voting system initialized with method: {:?}",
-                config.voting_method
-            );
+            debug!("Voting system initialized with method: {:?}", config.voting_method);
             Some(crate::voting::VotingSystem::new(config.voting_method))
         } else {
             None
@@ -534,18 +528,13 @@ impl SimulationEngine {
     pub fn save_action_log<P: AsRef<std::path::Path>>(&self, path: P) -> crate::error::Result<()> {
         if let Some(ref log) = self.action_log {
             log.save_to_file(path)?;
-            info!(
-                "Action log saved successfully ({} actions recorded)",
-                log.len()
-            );
+            info!("Action log saved successfully ({} actions recorded)", log.len());
             Ok(())
         } else {
-            Err(crate::error::SimulationError::ActionLogWrite(
-                std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "Action recording is not enabled",
-                ),
-            ))
+            Err(crate::error::SimulationError::ActionLogWrite(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Action recording is not enabled",
+            )))
         }
     }
 
@@ -596,13 +585,8 @@ impl SimulationEngine {
                 rng.random_range(0.0..=100.0),
             );
 
-            let mut entity = Entity::new(
-                i,
-                config.initial_money_per_person,
-                person_skills,
-                strategy,
-                location,
-            );
+            let mut entity =
+                Entity::new(i, config.initial_money_per_person, person_skills, strategy, location);
 
             // Assign specialization strategy if enabled
             if config.enable_specialization {
@@ -750,7 +734,7 @@ impl SimulationEngine {
                         skill.current_price = skill.current_price.max(self.config.min_skill_price);
                     }
                 }
-            }
+            },
             CrisisEvent::DemandShock => {
                 // Reduce demand by removing some needed skills from entities
                 debug!("Applying demand shock: reducing skill demand");
@@ -768,7 +752,7 @@ impl SimulationEngine {
                         entity.person_data.needed_skills.truncate(keep_count.max(0));
                     }
                 }
-            }
+            },
             CrisisEvent::SupplyShock => {
                 // Temporarily reduce supply (simulated by temporarily disabling some entities)
                 // For simplicity, we'll just log this - in a more complex implementation,
@@ -782,7 +766,7 @@ impl SimulationEngine {
                     *count = ((old_supply as f64) * reduction_factor) as usize;
                     debug!("  Supply reduced from {} to {}", old_supply, *count);
                 }
-            }
+            },
             CrisisEvent::CurrencyDevaluation => {
                 // Reduce everyone's money holdings
                 debug!("Applying currency devaluation: reducing all money holdings");
@@ -807,7 +791,7 @@ impl SimulationEngine {
                         entity.id, old_money, entity.person_data.money
                     );
                 }
-            }
+            },
             CrisisEvent::TechnologyShock => {
                 // Technology shock: randomly select subset of skills to become obsolete
                 debug!("Applying technology shock: making skills obsolete");
@@ -872,7 +856,7 @@ impl SimulationEngine {
                     affected_skills.len(),
                     total_skills
                 );
-            }
+            },
         }
 
         // Process insurance payouts for crisis events
@@ -894,21 +878,14 @@ impl SimulationEngine {
         let start_time = Instant::now();
         let mut step_times = Vec::new();
 
-        info!(
-            "Starting economic simulation with {} persons",
-            self.entities.len()
-        );
+        info!("Starting economic simulation with {} persons", self.entities.len());
         debug!(
             "Simulation configuration: max_steps={}, scenario={:?}",
             self.config.max_steps, self.config.scenario
         );
 
         // Create plugin context for simulation start
-        let persons: Vec<_> = self
-            .entities
-            .iter()
-            .map(|e| e.person_data.clone())
-            .collect();
+        let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
         let start_context = PluginContext {
             config: &self.config,
             current_step: 0,
@@ -950,11 +927,7 @@ impl SimulationEngine {
             let step_start = Instant::now();
 
             // Create plugin context and notify plugins before step starts
-            let persons: Vec<_> = self
-                .entities
-                .iter()
-                .map(|e| e.person_data.clone())
-                .collect();
+            let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
             let step_context = PluginContext {
                 config: &self.config,
                 current_step: self.current_step,
@@ -1007,11 +980,7 @@ impl SimulationEngine {
             step_times.push(step_duration.as_secs_f64());
 
             // Notify plugins after step completes
-            let persons: Vec<_> = self
-                .entities
-                .iter()
-                .map(|e| e.person_data.clone())
-                .collect();
+            let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
             let step_end_context = PluginContext {
                 config: &self.config,
                 current_step: self.current_step,
@@ -1033,10 +1002,7 @@ impl SimulationEngine {
                     .unwrap_or_else(|| "checkpoint.json".to_string());
 
                 if let Err(e) = self.save_checkpoint(&checkpoint_path) {
-                    warn!(
-                        "Failed to save checkpoint at step {}: {}",
-                        self.current_step, e
-                    );
+                    warn!("Failed to save checkpoint at step {}: {}", self.current_step, e);
                 } else {
                     debug!("Auto-checkpoint saved at step {}", self.current_step);
                 }
@@ -1082,12 +1048,8 @@ impl SimulationEngine {
 
         let total_duration = start_time.elapsed();
 
-        let mut final_money_distribution: Vec<f64> = self
-            .entities
-            .iter()
-            .filter(|e| e.active)
-            .map(|e| e.person_data.money)
-            .collect();
+        let mut final_money_distribution: Vec<f64> =
+            self.entities.iter().filter(|e| e.active).map(|e| e.person_data.money).collect();
         final_money_distribution
             .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
@@ -1206,11 +1168,8 @@ impl SimulationEngine {
             .map(|(id, price)| crate::result::SkillPriceInfo { id, price })
             .collect();
 
-        final_skill_prices_vec.sort_by(|a, b| {
-            b.price
-                .partial_cmp(&a.price)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        final_skill_prices_vec
+            .sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
 
         let most_valuable_skill = final_skill_prices_vec.first().cloned();
         let least_valuable_skill = final_skill_prices_vec.last().cloned();
@@ -1317,12 +1276,9 @@ impl SimulationEngine {
                 .collect::<std::collections::HashSet<_>>()
                 .len();
 
-            let average_efficiency_boost = self
-                .technology_breakthroughs
-                .iter()
-                .map(|b| b.efficiency_boost)
-                .sum::<f64>()
-                / total_breakthroughs as f64;
+            let average_efficiency_boost =
+                self.technology_breakthroughs.iter().map(|b| b.efficiency_boost).sum::<f64>()
+                    / total_breakthroughs as f64;
 
             let min_efficiency_boost = self
                 .technology_breakthroughs
@@ -1406,9 +1362,7 @@ impl SimulationEngine {
 
         // Sort by total volume (highest first)
         per_skill_trade_stats.sort_by(|a, b| {
-            b.total_volume
-                .partial_cmp(&a.total_volume)
-                .unwrap_or(std::cmp::Ordering::Equal)
+            b.total_volume.partial_cmp(&a.total_volume).unwrap_or(std::cmp::Ordering::Equal)
         });
 
         // Calculate market concentration metrics for each skill
@@ -1528,27 +1482,18 @@ impl SimulationEngine {
             contract_statistics: if self.config.enable_contracts {
                 let active_contracts = self.contracts.values().filter(|c| c.is_active()).count();
 
-                let completed_contracts: Vec<_> = self
-                    .contracts
-                    .values()
-                    .filter(|c| c.remaining_steps == 0)
-                    .collect();
+                let completed_contracts: Vec<_> =
+                    self.contracts.values().filter(|c| c.remaining_steps == 0).collect();
 
                 let avg_contract_duration = if !completed_contracts.is_empty() {
-                    completed_contracts
-                        .iter()
-                        .map(|c| c.duration as f64)
-                        .sum::<f64>()
+                    completed_contracts.iter().map(|c| c.duration as f64).sum::<f64>()
                         / completed_contracts.len() as f64
                 } else {
                     0.0
                 };
 
-                let total_contract_value: f64 = self
-                    .contracts
-                    .values()
-                    .map(|c| c.total_value_exchanged())
-                    .sum();
+                let total_contract_value: f64 =
+                    self.contracts.values().map(|c| c.total_value_exchanged()).sum();
 
                 Some(crate::result::ContractStats {
                     total_contracts_created: self.total_contracts_created,
@@ -1659,10 +1604,7 @@ impl SimulationEngine {
                     let remaining_reserves: HashMap<String, f64> = Resource::all()
                         .iter()
                         .map(|resource| {
-                            (
-                                resource.name().to_string(),
-                                environment.remaining_reserves(*resource),
-                            )
+                            (resource.name().to_string(), environment.remaining_reserves(*resource))
                         })
                         .collect();
 
@@ -1753,48 +1695,30 @@ impl SimulationEngine {
                 .map(|trust_network| trust_network.get_statistics()),
             trade_agreement_statistics: if self.config.enable_trade_agreements {
                 // Calculate trade agreement statistics
-                let active_agreements = self
-                    .trade_agreements
-                    .iter()
-                    .filter(|a| a.is_active(self.current_step))
-                    .count();
+                let active_agreements =
+                    self.trade_agreements.iter().filter(|a| a.is_active(self.current_step)).count();
 
                 let total_agreement_trades: usize =
                     self.trade_agreements.iter().map(|a| a.trade_count).sum();
 
-                let total_agreement_trade_value: f64 = self
-                    .trade_agreements
-                    .iter()
-                    .map(|a| a.total_trade_value)
-                    .sum();
+                let total_agreement_trade_value: f64 =
+                    self.trade_agreements.iter().map(|a| a.total_trade_value).sum();
 
-                let bilateral_agreements = self
-                    .trade_agreements
-                    .iter()
-                    .filter(|a| a.partner_count() == 2)
-                    .count();
+                let bilateral_agreements =
+                    self.trade_agreements.iter().filter(|a| a.partner_count() == 2).count();
 
-                let multilateral_agreements = self
-                    .trade_agreements
-                    .iter()
-                    .filter(|a| a.partner_count() > 2)
-                    .count();
+                let multilateral_agreements =
+                    self.trade_agreements.iter().filter(|a| a.partner_count() > 2).count();
 
                 let average_discount_rate = if !self.trade_agreements.is_empty() {
-                    self.trade_agreements
-                        .iter()
-                        .map(|a| a.discount_rate)
-                        .sum::<f64>()
+                    self.trade_agreements.iter().map(|a| a.discount_rate).sum::<f64>()
                         / self.trade_agreements.len() as f64
                 } else {
                     0.0
                 };
 
                 let average_duration = if !self.trade_agreements.is_empty() {
-                    self.trade_agreements
-                        .iter()
-                        .map(|a| a.duration)
-                        .sum::<usize>() as f64
+                    self.trade_agreements.iter().map(|a| a.duration).sum::<usize>() as f64
                         / self.trade_agreements.len() as f64
                 } else {
                     0.0
@@ -1846,10 +1770,7 @@ impl SimulationEngine {
                             0.0
                         };
                         let avg_reputation: f64 = if member_count > 0 {
-                            members
-                                .iter()
-                                .map(|e| e.person_data.reputation)
-                                .sum::<f64>()
+                            members.iter().map(|e| e.person_data.reputation).sum::<f64>()
                                 / member_count as f64
                         } else {
                             0.0
@@ -2083,19 +2004,14 @@ impl SimulationEngine {
         };
 
         // Notify plugins that simulation has ended, allowing them to modify the result
-        let persons: Vec<_> = self
-            .entities
-            .iter()
-            .map(|e| e.person_data.clone())
-            .collect();
+        let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
         let end_context = PluginContext {
             config: &self.config,
             current_step: self.current_step,
             total_steps: self.config.max_steps,
             persons: &persons,
         };
-        self.plugin_registry
-            .on_simulation_end(&end_context, &mut result);
+        self.plugin_registry.on_simulation_end(&end_context, &mut result);
 
         result
     }
@@ -2144,10 +2060,8 @@ impl SimulationEngine {
                 .collect();
 
             // Find recipes that can be crafted with available skills
-            let craftable_recipes: Vec<&crate::production::Recipe> = recipes
-                .iter()
-                .filter(|recipe| recipe.can_craft(&available_skill_ids))
-                .collect();
+            let craftable_recipes: Vec<&crate::production::Recipe> =
+                recipes.iter().filter(|recipe| recipe.can_craft(&available_skill_ids)).collect();
 
             if craftable_recipes.is_empty() {
                 continue;
@@ -2156,10 +2070,7 @@ impl SimulationEngine {
             // Pick a random craftable recipe
             if let Some(recipe) = craftable_recipes.choose(&mut self.rng) {
                 // Check if person already has the output skill
-                if self.entities[idx]
-                    .person_data
-                    .has_skill(&recipe.output_skill)
-                {
+                if self.entities[idx].person_data.has_skill(&recipe.output_skill) {
                     continue;
                 }
 
@@ -2192,16 +2103,11 @@ impl SimulationEngine {
                 let new_skill = Skill::new(recipe.output_skill.clone(), output_price);
 
                 // Add skill to person's learned skills
-                self.entities[idx]
-                    .person_data
-                    .learned_skills
-                    .push(new_skill.clone());
+                self.entities[idx].person_data.learned_skills.push(new_skill.clone());
 
                 // Add skill to market if it doesn't exist yet
                 if !self.market.skills.contains_key(&new_skill.id) {
-                    self.market
-                        .skills
-                        .insert(new_skill.id.clone(), new_skill.clone());
+                    self.market.skills.insert(new_skill.id.clone(), new_skill.clone());
                     self.all_skill_ids.push(new_skill.id.clone());
 
                     // Also add to black market if enabled
@@ -2300,13 +2206,10 @@ impl SimulationEngine {
                         .any(|item| item.id == needed_skill_id)
                     {
                         let urgency = self.rng.random_range(1..=3);
-                        entity
-                            .person_data
-                            .needed_skills
-                            .push(crate::person::NeededSkillItem {
-                                id: needed_skill_id.clone(),
-                                urgency,
-                            });
+                        entity.person_data.needed_skills.push(crate::person::NeededSkillItem {
+                            id: needed_skill_id.clone(),
+                            urgency,
+                        });
                         self.market.increment_demand(&needed_skill_id);
                     }
                 } else {
@@ -2485,10 +2388,8 @@ impl SimulationEngine {
                         reputation_score
                     );
 
-                    purchase_options.push(PurchaseOption {
-                        needed_item: needed_item.clone(),
-                        priority_score,
-                    });
+                    purchase_options
+                        .push(PurchaseOption { needed_item: needed_item.clone(), priority_score });
                 }
             }
 
@@ -2528,9 +2429,8 @@ impl SimulationEngine {
 
                     // Apply reputation-based price multiplier for the seller
                     let mut final_price = if let Some(seller_id) = seller_id_opt {
-                        let seller_reputation_multiplier = self.entities[seller_id]
-                            .person_data
-                            .reputation_price_multiplier();
+                        let seller_reputation_multiplier =
+                            self.entities[seller_id].person_data.reputation_price_multiplier();
                         efficiency_adjusted_price * seller_reputation_multiplier
                     } else {
                         efficiency_adjusted_price
@@ -2542,9 +2442,7 @@ impl SimulationEngine {
                             let buyer_person_id = self.entities[buyer_idx].id;
                             let seller_person_id = self.entities[seller_id].id;
 
-                            if self.entities[buyer_idx]
-                                .person_data
-                                .is_friend_with(seller_person_id)
+                            if self.entities[buyer_idx].person_data.is_friend_with(seller_person_id)
                             {
                                 // Direct friendship discount
                                 let friendship_multiplier = 1.0 - self.config.friendship_discount;
@@ -2588,10 +2486,8 @@ impl SimulationEngine {
                             let seller_person_id = self.entities[seller_id].id;
 
                             // Check if there's an active agreement between buyer and seller
-                            let buyer_agreements = self.entities[buyer_idx]
-                                .person_data
-                                .trade_agreement_ids
-                                .clone();
+                            let buyer_agreements =
+                                self.entities[buyer_idx].person_data.trade_agreement_ids.clone();
 
                             for agreement_id in buyer_agreements {
                                 if let Some(agreement) = self.trade_agreements.iter().find(|a| {
@@ -2708,10 +2604,7 @@ impl SimulationEngine {
                         }
                     }
 
-                    if self.entities[buyer_idx]
-                        .person_data
-                        .can_afford_with_strategy(final_price)
-                    {
+                    if self.entities[buyer_idx].person_data.can_afford_with_strategy(final_price) {
                         if let Some(seller_id) = seller_id_opt {
                             let seller_idx = seller_id;
 
@@ -2790,8 +2683,7 @@ impl SimulationEngine {
         let step_taxes_collected_start = self.total_taxes_collected;
 
         // Track failed trade attempts for this step
-        self.failed_attempts_per_step
-            .push(failed_attempts_this_step);
+        self.failed_attempts_per_step.push(failed_attempts_this_step);
 
         // Determine which trades go to black market (if enabled)
         let mut black_market_trade_indices: Vec<usize> = Vec::new();
@@ -2806,10 +2698,8 @@ impl SimulationEngine {
                 // Randomly select trades to route to black market
                 let mut all_indices: Vec<usize> = (0..trades_to_execute.len()).collect();
                 all_indices.shuffle(&mut self.rng);
-                black_market_trade_indices = all_indices
-                    .into_iter()
-                    .take(num_black_market_trades)
-                    .collect();
+                black_market_trade_indices =
+                    all_indices.into_iter().take(num_black_market_trades).collect();
 
                 debug!(
                     "Routing {} out of {} trades to black market ({}% participation rate)",
@@ -2850,8 +2740,7 @@ impl SimulationEngine {
         // Common post-trade processing continues below...
         self.trades_per_step.push(trades_count);
         self.volume_per_step.push(total_volume);
-        self.black_market_trades_per_step
-            .push(black_market_trade_indices.len());
+        self.black_market_trades_per_step.push(black_market_trade_indices.len());
         self.black_market_volume_per_step.push(black_market_volume);
 
         // Apply reputation decay for all active entities
@@ -3060,9 +2949,7 @@ impl SimulationEngine {
                         };
 
                     // Attempt to learn the skill
-                    if self.entities[i]
-                        .person_data
-                        .learn_skill(skill_to_learn.clone(), final_cost)
+                    if self.entities[i].person_data.learn_skill(skill_to_learn.clone(), final_cost)
                     {
                         if let Some(mid) = mentor_id {
                             // Successful mentored learning
@@ -3290,10 +3177,7 @@ impl SimulationEngine {
         // Attempt production - persons combine skills to create new ones
         if self.config.enable_production {
             let _productions_count = self.attempt_production();
-            debug!(
-                "Production: {} persons successfully produced new skills",
-                _productions_count
-            );
+            debug!("Production: {} persons successfully produced new skills", _productions_count);
         }
 
         // Tax redistribution - distribute collected taxes equally among all persons
@@ -3327,12 +3211,8 @@ impl SimulationEngine {
             use crate::result::SkillPriceInfo;
 
             // Calculate current step statistics
-            let money_values: Vec<f64> = self
-                .entities
-                .iter()
-                .filter(|e| e.active)
-                .map(|e| e.person_data.money)
-                .collect();
+            let money_values: Vec<f64> =
+                self.entities.iter().filter(|e| e.active).map(|e| e.person_data.money).collect();
 
             let avg_money = if !money_values.is_empty() {
                 money_values.iter().sum::<f64>() / money_values.len() as f64
@@ -3363,16 +3243,10 @@ impl SimulationEngine {
                 .market
                 .skills
                 .iter()
-                .map(|(id, skill)| SkillPriceInfo {
-                    id: id.clone(),
-                    price: skill.current_price,
-                })
+                .map(|(id, skill)| SkillPriceInfo { id: id.clone(), price: skill.current_price })
                 .collect();
-            skill_prices.sort_by(|a, b| {
-                b.price
-                    .partial_cmp(&a.price)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            });
+            skill_prices
+                .sort_by(|a, b| b.price.partial_cmp(&a.price).unwrap_or(std::cmp::Ordering::Equal));
             skill_prices.truncate(5);
 
             let step_data = StepData {
@@ -3387,21 +3261,14 @@ impl SimulationEngine {
 
             // Write to stream, but don't fail the simulation if streaming fails
             if let Err(e) = write_step_to_stream(writer, &step_data) {
-                warn!(
-                    "Failed to write step {} to streaming output: {}",
-                    self.current_step, e
-                );
+                warn!("Failed to write step {} to streaming output: {}", self.current_step, e);
             }
         }
 
         // Collect wealth distribution statistics for this step
         // This enables time-series analysis of how wealth inequality evolves
-        let money_values: Vec<f64> = self
-            .entities
-            .iter()
-            .filter(|e| e.active)
-            .map(|e| e.person_data.money)
-            .collect();
+        let money_values: Vec<f64> =
+            self.entities.iter().filter(|e| e.active).map(|e| e.person_data.money).collect();
 
         if !money_values.is_empty() {
             let mut sorted_money = money_values.clone();
@@ -3467,10 +3334,7 @@ impl SimulationEngine {
                 // This ensures more balanced quintiles when total_persons is not divisible by 5
                 let quintile = ((sorted_position * 5) / total_persons).min(4);
 
-                self.mobility_quintiles
-                    .entry(*entity_idx)
-                    .or_default()
-                    .push(quintile);
+                self.mobility_quintiles.entry(*entity_idx).or_default().push(quintile);
             }
         }
 
@@ -3584,9 +3448,7 @@ impl SimulationEngine {
         );
         // Increase buyer reputation for completing a purchase
         let buyer_rep_before = self.entities[buyer_idx].person_data.reputation;
-        self.entities[buyer_idx]
-            .person_data
-            .increase_reputation_as_buyer();
+        self.entities[buyer_idx].person_data.increase_reputation_as_buyer();
         debug!(
             "Person {} reputation increased as buyer: {:.3} -> {:.3}",
             buyer_entity_id, buyer_rep_before, self.entities[buyer_idx].person_data.reputation
@@ -3600,10 +3462,7 @@ impl SimulationEngine {
         );
         // Track successful trade for adaptive strategies
         if self.config.enable_adaptive_strategies {
-            self.entities[buyer_idx]
-                .person_data
-                .strategy_params
-                .record_successful_buy();
+            self.entities[buyer_idx].person_data.strategy_params.record_successful_buy();
         }
 
         // Seller receives price minus fee
@@ -3643,9 +3502,7 @@ impl SimulationEngine {
         );
         // Increase seller reputation for completing a sale
         let seller_rep_before = self.entities[seller_idx].person_data.reputation;
-        self.entities[seller_idx]
-            .person_data
-            .increase_reputation_as_seller();
+        self.entities[seller_idx].person_data.increase_reputation_as_seller();
         debug!(
             "Person {} reputation increased as seller: {:.3} -> {:.3}",
             seller_entity_id, seller_rep_before, self.entities[seller_idx].person_data.reputation
@@ -3659,10 +3516,7 @@ impl SimulationEngine {
         );
         // Track successful trade for adaptive strategies
         if self.config.enable_adaptive_strategies {
-            self.entities[seller_idx]
-                .person_data
-                .strategy_params
-                .record_successful_sell();
+            self.entities[seller_idx].person_data.strategy_params.record_successful_sell();
         }
 
         // Emit trade executed event
@@ -3687,10 +3541,8 @@ impl SimulationEngine {
 
         // Improve skill quality for seller (if quality system enabled)
         if self.config.enable_quality {
-            if let Some(current_quality) = self.entities[seller_idx]
-                .person_data
-                .skill_qualities
-                .get_mut(&skill_id)
+            if let Some(current_quality) =
+                self.entities[seller_idx].person_data.skill_qualities.get_mut(&skill_id)
             {
                 let old_quality = *current_quality;
                 // Increase quality by improvement rate, capped at 5.0
@@ -3716,10 +3568,7 @@ impl SimulationEngine {
             let seller_id = self.entities[seller_idx].id;
 
             // Check if they're not already friends
-            if !self.entities[buyer_idx]
-                .person_data
-                .is_friend_with(seller_id)
-            {
+            if !self.entities[buyer_idx].person_data.is_friend_with(seller_id) {
                 // Roll for friendship formation
                 let friendship_roll: f64 = self.rng.random();
                 if friendship_roll < self.config.friendship_probability {
@@ -3771,25 +3620,15 @@ impl SimulationEngine {
         }
 
         // Update per-skill trade statistics
-        let skill_stats = self
-            .per_skill_trades
-            .entry(skill_id.clone())
-            .or_insert((0, 0.0));
+        let skill_stats = self.per_skill_trades.entry(skill_id.clone()).or_insert((0, 0.0));
         skill_stats.0 += 1; // Increment trade count
         skill_stats.1 += price; // Add to total volume
 
         // Track per-seller, per-skill volumes for market concentration analysis
-        let seller_volumes = self
-            .per_skill_seller_volumes
-            .entry(skill_id.clone())
-            .or_default();
+        let seller_volumes = self.per_skill_seller_volumes.entry(skill_id.clone()).or_default();
         *seller_volumes.entry(seller_idx).or_insert(0.0) += price;
 
-        *self
-            .market
-            .sales_this_step
-            .entry(skill_id.clone())
-            .or_insert(0) += 1;
+        *self.market.sales_this_step.entry(skill_id.clone()).or_insert(0) += 1;
     }
 
     /// Update incremental money statistics for efficient retrieval.
@@ -3862,13 +3701,7 @@ impl SimulationEngine {
                 .collect();
 
             // Apply decay to skills that weren't sold
-            for skill_id in entity
-                .person_data
-                .skill_qualities
-                .keys()
-                .cloned()
-                .collect::<Vec<_>>()
-            {
+            for skill_id in entity.person_data.skill_qualities.keys().cloned().collect::<Vec<_>>() {
                 if !sold_skills.contains(&skill_id) {
                     if let Some(quality) = entity.person_data.skill_qualities.get_mut(&skill_id) {
                         let old_quality = *quality;
@@ -3938,10 +3771,7 @@ impl SimulationEngine {
             } else {
                 // Borrower cannot afford the payment - record as missed payment
                 if self.config.enable_credit_rating {
-                    self.entities[borrower_idx]
-                        .person_data
-                        .credit_score
-                        .record_missed_payment();
+                    self.entities[borrower_idx].person_data.credit_score.record_missed_payment();
                     debug!(
                         "Person {} missed loan payment, credit score affected",
                         self.entities[borrower_idx].id
@@ -3967,10 +3797,7 @@ impl SimulationEngine {
                 .person_data
                 .borrowed_loans
                 .retain(|&id| id != loan_id);
-            self.entities[loan.lender_id]
-                .person_data
-                .lent_loans
-                .retain(|&id| id != loan_id);
+            self.entities[loan.lender_id].person_data.lent_loans.retain(|&id| id != loan_id);
 
             self.total_loans_repaid += 1;
         }
@@ -3995,10 +3822,7 @@ impl SimulationEngine {
             }
 
             // Random chance to attempt purchase
-            if !self
-                .rng
-                .random_bool(self.config.insurance_purchase_probability)
-            {
+            if !self.rng.random_bool(self.config.insurance_purchase_probability) {
                 continue;
             }
 
@@ -4007,11 +3831,8 @@ impl SimulationEngine {
                 .iter()
                 .filter(|&&insurance_type| {
                     // Check if person already has this type of active insurance
-                    !self.entities[entity_idx]
-                        .person_data
-                        .insurance_policies
-                        .iter()
-                        .any(|&policy_id| {
+                    !self.entities[entity_idx].person_data.insurance_policies.iter().any(
+                        |&policy_id| {
                             if let Some(policy) = self.insurances.get(&policy_id) {
                                 policy.insurance_type == insurance_type
                                     && policy.is_active
@@ -4019,7 +3840,8 @@ impl SimulationEngine {
                             } else {
                                 false
                             }
-                        })
+                        },
+                    )
                 })
                 .copied()
                 .collect();
@@ -4064,10 +3886,7 @@ impl SimulationEngine {
             self.entities[entity_idx].person_data.money -= premium;
 
             // Track insurance
-            self.entities[entity_idx]
-                .person_data
-                .insurance_policies
-                .push(insurance_id);
+            self.entities[entity_idx].person_data.insurance_policies.push(insurance_id);
             self.insurances.insert(insurance_id, insurance);
 
             // Update statistics
@@ -4308,16 +4127,8 @@ impl SimulationEngine {
             }
 
             // Check if this person has the skill
-            let has_skill = entity
-                .person_data
-                .own_skills
-                .iter()
-                .any(|s| &s.id == skill_id)
-                || entity
-                    .person_data
-                    .learned_skills
-                    .iter()
-                    .any(|s| &s.id == skill_id);
+            let has_skill = entity.person_data.own_skills.iter().any(|s| &s.id == skill_id)
+                || entity.person_data.learned_skills.iter().any(|s| &s.id == skill_id);
 
             if !has_skill {
                 continue;
@@ -4358,10 +4169,8 @@ impl SimulationEngine {
             return None;
         }
 
-        let credit_scores: Vec<u16> = active_persons
-            .iter()
-            .map(|e| e.person_data.credit_score.score)
-            .collect();
+        let credit_scores: Vec<u16> =
+            active_persons.iter().map(|e| e.person_data.credit_score.score).collect();
 
         let mut sorted_scores = credit_scores.clone();
         sorted_scores.sort_unstable();
@@ -4392,18 +4201,9 @@ impl SimulationEngine {
 
         // Count by rating category
         let excellent_count = credit_scores.iter().filter(|&&s| s >= 800).count();
-        let very_good_count = credit_scores
-            .iter()
-            .filter(|&&s| (740..800).contains(&s))
-            .count();
-        let good_count = credit_scores
-            .iter()
-            .filter(|&&s| (670..740).contains(&s))
-            .count();
-        let fair_count = credit_scores
-            .iter()
-            .filter(|&&s| (580..670).contains(&s))
-            .count();
+        let very_good_count = credit_scores.iter().filter(|&&s| (740..800).contains(&s)).count();
+        let good_count = credit_scores.iter().filter(|&&s| (670..740).contains(&s)).count();
+        let fair_count = credit_scores.iter().filter(|&&s| (580..670).contains(&s)).count();
         let poor_count = credit_scores.iter().filter(|&&s| s < 580).count();
 
         // Sum up payment statistics
@@ -4412,10 +4212,8 @@ impl SimulationEngine {
             .map(|e| e.person_data.credit_score.successful_payments)
             .sum();
 
-        let total_missed_payments: usize = active_persons
-            .iter()
-            .map(|e| e.person_data.credit_score.missed_payments)
-            .sum();
+        let total_missed_payments: usize =
+            active_persons.iter().map(|e| e.person_data.credit_score.missed_payments).sum();
 
         Some(crate::result::CreditScoreStats {
             average_score,
@@ -4437,12 +4235,8 @@ impl SimulationEngine {
         if self.entities.is_empty() {
             return 0.0;
         }
-        let total_money: f64 = self
-            .entities
-            .iter()
-            .filter(|e| e.active)
-            .map(|e| e.person_data.money)
-            .sum();
+        let total_money: f64 =
+            self.entities.iter().filter(|e| e.active).map(|e| e.person_data.money).sum();
         let active_count = self.entities.iter().filter(|e| e.active).count();
         if active_count == 0 {
             return 0.0;
@@ -4491,12 +4285,8 @@ impl SimulationEngine {
     /// Note: Some complex statistics are omitted for simplicity
     pub fn get_current_result(&self) -> SimulationResult {
         // Collect money distribution
-        let mut final_money_distribution: Vec<f64> = self
-            .entities
-            .iter()
-            .filter(|e| e.active)
-            .map(|e| e.person_data.money)
-            .collect();
+        let mut final_money_distribution: Vec<f64> =
+            self.entities.iter().filter(|e| e.active).map(|e| e.person_data.money).collect();
         final_money_distribution
             .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
@@ -4614,27 +4404,13 @@ impl SimulationEngine {
 
         let most_valuable_skill = final_skill_prices
             .iter()
-            .max_by(|a, b| {
-                a.price
-                    .partial_cmp(&b.price)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-            .map(|info| crate::result::SkillPriceInfo {
-                id: info.id.clone(),
-                price: info.price,
-            });
+            .max_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|info| crate::result::SkillPriceInfo { id: info.id.clone(), price: info.price });
 
         let least_valuable_skill = final_skill_prices
             .iter()
-            .min_by(|a, b| {
-                a.price
-                    .partial_cmp(&b.price)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })
-            .map(|info| crate::result::SkillPriceInfo {
-                id: info.id.clone(),
-                price: info.price,
-            });
+            .min_by(|a, b| a.price.partial_cmp(&b.price).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|info| crate::result::SkillPriceInfo { id: info.id.clone(), price: info.price });
 
         // Capture metadata for this snapshot result
         let metadata = crate::result::SimulationMetadata::capture(
@@ -4769,11 +4545,7 @@ impl SimulationEngine {
     /// engine.save_checkpoint("checkpoint.json").expect("Failed to save checkpoint");
     /// ```
     pub fn save_checkpoint<P: AsRef<Path>>(&self, path: P) -> std::io::Result<()> {
-        info!(
-            "Saving checkpoint at step {} to {:?}",
-            self.current_step,
-            path.as_ref()
-        );
+        info!("Saving checkpoint at step {} to {:?}", self.current_step, path.as_ref());
 
         let checkpoint = SimulationCheckpoint {
             config: self.config.clone(),
@@ -4875,10 +4647,7 @@ impl SimulationEngine {
         // Reseed RNG based on the checkpoint's current step to ensure reproducibility
         // We combine the original seed with the current step to get a deterministic but
         // step-dependent seed
-        let seed = checkpoint
-            .config
-            .seed
-            .wrapping_add(checkpoint.current_step as u64);
+        let seed = checkpoint.config.seed.wrapping_add(checkpoint.current_step as u64);
         let rng = StdRng::seed_from_u64(seed);
 
         info!(
@@ -4897,7 +4666,7 @@ impl SimulationEngine {
                         e
                     );
                     None
-                }
+                },
             }
         } else {
             None
@@ -4994,16 +4763,9 @@ impl SimulationEngine {
                 self.total_trade_agreements_expired += 1;
                 // Remove agreement IDs from persons
                 for entity in &mut self.entities {
-                    entity
-                        .person_data
-                        .trade_agreement_ids
-                        .retain(|id| *id != agreement.id);
+                    entity.person_data.trade_agreement_ids.retain(|id| *id != agreement.id);
                 }
-                trace!(
-                    "Trade agreement {} expired at step {}",
-                    agreement.id,
-                    self.current_step
-                );
+                trace!("Trade agreement {} expired at step {}", agreement.id, self.current_step);
             }
             active
         });
@@ -5020,12 +4782,8 @@ impl SimulationEngine {
             }
 
             let person_id = self.entities[i].id;
-            let friends: Vec<PersonId> = self.entities[i]
-                .person_data
-                .friends
-                .iter()
-                .copied()
-                .collect();
+            let friends: Vec<PersonId> =
+                self.entities[i].person_data.friends.iter().copied().collect();
 
             // Need at least one friend to form an agreement
             if friends.is_empty() {

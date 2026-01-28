@@ -102,11 +102,8 @@ impl ScenarioComparisonResult {
             .map(|scenario| {
                 info!(
                     "{}",
-                    format!(
-                        "Running {} runs for scenario: {:?}",
-                        runs_per_scenario, scenario
-                    )
-                    .bright_yellow()
+                    format!("Running {} runs for scenario: {:?}", runs_per_scenario, scenario)
+                        .bright_yellow()
                 );
 
                 // Run multiple simulations with different seeds for this scenario
@@ -127,22 +124,16 @@ impl ScenarioComparisonResult {
                     results.iter().map(|r| r.money_statistics.average).collect();
                 let avg_money_stats = calculate_statistics(&avg_money_values);
 
-                let gini_values: Vec<f64> = results
-                    .iter()
-                    .map(|r| r.money_statistics.gini_coefficient)
-                    .collect();
+                let gini_values: Vec<f64> =
+                    results.iter().map(|r| r.money_statistics.gini_coefficient).collect();
                 let gini_coefficient_stats = calculate_statistics(&gini_values);
 
-                let total_trades_values: Vec<f64> = results
-                    .iter()
-                    .map(|r| r.trade_volume_statistics.total_trades as f64)
-                    .collect();
+                let total_trades_values: Vec<f64> =
+                    results.iter().map(|r| r.trade_volume_statistics.total_trades as f64).collect();
                 let total_trades_stats = calculate_statistics(&total_trades_values);
 
-                let avg_reputation_values: Vec<f64> = results
-                    .iter()
-                    .map(|r| r.reputation_statistics.average)
-                    .collect();
+                let avg_reputation_values: Vec<f64> =
+                    results.iter().map(|r| r.reputation_statistics.average).collect();
                 let avg_reputation_stats = calculate_statistics(&avg_reputation_values);
 
                 ScenarioComparisonPoint {
@@ -159,10 +150,7 @@ impl ScenarioComparisonResult {
         // Determine winners based on different criteria
         let winners = Self::determine_winners(&comparison_points);
 
-        info!(
-            "{}",
-            "Scenario comparison completed successfully!".bright_green()
-        );
+        info!("{}", "Scenario comparison completed successfully!".bright_green());
 
         Ok(ScenarioComparisonResult {
             scenarios,
@@ -244,10 +232,7 @@ impl ScenarioComparisonResult {
 
     /// Print a summary of the comparison to the console
     pub fn print_summary(&self) {
-        println!(
-            "\n{}",
-            "=== Scenario Comparison Summary ===".bright_cyan().bold()
-        );
+        println!("\n{}", "=== Scenario Comparison Summary ===".bright_cyan().bold());
         println!(
             "Total simulations: {} ({} scenarios × {} runs)",
             self.total_simulations,
@@ -290,22 +275,10 @@ impl ScenarioComparisonResult {
         }
 
         println!("\n{}", "Winners by Criterion:".bright_magenta().bold());
-        println!(
-            "  Highest Avg Wealth:   {:?}",
-            self.winners.highest_avg_wealth
-        );
-        println!(
-            "  Lowest Inequality:    {:?}",
-            self.winners.lowest_inequality
-        );
-        println!(
-            "  Highest Trade Volume: {:?}",
-            self.winners.highest_trade_volume
-        );
-        println!(
-            "  Highest Reputation:   {:?}",
-            self.winners.highest_reputation
-        );
+        println!("  Highest Avg Wealth:   {:?}", self.winners.highest_avg_wealth);
+        println!("  Lowest Inequality:    {:?}", self.winners.lowest_inequality);
+        println!("  Highest Trade Volume: {:?}", self.winners.highest_trade_volume);
+        println!("  Highest Reputation:   {:?}", self.winners.highest_reputation);
         println!();
     }
 }

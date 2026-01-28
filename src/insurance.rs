@@ -39,11 +39,7 @@ pub enum InsuranceType {
 impl InsuranceType {
     /// Returns all insurance types for iteration
     pub fn all_types() -> [InsuranceType; 3] {
-        [
-            InsuranceType::Credit,
-            InsuranceType::Income,
-            InsuranceType::Crisis,
-        ]
+        [InsuranceType::Credit, InsuranceType::Income, InsuranceType::Crisis]
     }
 
     /// Returns a human-readable name for this insurance type

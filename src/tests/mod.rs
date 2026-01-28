@@ -96,26 +96,17 @@ mod engine_tests {
 
         // At step 0
         let factor_0 = engine.calculate_seasonal_factor(&skill_id);
-        assert!(
-            (0.5..=1.5).contains(&factor_0),
-            "Factor should be in range [0.5, 1.5]"
-        );
+        assert!((0.5..=1.5).contains(&factor_0), "Factor should be in range [0.5, 1.5]");
 
         // Advance to step 25 (quarter cycle)
         engine.current_step = 25;
         let factor_25 = engine.calculate_seasonal_factor(&skill_id);
-        assert!(
-            (0.5..=1.5).contains(&factor_25),
-            "Factor should be in range [0.5, 1.5]"
-        );
+        assert!((0.5..=1.5).contains(&factor_25), "Factor should be in range [0.5, 1.5]");
 
         // Advance to step 50 (half cycle)
         engine.current_step = 50;
         let factor_50 = engine.calculate_seasonal_factor(&skill_id);
-        assert!(
-            (0.5..=1.5).contains(&factor_50),
-            "Factor should be in range [0.5, 1.5]"
-        );
+        assert!((0.5..=1.5).contains(&factor_50), "Factor should be in range [0.5, 1.5]");
 
         // The factors should not all be the same (seasonal variation)
         // Due to phase offset, we can't guarantee specific relationships,
@@ -155,10 +146,7 @@ mod engine_tests {
         let result = engine.run();
 
         // Verify that fees were collected
-        assert!(
-            result.total_fees_collected >= 0.0,
-            "Total fees should be non-negative"
-        );
+        assert!(result.total_fees_collected >= 0.0, "Total fees should be non-negative");
 
         // If there were trades, fees should be positive (10% of total volume)
         if result.trade_volume_statistics.total_trades > 0 {
@@ -226,10 +214,7 @@ mod engine_tests {
 
         // Verify it can be serialized to JSON (would fail if field is missing)
         let json_result = serde_json::to_string(&result);
-        assert!(
-            json_result.is_ok(),
-            "SimulationResult should be serializable to JSON"
-        );
+        assert!(json_result.is_ok(), "SimulationResult should be serializable to JSON");
 
         // Verify failed_steps is in the JSON output
         let json_str = json_result.unwrap();
@@ -261,9 +246,7 @@ mod engine_tests {
         let original_entity_count = engine.get_active_entity_count();
 
         // Save checkpoint
-        engine
-            .save_checkpoint(checkpoint_path)
-            .expect("Failed to save checkpoint");
+        engine.save_checkpoint(checkpoint_path).expect("Failed to save checkpoint");
 
         // Load checkpoint
         let loaded_engine =
@@ -271,10 +254,7 @@ mod engine_tests {
 
         // Verify state was restored correctly
         assert_eq!(loaded_engine.current_step, 5);
-        assert_eq!(
-            loaded_engine.get_active_entity_count(),
-            original_entity_count
-        );
+        assert_eq!(loaded_engine.get_active_entity_count(), original_entity_count);
     }
 
     #[test]
@@ -292,9 +272,7 @@ mod engine_tests {
         for _ in 0..5 {
             engine1.step();
         }
-        engine1
-            .save_checkpoint(checkpoint_path)
-            .expect("Failed to save checkpoint");
+        engine1.save_checkpoint(checkpoint_path).expect("Failed to save checkpoint");
 
         // Load and continue simulation
         let mut engine2 =
@@ -346,10 +324,7 @@ mod engine_tests {
             loaded_engine.current_step >= 3,
             "Checkpoint should have been saved at step 3 or later"
         );
-        assert!(
-            loaded_engine.current_step <= 10,
-            "Checkpoint step should not exceed max_steps"
-        );
+        assert!(loaded_engine.current_step <= 10, "Checkpoint step should not exceed max_steps");
     }
 
     #[test]
@@ -387,29 +362,14 @@ mod engine_tests {
             assert!(json.get("step").is_some(), "Should have 'step' field");
             assert!(json.get("trades").is_some(), "Should have 'trades' field");
             assert!(json.get("volume").is_some(), "Should have 'volume' field");
-            assert!(
-                json.get("avg_money").is_some(),
-                "Should have 'avg_money' field"
-            );
-            assert!(
-                json.get("gini_coefficient").is_some(),
-                "Should have 'gini_coefficient' field"
-            );
-            assert!(
-                json.get("avg_reputation").is_some(),
-                "Should have 'avg_reputation' field"
-            );
-            assert!(
-                json.get("top_skill_prices").is_some(),
-                "Should have 'top_skill_prices' field"
-            );
+            assert!(json.get("avg_money").is_some(), "Should have 'avg_money' field");
+            assert!(json.get("gini_coefficient").is_some(), "Should have 'gini_coefficient' field");
+            assert!(json.get("avg_reputation").is_some(), "Should have 'avg_reputation' field");
+            assert!(json.get("top_skill_prices").is_some(), "Should have 'top_skill_prices' field");
 
             // Verify step number matches line number
             let step = json["step"].as_u64().unwrap();
-            assert_eq!(
-                step as usize, i,
-                "Step number should match line number (0-indexed)"
-            );
+            assert_eq!(step as usize, i, "Step number should match line number (0-indexed)");
         }
     }
 
@@ -432,10 +392,7 @@ mod engine_tests {
         // Verify structure and data consistency
         for skill_stat in &result.per_skill_trade_stats {
             // Check that all fields are valid
-            assert!(
-                !skill_stat.skill_id.is_empty(),
-                "Skill ID should not be empty"
-            );
+            assert!(!skill_stat.skill_id.is_empty(), "Skill ID should not be empty");
             assert!(
                 skill_stat.trade_count > 0,
                 "Trade count should be positive for tracked skills"
@@ -444,10 +401,7 @@ mod engine_tests {
                 skill_stat.total_volume > 0.0,
                 "Total volume should be positive for traded skills"
             );
-            assert!(
-                skill_stat.avg_price > 0.0,
-                "Average price should be positive"
-            );
+            assert!(skill_stat.avg_price > 0.0, "Average price should be positive");
 
             // Verify avg_price calculation is correct
             let calculated_avg = skill_stat.total_volume / (skill_stat.trade_count as f64);
@@ -467,16 +421,10 @@ mod engine_tests {
         }
 
         // Verify sum of per-skill stats matches total trade stats
-        let total_trades_from_skills: usize = result
-            .per_skill_trade_stats
-            .iter()
-            .map(|s| s.trade_count)
-            .sum();
-        let total_volume_from_skills: f64 = result
-            .per_skill_trade_stats
-            .iter()
-            .map(|s| s.total_volume)
-            .sum();
+        let total_trades_from_skills: usize =
+            result.per_skill_trade_stats.iter().map(|s| s.trade_count).sum();
+        let total_volume_from_skills: f64 =
+            result.per_skill_trade_stats.iter().map(|s| s.total_volume).sum();
 
         assert_eq!(
             total_trades_from_skills, result.trade_volume_statistics.total_trades,
@@ -612,40 +560,25 @@ mod engine_tests {
 
         // Test invalid probability (> 1.0)
         config.friendship_probability = 1.5;
-        assert!(
-            config.validate().is_err(),
-            "Should reject friendship_probability > 1.0"
-        );
+        assert!(config.validate().is_err(), "Should reject friendship_probability > 1.0");
 
         // Test invalid probability (< 0.0)
         config.friendship_probability = -0.1;
-        assert!(
-            config.validate().is_err(),
-            "Should reject friendship_probability < 0.0"
-        );
+        assert!(config.validate().is_err(), "Should reject friendship_probability < 0.0");
 
         // Test invalid discount (> 1.0)
         config.friendship_probability = 0.5;
         config.friendship_discount = 1.5;
-        assert!(
-            config.validate().is_err(),
-            "Should reject friendship_discount > 1.0"
-        );
+        assert!(config.validate().is_err(), "Should reject friendship_discount > 1.0");
 
         // Test invalid discount (< 0.0)
         config.friendship_discount = -0.1;
-        assert!(
-            config.validate().is_err(),
-            "Should reject friendship_discount < 0.0"
-        );
+        assert!(config.validate().is_err(), "Should reject friendship_discount < 0.0");
 
         // Test valid parameters
         config.friendship_probability = 0.1;
         config.friendship_discount = 0.1;
-        assert!(
-            config.validate().is_ok(),
-            "Should accept valid friendship parameters"
-        );
+        assert!(config.validate().is_ok(), "Should accept valid friendship parameters");
     }
 
     #[test]
@@ -706,10 +639,7 @@ mod engine_tests {
         let result = engine.run();
 
         // Verify events were collected
-        assert!(
-            result.events.is_some(),
-            "Events should be collected when enabled"
-        );
+        assert!(result.events.is_some(), "Events should be collected when enabled");
         let events = result.events.as_ref().unwrap();
         assert!(!events.is_empty(), "Should have collected some events");
 
@@ -752,10 +682,7 @@ mod engine_tests {
         let result = engine.run();
 
         // Verify events were NOT collected
-        assert!(
-            result.events.is_none(),
-            "Events should not be collected when disabled"
-        );
+        assert!(result.events.is_none(), "Events should not be collected when disabled");
     }
 
     #[test]
@@ -775,10 +702,7 @@ mod engine_tests {
         let money_stats = &result.money_statistics;
 
         // Verify mean is reasonable
-        assert!(
-            money_stats.average.is_finite(),
-            "Average money should be finite"
-        );
+        assert!(money_stats.average.is_finite(), "Average money should be finite");
 
         // Verify std_dev is non-negative and finite
         assert!(
@@ -806,10 +730,7 @@ mod engine_tests {
         );
 
         // Verify Gini coefficient is in valid range [0, infinity)
-        assert!(
-            money_stats.gini_coefficient >= 0.0,
-            "Gini coefficient should be non-negative"
-        );
+        assert!(money_stats.gini_coefficient >= 0.0, "Gini coefficient should be non-negative");
 
         // Run multiple simulations and verify statistics are consistent
         for seed in 100..105 {
@@ -831,18 +752,10 @@ mod engine_tests {
             );
 
             // Standard deviation should be non-negative
-            assert!(
-                stats.std_dev >= 0.0,
-                "Std dev should be non-negative for seed {}",
-                seed
-            );
+            assert!(stats.std_dev >= 0.0, "Std dev should be non-negative for seed {}", seed);
 
             // Min/max should be consistent
-            assert!(
-                stats.min_money <= stats.max_money,
-                "Min <= max should hold for seed {}",
-                seed
-            );
+            assert!(stats.min_money <= stats.max_money, "Min <= max should hold for seed {}", seed);
         }
     }
 
@@ -885,10 +798,7 @@ mod engine_tests {
         // Verify velocity makes economic sense
         // For a typical simulation with active trading, velocity should be > 0
         if result.trade_volume_statistics.total_trades > 0 {
-            assert!(
-                velocity > 0.0,
-                "Velocity should be positive when trades occur"
-            );
+            assert!(velocity > 0.0, "Velocity should be positive when trades occur");
         }
 
         // Test with zero transactions (very short simulation)
@@ -900,10 +810,7 @@ mod engine_tests {
 
         // Velocity should still be a valid number (likely 0 or very low)
         assert!(
-            result_zero
-                .trade_volume_statistics
-                .velocity_of_money
-                .is_finite(),
+            result_zero.trade_volume_statistics.velocity_of_money.is_finite(),
             "Velocity should be finite even with minimal trading"
         );
         assert!(

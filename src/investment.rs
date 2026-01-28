@@ -156,9 +156,7 @@ mod tests {
             0,
             1,
             Some(2),
-            InvestmentType::Education {
-                skill_id: "Programming".to_string(),
-            },
+            InvestmentType::Education { skill_id: "Programming".to_string() },
             100.0,
             0.02,
             10,
@@ -182,9 +180,7 @@ mod tests {
             0,
             1,
             Some(2),
-            InvestmentType::Education {
-                skill_id: "Programming".to_string(),
-            },
+            InvestmentType::Education { skill_id: "Programming".to_string() },
             100.0,
             0.02,
             10,
@@ -205,9 +201,7 @@ mod tests {
             0,
             1,
             Some(2),
-            InvestmentType::Education {
-                skill_id: "Programming".to_string(),
-            },
+            InvestmentType::Education { skill_id: "Programming".to_string() },
             100.0,
             0.02,
             10,
@@ -240,9 +234,7 @@ mod tests {
             0,
             1,
             None,
-            InvestmentType::Production {
-                recipe_name: "AdvancedProduction".to_string(),
-            },
+            InvestmentType::Production { recipe_name: "AdvancedProduction".to_string() },
             100.0,
             0.02,
             10,
@@ -271,9 +263,7 @@ mod tests {
             0,
             1,
             None,
-            InvestmentType::Production {
-                recipe_name: "HighYield".to_string(),
-            },
+            InvestmentType::Production { recipe_name: "HighYield".to_string() },
             100.0,
             0.15, // 15% per step
             10,

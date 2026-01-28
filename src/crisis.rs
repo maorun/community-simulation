@@ -71,7 +71,7 @@ impl CrisisEvent {
             CrisisEvent::CurrencyDevaluation => "Reduction in purchasing power (10-30%)",
             CrisisEvent::TechnologyShock => {
                 "Technological disruption making certain skills obsolete (50-80%)"
-            }
+            },
         }
     }
 
@@ -100,34 +100,34 @@ impl CrisisEvent {
                 let randomness =
                     rng.random_range(STANDARD_RANDOMNESS_MIN..=STANDARD_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
-            }
+            },
             CrisisEvent::DemandShock => {
                 // Demand drop: 30% to 50% reduction, scaled by severity
                 let drop_percentage = 0.30 + (severity * 0.20);
                 let randomness =
                     rng.random_range(STANDARD_RANDOMNESS_MIN..=STANDARD_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
-            }
+            },
             CrisisEvent::SupplyShock => {
                 // Supply drop: 20% to 40% reduction, scaled by severity
                 let drop_percentage = 0.20 + (severity * 0.20);
                 let randomness =
                     rng.random_range(STANDARD_RANDOMNESS_MIN..=STANDARD_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
-            }
+            },
             CrisisEvent::CurrencyDevaluation => {
                 // Money reduction: 10% to 30% reduction, scaled by severity
                 let drop_percentage = 0.10 + (severity * 0.20);
                 let randomness = rng.random_range(MONEY_RANDOMNESS_MIN..=MONEY_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
-            }
+            },
             CrisisEvent::TechnologyShock => {
                 // Technology shock: 50% to 80% price drop for obsolete skills
                 let drop_percentage = 0.50 + (severity * 0.30);
                 let randomness =
                     rng.random_range(STANDARD_RANDOMNESS_MIN..=STANDARD_RANDOMNESS_MAX);
                 base_value * (1.0 - drop_percentage) * randomness
-            }
+            },
         }
     }
 }
@@ -142,10 +142,7 @@ mod tests {
         assert_eq!(CrisisEvent::MarketCrash.name(), "Market Crash");
         assert_eq!(CrisisEvent::DemandShock.name(), "Demand Shock");
         assert_eq!(CrisisEvent::SupplyShock.name(), "Supply Shock");
-        assert_eq!(
-            CrisisEvent::CurrencyDevaluation.name(),
-            "Currency Devaluation"
-        );
+        assert_eq!(CrisisEvent::CurrencyDevaluation.name(), "Currency Devaluation");
         assert_eq!(CrisisEvent::TechnologyShock.name(), "Technology Shock");
     }
 

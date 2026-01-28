@@ -170,6 +170,38 @@ The CI pipeline enforces code quality through:
 
 All PRs must pass these checks before merging, ensuring consistent code style and quality across the project.
 
+### Linting Configuration
+
+The project uses custom linting configurations to maintain high code quality:
+
+**`.clippy.toml`** - Configures Clippy with additional lints:
+- **Complexity Checks**: Functions are checked for cognitive complexity (threshold: 25), excessive arguments (threshold: 7), and excessive lines (threshold: 150)
+- **Type Complexity**: Warns about overly complex type definitions (threshold: 500)
+- **Performance**: Detects large arrays (threshold: 16KB) and enum variants (threshold: 200 bytes) that might impact performance
+- **Style**: Enforces consistent naming conventions and documentation standards
+
+**`.rustfmt.toml`** - Configures code formatting:
+- **Maximum Line Width**: 100 characters
+- **Import Organization**: Automatically reorders imports
+- **Consistent Style**: Enforces use of field init shorthand, try shorthand, and explicit ABI
+- **Code Layout**: Standardizes function call width (80 chars), struct literal width (80 chars), and other formatting rules
+
+To run linting locally:
+```bash
+# Run clippy with project configuration
+cargo clippy --all-targets --all-features -- -D warnings -A deprecated
+
+# Format code with project configuration
+cargo fmt --all
+```
+
+These configurations help identify:
+- Overly complex functions that should be refactored
+- Functions with too many parameters
+- Large data structures that might cause stack overflow
+- Type definitions that are hard to understand
+- Inconsistent code formatting
+
 ## Fuzz Testing
 
 The project includes fuzz testing to find edge cases, crashes, and security vulnerabilities through automated random input generation. Fuzz tests use `cargo-fuzz` and require the Rust nightly toolchain.
@@ -235,12 +267,19 @@ We welcome contributions to the Economic Simulation Framework! Here are some gui
    - Follow Rust naming conventions
    - Add tests for new functionality
    - Update documentation as needed
+   - Keep functions focused and avoid high complexity (cognitive complexity < 25)
+   - Limit function parameters to 7 or fewer when possible
 
 4. **Format and Lint**: Ensure code quality
    ```bash
    cargo fmt --all
    cargo clippy --all-targets --all-features -- -D warnings -A deprecated
    ```
+   The project uses `.clippy.toml` and `.rustfmt.toml` for consistent linting and formatting.
+   Clippy will warn about:
+   - Functions with high cognitive complexity
+   - Functions with too many parameters or lines
+   - Large data structures that might impact performance
 
 5. **Test**: Run all tests to ensure nothing breaks
    ```bash

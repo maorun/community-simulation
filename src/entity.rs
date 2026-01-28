@@ -76,18 +76,9 @@ impl Entity {
         strategy: Strategy,
         location: crate::person::Location,
     ) -> Self {
-        let person = Person::new(
-            id as InnerPersonId,
-            initial_money,
-            own_skills,
-            strategy,
-            location,
-        );
-        Self {
-            id,
-            person_data: person,
-            active: true,
-        }
+        let person =
+            Person::new(id as InnerPersonId, initial_money, own_skills, strategy, location);
+        Self { id, person_data: person, active: true }
     }
 
     /// Gets the current money amount for this entity's person.

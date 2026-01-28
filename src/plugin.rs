@@ -98,9 +98,7 @@ pub struct PluginRegistry {
 impl PluginRegistry {
     /// Creates a new empty plugin registry.
     pub fn new() -> Self {
-        Self {
-            plugins: Vec::new(),
-        }
+        Self { plugins: Vec::new() }
     }
 
     /// Registers a plugin with the registry.
@@ -137,10 +135,7 @@ impl PluginRegistry {
 
     /// Gets a reference to a plugin by name.
     pub fn get(&self, name: &str) -> Option<&dyn Plugin> {
-        self.plugins
-            .iter()
-            .find(|p| p.name() == name)
-            .map(|p| p.as_ref())
+        self.plugins.iter().find(|p| p.name() == name).map(|p| p.as_ref())
     }
 
     /// Gets a mutable reference to a plugin by name.
@@ -278,12 +273,8 @@ mod tests {
             ..Default::default()
         };
 
-        let context = PluginContext {
-            config: &config,
-            current_step: 0,
-            total_steps: 5,
-            persons: &[],
-        };
+        let context =
+            PluginContext { config: &config, current_step: 0, total_steps: 5, persons: &[] };
 
         // Test lifecycle hooks
         registry.on_simulation_start(&context);
