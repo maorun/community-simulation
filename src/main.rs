@@ -1697,11 +1697,14 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             "\n{:>20} {:>10} {:>10} {:>10}",
                             "Skill", "Price", "Supply", "Demand"
                         );
-                        println!("{}", "─".repeat(55));
+                        println!("{}", "─".repeat(54));
 
                         let mut skills: Vec<_> = market.skills.values().collect();
-                        skills
-                            .sort_by(|a, b| b.current_price.partial_cmp(&a.current_price).unwrap());
+                        skills.sort_by(|a, b| {
+                            b.current_price
+                                .partial_cmp(&a.current_price)
+                                .unwrap_or(std::cmp::Ordering::Equal)
+                        });
 
                         for skill in skills.iter().take(20) {
                             let supply = market.supply_counts.get(&skill.id).unwrap_or(&0);
@@ -1721,7 +1724,20 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                     }
                     "find-rich" => {
                         let count: usize = if parts.len() > 1 {
-                            parts[1].parse().unwrap_or(10)
+                            match parts[1].parse() {
+                                Ok(n) => n,
+                                Err(_) => {
+                                    println!(
+                                        "{}",
+                                        format!(
+                                            "Invalid number '{}', using default of 10",
+                                            parts[1]
+                                        )
+                                        .bright_yellow()
+                                    );
+                                    10
+                                }
+                            }
                         } else {
                             10
                         };
@@ -1731,7 +1747,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             b.person_data
                                 .money
                                 .partial_cmp(&a.person_data.money)
-                                .unwrap()
+                                .unwrap_or(std::cmp::Ordering::Equal)
                         });
 
                         println!(
@@ -1739,18 +1755,19 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             format!("=== Top {} Wealthiest Persons ===", count).bright_yellow()
                         );
                         println!(
-                            "{:>5} {:>15} {:>10} {:>10}",
-                            "Rank", "Money", "Savings", "Skills"
+                            "{:>5} {:>5} {:>15} {:>10} {:>10}",
+                            "Rank", "ID", "Money", "Savings", "Skills"
                         );
-                        println!("{}", "─".repeat(45));
+                        println!("{}", "─".repeat(52));
 
                         for (i, entity) in entities.iter().take(count).enumerate() {
                             let person = &entity.person_data;
                             let total_skills =
                                 person.own_skills.len() + person.learned_skills.len();
                             println!(
-                                "{:>5} {:>15.2} {:>10.2} {:>10}",
+                                "{:>5} {:>5} {:>15.2} {:>10.2} {:>10}",
                                 i + 1,
+                                entity.id,
                                 person.money,
                                 person.savings,
                                 total_skills
@@ -1759,7 +1776,20 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                     }
                     "find-poor" => {
                         let count: usize = if parts.len() > 1 {
-                            parts[1].parse().unwrap_or(10)
+                            match parts[1].parse() {
+                                Ok(n) => n,
+                                Err(_) => {
+                                    println!(
+                                        "{}",
+                                        format!(
+                                            "Invalid number '{}', using default of 10",
+                                            parts[1]
+                                        )
+                                        .bright_yellow()
+                                    );
+                                    10
+                                }
+                            }
                         } else {
                             10
                         };
@@ -1769,7 +1799,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             a.person_data
                                 .money
                                 .partial_cmp(&b.person_data.money)
-                                .unwrap()
+                                .unwrap_or(std::cmp::Ordering::Equal)
                         });
 
                         println!(
@@ -1777,18 +1807,19 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             format!("=== Bottom {} Poorest Persons ===", count).bright_yellow()
                         );
                         println!(
-                            "{:>5} {:>15} {:>10} {:>10}",
-                            "Rank", "Money", "Savings", "Skills"
+                            "{:>5} {:>5} {:>15} {:>10} {:>10}",
+                            "Rank", "ID", "Money", "Savings", "Skills"
                         );
-                        println!("{}", "─".repeat(45));
+                        println!("{}", "─".repeat(52));
 
                         for (i, entity) in entities.iter().take(count).enumerate() {
                             let person = &entity.person_data;
                             let total_skills =
                                 person.own_skills.len() + person.learned_skills.len();
                             println!(
-                                "{:>5} {:>15.2} {:>10.2} {:>10}",
+                                "{:>5} {:>5} {:>15.2} {:>10.2} {:>10}",
                                 i + 1,
+                                entity.id,
                                 person.money,
                                 person.savings,
                                 total_skills
@@ -1832,7 +1863,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 .bright_yellow()
                             );
                             println!("{:>5} {:>15} {:>10}", "ID", "Money", "Reputation");
-                            println!("{}", "─".repeat(35));
+                            println!("{}", "─".repeat(33));
 
                             for entity in matching {
                                 let person = &entity.person_data;

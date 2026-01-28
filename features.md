@@ -91,23 +91,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Debugging-Tools
 
-#### 2.1 Simulation-Debugger
-**Beschreibung:** Interaktiver Debugger mit Breakpoints, Step-Execution, State-Inspektion und Time-Travel-Debugging.
-
-**Harmonien:**
-- **Checkpoint-System:** Nutzt Checkpoints für Time-Travel
-- **Interaktiver Modus:** Erweitert REPL mit Debug-Kommandos
-- **Event-System:** Events als Debug-Trail
-- **Logging:** Integration mit strukturiertem Logging
-
-**Nutzen:** Drastisch verbesserte Debugging-Erfahrung, schnellere Bug-Diagnose.
-
-**Implementierung:**
-- Breakpoint-System (Step, Trade, Price-Threshold)
-- State-Inspektion mit Pretty-Printing
-- Time-Travel: Zurückspulen zu früheren Steps via Checkpoints
-- Conditional Breakpoints mit Expression-Evaluator
-
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
 #### 1. Epidemiologie-Integration
@@ -166,8 +149,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 8. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
 9. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
 10. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-11. **Simulation-Debugger** - Nice-to-have für Entwicklung
-12. **Spezielle Anwendungsfälle** - Domänenspezifisch
+11. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 

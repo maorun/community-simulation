@@ -88,6 +88,13 @@ This repository contains a configurable economic simulation written in Rust. It 
   - `status` - Show current step, progress, active persons, and scenario
   - `stats` - Display comprehensive statistics snapshot (money, reputation, savings, trade volume, etc.)
   - `save <path>` - Save current state to checkpoint file
+  - **Debugging Commands** (added for better simulation inspection):
+    - `inspect <id>` - Show detailed state of a specific person (money, skills with quality, reputation, loans, recent transactions)
+    - `persons` / `list-persons` - List all persons with summary info (ID, money, savings, reputation, skills, active status)
+    - `market` - Display current market state (base price, volatility, top 20 skills by price with supply/demand)
+    - `find-rich [N]` - Show top N wealthiest persons (default: 10) with ID for easy inspection
+    - `find-poor [N]` - Show bottom N poorest persons (default: 10) with ID for easy inspection
+    - `filter-by-skill <name>` - List persons with a specific skill (case-insensitive substring match)
   - `help` - Show all available commands
   - `exit`/`quit` - Exit interactive mode
   
