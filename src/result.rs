@@ -2286,8 +2286,9 @@ pub fn calculate_gini_coefficient(sorted_values: &[f64], sum: f64) -> f64 {
 /// // Perfect inequality: one person has everything
 /// let unequal = vec![0.0, 0.0, 0.0, 100.0];
 /// let curve = calculate_lorenz_curve(&unequal, 100.0);
-/// // First 3 points at y=0, last point at y=1.0
+/// // First 3 people have 0% wealth, last person has 100%
 /// assert!((curve[3].1 - 0.0).abs() < 0.001); // 75% of pop has 0% wealth
+/// assert_eq!(curve[4], (1.0, 1.0)); // 100% of pop has 100% wealth
 /// ```
 pub fn calculate_lorenz_curve(sorted_values: &[f64], sum: f64) -> Vec<(f64, f64)> {
     if sorted_values.is_empty() || sum == 0.0 {
