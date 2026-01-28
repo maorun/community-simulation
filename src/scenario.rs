@@ -32,6 +32,55 @@ impl Display for Scenario {
     }
 }
 
+impl Scenario {
+    /// Get all available scenarios
+    pub fn all() -> Vec<Scenario> {
+        vec![
+            Scenario::Original,
+            Scenario::DynamicPricing,
+            Scenario::AdaptivePricing,
+            Scenario::AuctionPricing,
+        ]
+    }
+
+    /// Get a brief description of this scenario
+    pub fn description(&self) -> &str {
+        match self {
+            Scenario::Original => "Supply/demand-based pricing with volatility",
+            Scenario::DynamicPricing => "Sales-based pricing mechanism",
+            Scenario::AdaptivePricing => {
+                "Gradual price adaptation using exponential moving average"
+            }
+            Scenario::AuctionPricing => "Competitive bidding mechanism",
+        }
+    }
+
+    /// Get the mechanism details of this scenario
+    pub fn mechanism(&self) -> &str {
+        match self {
+            Scenario::Original => "Prices adjust based on the ratio of buyers to sellers",
+            Scenario::DynamicPricing => "Prices increase 5% when sold, decrease 5% when not sold",
+            Scenario::AdaptivePricing => "Smooth price adjustments with 20% learning rate",
+            Scenario::AuctionPricing => "Prices increase aggressively when multiple buyers compete",
+        }
+    }
+
+    /// Get the best use case for this scenario
+    pub fn use_case(&self) -> &str {
+        match self {
+            Scenario::Original => "Studying natural market dynamics and equilibrium",
+            Scenario::DynamicPricing => "Studying price discovery and market feedback",
+            Scenario::AdaptivePricing => "Modeling gradual market learning and stability",
+            Scenario::AuctionPricing => "Studying auction dynamics and competitive markets",
+        }
+    }
+
+    /// Check if this is the default scenario
+    pub fn is_default(&self) -> bool {
+        matches!(self, Scenario::Original)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

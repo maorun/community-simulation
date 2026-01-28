@@ -475,25 +475,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.list_scenarios {
         println!("Available pricing scenarios:\n");
 
-        println!("  Original (default)");
-        println!("    Description: Supply/demand-based pricing with volatility");
-        println!("    Mechanism: Prices adjust based on the ratio of buyers to sellers");
-        println!("    Best for: Studying natural market dynamics and equilibrium\n");
-
-        println!("  DynamicPricing");
-        println!("    Description: Sales-based pricing mechanism");
-        println!("    Mechanism: Prices increase 5% when sold, decrease 5% when not sold");
-        println!("    Best for: Studying price discovery and market feedback\n");
-
-        println!("  AdaptivePricing");
-        println!("    Description: Gradual price adaptation using exponential moving average");
-        println!("    Mechanism: Smooth price adjustments with 20% learning rate");
-        println!("    Best for: Modeling gradual market learning and stability\n");
-
-        println!("  AuctionPricing");
-        println!("    Description: Competitive bidding mechanism");
-        println!("    Mechanism: Prices increase aggressively when multiple buyers compete");
-        println!("    Best for: Studying auction dynamics and competitive markets\n");
+        for scenario in Scenario::all() {
+            let default_marker = if scenario.is_default() {
+                " (default)"
+            } else {
+                ""
+            };
+            println!("  {}{}", scenario, default_marker);
+            println!("    Description: {}", scenario.description());
+            println!("    Mechanism: {}", scenario.mechanism());
+            println!("    Best for: {}\n", scenario.use_case());
+        }
 
         println!("Usage: --scenario <SCENARIO>");
         println!(
