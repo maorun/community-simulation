@@ -174,10 +174,7 @@ mod comprehensive_scenarios {
         assert_eq!(result_no_tax.total_steps, 150);
 
         // Verify tax collection and redistribution occurred
-        assert!(
-            result_with_tax.total_taxes_collected.is_some(),
-            "Taxes should be collected"
-        );
+        assert!(result_with_tax.total_taxes_collected.is_some(), "Taxes should be collected");
         assert!(
             result_with_tax.total_taxes_redistributed.is_some(),
             "Taxes should be redistributed"
@@ -208,10 +205,7 @@ mod comprehensive_scenarios {
             gini_with_tax.is_finite(),
             "Gini coefficient should be finite with tax redistribution"
         );
-        assert!(
-            gini_no_tax.is_finite(),
-            "Gini coefficient should be finite without taxes"
-        );
+        assert!(gini_no_tax.is_finite(), "Gini coefficient should be finite without taxes");
 
         // Verify that bottom performers benefited from redistribution
         // by checking that average money is more evenly distributed
@@ -267,23 +261,14 @@ mod comprehensive_scenarios {
         assert!(!result.final_skill_prices.is_empty());
 
         // Verify quality system is active
-        assert!(
-            result.quality_statistics.is_some(),
-            "Quality statistics should be present"
-        );
+        assert!(result.quality_statistics.is_some(), "Quality statistics should be present");
         if let Some(quality_stats) = &result.quality_statistics {
             assert!(
                 quality_stats.average_quality > 0.0 && quality_stats.average_quality <= 5.0,
                 "Average quality should be in valid range [0, 5]"
             );
-            assert!(
-                quality_stats.min_quality >= 0.0,
-                "Min quality should be non-negative"
-            );
-            assert!(
-                quality_stats.max_quality <= 5.0,
-                "Max quality should not exceed 5.0"
-            );
+            assert!(quality_stats.min_quality >= 0.0, "Min quality should be non-negative");
+            assert!(quality_stats.max_quality <= 5.0, "Max quality should not exceed 5.0");
         }
 
         // Verify friendship system is active
@@ -303,10 +288,7 @@ mod comprehensive_scenarios {
         }
 
         // Verify transaction fees were collected
-        assert!(
-            result.total_fees_collected > 0.0,
-            "Transaction fees should be collected"
-        );
+        assert!(result.total_fees_collected > 0.0, "Transaction fees should be collected");
 
         // Verify trading occurred consistently
         assert!(
@@ -315,16 +297,10 @@ mod comprehensive_scenarios {
         );
 
         // Verify price history was tracked
-        assert!(
-            !result.skill_price_history.is_empty(),
-            "Price history should be tracked"
-        );
+        assert!(!result.skill_price_history.is_empty(), "Price history should be tracked");
 
         // Verify wealth distribution metrics
-        assert!(
-            result.money_statistics.average > 0.0,
-            "Average money should be positive"
-        );
+        assert!(result.money_statistics.average > 0.0, "Average money should be positive");
         assert!(
             result.money_statistics.gini_coefficient.is_finite(),
             "Gini coefficient should be finite"
@@ -394,10 +370,7 @@ mod comprehensive_scenarios {
         // Verify education occurred (persons need to learn skills to produce)
         // Note: production_statistics doesn't exist as a separate field
         // Production is part of education system (learning new skills)
-        assert!(
-            result.education_statistics.is_some(),
-            "Education statistics should be present"
-        );
+        assert!(result.education_statistics.is_some(), "Education statistics should be present");
 
         if let Some(education_stats) = &result.education_statistics {
             // Some skills should have been learned which enables production chains
@@ -406,10 +379,7 @@ mod comprehensive_scenarios {
         }
 
         // Verify quality system tracked skills
-        assert!(
-            result.quality_statistics.is_some(),
-            "Quality statistics should be present"
-        );
+        assert!(result.quality_statistics.is_some(), "Quality statistics should be present");
 
         // Verify trading continued with produced skills
         assert!(
@@ -470,10 +440,7 @@ mod comprehensive_scenarios {
         );
 
         // Verify reputation system still works with loans
-        assert!(
-            result.reputation_statistics.average > 0.0,
-            "Reputation should be tracked"
-        );
+        assert!(result.reputation_statistics.average > 0.0, "Reputation should be tracked");
     }
 
     /// Test: Contract System Scenario
@@ -576,10 +543,7 @@ mod comprehensive_scenarios {
         // and the system didn't crash with voting enabled
 
         // Verify simulation remained stable despite potential policy changes
-        assert!(
-            result.money_statistics.average.is_finite(),
-            "Average money should be finite"
-        );
+        assert!(result.money_statistics.average.is_finite(), "Average money should be finite");
         assert!(
             result.trade_volume_statistics.total_trades > 0,
             "Trading should continue with voting system"
@@ -636,10 +600,7 @@ mod comprehensive_scenarios {
         }
 
         // Verify both markets had activity
-        assert!(
-            result.trade_volume_statistics.total_trades > 0,
-            "Overall trading should occur"
-        );
+        assert!(result.trade_volume_statistics.total_trades > 0, "Overall trading should occur");
 
         // Verify transaction fees were collected from formal market trades
         assert!(
@@ -709,18 +670,11 @@ mod comprehensive_scenarios {
 
             // Verify remaining reserves are tracked
             for (resource_name, remaining) in &env_stats.remaining_reserves {
-                assert!(
-                    remaining.is_finite(),
-                    "Remaining {} should be finite",
-                    resource_name
-                );
+                assert!(remaining.is_finite(), "Remaining {} should be finite", resource_name);
             }
 
             // Verify initial reserves exist
-            assert!(
-                !env_stats.initial_reserves.is_empty(),
-                "Initial reserves should be tracked"
-            );
+            assert!(!env_stats.initial_reserves.is_empty(), "Initial reserves should be tracked");
         } else {
             panic!("Environment statistics should be present when environment tracking is enabled");
         }

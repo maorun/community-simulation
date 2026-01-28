@@ -73,11 +73,11 @@ fn main() {
             } else {
                 println!("\n💾 Results saved to {}", output_path);
             }
-        }
+        },
         Err(e) => {
             eprintln!("❌ Error performing causal analysis: {}", e);
             std::process::exit(1);
-        }
+        },
     }
 
     println!("\n===========================================");

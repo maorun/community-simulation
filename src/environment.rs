@@ -20,12 +20,7 @@ pub enum Resource {
 impl Resource {
     /// Returns all resource types for iteration.
     pub fn all() -> [Resource; 4] {
-        [
-            Resource::Energy,
-            Resource::Water,
-            Resource::Materials,
-            Resource::Land,
-        ]
+        [Resource::Energy, Resource::Water, Resource::Materials, Resource::Land]
     }
 
     /// Returns a human-readable name for this resource type.
@@ -68,11 +63,7 @@ impl Environment {
             total_consumption.insert(resource, 0.0);
         }
 
-        Environment {
-            total_consumption,
-            resource_reserves,
-            current_step: 0,
-        }
+        Environment { total_consumption, resource_reserves, current_step: 0 }
     }
 
     /// Creates a new Environment with default resource reserves.
@@ -125,16 +116,8 @@ impl Environment {
         let mut scores = HashMap::new();
 
         for resource in Resource::all() {
-            let consumed = self
-                .total_consumption
-                .get(&resource)
-                .copied()
-                .unwrap_or(0.0);
-            let reserves = self
-                .resource_reserves
-                .get(&resource)
-                .copied()
-                .unwrap_or(0.0); // Missing reserves treated as 0.0 (no reserves available)
+            let consumed = self.total_consumption.get(&resource).copied().unwrap_or(0.0);
+            let reserves = self.resource_reserves.get(&resource).copied().unwrap_or(0.0); // Missing reserves treated as 0.0 (no reserves available)
 
             let score = if reserves > 0.0 {
                 1.0 - (consumed / reserves)
@@ -168,9 +151,7 @@ impl Environment {
     /// # Returns
     /// `true` if all resources have positive sustainability scores, `false` otherwise
     pub fn is_sustainable(&self) -> bool {
-        self.sustainability_scores()
-            .values()
-            .all(|&score| score >= 0.0)
+        self.sustainability_scores().values().all(|&score| score >= 0.0)
     }
 
     /// Gets the remaining reserves for a specific resource.
@@ -181,16 +162,8 @@ impl Environment {
     /// # Returns
     /// The remaining amount (reserves - consumption), can be negative if overconsumed
     pub fn remaining_reserves(&self, resource: Resource) -> f64 {
-        let reserves = self
-            .resource_reserves
-            .get(&resource)
-            .copied()
-            .unwrap_or(0.0);
-        let consumed = self
-            .total_consumption
-            .get(&resource)
-            .copied()
-            .unwrap_or(0.0);
+        let reserves = self.resource_reserves.get(&resource).copied().unwrap_or(0.0);
+        let consumed = self.total_consumption.get(&resource).copied().unwrap_or(0.0);
         reserves - consumed
     }
 }
@@ -218,31 +191,16 @@ mod tests {
         let env = Environment::new(reserves);
         assert_eq!(env.current_step, 0);
         assert_eq!(env.total_consumption.len(), 4);
-        assert_eq!(
-            *env.resource_reserves.get(&Resource::Energy).unwrap(),
-            1000.0
-        );
+        assert_eq!(*env.resource_reserves.get(&Resource::Energy).unwrap(), 1000.0);
     }
 
     #[test]
     fn test_environment_default_reserves() {
         let env = Environment::with_default_reserves();
-        assert_eq!(
-            *env.resource_reserves.get(&Resource::Energy).unwrap(),
-            100_000.0
-        );
-        assert_eq!(
-            *env.resource_reserves.get(&Resource::Water).unwrap(),
-            100_000.0
-        );
-        assert_eq!(
-            *env.resource_reserves.get(&Resource::Materials).unwrap(),
-            100_000.0
-        );
-        assert_eq!(
-            *env.resource_reserves.get(&Resource::Land).unwrap(),
-            10_000.0
-        );
+        assert_eq!(*env.resource_reserves.get(&Resource::Energy).unwrap(), 100_000.0);
+        assert_eq!(*env.resource_reserves.get(&Resource::Water).unwrap(), 100_000.0);
+        assert_eq!(*env.resource_reserves.get(&Resource::Materials).unwrap(), 100_000.0);
+        assert_eq!(*env.resource_reserves.get(&Resource::Land).unwrap(), 10_000.0);
     }
 
     #[test]
@@ -254,10 +212,7 @@ mod tests {
 
         env.consume_resources(&costs);
 
-        assert_eq!(
-            *env.total_consumption.get(&Resource::Energy).unwrap(),
-            100.0
-        );
+        assert_eq!(*env.total_consumption.get(&Resource::Energy).unwrap(), 100.0);
         assert_eq!(*env.total_consumption.get(&Resource::Water).unwrap(), 50.0);
     }
 

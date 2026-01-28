@@ -69,41 +69,41 @@ impl fmt::Display for SimulationError {
         match self {
             SimulationError::ConfigFileRead(e) => {
                 write!(f, "Failed to read configuration file: {}", e)
-            }
+            },
             SimulationError::YamlParse(msg) => {
                 write!(f, "Failed to parse YAML configuration: {}", msg)
-            }
+            },
             SimulationError::TomlParse(msg) => {
                 write!(f, "Failed to parse TOML configuration: {}", msg)
-            }
+            },
             SimulationError::UnsupportedConfigFormat(ext) => {
                 write!(
                     f,
                     "Unsupported configuration file format: '{}'. Use .yaml, .yml, or .toml",
                     ext
                 )
-            }
+            },
             SimulationError::ValidationError(msg) => {
                 write!(f, "Configuration validation failed: {}", msg)
-            }
+            },
             SimulationError::IoError(e) => {
                 write!(f, "I/O error: {}", e)
-            }
+            },
             SimulationError::JsonSerialize(msg) => {
                 write!(f, "Failed to serialize JSON: {}", msg)
-            }
+            },
             SimulationError::ActionLogWrite(e) => {
                 write!(f, "Failed to write action log file: {}", e)
-            }
+            },
             SimulationError::ActionLogRead(e) => {
                 write!(f, "Failed to read action log file: {}", e)
-            }
+            },
             SimulationError::ActionLogSerialize(e) => {
                 write!(f, "Failed to serialize action log: {}", e)
-            }
+            },
             SimulationError::ActionLogDeserialize(e) => {
                 write!(f, "Failed to deserialize action log: {}", e)
-            }
+            },
         }
     }
 }
@@ -117,7 +117,7 @@ impl StdError for SimulationError {
             | SimulationError::ActionLogRead(e) => Some(e),
             SimulationError::ActionLogSerialize(e) | SimulationError::ActionLogDeserialize(e) => {
                 Some(e)
-            }
+            },
             _ => None,
         }
     }

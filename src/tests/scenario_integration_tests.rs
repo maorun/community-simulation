@@ -155,11 +155,7 @@ mod integration_tests {
 
         // All reputations should be within bounds
         for rep in &result.final_reputation_distribution {
-            assert!(
-                *rep >= 0.0 && *rep <= 2.0,
-                "Reputation {} out of bounds",
-                rep
-            );
+            assert!(*rep >= 0.0 && *rep <= 2.0, "Reputation {} out of bounds", rep);
         }
     }
 
@@ -284,10 +280,7 @@ mod integration_tests {
             ..Default::default()
         };
 
-        let config2 = SimulationConfig {
-            seed: 999,
-            ..config1.clone()
-        };
+        let config2 = SimulationConfig { seed: 999, ..config1.clone() };
 
         let mut engine1 = SimulationEngine::new(config1);
         let result1 = engine1.run();
@@ -297,20 +290,15 @@ mod integration_tests {
 
         // Results should be different (at least some money values should differ)
         let mut differences = 0;
-        for (m1, m2) in result1
-            .final_money_distribution
-            .iter()
-            .zip(&result2.final_money_distribution)
+        for (m1, m2) in
+            result1.final_money_distribution.iter().zip(&result2.final_money_distribution)
         {
             if (m1 - m2).abs() > 0.01 {
                 differences += 1;
             }
         }
 
-        assert!(
-            differences > 0,
-            "Different seeds should produce different results"
-        );
+        assert!(differences > 0, "Different seeds should produce different results");
     }
 
     /// Test short simulation (edge case)
@@ -524,10 +512,7 @@ mod integration_tests {
             // (though this may not always be true due to random factors)
             // At minimum, both should have non-negative variance
             assert!(variance_no_season >= 0.0, "Variance should be non-negative");
-            assert!(
-                variance_with_season >= 0.0,
-                "Variance should be non-negative"
-            );
+            assert!(variance_with_season >= 0.0, "Variance should be non-negative");
 
             // Seasonality should create variation (though we can't guarantee it's always higher)
             // So we just verify the simulation completes and produces valid statistics
@@ -908,10 +893,7 @@ mod integration_tests {
         assert_eq!(result.total_steps, 50);
         assert_eq!(result.active_persons, 10);
         // With priority system, should still have reasonable trade activity
-        assert!(
-            result.trade_volume_statistics.total_trades > 0,
-            "Should have some trades"
-        );
+        assert!(result.trade_volume_statistics.total_trades > 0, "Should have some trades");
     }
 
     /// Test priority-based buying with urgency-only weighting
@@ -967,10 +949,7 @@ mod integration_tests {
         // Test that priority weights must be in 0.0-1.0 range
 
         // Valid weights should pass
-        let mut config = SimulationConfig {
-            priority_urgency_weight: 0.5,
-            ..Default::default()
-        };
+        let mut config = SimulationConfig { priority_urgency_weight: 0.5, ..Default::default() };
         assert!(config.validate().is_ok());
 
         // Invalid weight > 1.0 should fail
@@ -1191,11 +1170,7 @@ mod integration_tests {
 
         // Verify wealth stats history is collected
         assert!(!result.wealth_stats_history.is_empty());
-        assert_eq!(
-            result.wealth_stats_history.len(),
-            50,
-            "Should have one snapshot per step"
-        );
+        assert_eq!(result.wealth_stats_history.len(), 50, "Should have one snapshot per step");
 
         // Verify each snapshot has valid data
         for (i, snapshot) in result.wealth_stats_history.iter().enumerate() {
@@ -1203,15 +1178,9 @@ mod integration_tests {
             assert!(snapshot.average.is_finite(), "Average should be finite");
             assert!(snapshot.median.is_finite(), "Median should be finite");
             assert!(snapshot.std_dev >= 0.0, "Std dev should be non-negative");
-            assert!(
-                snapshot.min_money <= snapshot.max_money,
-                "Min should be <= max"
-            );
+            assert!(snapshot.min_money <= snapshot.max_money, "Min should be <= max");
             // Gini coefficient can go above 1.0 when negative money (debt) exists
-            assert!(
-                snapshot.gini_coefficient.is_finite(),
-                "Gini coefficient should be finite"
-            );
+            assert!(snapshot.gini_coefficient.is_finite(), "Gini coefficient should be finite");
         }
 
         // Verify that statistics evolve over time (they should not all be identical)
@@ -1223,10 +1192,7 @@ mod integration_tests {
             || first_snapshot.gini_coefficient != last_snapshot.gini_coefficient
             || first_snapshot.median != last_snapshot.median;
 
-        assert!(
-            has_changed,
-            "Wealth distribution should evolve over the simulation"
-        );
+        assert!(has_changed, "Wealth distribution should evolve over the simulation");
     }
 
     /// Test social mobility statistics tracking
@@ -1286,11 +1252,7 @@ mod integration_tests {
         let prob_sum = mobility_stats.upward_mobility_probability
             + mobility_stats.downward_mobility_probability
             + mobility_stats.quintile_persistence;
-        assert!(
-            (prob_sum - 1.0).abs() < 1e-6,
-            "Probabilities sum to {}, expected 1.0",
-            prob_sum
-        );
+        assert!((prob_sum - 1.0).abs() < 1e-6, "Probabilities sum to {}, expected 1.0", prob_sum);
 
         // Average quintile changes should be non-negative
         assert!(mobility_stats.avg_quintile_changes >= 0.0);
@@ -1380,10 +1342,7 @@ mod integration_tests {
         let group_stats = result.group_statistics.unwrap();
 
         // Verify total groups
-        assert_eq!(
-            group_stats.total_groups, 5,
-            "Should have 5 groups as configured"
-        );
+        assert_eq!(group_stats.total_groups, 5, "Should have 5 groups as configured");
 
         // Verify average group size
         assert_eq!(
@@ -1392,11 +1351,7 @@ mod integration_tests {
         );
 
         // Verify individual group data
-        assert_eq!(
-            group_stats.groups.len(),
-            5,
-            "Should have stats for 5 groups"
-        );
+        assert_eq!(group_stats.groups.len(), 5, "Should have stats for 5 groups");
 
         // Check that all groups have the expected number of members (round-robin distribution)
         for (i, group) in group_stats.groups.iter().enumerate() {
@@ -1404,16 +1359,8 @@ mod integration_tests {
             assert_eq!(group.member_count, 4, "Group {} should have 4 members", i);
             // Money can be negative in simulations with aggressive strategies/loans
             // so we just check that stats are calculated (not NaN)
-            assert!(
-                !group.avg_money.is_nan(),
-                "Group {} should have valid average money",
-                i
-            );
-            assert!(
-                !group.total_money.is_nan(),
-                "Group {} should have valid total money",
-                i
-            );
+            assert!(!group.avg_money.is_nan(), "Group {} should have valid average money", i);
+            assert!(!group.total_money.is_nan(), "Group {} should have valid total money", i);
             assert!(
                 group.avg_reputation > 0.0,
                 "Group {} should have positive average reputation",
@@ -1429,16 +1376,9 @@ mod integration_tests {
     /// Test that groups are disabled by default
     #[test]
     fn test_groups_disabled_by_default() {
-        let config = SimulationConfig {
-            entity_count: 20,
-            max_steps: 50,
-            ..Default::default()
-        };
+        let config = SimulationConfig { entity_count: 20, max_steps: 50, ..Default::default() };
 
-        assert!(
-            config.num_groups.is_none(),
-            "Groups should be disabled by default"
-        );
+        assert!(config.num_groups.is_none(), "Groups should be disabled by default");
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -1466,9 +1406,7 @@ mod integration_tests {
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
 
-        let group_stats = result
-            .group_statistics
-            .expect("Group statistics should be present");
+        let group_stats = result.group_statistics.expect("Group statistics should be present");
 
         // With 23 persons and 5 groups, using round-robin:
         // Groups 0, 1, 2 get 5 members each (first 3 groups get extra person)
@@ -1479,20 +1417,11 @@ mod integration_tests {
 
         // Verify total member count is correct
         let total_members: usize = member_counts.iter().sum();
-        assert_eq!(
-            total_members, 23,
-            "Total members across all groups should be 23"
-        );
+        assert_eq!(total_members, 23, "Total members across all groups should be 23");
 
         // Verify min and max group sizes
-        assert_eq!(
-            group_stats.min_group_size, 4,
-            "Minimum group size should be 4"
-        );
-        assert_eq!(
-            group_stats.max_group_size, 5,
-            "Maximum group size should be 5"
-        );
+        assert_eq!(group_stats.min_group_size, 4, "Minimum group size should be 4");
+        assert_eq!(group_stats.max_group_size, 5, "Maximum group size should be 5");
 
         // Verify average group size
         let expected_avg = 23.0 / 5.0; // 4.6
@@ -1515,10 +1444,7 @@ mod integration_tests {
         let result = config.validate();
         assert!(result.is_err(), "Validation should fail for zero groups");
         assert!(
-            result
-                .unwrap_err()
-                .to_string()
-                .contains("num_groups must be at least 1"),
+            result.unwrap_err().to_string().contains("num_groups must be at least 1"),
             "Error message should mention minimum groups"
         );
     }
@@ -1534,10 +1460,7 @@ mod integration_tests {
         };
 
         let result = config.validate();
-        assert!(
-            result.is_err(),
-            "Validation should fail when groups exceed persons"
-        );
+        assert!(result.is_err(), "Validation should fail when groups exceed persons");
         assert!(
             result
                 .unwrap_err()
@@ -1560,9 +1483,7 @@ mod integration_tests {
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
 
-        let group_stats = result
-            .group_statistics
-            .expect("Group statistics should be present");
+        let group_stats = result.group_statistics.expect("Group statistics should be present");
 
         assert_eq!(group_stats.total_groups, 1);
         assert_eq!(group_stats.groups[0].member_count, 20);
@@ -1584,9 +1505,7 @@ mod integration_tests {
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
 
-        let group_stats = result
-            .group_statistics
-            .expect("Group statistics should be present");
+        let group_stats = result.group_statistics.expect("Group statistics should be present");
 
         assert_eq!(group_stats.total_groups, 10);
         assert_eq!(group_stats.avg_group_size, 1.0);
@@ -1666,31 +1585,19 @@ mod integration_tests {
     #[test]
     fn test_distance_cost_factor_validation() {
         // Valid values should pass
-        let valid_config = SimulationConfig {
-            distance_cost_factor: 0.05,
-            ..Default::default()
-        };
+        let valid_config = SimulationConfig { distance_cost_factor: 0.05, ..Default::default() };
         assert!(valid_config.validate().is_ok());
 
         // Negative values should fail
-        let negative_config = SimulationConfig {
-            distance_cost_factor: -0.1,
-            ..Default::default()
-        };
+        let negative_config = SimulationConfig { distance_cost_factor: -0.1, ..Default::default() };
         assert!(negative_config.validate().is_err());
 
         // Values above 1.0 should fail
-        let too_large_config = SimulationConfig {
-            distance_cost_factor: 1.5,
-            ..Default::default()
-        };
+        let too_large_config = SimulationConfig { distance_cost_factor: 1.5, ..Default::default() };
         assert!(too_large_config.validate().is_err());
 
         // Exactly 1.0 should fail (unrealistic)
-        let max_config = SimulationConfig {
-            distance_cost_factor: 1.0,
-            ..Default::default()
-        };
+        let max_config = SimulationConfig { distance_cost_factor: 1.0, ..Default::default() };
         assert!(max_config.validate().is_err());
     }
 

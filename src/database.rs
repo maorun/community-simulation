@@ -220,11 +220,9 @@ mod tests {
 
         // Check that tables exist
         let table_count: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table'",
-                [],
-                |row| row.get(0),
-            )
+            .query_row("SELECT COUNT(*) FROM sqlite_master WHERE type='table'", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         assert_eq!(table_count, 4);
     }
@@ -252,9 +250,7 @@ mod tests {
 
         // Verify money distribution was inserted
         let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM money_distribution", [], |row| {
-                row.get(0)
-            })
+            .query_row("SELECT COUNT(*) FROM money_distribution", [], |row| row.get(0))
             .unwrap();
 
         assert_eq!(count, 10);
@@ -266,9 +262,7 @@ mod tests {
 
         // Verify reputation distribution was inserted
         let count: i64 = conn
-            .query_row("SELECT COUNT(*) FROM reputation_distribution", [], |row| {
-                row.get(0)
-            })
+            .query_row("SELECT COUNT(*) FROM reputation_distribution", [], |row| row.get(0))
             .unwrap();
 
         assert_eq!(count, 10);
@@ -352,27 +346,12 @@ mod tests {
             trades_per_step: vec![],
             volume_per_step: vec![],
             final_skill_prices: vec![
-                SkillPriceInfo {
-                    id: "Skill1".to_string(),
-                    price: 15.0,
-                },
-                SkillPriceInfo {
-                    id: "Skill2".to_string(),
-                    price: 12.0,
-                },
-                SkillPriceInfo {
-                    id: "Skill3".to_string(),
-                    price: 18.0,
-                },
+                SkillPriceInfo { id: "Skill1".to_string(), price: 15.0 },
+                SkillPriceInfo { id: "Skill2".to_string(), price: 12.0 },
+                SkillPriceInfo { id: "Skill3".to_string(), price: 18.0 },
             ],
-            most_valuable_skill: Some(SkillPriceInfo {
-                id: "Skill3".to_string(),
-                price: 18.0,
-            }),
-            least_valuable_skill: Some(SkillPriceInfo {
-                id: "Skill2".to_string(),
-                price: 12.0,
-            }),
+            most_valuable_skill: Some(SkillPriceInfo { id: "Skill3".to_string(), price: 18.0 }),
+            least_valuable_skill: Some(SkillPriceInfo { id: "Skill2".to_string(), price: 12.0 }),
             skill_price_history: std::collections::HashMap::new(),
             final_persons_data: vec![],
             total_fees_collected: 0.0,

@@ -207,7 +207,7 @@ impl TrustNetwork {
                         1 => direct_trusts += 1,
                         2 => second_degree_trusts += 1,
                         3 => third_degree_trusts += 1,
-                        _ => {}
+                        _ => {},
                     }
                 }
             }

@@ -67,9 +67,7 @@ impl Certification {
     ///
     /// `true` if the certification has expired, `false` otherwise
     pub fn is_expired(&self, current_step: usize) -> bool {
-        self.expiration_step
-            .map(|exp| current_step >= exp)
-            .unwrap_or(false)
+        self.expiration_step.map(|exp| current_step >= exp).unwrap_or(false)
     }
 
     /// Calculates the price multiplier for this certification.
@@ -152,12 +150,7 @@ impl Skill {
     /// let accounting = Skill::new("Accounting".to_string(), 45.0);
     /// ```
     pub fn new(id: SkillId, base_price: f64) -> Self {
-        Self {
-            id,
-            current_price: base_price,
-            efficiency_multiplier: 1.0,
-            certification: None,
-        }
+        Self { id, current_price: base_price, efficiency_multiplier: 1.0, certification: None }
     }
 
     /// Returns the effective price for this skill, taking into account certification.

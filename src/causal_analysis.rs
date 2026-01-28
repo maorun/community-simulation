@@ -330,18 +330,9 @@ impl CausalAnalysisResult {
     /// Print a human-readable summary of the causal analysis
     pub fn print_summary(&self) {
         println!("\n{}", "=== Causal Analysis Results ===".bold());
-        println!(
-            "Treatment: {} (n={})",
-            self.config.treatment_name, self.treatment_n
-        );
-        println!(
-            "Control: {} (n={})",
-            self.config.control_name, self.control_n
-        );
-        println!(
-            "Confidence Level: {}%",
-            (self.config.confidence_level * 100.0) as usize
-        );
+        println!("Treatment: {} (n={})", self.config.treatment_name, self.treatment_n);
+        println!("Control: {} (n={})", self.config.control_name, self.control_n);
+        println!("Confidence Level: {}%", (self.config.confidence_level * 100.0) as usize);
         println!();
 
         for test in &self.tests {
@@ -361,10 +352,7 @@ impl CausalAnalysisResult {
             );
             println!("  t-statistic:    {:.4}", test.t_statistic);
             println!("  p-value:        {:.4}", test.p_value);
-            println!(
-                "  Significant:    {}",
-                if test.is_significant { "YES" } else { "NO" }
-            );
+            println!("  Significant:    {}", if test.is_significant { "YES" } else { "NO" });
             println!();
         }
 

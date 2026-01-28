@@ -1,0 +1,32 @@
+# Clippy Configuration for Economic Simulation Framework
+# This configuration enables additional lints for code complexity and style
+
+# Complexity Lints - These help identify overly complex code
+cognitive-complexity-threshold = 25
+too-many-arguments-threshold = 7
+too-many-lines-threshold = 150
+type-complexity-threshold = 500
+
+# Warn about large types that might impact performance
+array-size-threshold = 16384
+enum-variant-size-threshold = 200
+
+# Documentation and naming conventions
+# These ensure consistent and well-documented code
+doc-valid-idents = [
+    "GitHub",
+    "GitLab",
+    "Rayon",
+    "SQLite",
+    "YAML",
+    "TOML",
+    "JSON",
+    "CSV",
+]
+
+# Avoid false positives for commonly used single-letter variable names
+single-char-binding-names-threshold = 4
+
+# Additional style preferences
+# These help maintain clean and maintainable code
+max-suggested-slice-pattern-length = 3

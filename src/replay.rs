@@ -11,34 +11,13 @@ use std::path::Path;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SimulationAction {
     /// A trade occurred between two entities
-    Trade {
-        step: usize,
-        buyer_id: usize,
-        seller_id: usize,
-        skill_id: String,
-        price: f64,
-    },
+    Trade { step: usize, buyer_id: usize, seller_id: usize, skill_id: String, price: f64 },
     /// A trade was attempted but failed due to insufficient funds
-    FailedTrade {
-        step: usize,
-        buyer_id: usize,
-        seller_id: usize,
-        skill_id: String,
-        price: f64,
-    },
+    FailedTrade { step: usize, buyer_id: usize, seller_id: usize, skill_id: String, price: f64 },
     /// Prices were updated in the market
-    PriceUpdate {
-        step: usize,
-        skill_id: String,
-        old_price: f64,
-        new_price: f64,
-    },
+    PriceUpdate { step: usize, skill_id: String, old_price: f64, new_price: f64 },
     /// A crisis event occurred
-    CrisisEvent {
-        step: usize,
-        event_type: String,
-        severity: f64,
-    },
+    CrisisEvent { step: usize, event_type: String, severity: f64 },
 }
 
 /// Action log for recording simulation events.
@@ -60,12 +39,7 @@ pub struct ActionLog {
 impl ActionLog {
     /// Creates a new empty action log with the given simulation parameters.
     pub fn new(seed: u64, entity_count: usize, max_steps: usize) -> Self {
-        ActionLog {
-            seed,
-            entity_count,
-            max_steps,
-            actions: Vec::new(),
-        }
+        ActionLog { seed, entity_count, max_steps, actions: Vec::new() }
     }
 
     /// Records a single action in the log.

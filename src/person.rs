@@ -274,12 +274,7 @@ impl Mentorship {
         skill_id: SkillId,
         start_step: usize,
     ) -> Self {
-        Mentorship {
-            mentor_id,
-            mentee_id,
-            skill_id,
-            start_step,
-        }
+        Mentorship { mentor_id, mentee_id, skill_id, start_step }
     }
 }
 
@@ -426,13 +421,7 @@ impl Person {
         amount: f64,
         counterparty_id: Option<PersonId>,
     ) {
-        let transaction = Transaction {
-            step,
-            skill_id,
-            transaction_type,
-            amount,
-            counterparty_id,
-        };
+        let transaction = Transaction { step, skill_id, transaction_type, amount, counterparty_id };
         self.transaction_history.push(transaction);
     }
 
@@ -580,9 +569,7 @@ impl Person {
         }
 
         // Calculate wealth growth rate
-        let growth_rate = self
-            .strategy_params
-            .calculate_short_term_growth_rate(self.money);
+        let growth_rate = self.strategy_params.calculate_short_term_growth_rate(self.money);
 
         // Only adapt if growth is significant (avoid noise)
         if growth_rate.abs() < 0.01 {
@@ -618,10 +605,7 @@ impl Person {
     /// # Returns
     /// A vector of references to all skills this person possesses
     pub fn all_skills(&self) -> Vec<&Skill> {
-        self.own_skills
-            .iter()
-            .chain(self.learned_skills.iter())
-            .collect()
+        self.own_skills.iter().chain(self.learned_skills.iter()).collect()
     }
 }
 
@@ -691,10 +675,7 @@ mod tests {
         let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
 
         person.increase_reputation_as_seller();
-        assert_eq!(
-            person.reputation, 1.01,
-            "Reputation should increase by 0.01"
-        );
+        assert_eq!(person.reputation, 1.01, "Reputation should increase by 0.01");
 
         // Test multiple increases
         for _ in 0..99 {
@@ -709,10 +690,7 @@ mod tests {
         let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
 
         person.increase_reputation_as_buyer();
-        assert_eq!(
-            person.reputation, 1.005,
-            "Reputation should increase by 0.005"
-        );
+        assert_eq!(person.reputation, 1.005, "Reputation should increase by 0.005");
 
         // Test cap
         for _ in 0..200 {
@@ -728,18 +706,12 @@ mod tests {
         person.reputation = 1.5;
 
         person.apply_reputation_decay();
-        assert_eq!(
-            person.reputation, 1.499,
-            "Reputation should decay toward neutral"
-        );
+        assert_eq!(person.reputation, 1.499, "Reputation should decay toward neutral");
 
         // Test decay stops at neutral
         person.reputation = 1.0;
         person.apply_reputation_decay();
-        assert_eq!(
-            person.reputation, 1.0,
-            "Reputation should not decay below neutral"
-        );
+        assert_eq!(person.reputation, 1.0, "Reputation should not decay below neutral");
     }
 
     #[test]
@@ -749,10 +721,7 @@ mod tests {
         person.reputation = 0.5;
 
         person.apply_reputation_decay();
-        assert_eq!(
-            person.reputation, 0.501,
-            "Reputation should increase toward neutral"
-        );
+        assert_eq!(person.reputation, 0.501, "Reputation should increase toward neutral");
 
         // Test recovery stops at neutral
         person.reputation = 1.0;
@@ -768,10 +737,7 @@ mod tests {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
         let multiplier = person.reputation_price_multiplier();
-        assert_eq!(
-            multiplier, 1.0,
-            "Neutral reputation should have no price effect"
-        );
+        assert_eq!(multiplier, 1.0, "Neutral reputation should have no price effect");
     }
 
     #[test]
@@ -824,19 +790,13 @@ mod tests {
         // Test 10% savings rate
         let saved = person.apply_savings(0.1);
         assert_eq!(saved, 10.0, "Should save 10% of 100");
-        assert_eq!(
-            person.money, 90.0,
-            "Money should be reduced by saved amount"
-        );
+        assert_eq!(person.money, 90.0, "Money should be reduced by saved amount");
         assert_eq!(person.savings, 10.0, "Savings should be 10");
 
         // Apply savings again - now on 90.0
         let saved = person.apply_savings(0.1);
         assert_eq!(saved, 9.0, "Should save 10% of 90");
-        assert_eq!(
-            person.money, 81.0,
-            "Money should be 81 after second savings"
-        );
+        assert_eq!(person.money, 81.0, "Money should be 81 after second savings");
         assert_eq!(person.savings, 19.0, "Savings should accumulate to 19");
     }
 
@@ -889,13 +849,7 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_conservative() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(
-            1,
-            100.0,
-            vec![skill],
-            Strategy::Conservative,
-            test_location(),
-        );
+        let person = Person::new(1, 100.0, vec![skill], Strategy::Conservative, test_location());
 
         // Conservative has 0.7x multiplier, so with $100 can afford up to $70
         assert!(person.can_afford_with_strategy(70.0));
@@ -949,13 +903,8 @@ mod tests {
     #[test]
     fn test_learn_skill_success() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(
-            1,
-            100.0,
-            vec![own_skill],
-            Strategy::default(),
-            test_location(),
-        );
+        let mut person =
+            Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
 
         let new_skill = Skill::new("NewSkill".to_string(), 15.0);
         let learning_cost = 30.0;
@@ -964,27 +913,15 @@ mod tests {
 
         assert!(result, "Should successfully learn the skill");
         assert_eq!(person.money, 70.0, "Money should be deducted");
-        assert_eq!(
-            person.learned_skills.len(),
-            1,
-            "Should have one learned skill"
-        );
-        assert_eq!(
-            person.learned_skills[0].id, "NewSkill",
-            "Learned skill should be NewSkill"
-        );
+        assert_eq!(person.learned_skills.len(), 1, "Should have one learned skill");
+        assert_eq!(person.learned_skills[0].id, "NewSkill", "Learned skill should be NewSkill");
     }
 
     #[test]
     fn test_learn_skill_cannot_afford() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(
-            1,
-            50.0,
-            vec![own_skill],
-            Strategy::default(),
-            test_location(),
-        );
+        let mut person =
+            Person::new(1, 50.0, vec![own_skill], Strategy::default(), test_location());
 
         let new_skill = Skill::new("ExpensiveSkill".to_string(), 15.0);
         let learning_cost = 100.0; // More than person has
@@ -993,49 +930,28 @@ mod tests {
 
         assert!(!result, "Should fail to learn due to insufficient money");
         assert_eq!(person.money, 50.0, "Money should not be deducted");
-        assert_eq!(
-            person.learned_skills.len(),
-            0,
-            "Should have no learned skills"
-        );
+        assert_eq!(person.learned_skills.len(), 0, "Should have no learned skills");
     }
 
     #[test]
     fn test_learn_skill_already_has_as_own_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(
-            1,
-            100.0,
-            vec![own_skill.clone()],
-            Strategy::default(),
-            test_location(),
-        );
+        let mut person =
+            Person::new(1, 100.0, vec![own_skill.clone()], Strategy::default(), test_location());
 
         let learning_cost = 30.0;
         let result = person.learn_skill(own_skill, learning_cost);
 
-        assert!(
-            !result,
-            "Should fail to learn skill they already have as own_skill"
-        );
+        assert!(!result, "Should fail to learn skill they already have as own_skill");
         assert_eq!(person.money, 100.0, "Money should not be deducted");
-        assert_eq!(
-            person.learned_skills.len(),
-            0,
-            "Should have no learned skills"
-        );
+        assert_eq!(person.learned_skills.len(), 0, "Should have no learned skills");
     }
 
     #[test]
     fn test_learn_skill_already_learned() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(
-            1,
-            100.0,
-            vec![own_skill],
-            Strategy::default(),
-            test_location(),
-        );
+        let mut person =
+            Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
 
         let new_skill = Skill::new("NewSkill".to_string(), 15.0);
         let learning_cost = 20.0;
@@ -1052,44 +968,23 @@ mod tests {
             person.money, money_after_first_learning,
             "Money should not be deducted on second attempt"
         );
-        assert_eq!(
-            person.learned_skills.len(),
-            1,
-            "Should still have only one learned skill"
-        );
+        assert_eq!(person.learned_skills.len(), 1, "Should still have only one learned skill");
     }
 
     #[test]
     fn test_has_skill_with_own_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let person = Person::new(
-            1,
-            100.0,
-            vec![own_skill],
-            Strategy::default(),
-            test_location(),
-        );
+        let person = Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
 
-        assert!(
-            person.has_skill(&"OwnSkill".to_string()),
-            "Should have OwnSkill as own_skill"
-        );
-        assert!(
-            !person.has_skill(&"OtherSkill".to_string()),
-            "Should not have OtherSkill"
-        );
+        assert!(person.has_skill(&"OwnSkill".to_string()), "Should have OwnSkill as own_skill");
+        assert!(!person.has_skill(&"OtherSkill".to_string()), "Should not have OtherSkill");
     }
 
     #[test]
     fn test_has_skill_with_learned_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(
-            1,
-            100.0,
-            vec![own_skill],
-            Strategy::default(),
-            test_location(),
-        );
+        let mut person =
+            Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
 
         let learned_skill = Skill::new("LearnedSkill".to_string(), 15.0);
         person.learn_skill(learned_skill, 30.0);
@@ -1098,22 +993,14 @@ mod tests {
             person.has_skill(&"LearnedSkill".to_string()),
             "Should have LearnedSkill as learned_skill"
         );
-        assert!(
-            person.has_skill(&"OwnSkill".to_string()),
-            "Should still have OwnSkill"
-        );
+        assert!(person.has_skill(&"OwnSkill".to_string()), "Should still have OwnSkill");
     }
 
     #[test]
     fn test_all_skills() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person = Person::new(
-            1,
-            100.0,
-            vec![own_skill],
-            Strategy::default(),
-            test_location(),
-        );
+        let mut person =
+            Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
 
         let learned_skill1 = Skill::new("LearnedSkill1".to_string(), 15.0);
         let learned_skill2 = Skill::new("LearnedSkill2".to_string(), 20.0);
@@ -1149,22 +1036,15 @@ mod tests {
 
         // Simulate wealth growth
         person.money = 110.0; // 10% growth
-        let growth_rate = person
-            .strategy_params
-            .calculate_short_term_growth_rate(person.money);
+        let growth_rate = person.strategy_params.calculate_short_term_growth_rate(person.money);
         assert!(
             (growth_rate - 0.1).abs() < 0.01,
             "Growth rate should be approximately 0.1 (10%)"
         );
 
         // Test long-term growth
-        let long_term_growth = person
-            .strategy_params
-            .calculate_long_term_growth_rate(person.money);
-        assert!(
-            (long_term_growth - 0.1).abs() < 0.01,
-            "Long-term growth should be 10%"
-        );
+        let long_term_growth = person.strategy_params.calculate_long_term_growth_rate(person.money);
+        assert!((long_term_growth - 0.1).abs() < 0.01, "Long-term growth should be 10%");
     }
 
     #[test]
@@ -1219,10 +1099,7 @@ mod tests {
         // Try to adapt
         let adapted = person.adapt_strategy(0.1, &mut rng, 0.0);
 
-        assert!(
-            !adapted,
-            "Strategy should not adapt with insignificant change"
-        );
+        assert!(!adapted, "Strategy should not adapt with insignificant change");
         assert_eq!(
             person.strategy_params.adjustment_factor, 1.0,
             "Adjustment factor should remain unchanged"
@@ -1292,31 +1169,19 @@ mod tests {
     #[test]
     fn test_specialization_strategy_quality_bonus_specialist() {
         let strategy = SpecializationStrategy::Specialist;
-        assert_eq!(
-            strategy.quality_bonus(),
-            1.0,
-            "Specialist should have +1.0 quality bonus"
-        );
+        assert_eq!(strategy.quality_bonus(), 1.0, "Specialist should have +1.0 quality bonus");
     }
 
     #[test]
     fn test_specialization_strategy_quality_bonus_balanced() {
         let strategy = SpecializationStrategy::Balanced;
-        assert_eq!(
-            strategy.quality_bonus(),
-            0.0,
-            "Balanced should have no quality bonus"
-        );
+        assert_eq!(strategy.quality_bonus(), 0.0, "Balanced should have no quality bonus");
     }
 
     #[test]
     fn test_specialization_strategy_quality_bonus_generalist() {
         let strategy = SpecializationStrategy::Generalist;
-        assert_eq!(
-            strategy.quality_bonus(),
-            0.0,
-            "Generalist should have no quality bonus"
-        );
+        assert_eq!(strategy.quality_bonus(), 0.0, "Generalist should have no quality bonus");
     }
 
     #[test]
@@ -1331,11 +1196,7 @@ mod tests {
     #[test]
     fn test_specialization_strategy_price_multiplier_balanced() {
         let strategy = SpecializationStrategy::Balanced;
-        assert_eq!(
-            strategy.price_multiplier(),
-            1.0,
-            "Balanced should have base price multiplier"
-        );
+        assert_eq!(strategy.price_multiplier(), 1.0, "Balanced should have base price multiplier");
     }
 
     #[test]
@@ -1351,11 +1212,7 @@ mod tests {
     #[test]
     fn test_specialization_strategy_all_variants() {
         let variants = SpecializationStrategy::all_variants();
-        assert_eq!(
-            variants.len(),
-            3,
-            "Should have exactly 3 specialization strategy variants"
-        );
+        assert_eq!(variants.len(), 3, "Should have exactly 3 specialization strategy variants");
         assert_eq!(variants[0], SpecializationStrategy::Specialist);
         assert_eq!(variants[1], SpecializationStrategy::Balanced);
         assert_eq!(variants[2], SpecializationStrategy::Generalist);

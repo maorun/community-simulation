@@ -50,7 +50,7 @@ impl Scenario {
             Scenario::DynamicPricing => "Sales-based pricing mechanism",
             Scenario::AdaptivePricing => {
                 "Gradual price adaptation using exponential moving average"
-            }
+            },
             Scenario::AuctionPricing => "Competitive bidding mechanism",
         }
     }
@@ -350,11 +350,7 @@ mod tests {
 
         let new_price = market.get_price(&skill_id).unwrap();
         // Price should be clamped to per-skill max (70.0), not global max (1000.0)
-        assert!(
-            new_price <= 70.0,
-            "Price {} should be clamped to 70.0",
-            new_price
-        );
+        assert!(new_price <= 70.0, "Price {} should be clamped to 70.0", new_price);
 
         // Now simulate low demand to push price below min
         market.demand_counts.insert(skill_id.clone(), 0);
@@ -363,11 +359,7 @@ mod tests {
         updater.update_prices(&mut market, &mut rng);
         let new_price = market.get_price(&skill_id).unwrap();
         // Price should be clamped to per-skill min (30.0), not global min (1.0)
-        assert!(
-            new_price >= 30.0,
-            "Price {} should be clamped to 30.0",
-            new_price
-        );
+        assert!(new_price >= 30.0, "Price {} should be clamped to 30.0", new_price);
     }
 }
 
@@ -887,7 +879,7 @@ impl From<DemandStrategy> for DemandGenerator {
             DemandStrategy::Uniform => DemandGenerator::Uniform(UniformDemandGenerator),
             DemandStrategy::Concentrated => {
                 DemandGenerator::Concentrated(ConcentratedDemandGenerator)
-            }
+            },
             DemandStrategy::Cyclical => DemandGenerator::Cyclical(CyclicalDemandGenerator),
         }
     }
@@ -1043,10 +1035,7 @@ mod demand_tests {
 
         // Check that we see different demand values (not constant)
         let unique_values: std::collections::HashSet<_> = demands.iter().cloned().collect();
-        assert!(
-            unique_values.len() > 1,
-            "Cyclical demand should vary over time"
-        );
+        assert!(unique_values.len() > 1, "Cyclical demand should vary over time");
     }
 
     #[test]

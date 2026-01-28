@@ -127,10 +127,9 @@ pub fn calculate_centrality(nodes: &[NetworkNode], edges: &[NetworkEdge]) -> Cen
 
     // Add edges with weights (total_value as weight)
     for edge in edges {
-        if let (Some(&source_idx), Some(&target_idx)) = (
-            node_indices.get(&edge.source),
-            node_indices.get(&edge.target),
-        ) {
+        if let (Some(&source_idx), Some(&target_idx)) =
+            (node_indices.get(&edge.source), node_indices.get(&edge.target))
+        {
             graph.add_edge(source_idx, target_idx, edge.total_value);
         }
     }
@@ -156,21 +155,11 @@ pub fn calculate_centrality(nodes: &[NetworkNode], edges: &[NetworkEdge]) -> Cen
     // Calculate network-level metrics
     let connected_components = connected_components(&graph);
     let n = nodes.len() as f64;
-    let avg_degree = node_centralities
-        .iter()
-        .map(|nc| nc.degree_centrality)
-        .sum::<f64>()
-        / n;
-    let avg_betweenness = node_centralities
-        .iter()
-        .map(|nc| nc.betweenness_centrality)
-        .sum::<f64>()
-        / n;
-    let avg_eigenvector = node_centralities
-        .iter()
-        .map(|nc| nc.eigenvector_centrality)
-        .sum::<f64>()
-        / n;
+    let avg_degree = node_centralities.iter().map(|nc| nc.degree_centrality).sum::<f64>() / n;
+    let avg_betweenness =
+        node_centralities.iter().map(|nc| nc.betweenness_centrality).sum::<f64>() / n;
+    let avg_eigenvector =
+        node_centralities.iter().map(|nc| nc.eigenvector_centrality).sum::<f64>() / n;
     let avg_pagerank = node_centralities.iter().map(|nc| nc.pagerank).sum::<f64>() / n;
 
     let network_density = if nodes.len() > 1 {
@@ -187,44 +176,29 @@ pub fn calculate_centrality(nodes: &[NetworkNode], edges: &[NetworkEdge]) -> Cen
             .partial_cmp(&a.degree_centrality)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
-    let top_degree: Vec<String> = node_centralities
-        .iter()
-        .take(5)
-        .map(|nc| nc.node_id.clone())
-        .collect();
+    let top_degree: Vec<String> =
+        node_centralities.iter().take(5).map(|nc| nc.node_id.clone()).collect();
 
     node_centralities.sort_by(|a, b| {
         b.betweenness_centrality
             .partial_cmp(&a.betweenness_centrality)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
-    let top_betweenness: Vec<String> = node_centralities
-        .iter()
-        .take(5)
-        .map(|nc| nc.node_id.clone())
-        .collect();
+    let top_betweenness: Vec<String> =
+        node_centralities.iter().take(5).map(|nc| nc.node_id.clone()).collect();
 
     node_centralities.sort_by(|a, b| {
         b.eigenvector_centrality
             .partial_cmp(&a.eigenvector_centrality)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
-    let top_eigenvector: Vec<String> = node_centralities
-        .iter()
-        .take(5)
-        .map(|nc| nc.node_id.clone())
-        .collect();
+    let top_eigenvector: Vec<String> =
+        node_centralities.iter().take(5).map(|nc| nc.node_id.clone()).collect();
 
-    node_centralities.sort_by(|a, b| {
-        b.pagerank
-            .partial_cmp(&a.pagerank)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-    let top_pagerank: Vec<String> = node_centralities
-        .iter()
-        .take(5)
-        .map(|nc| nc.node_id.clone())
-        .collect();
+    node_centralities
+        .sort_by(|a, b| b.pagerank.partial_cmp(&a.pagerank).unwrap_or(std::cmp::Ordering::Equal));
+    let top_pagerank: Vec<String> =
+        node_centralities.iter().take(5).map(|nc| nc.node_id.clone()).collect();
 
     // Sort by node ID for consistency in output
     node_centralities.sort_by(|a, b| a.node_id.cmp(&b.node_id));
@@ -312,10 +286,7 @@ fn calculate_betweenness_centrality(
                 if *distance.get(&neighbor).unwrap() == dist_v + 1 {
                     let paths_v = *paths.get(&v).unwrap();
                     *paths.entry(neighbor).or_insert(0) += paths_v;
-                    predecessors
-                        .entry(neighbor)
-                        .or_insert_with(Vec::new)
-                        .push(v);
+                    predecessors.entry(neighbor).or_insert_with(Vec::new).push(v);
                 }
             }
         }
@@ -370,10 +341,8 @@ fn calculate_eigenvector_centrality(
     }
 
     // Initialize all nodes with equal centrality
-    let mut centrality: HashMap<NodeIndex, f64> = node_indices
-        .values()
-        .map(|&idx| (idx, 1.0 / n as f64))
-        .collect();
+    let mut centrality: HashMap<NodeIndex, f64> =
+        node_indices.values().map(|&idx| (idx, 1.0 / n as f64)).collect();
 
     // Power iteration (100 iterations should be sufficient)
     for _ in 0..100 {
@@ -422,10 +391,8 @@ fn calculate_pagerank(
     let epsilon = 1e-6;
 
     // Initialize all nodes with equal PageRank
-    let mut pagerank: HashMap<NodeIndex, f64> = node_indices
-        .values()
-        .map(|&idx| (idx, 1.0 / n as f64))
-        .collect();
+    let mut pagerank: HashMap<NodeIndex, f64> =
+        node_indices.values().map(|&idx| (idx, 1.0 / n as f64)).collect();
 
     // Power iteration
     for _ in 0..100 {
@@ -608,19 +575,13 @@ mod tests {
         assert_eq!(analysis.node_centralities.len(), 5);
 
         // Center node should have highest degree centrality (4/4 = 1.0)
-        let center_centrality = analysis
-            .node_centralities
-            .iter()
-            .find(|nc| nc.node_id == "Center")
-            .unwrap();
+        let center_centrality =
+            analysis.node_centralities.iter().find(|nc| nc.node_id == "Center").unwrap();
         assert_eq!(center_centrality.degree_centrality, 1.0);
 
         // Spoke nodes should have lower degree centrality (1/4 = 0.25)
-        let spoke_centrality = analysis
-            .node_centralities
-            .iter()
-            .find(|nc| nc.node_id == "Spoke1")
-            .unwrap();
+        let spoke_centrality =
+            analysis.node_centralities.iter().find(|nc| nc.node_id == "Spoke1").unwrap();
         assert_eq!(spoke_centrality.degree_centrality, 0.25);
 
         // Center should be in top_degree
