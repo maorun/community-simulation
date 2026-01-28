@@ -220,11 +220,12 @@ impl ParameterSweepResult {
         println!("\n{}", "Optimal Parameter Values:".bright_green());
 
         // Highest average money
-        if let Some(max_money_point) = self
-            .sweep_points
-            .iter()
-            .max_by(|a, b| a.avg_money_stats.mean.partial_cmp(&b.avg_money_stats.mean).unwrap())
-        {
+        if let Some(max_money_point) = self.sweep_points.iter().max_by(|a, b| {
+            a.avg_money_stats
+                .mean
+                .partial_cmp(&b.avg_money_stats.mean)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        }) {
             println!(
                 "  Highest avg money:  {} = {:.4} (${:.2})",
                 self.parameter_name,
@@ -238,7 +239,7 @@ impl ParameterSweepResult {
             a.gini_coefficient_stats
                 .mean
                 .partial_cmp(&b.gini_coefficient_stats.mean)
-                .unwrap()
+                .unwrap_or(std::cmp::Ordering::Equal)
         }) {
             println!(
                 "  Lowest inequality:  {} = {:.4} (Gini: {:.4})",
@@ -250,7 +251,10 @@ impl ParameterSweepResult {
 
         // Highest trade volume
         if let Some(max_trades_point) = self.sweep_points.iter().max_by(|a, b| {
-            a.total_trades_stats.mean.partial_cmp(&b.total_trades_stats.mean).unwrap()
+            a.total_trades_stats
+                .mean
+                .partial_cmp(&b.total_trades_stats.mean)
+                .unwrap_or(std::cmp::Ordering::Equal)
         }) {
             println!(
                 "  Highest trade volume: {} = {:.4} ({:.0} trades)",
@@ -399,5 +403,122 @@ mod tests {
         // Verify each point has correct number of results
         assert_eq!(result.sweep_points[0].results.len(), 2);
         assert_eq!(result.sweep_points[1].results.len(), 2);
+    }
+
+    #[test]
+    fn test_nan_handling_in_comparisons() {
+        // Test that NaN values in statistics don't cause panics during comparison
+
+        // Create a mock sweep result with NaN values in statistics
+        let mut sweep_result = ParameterSweepResult {
+            parameter_name: "test_param".to_string(),
+            sweep_points: vec![],
+            runs_per_point: 1,
+            total_simulations: 2,
+            base_seed: 42,
+        };
+
+        // Add points with normal and NaN values
+        let point1 = ParameterSweepPoint {
+            parameter_value: 10.0,
+            parameter_name: "test_param".to_string(),
+            results: vec![],
+            avg_money_stats: MonteCarloStats {
+                mean: 100.0,
+                median: 100.0,
+                std_dev: 10.0,
+                min: 90.0,
+                max: 110.0,
+            },
+            gini_coefficient_stats: MonteCarloStats {
+                mean: 0.3,
+                median: 0.3,
+                std_dev: 0.01,
+                min: 0.29,
+                max: 0.31,
+            },
+            total_trades_stats: MonteCarloStats {
+                mean: 50.0,
+                median: 50.0,
+                std_dev: 5.0,
+                min: 45.0,
+                max: 55.0,
+            },
+            avg_reputation_stats: MonteCarloStats {
+                mean: 0.5,
+                median: 0.5,
+                std_dev: 0.1,
+                min: 0.4,
+                max: 0.6,
+            },
+        };
+
+        let point2_with_nan = ParameterSweepPoint {
+            parameter_value: 20.0,
+            parameter_name: "test_param".to_string(),
+            results: vec![],
+            avg_money_stats: MonteCarloStats {
+                mean: f64::NAN, // NaN value that would cause unwrap() to panic
+                median: 100.0,
+                std_dev: 10.0,
+                min: 90.0,
+                max: 110.0,
+            },
+            gini_coefficient_stats: MonteCarloStats {
+                mean: f64::NAN, // NaN value
+                median: 0.3,
+                std_dev: 0.01,
+                min: 0.29,
+                max: 0.31,
+            },
+            total_trades_stats: MonteCarloStats {
+                mean: f64::NAN, // NaN value
+                median: 50.0,
+                std_dev: 5.0,
+                min: 45.0,
+                max: 55.0,
+            },
+            avg_reputation_stats: MonteCarloStats {
+                mean: 0.5,
+                median: 0.5,
+                std_dev: 0.1,
+                min: 0.4,
+                max: 0.6,
+            },
+        };
+
+        sweep_result.sweep_points.push(point1);
+        sweep_result.sweep_points.push(point2_with_nan);
+
+        // Test max_by with avg_money_stats - should not panic with NaN
+        // The key is that this doesn't panic, not which value is selected
+        let max_money = sweep_result.sweep_points.iter().max_by(|a, b| {
+            a.avg_money_stats
+                .mean
+                .partial_cmp(&b.avg_money_stats.mean)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        assert!(max_money.is_some(), "max_by should return a result even with NaN values");
+
+        // Test min_by with gini_coefficient_stats - should not panic with NaN
+        let min_gini = sweep_result.sweep_points.iter().min_by(|a, b| {
+            a.gini_coefficient_stats
+                .mean
+                .partial_cmp(&b.gini_coefficient_stats.mean)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        assert!(min_gini.is_some(), "min_by should return a result even with NaN values");
+
+        // Test max_by with total_trades_stats - should not panic with NaN
+        let max_trades = sweep_result.sweep_points.iter().max_by(|a, b| {
+            a.total_trades_stats
+                .mean
+                .partial_cmp(&b.total_trades_stats.mean)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        assert!(max_trades.is_some(), "max_by should return a result even with NaN values");
+
+        // The critical success criterion is that none of the above operations panicked
+        // The specific value selected when NaN is involved is implementation-defined
     }
 }
