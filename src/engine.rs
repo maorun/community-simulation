@@ -4217,8 +4217,9 @@ impl SimulationEngine {
 
     /// Processes credit insurance payouts when loan defaults occur.
     ///
-    /// When a borrower cannot make loan payments (loan becomes bad debt),
-    /// credit insurance compensates the lender for their losses.
+    /// When a borrower faces financial distress (low money relative to outstanding debt),
+    /// their credit insurance provides funds to help pay off loans, reducing default risk.
+    /// This protects borrowers from defaulting and indirectly protects lenders from losses.
     fn process_credit_insurance_payouts(&mut self) {
         if !self.config.enable_insurance || !self.config.enable_loans {
             return;
@@ -4229,7 +4230,7 @@ impl SimulationEngine {
 
         let mut policies_to_claim: Vec<(crate::insurance::InsuranceId, usize, f64)> = Vec::new();
 
-        // Identify persons with loans who are in financial distress (low money)
+        // Identify borrowers with loans who are in financial distress (low money)
         let distress_threshold = self.config.base_skill_price * 0.5;
 
         for entity in &self.entities {
@@ -4237,11 +4238,10 @@ impl SimulationEngine {
                 continue;
             }
 
-            // Check if person has active loans and very low money (potential default)
-            let has_loans = !entity.person_data.borrowed_loans.is_empty()
-                || !entity.person_data.lent_loans.is_empty();
+            // Check if person has borrowed loans and very low money (potential default)
+            let has_borrowed_loans = !entity.person_data.borrowed_loans.is_empty();
 
-            if has_loans && entity.person_data.money < distress_threshold {
+            if has_borrowed_loans && entity.person_data.money < distress_threshold {
                 // Person is at risk of defaulting - check for credit insurance
                 // Calculate potential loss as remaining debt
                 let total_debt: f64 = entity
