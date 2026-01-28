@@ -324,6 +324,23 @@ pub struct MoneyStats {
     /// Share of total wealth held by the bottom 50% of persons (0.0-1.0)
     /// Values < 0.1 indicate high inequality with poverty concentration
     pub bottom_50_percent_share: f64,
+    /// Lorenz curve data points for wealth distribution visualization.
+    ///
+    /// Each point is (cumulative_population_percentage, cumulative_wealth_percentage).
+    /// The curve starts at (0.0, 0.0) and ends at (1.0, 1.0).
+    ///
+    /// # Interpretation
+    /// * The diagonal line y=x represents perfect equality
+    /// * Curves below the diagonal indicate inequality (further = more unequal)
+    /// * Area between the Lorenz curve and perfect equality line is related to Gini coefficient
+    /// * Used for visual analysis of wealth distribution patterns
+    ///
+    /// # Example
+    /// ```
+    /// // Perfect equality: [(0.0, 0.0), (0.1, 0.1), (0.2, 0.2), ..., (1.0, 1.0)]
+    /// // Perfect inequality: [(0.0, 0.0), (0.1, 0.0), (0.2, 0.0), ..., (0.99, 0.0), (1.0, 1.0)]
+    /// ```
+    pub lorenz_curve: Vec<(f64, f64)>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -1165,6 +1182,7 @@ impl SimulationResult {
     /// #         average: 0.0, median: 0.0, std_dev: 0.0,
     /// #         min_money: 0.0, max_money: 0.0, gini_coefficient: 0.0, herfindahl_index: 0.0,
     /// #         top_10_percent_share: 0.0, top_1_percent_share: 0.0, bottom_50_percent_share: 0.0,
+    /// #         lorenz_curve: vec![(0.0, 0.0), (1.0, 1.0)],
     /// #     },
     /// #     final_reputation_distribution: vec![],
     /// #     reputation_statistics: simulation_framework::result::ReputationStats {
@@ -2234,6 +2252,67 @@ pub fn calculate_gini_coefficient(sorted_values: &[f64], sum: f64) -> f64 {
     (2.0 * weighted_sum) / (n as f64 * sum) - (n as f64 + 1.0) / n as f64
 }
 
+/// Calculate the Lorenz curve for wealth distribution visualization.
+///
+/// The Lorenz curve shows the cumulative distribution of wealth across the population,
+/// enabling visual analysis of inequality. Each point represents (cumulative % of population,
+/// cumulative % of wealth).
+///
+/// # Arguments
+/// * `sorted_values` - A slice of values sorted in ascending order (e.g., money holdings)
+/// * `sum` - The sum of all values (total wealth)
+///
+/// # Returns
+/// A vector of (x, y) coordinates where:
+/// * x = cumulative percentage of population (0.0 to 1.0)
+/// * y = cumulative percentage of wealth (0.0 to 1.0)
+///
+/// # Interpretation
+/// * The diagonal line y=x represents perfect equality (everyone has equal wealth)
+/// * Curves below the diagonal indicate inequality
+/// * The area between the curve and the diagonal is related to the Gini coefficient
+/// * Steeper curves at the start indicate wealth concentrated in fewer hands
+///
+/// # Examples
+/// ```
+/// use simulation_framework::result::calculate_lorenz_curve;
+///
+/// // Perfect equality: everyone has 100
+/// let equal = vec![100.0, 100.0, 100.0, 100.0];
+/// let curve = calculate_lorenz_curve(&equal, 400.0);
+/// // Points should lie on the diagonal: (0.25, 0.25), (0.5, 0.5), etc.
+/// assert_eq!(curve.len(), 5); // Includes starting point (0, 0)
+///
+/// // Perfect inequality: one person has everything
+/// let unequal = vec![0.0, 0.0, 0.0, 100.0];
+/// let curve = calculate_lorenz_curve(&unequal, 100.0);
+/// // First 3 points at y=0, last point at y=1.0
+/// assert!((curve[3].1 - 0.0).abs() < 0.001); // 75% of pop has 0% wealth
+/// ```
+pub fn calculate_lorenz_curve(sorted_values: &[f64], sum: f64) -> Vec<(f64, f64)> {
+    if sorted_values.is_empty() || sum == 0.0 {
+        // Return perfect equality line for empty or zero-sum case
+        return vec![(0.0, 0.0), (1.0, 1.0)];
+    }
+
+    let n = sorted_values.len();
+    let mut curve = Vec::with_capacity(n + 1);
+
+    // Start at origin
+    curve.push((0.0, 0.0));
+
+    // Calculate cumulative wealth percentages
+    let mut cumulative_wealth = 0.0;
+    for (i, &value) in sorted_values.iter().enumerate() {
+        cumulative_wealth += value;
+        let pop_pct = (i + 1) as f64 / n as f64;
+        let wealth_pct = cumulative_wealth / sum;
+        curve.push((pop_pct, wealth_pct));
+    }
+
+    curve
+}
+
 /// Calculate the Herfindahl-Hirschman Index (HHI) for a given distribution of values.
 ///
 /// The HHI measures market concentration by summing the squared market shares.
@@ -2657,6 +2736,7 @@ pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
             top_10_percent_share: 0.0,
             top_1_percent_share: 0.0,
             bottom_50_percent_share: 0.0,
+            lorenz_curve: vec![(0.0, 0.0), (1.0, 1.0)], // Perfect equality for empty case
         };
     }
 
@@ -2693,6 +2773,9 @@ pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
     let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
         calculate_wealth_concentration(&sorted_money, sum);
 
+    // Calculate Lorenz curve for wealth distribution visualization
+    let lorenz_curve = calculate_lorenz_curve(&sorted_money, sum);
+
     MoneyStats {
         average,
         median,
@@ -2704,6 +2787,7 @@ pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
         top_10_percent_share,
         top_1_percent_share,
         bottom_50_percent_share,
+        lorenz_curve,
     }
 }
 
@@ -3420,6 +3504,14 @@ mod tests {
                 top_10_percent_share: 0.3,
                 top_1_percent_share: 0.15,
                 bottom_50_percent_share: 0.25,
+                lorenz_curve: vec![
+                    (0.0, 0.0),
+                    (0.2, 0.1),
+                    (0.4, 0.25),
+                    (0.6, 0.45),
+                    (0.8, 0.7),
+                    (1.0, 1.0),
+                ],
             },
             final_reputation_distribution: vec![0.95, 1.0, 1.0, 1.05, 1.1],
             reputation_statistics: ReputationStats {
@@ -3841,6 +3933,94 @@ mod tests {
         assert!((top10 - 1.0).abs() < 1e-10);
         assert!((top1 - 1.0).abs() < 1e-10);
         assert!((bottom50 - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_lorenz_curve_perfect_equality() {
+        // Perfect equality: everyone has 100
+        let equal = vec![100.0, 100.0, 100.0, 100.0];
+        let sum: f64 = equal.iter().sum();
+        let curve = calculate_lorenz_curve(&equal, sum);
+
+        // Curve should lie on the diagonal (0,0) to (1,1)
+        assert_eq!(curve.len(), 5); // Start + 4 people
+        assert_eq!(curve[0], (0.0, 0.0)); // Origin
+        assert!((curve[1].0 - 0.25).abs() < 1e-10);
+        assert!((curve[1].1 - 0.25).abs() < 1e-10);
+        assert!((curve[2].0 - 0.5).abs() < 1e-10);
+        assert!((curve[2].1 - 0.5).abs() < 1e-10);
+        assert!((curve[3].0 - 0.75).abs() < 1e-10);
+        assert!((curve[3].1 - 0.75).abs() < 1e-10);
+        assert_eq!(curve[4], (1.0, 1.0)); // End
+    }
+
+    #[test]
+    fn test_lorenz_curve_perfect_inequality() {
+        // Perfect inequality: one person has everything
+        let unequal = vec![0.0, 0.0, 0.0, 100.0];
+        let sum = 100.0;
+        let curve = calculate_lorenz_curve(&unequal, sum);
+
+        // First 3 people have 0%, last person has 100%
+        assert_eq!(curve.len(), 5);
+        assert_eq!(curve[0], (0.0, 0.0));
+        assert_eq!(curve[1], (0.25, 0.0)); // 25% of pop, 0% of wealth
+        assert_eq!(curve[2], (0.5, 0.0)); // 50% of pop, 0% of wealth
+        assert_eq!(curve[3], (0.75, 0.0)); // 75% of pop, 0% of wealth
+        assert_eq!(curve[4], (1.0, 1.0)); // 100% of pop, 100% of wealth
+    }
+
+    #[test]
+    fn test_lorenz_curve_moderate_inequality() {
+        // Moderate inequality: [50, 80, 100, 120, 150]
+        let values = vec![50.0, 80.0, 100.0, 120.0, 150.0];
+        let sum: f64 = values.iter().sum(); // 500
+        let curve = calculate_lorenz_curve(&values, sum);
+
+        assert_eq!(curve.len(), 6); // Start + 5 people
+        assert_eq!(curve[0], (0.0, 0.0));
+
+        // First person: 20% of pop, 10% of wealth (50/500)
+        assert!((curve[1].0 - 0.2).abs() < 1e-10);
+        assert!((curve[1].1 - 0.1).abs() < 1e-10);
+
+        // Second person: 40% of pop, 26% of wealth (130/500)
+        assert!((curve[2].0 - 0.4).abs() < 1e-10);
+        assert!((curve[2].1 - 0.26).abs() < 1e-10);
+
+        // Last person: 100% of pop, 100% of wealth
+        assert_eq!(curve[5], (1.0, 1.0));
+    }
+
+    #[test]
+    fn test_lorenz_curve_empty() {
+        let curve = calculate_lorenz_curve(&[], 0.0);
+        // Empty case returns perfect equality line
+        assert_eq!(curve.len(), 2);
+        assert_eq!(curve[0], (0.0, 0.0));
+        assert_eq!(curve[1], (1.0, 1.0));
+    }
+
+    #[test]
+    fn test_lorenz_curve_single_person() {
+        let values = vec![100.0];
+        let curve = calculate_lorenz_curve(&values, 100.0);
+        // Single person: goes from (0,0) to (1,1) in one step
+        assert_eq!(curve.len(), 2);
+        assert_eq!(curve[0], (0.0, 0.0));
+        assert_eq!(curve[1], (1.0, 1.0));
+    }
+
+    #[test]
+    fn test_lorenz_curve_two_persons_unequal() {
+        let values = vec![25.0, 75.0];
+        let curve = calculate_lorenz_curve(&values, 100.0);
+        // First person: 50% of pop, 25% of wealth
+        // Second person: 100% of pop, 100% of wealth
+        assert_eq!(curve.len(), 3);
+        assert_eq!(curve[0], (0.0, 0.0));
+        assert_eq!(curve[1], (0.5, 0.25));
+        assert_eq!(curve[2], (1.0, 1.0));
     }
 
     #[test]
