@@ -91,7 +91,7 @@ pub struct Market {
     /// When a skill has a specific limit set, that limit takes precedence over
     /// the global `min_skill_price` and `max_skill_price` values.
     ///
-    /// Format: HashMap<SkillId, (Option<min>, Option<max>)>
+    /// Format: `HashMap<SkillId, (Option<min>, Option<max>)>`
     /// - None means no specific limit (fall back to global limit)
     /// - Some(value) means enforce this specific limit
     ///
