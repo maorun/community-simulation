@@ -1109,65 +1109,20 @@ impl SimulationEngine {
         final_savings_distribution
             .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
+        // Calculate money statistics using centralized function, then override incremental values
         let money_stats = if !final_money_distribution.is_empty() {
-            let sum: f64 = final_money_distribution.iter().sum();
-            let count = final_money_distribution.len() as f64;
+            let mut stats = crate::result::calculate_money_stats(&final_money_distribution);
 
-            // Use incremental statistics for mean, variance, std_dev (O(1) retrieval)
-            let average = self.money_incremental_stats.mean();
-            let std_dev = self.money_incremental_stats.std_dev();
+            // Override with incrementally tracked values for better performance
+            // (these were tracked during simulation with O(1) updates)
+            stats.average = self.money_incremental_stats.mean();
+            stats.std_dev = self.money_incremental_stats.std_dev();
+            stats.min_money = self.min_money;
+            stats.max_money = self.max_money;
 
-            // Median requires sorted data (cannot be incremental)
-            let median = if count > 0.0 {
-                if count as usize % 2 == 1 {
-                    final_money_distribution[count as usize / 2]
-                } else {
-                    (final_money_distribution[count as usize / 2 - 1]
-                        + final_money_distribution[count as usize / 2])
-                        / 2.0
-                }
-            } else {
-                0.0
-            };
-
-            // Calculate Gini coefficient using the shared utility function
-            let gini_coefficient =
-                crate::result::calculate_gini_coefficient(&final_money_distribution, sum);
-
-            // Calculate Herfindahl-Hirschman Index for wealth concentration
-            let herfindahl_index =
-                crate::result::calculate_herfindahl_index(&final_money_distribution);
-
-            // Calculate wealth concentration ratios
-            let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
-                crate::result::calculate_wealth_concentration(&final_money_distribution, sum);
-
-            crate::result::MoneyStats {
-                average,
-                median,
-                std_dev,
-                // Use incrementally tracked min/max (O(1) retrieval)
-                min_money: self.min_money,
-                max_money: self.max_money,
-                gini_coefficient,
-                herfindahl_index,
-                top_10_percent_share,
-                top_1_percent_share,
-                bottom_50_percent_share,
-            }
+            stats
         } else {
-            crate::result::MoneyStats {
-                average: 0.0,
-                median: 0.0,
-                std_dev: 0.0,
-                min_money: 0.0,
-                max_money: 0.0,
-                gini_coefficient: 0.0,
-                herfindahl_index: 0.0,
-                top_10_percent_share: 0.0,
-                top_1_percent_share: 0.0,
-                bottom_50_percent_share: 0.0,
-            }
+            crate::result::calculate_money_stats(&[])
         };
 
         let reputation_stats = if !final_reputation_distribution.is_empty() {
@@ -4348,58 +4303,24 @@ impl SimulationEngine {
         final_money_distribution
             .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Calculate money statistics
+        // Calculate money statistics using centralized function, then override incremental values
         let money_stats = if !final_money_distribution.is_empty() {
-            let sum: f64 = final_money_distribution.iter().sum();
-            let count = final_money_distribution.len() as f64;
+            let mut stats = crate::result::calculate_money_stats(&final_money_distribution);
 
-            // Use incremental statistics for mean and std_dev (O(1) retrieval)
-            let average = self.money_incremental_stats.mean();
-            let std_dev = self.money_incremental_stats.std_dev();
+            // Override with incrementally tracked values for better performance
+            stats.average = self.money_incremental_stats.mean();
+            stats.std_dev = self.money_incremental_stats.std_dev();
+            stats.min_money = self.min_money;
+            stats.max_money = self.max_money;
 
-            // Median requires sorted data
-            let median = if count as usize > 0 {
-                if count as usize % 2 == 1 {
-                    final_money_distribution[count as usize / 2]
-                } else {
-                    (final_money_distribution[count as usize / 2 - 1]
-                        + final_money_distribution[count as usize / 2])
-                        / 2.0
-                }
-            } else {
-                0.0
-            };
-            crate::result::MoneyStats {
-                average,
-                median,
-                std_dev, // Now computed incrementally instead of being 0.0
-                // Use incrementally tracked min/max
-                min_money: self.min_money,
-                max_money: self.max_money,
-                gini_coefficient: crate::result::calculate_gini_coefficient(
-                    &final_money_distribution,
-                    sum,
-                ),
-                herfindahl_index: crate::result::calculate_herfindahl_index(
-                    &final_money_distribution,
-                ),
-                top_10_percent_share: 0.0,    // Simplified
-                top_1_percent_share: 0.0,     // Simplified
-                bottom_50_percent_share: 0.0, // Simplified
-            }
+            // Simplified version: skip wealth concentration calculations for performance
+            stats.top_10_percent_share = 0.0;
+            stats.top_1_percent_share = 0.0;
+            stats.bottom_50_percent_share = 0.0;
+
+            stats
         } else {
-            crate::result::MoneyStats {
-                average: 0.0,
-                median: 0.0,
-                std_dev: 0.0,
-                min_money: 0.0,
-                max_money: 0.0,
-                gini_coefficient: 0.0,
-                herfindahl_index: 0.0,
-                top_10_percent_share: 0.0,
-                top_1_percent_share: 0.0,
-                bottom_50_percent_share: 0.0,
-            }
+            crate::result::calculate_money_stats(&[])
         };
 
         // Collect reputation distribution
