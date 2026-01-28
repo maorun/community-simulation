@@ -98,10 +98,12 @@ This repository contains a configurable economic simulation written in Rust. It 
   - **Active:** Number of active entities currently participating in the economy
   - **$̄ (Average Money):** Mean wealth across all active persons, using mathematical notation for brevity
   - **Trades:** Number of trades executed in the most recent simulation step, indicating market activity levels
-  - **P̄ (Average Price):** Mean skill price across all markets, showing overall price level trends
+  - **P̄ (Average Price):** Mean price across all skills in the market, showing overall price level trends
   - **Gini:** Gini coefficient (0.0-1.0+ scale) measuring wealth inequality, where 0 indicates perfect equality and higher values indicate greater concentration
   
   The enhanced display provides immediate insight into simulation dynamics without interrupting execution. Updates occur at calculated intervals (every 1% of steps or every 10 steps, whichever is less frequent) to balance informativeness with performance. Example display: `Active: 100 | $̄: 250.3 | Trades: 45 | P̄: 15.2 | Gini: 0.345`. Can be disabled with `--no-progress` flag. Perfect for monitoring long-running simulations, detecting anomalies early, and understanding economic trends as they emerge.
+  
+  **Note:** The mathematical notation symbols (P̄, $̄) use Unicode combining characters (macron) which require a terminal with Unicode support. Most modern terminals support these characters, but if they display incorrectly as garbled text or question marks, this indicates limited Unicode support in your terminal environment.
 - **Structured Logging:** Configurable logging system for debugging and monitoring using standard Rust logging infrastructure (`log` + `env_logger`).
 - **Trace Mode:** Comprehensive debug logging for problem diagnosis. Enable detailed logging of all simulation actions including trade attempts, price updates, reputation changes, loan payments, and tax redistribution. Use environment variable `RUST_LOG=debug` for detailed logs or `RUST_LOG=trace` for extremely detailed output. Ideal for debugging simulation behavior, understanding agent decision-making, and diagnosing unexpected results.
 - **Interactive Mode (REPL):** Step-by-step simulation control through an interactive command-line interface. Enable with `--interactive` flag to enter a read-eval-print loop (REPL) where you can execute individual simulation steps, inspect current state, and save checkpoints on demand. Available commands:

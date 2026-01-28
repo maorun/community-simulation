@@ -1027,6 +1027,7 @@ impl SimulationEngine {
                     let avg_price = self.market.get_average_price();
 
                     // Calculate Gini coefficient for wealth inequality
+                    // Collect and sort money values
                     let mut money_values: Vec<f64> = self
                         .entities
                         .iter()
@@ -1035,6 +1036,7 @@ impl SimulationEngine {
                         .collect();
                     money_values
                         .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                    // Calculate sum once and pass to gini coefficient function
                     let sum: f64 = money_values.iter().sum();
                     let gini = if sum > 0.0 {
                         crate::result::calculate_gini_coefficient(&money_values, sum)
