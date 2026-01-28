@@ -10,6 +10,7 @@ This document provides comprehensive information for developers working on the E
 - [Testing](#testing)
 - [Benchmarks](#benchmarks)
 - [Continuous Integration](#continuous-integration)
+- [Linting and Code Quality](#linting-and-code-quality)
 - [Fuzz Testing](#fuzz-testing)
 - [Contributing](#contributing)
 
@@ -170,9 +171,11 @@ The CI pipeline enforces code quality through:
 
 All PRs must pass these checks before merging, ensuring consistent code style and quality across the project.
 
-### Linting Configuration
+## Linting and Code Quality
 
-The project uses custom linting configurations to maintain high code quality:
+The project uses custom linting configurations to maintain high code quality. For detailed information, see [LINTING.md](LINTING.md).
+
+**Quick Overview:**
 
 **`.clippy.toml`** - Configures Clippy with additional lints:
 - **Complexity Checks**: Functions are checked for cognitive complexity (threshold: 25), excessive arguments (threshold: 7), and excessive lines (threshold: 150)
@@ -201,6 +204,8 @@ These configurations help identify:
 - Large data structures that might cause stack overflow
 - Type definitions that are hard to understand
 - Inconsistent code formatting
+
+**For comprehensive documentation on linting rules, best practices, and examples, see [LINTING.md](LINTING.md).**
 
 ## Fuzz Testing
 
