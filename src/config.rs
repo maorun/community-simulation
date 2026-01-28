@@ -102,7 +102,7 @@ pub struct SimulationConfig {
     ///
     /// Allows setting skill-specific minimum and maximum prices that override
     /// the global `min_skill_price` and `max_skill_price` values.
-    /// Format: HashMap<skill_name, (Option<min>, Option<max>)>
+    /// Format: `HashMap<skill_name, (Option<min>, Option<max>)>`
     ///
     /// Example in YAML:
     /// ```yaml

@@ -16,7 +16,7 @@ use std::path::PathBuf;
 ///
 /// # Returns
 ///
-/// Returns a tuple of (SimulationConfig, Option<PathBuf>) where the second element
+/// Returns a tuple of `(SimulationConfig, Option<PathBuf>)` where the second element
 /// is the path to save the configuration file to (if requested by the user).
 ///
 /// # Examples

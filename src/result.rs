@@ -956,7 +956,7 @@ pub struct TradingNetworkData {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MobilityStatistics {
     /// 5x5 transition matrix showing probability of moving between quintiles.
-    /// Entry [i][j] represents the probability of moving from quintile i to quintile j.
+    /// Entry `[i][j]` represents the probability of moving from quintile `i` to quintile `j`.
     /// Quintiles: 0 = bottom 20%, 1 = second 20%, 2 = middle 20%, 3 = fourth 20%, 4 = top 20%
     pub transition_matrix: Vec<Vec<f64>>,
     /// Probability of moving to a higher quintile (upward mobility)
