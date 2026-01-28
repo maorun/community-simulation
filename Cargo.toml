@@ -21,7 +21,6 @@ colored = "3.0"
 rusqlite = "0.38"
 rustyline = "17.0"
 petgraph = { version = "0.8", features = ["serde-1"] }
-inquire = "0.7"
 chrono = { version = "0.4", features = ["serde"] }
 inquire = "0.9"
 
