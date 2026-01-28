@@ -96,6 +96,13 @@ This repository contains a configurable economic simulation written in Rust. It 
 - **Colored Terminal Output:** Enhanced terminal output with color-coded statistics and messages for improved readability. Automatically detects terminal capabilities and can be disabled with `--no-color` flag.
 - **Wealth Inequality Analysis:** Comprehensive wealth distribution analysis including:
   - **Gini Coefficient:** Measures overall inequality (0 = perfect equality, 1 = perfect inequality)
+  - **Lorenz Curve Data:** Visualization-ready coordinate pairs showing the cumulative distribution of wealth across the population. Key features:
+    - **Format:** Each point represents (cumulative % of population, cumulative % of wealth), starting at (0.0, 0.0) and ending at (1.0, 1.0)
+    - **Interpretation:** The diagonal line y=x represents perfect equality. Curves below the diagonal indicate inequality, with greater distance showing more extreme inequality
+    - **Mathematical Relationship:** The area between the Lorenz curve and the perfect equality line is directly related to the Gini coefficient
+    - **Output Location:** Automatically included in JSON output under `money_statistics.lorenz_curve`
+    - **Visualization:** Use with visualization tools like matplotlib, gnuplot, or web-based charting libraries to create publication-quality inequality visualizations
+    - **Use Cases:** Compare wealth distributions across different simulation scenarios, study inequality trends over time, and analyze policy impacts on wealth concentration
   - **Wealth Concentration Ratios:** Intuitive metrics showing what percentage of total wealth is held by:
     - Top 10% wealthiest persons (indicates upper class concentration)
     - Top 1% wealthiest persons (indicates extreme wealth concentration)

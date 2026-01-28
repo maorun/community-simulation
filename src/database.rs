@@ -311,6 +311,14 @@ mod tests {
                 top_10_percent_share: 0.25,
                 top_1_percent_share: 0.15,
                 bottom_50_percent_share: 0.45,
+                lorenz_curve: vec![
+                    (0.0, 0.0),
+                    (0.2, 0.08),
+                    (0.4, 0.2),
+                    (0.6, 0.4),
+                    (0.8, 0.65),
+                    (1.0, 1.0),
+                ],
             },
             final_reputation_distribution: vec![
                 1.0, 1.1, 0.9, 1.2, 1.0, 1.1, 0.95, 1.05, 1.15, 0.85,
