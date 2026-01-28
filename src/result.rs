@@ -3374,6 +3374,36 @@ mod tests {
         }
     }
 
+    /// Helper function to reduce code duplication in CSV export tests.
+    /// Creates a temp directory, saves CSV files, and reads a specific CSV file.
+    ///
+    /// # Arguments
+    /// * `result` - The SimulationResult to save
+    /// * `file_suffix` - The suffix for the CSV file to read (e.g., "summary", "money")
+    ///
+    /// # Returns
+    /// The contents of the specified CSV file as a String
+    fn read_csv_file_from_test(result: &SimulationResult, file_suffix: &str) -> String {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir
+            .path()
+            .join("test_output")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        let file_path = format!("{}_{}.csv", path_prefix, file_suffix);
+        let mut contents = String::new();
+        File::open(&file_path)
+            .unwrap()
+            .read_to_string(&mut contents)
+            .unwrap();
+
+        contents
+    }
+
     #[test]
     fn test_print_summary() {
         let result = get_test_result();
@@ -3774,24 +3804,9 @@ mod tests {
     #[test]
     fn test_save_to_csv_summary() {
         let result = get_test_result();
-        let temp_dir = tempfile::tempdir().unwrap();
-        let path_prefix = temp_dir
-            .path()
-            .join("test_output")
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        result.save_to_csv(&path_prefix).unwrap();
+        let contents = read_csv_file_from_test(&result, "summary");
 
         // Check that summary file was created and contains expected content
-        let summary_path = format!("{}_summary.csv", path_prefix);
-        let mut contents = String::new();
-        File::open(&summary_path)
-            .unwrap()
-            .read_to_string(&mut contents)
-            .unwrap();
-
         assert!(contents.contains("Metric,Value"));
         assert!(contents.contains("Total Steps,10"));
         assert!(contents.contains("Active Persons,5"));
@@ -3802,24 +3817,9 @@ mod tests {
     #[test]
     fn test_save_to_csv_money_distribution() {
         let result = get_test_result();
-        let temp_dir = tempfile::tempdir().unwrap();
-        let path_prefix = temp_dir
-            .path()
-            .join("test_output")
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        result.save_to_csv(&path_prefix).unwrap();
+        let contents = read_csv_file_from_test(&result, "money");
 
         // Check money distribution file
-        let money_path = format!("{}_money.csv", path_prefix);
-        let mut contents = String::new();
-        File::open(&money_path)
-            .unwrap()
-            .read_to_string(&mut contents)
-            .unwrap();
-
         assert!(contents.contains("Person_ID,Money"));
         assert!(contents.contains("0,50."));
         assert!(contents.contains("1,80."));
@@ -3831,24 +3831,9 @@ mod tests {
     #[test]
     fn test_save_to_csv_reputation_distribution() {
         let result = get_test_result();
-        let temp_dir = tempfile::tempdir().unwrap();
-        let path_prefix = temp_dir
-            .path()
-            .join("test_output")
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        result.save_to_csv(&path_prefix).unwrap();
+        let contents = read_csv_file_from_test(&result, "reputation");
 
         // Check reputation distribution file
-        let reputation_path = format!("{}_reputation.csv", path_prefix);
-        let mut contents = String::new();
-        File::open(&reputation_path)
-            .unwrap()
-            .read_to_string(&mut contents)
-            .unwrap();
-
         assert!(contents.contains("Person_ID,Reputation"));
         assert!(contents.contains("0,0.95"));
         assert!(contents.contains("2,1.0"));
@@ -3865,24 +3850,9 @@ mod tests {
         price_history.insert("Skill_1".to_string(), vec![15.0, 14.5, 14.0]);
         result.skill_price_history = price_history;
 
-        let temp_dir = tempfile::tempdir().unwrap();
-        let path_prefix = temp_dir
-            .path()
-            .join("test_output")
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        result.save_to_csv(&path_prefix).unwrap();
+        let contents = read_csv_file_from_test(&result, "price_history");
 
         // Check price history file
-        let history_path = format!("{}_price_history.csv", path_prefix);
-        let mut contents = String::new();
-        File::open(&history_path)
-            .unwrap()
-            .read_to_string(&mut contents)
-            .unwrap();
-
         assert!(contents.contains("Step,Skill_"));
         assert!(contents.contains("0,10."));
         assert!(contents.contains("1,11."));
@@ -3906,24 +3876,9 @@ mod tests {
     #[test]
     fn test_save_to_csv_trade_volume() {
         let result = get_test_result();
-        let temp_dir = tempfile::tempdir().unwrap();
-        let path_prefix = temp_dir
-            .path()
-            .join("test_output")
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        result.save_to_csv(&path_prefix).unwrap();
+        let contents = read_csv_file_from_test(&result, "trade_volume");
 
         // Check trade volume file
-        let volume_path = format!("{}_trade_volume.csv", path_prefix);
-        let mut contents = String::new();
-        File::open(&volume_path)
-            .unwrap()
-            .read_to_string(&mut contents)
-            .unwrap();
-
         assert!(contents.contains("Step,Trades_Count,Volume_Exchanged"));
         assert!(contents.contains("0,10,100."));
         assert!(contents.contains("4,15,150."));
