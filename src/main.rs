@@ -304,6 +304,36 @@ struct Args {
     #[arg(long)]
     min_money_to_lend: Option<f64>,
 
+    /// Enable insurance system where persons can purchase insurance policies
+    /// When enabled, persons can buy insurance to protect against economic risks
+    /// Available types: Credit (loan defaults), Income (low earnings), Crisis (economic shocks)
+    #[arg(long, default_value_t = false)]
+    enable_insurance: bool,
+
+    /// Insurance premium rate as percentage of coverage (0.0-1.0, e.g., 0.05 = 5%)
+    /// Premium is calculated as: coverage * premium_rate, then adjusted for reputation
+    /// Only used when --enable-insurance is set
+    #[arg(long)]
+    insurance_premium_rate: Option<f64>,
+
+    /// Insurance policy duration in simulation steps (e.g., 100 = policy lasts 100 steps)
+    /// After this duration, policies expire and must be renewed
+    /// Set to 0 for indefinite coverage
+    /// Only used when --enable-insurance is set
+    #[arg(long)]
+    insurance_duration: Option<usize>,
+
+    /// Probability per step that a person attempts to purchase insurance (0.0-1.0, e.g., 0.05 = 5%)
+    /// Only used when --enable-insurance is set
+    #[arg(long)]
+    insurance_purchase_probability: Option<f64>,
+
+    /// Default coverage amount for insurance policies (e.g., 50.0 = max payout of 50)
+    /// Higher coverage provides more protection but costs more in premiums
+    /// Only used when --enable-insurance is set
+    #[arg(long)]
+    insurance_coverage_amount: Option<f64>,
+
     /// Number of groups/organizations to create in the simulation
     /// When set, persons are assigned to groups for collective behavior analysis
     /// Valid range: 1 to number of persons
@@ -695,6 +725,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(min_money) = args.min_money_to_lend {
             cfg.min_money_to_lend = min_money;
         }
+        if args.enable_insurance {
+            cfg.enable_insurance = true;
+        }
+        if let Some(premium_rate) = args.insurance_premium_rate {
+            cfg.insurance_premium_rate = premium_rate;
+        }
+        if let Some(duration) = args.insurance_duration {
+            cfg.insurance_duration = duration;
+        }
+        if let Some(probability) = args.insurance_purchase_probability {
+            cfg.insurance_purchase_probability = probability;
+        }
+        if let Some(coverage) = args.insurance_coverage_amount {
+            cfg.insurance_coverage_amount = coverage;
+        }
         if let Some(num_groups) = args.num_groups {
             cfg.num_groups = Some(num_groups);
         }
@@ -840,6 +885,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Some(min_money) = args.min_money_to_lend {
                 cfg.min_money_to_lend = min_money;
+            }
+            if args.enable_insurance {
+                cfg.enable_insurance = true;
+            }
+            if let Some(premium_rate) = args.insurance_premium_rate {
+                cfg.insurance_premium_rate = premium_rate;
+            }
+            if let Some(duration) = args.insurance_duration {
+                cfg.insurance_duration = duration;
+            }
+            if let Some(probability) = args.insurance_purchase_probability {
+                cfg.insurance_purchase_probability = probability;
+            }
+            if let Some(coverage) = args.insurance_coverage_amount {
+                cfg.insurance_coverage_amount = coverage;
             }
             if let Some(num_groups) = args.num_groups {
                 cfg.num_groups = Some(num_groups);
@@ -1004,12 +1064,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             crisis_severity: args
                 .crisis_severity
                 .unwrap_or(SimulationConfig::default().crisis_severity),
-            enable_insurance: SimulationConfig::default().enable_insurance,
-            insurance_premium_rate: SimulationConfig::default().insurance_premium_rate,
-            insurance_duration: SimulationConfig::default().insurance_duration,
-            insurance_purchase_probability: SimulationConfig::default()
-                .insurance_purchase_probability,
-            insurance_coverage_amount: SimulationConfig::default().insurance_coverage_amount,
+            enable_insurance: args.enable_insurance,
+            insurance_premium_rate: args
+                .insurance_premium_rate
+                .unwrap_or(SimulationConfig::default().insurance_premium_rate),
+            insurance_duration: args
+                .insurance_duration
+                .unwrap_or(SimulationConfig::default().insurance_duration),
+            insurance_purchase_probability: args
+                .insurance_purchase_probability
+                .unwrap_or(SimulationConfig::default().insurance_purchase_probability),
+            insurance_coverage_amount: args
+                .insurance_coverage_amount
+                .unwrap_or(SimulationConfig::default().insurance_coverage_amount),
             enable_friendships: SimulationConfig::default().enable_friendships,
             friendship_probability: SimulationConfig::default().friendship_probability,
             friendship_discount: SimulationConfig::default().friendship_discount,

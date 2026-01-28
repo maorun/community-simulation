@@ -2367,6 +2367,12 @@ impl SimulationEngine {
         // Try to purchase insurance policies
         self.try_purchase_insurance();
 
+        // Process insurance claims for income protection
+        self.process_income_insurance_payouts();
+
+        // Process insurance claims for credit defaults
+        self.process_credit_insurance_payouts();
+
         /// Helper struct to hold priority information for purchase decisions.
         /// Combines multiple factors (urgency, affordability, efficiency, reputation)
         /// into a single priority score for sorting purchase options.
@@ -3974,36 +3980,18 @@ impl SimulationEngine {
     ///
     /// Persons have a probability (insurance_purchase_probability) of attempting to
     /// purchase insurance each step if they can afford it and don't already have active coverage.
+    /// Supports all three insurance types: Crisis, Income, and Credit.
     fn try_purchase_insurance(&mut self) {
         if !self.config.enable_insurance {
             return;
         }
 
-        // For simplicity, focus on Crisis insurance only initially
-        let insurance_type = crate::insurance::InsuranceType::Crisis;
+        // Try to sell all three types of insurance
+        let insurance_types = crate::insurance::InsuranceType::all_types();
 
         for entity_idx in 0..self.entities.len() {
             if !self.entities[entity_idx].active {
                 continue;
-            }
-
-            // Check if person already has active crisis insurance
-            let has_active_crisis_insurance = self.entities[entity_idx]
-                .person_data
-                .insurance_policies
-                .iter()
-                .any(|&policy_id| {
-                    if let Some(policy) = self.insurances.get(&policy_id) {
-                        policy.insurance_type == insurance_type
-                            && policy.is_active
-                            && !policy.is_expired(self.current_step)
-                    } else {
-                        false
-                    }
-                });
-
-            if has_active_crisis_insurance {
-                continue; // Already has active crisis insurance
             }
 
             // Random chance to attempt purchase
@@ -4013,6 +4001,35 @@ impl SimulationEngine {
             {
                 continue;
             }
+
+            // Randomly select an insurance type to purchase (if not already owned)
+            let available_types: Vec<_> = insurance_types
+                .iter()
+                .filter(|&&insurance_type| {
+                    // Check if person already has this type of active insurance
+                    !self.entities[entity_idx]
+                        .person_data
+                        .insurance_policies
+                        .iter()
+                        .any(|&policy_id| {
+                            if let Some(policy) = self.insurances.get(&policy_id) {
+                                policy.insurance_type == insurance_type
+                                    && policy.is_active
+                                    && !policy.is_expired(self.current_step)
+                            } else {
+                                false
+                            }
+                        })
+                })
+                .copied()
+                .collect();
+
+            if available_types.is_empty() {
+                continue; // Already has all types of insurance
+            }
+
+            // Choose a random available type
+            let insurance_type = *available_types.choose(&mut self.rng).unwrap();
 
             // Calculate premium based on coverage and reputation
             let base_premium = crate::insurance::Insurance::calculate_base_premium(
@@ -4058,8 +4075,12 @@ impl SimulationEngine {
             self.total_premiums_collected += premium;
 
             debug!(
-                "Person {} purchased Crisis insurance (ID: {}) - Premium: ${:.2}, Coverage: ${:.2}",
-                entity_idx, insurance_id, premium, self.config.insurance_coverage_amount
+                "Person {} purchased {} insurance (ID: {}) - Premium: ${:.2}, Coverage: ${:.2}",
+                entity_idx,
+                insurance_type.name(),
+                insurance_id,
+                premium,
+                self.config.insurance_coverage_amount
             );
         }
     }
@@ -4114,6 +4135,155 @@ impl SimulationEngine {
 
                     info!(
                         "💰 Insurance payout: Person {} received ${:.2} from Crisis insurance (Policy ID: {})",
+                        owner_id, payout, policy_id
+                    );
+                }
+            }
+        }
+    }
+
+    /// Processes income insurance payouts for persons with low trade income.
+    ///
+    /// When a person's trade income (successful sales) falls below a threshold,
+    /// their income insurance pays out to help maintain minimum living standards.
+    fn process_income_insurance_payouts(&mut self) {
+        if !self.config.enable_insurance {
+            return;
+        }
+
+        // Define low income threshold (50% of base skill price as minimum income expectation)
+        let low_income_threshold = self.config.base_skill_price * 0.5;
+
+        let mut policies_to_claim: Vec<(crate::insurance::InsuranceId, usize, f64)> = Vec::new();
+
+        // Check each person's income from this step
+        for entity in &self.entities {
+            if !entity.active {
+                continue;
+            }
+
+            // Calculate income from successful sales this step
+            let step_income: f64 = entity
+                .person_data
+                .transaction_history
+                .iter()
+                .filter(|t| {
+                    t.step == self.current_step
+                        && matches!(t.transaction_type, crate::person::TransactionType::Sell)
+                })
+                .map(|t| t.amount)
+                .sum();
+
+            // If income is below threshold, check for income insurance
+            if step_income < low_income_threshold {
+                let income_shortfall = low_income_threshold - step_income;
+
+                for &policy_id in &entity.person_data.insurance_policies {
+                    if let Some(policy) = self.insurances.get(&policy_id) {
+                        if policy.insurance_type == crate::insurance::InsuranceType::Income
+                            && policy.is_active
+                            && !policy.is_expired(self.current_step)
+                            && !policy.has_claimed
+                        {
+                            policies_to_claim.push((policy_id, entity.id, income_shortfall));
+                            break; // Only claim once per person per step
+                        }
+                    }
+                }
+            }
+        }
+
+        // Process claims
+        for (policy_id, owner_id, claim_amount) in policies_to_claim {
+            if let Some(policy) = self.insurances.get_mut(&policy_id) {
+                let payout = policy.file_claim(claim_amount, self.current_step);
+
+                if payout > 0.0 {
+                    // Add payout to person's money
+                    self.entities[owner_id].person_data.money += payout;
+
+                    // Update statistics
+                    self.total_insurance_claims_paid += 1;
+                    self.total_payouts_made += payout;
+
+                    debug!(
+                        "💰 Income insurance payout: Person {} received ${:.2} (Policy ID: {})",
+                        owner_id, payout, policy_id
+                    );
+                }
+            }
+        }
+    }
+
+    /// Processes credit insurance payouts when loan defaults occur.
+    ///
+    /// When a borrower faces financial distress (low money relative to outstanding debt),
+    /// their credit insurance provides funds to help pay off loans, reducing default risk.
+    /// This protects borrowers from defaulting and indirectly protects lenders from losses.
+    fn process_credit_insurance_payouts(&mut self) {
+        if !self.config.enable_insurance || !self.config.enable_loans {
+            return;
+        }
+
+        // Check for loan defaults (persons with active loans who can't pay)
+        // This is a simplified version - in practice, you'd track specific loan defaults
+
+        let mut policies_to_claim: Vec<(crate::insurance::InsuranceId, usize, f64)> = Vec::new();
+
+        // Identify borrowers with loans who are in financial distress (low money)
+        let distress_threshold = self.config.base_skill_price * 0.5;
+
+        for entity in &self.entities {
+            if !entity.active {
+                continue;
+            }
+
+            // Check if person has borrowed loans and very low money (potential default)
+            let has_borrowed_loans = !entity.person_data.borrowed_loans.is_empty();
+
+            if has_borrowed_loans && entity.person_data.money < distress_threshold {
+                // Person is at risk of defaulting - check for credit insurance
+                // Calculate potential loss as remaining debt
+                let total_debt: f64 = entity
+                    .person_data
+                    .borrowed_loans
+                    .iter()
+                    .filter_map(|&loan_id| self.loans.get(&loan_id))
+                    .map(|loan| loan.remaining_principal)
+                    .sum();
+
+                if total_debt > 0.0 {
+                    for &policy_id in &entity.person_data.insurance_policies {
+                        if let Some(policy) = self.insurances.get(&policy_id) {
+                            if policy.insurance_type == crate::insurance::InsuranceType::Credit
+                                && policy.is_active
+                                && !policy.is_expired(self.current_step)
+                                && !policy.has_claimed
+                            {
+                                policies_to_claim.push((policy_id, entity.id, total_debt));
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Process claims
+        for (policy_id, owner_id, claim_amount) in policies_to_claim {
+            if let Some(policy) = self.insurances.get_mut(&policy_id) {
+                let payout = policy.file_claim(claim_amount, self.current_step);
+
+                if payout > 0.0 {
+                    // Add payout to person's money (helps pay off debt)
+                    self.entities[owner_id].person_data.money += payout;
+
+                    // Update statistics
+                    self.total_insurance_claims_paid += 1;
+                    self.total_payouts_made += payout;
+
+                    debug!(
+                        "💰 Credit insurance payout: Person {} received ${:.2} (Policy ID: {})",
                         owner_id, payout, policy_id
                     );
                 }
