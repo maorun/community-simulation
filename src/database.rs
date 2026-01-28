@@ -394,6 +394,7 @@ mod tests {
             technology_breakthrough_statistics: None,
             group_statistics: None,
             quality_statistics: None,
+            externality_statistics: None,
             events: None,
         }
     }

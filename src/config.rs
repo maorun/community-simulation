@@ -1150,6 +1150,68 @@ pub struct SimulationConfig {
     /// Set to true to prepare for future parallelization (currently has no performance impact).
     #[serde(default)]
     pub enable_parallel_trades: bool,
+
+    /// Enable externality tracking for transactions.
+    ///
+    /// When enabled, the simulation tracks positive and negative externalities
+    /// (costs or benefits that affect third parties not involved in transactions).
+    /// This enables analysis of:
+    /// - Social costs vs. private costs of transactions
+    /// - Optimal Pigovian taxes/subsidies to internalize externalities
+    /// - Market failure analysis
+    /// - Total societal welfare (social value)
+    ///
+    /// Externalities are calculated as a percentage of transaction value based on
+    /// the externality_rate parameter. Positive rates represent positive externalities
+    /// (e.g., education creating informed citizens), negative rates represent
+    /// negative externalities (e.g., pollution from production).
+    ///
+    /// Set to false to disable externality tracking (default).
+    #[serde(default)]
+    pub enable_externalities: bool,
+
+    /// Default externality rate for all transactions (-1.0 to 1.0).
+    ///
+    /// This rate determines the magnitude of externality as a percentage of transaction value.
+    /// - Positive values: Positive externalities (benefits to society)
+    /// - Negative values: Negative externalities (costs to society)
+    ///
+    /// For example:
+    /// - 0.2: 20% positive externality (e.g., education, healthcare)
+    /// - -0.3: 30% negative externality (e.g., pollution, noise)
+    /// - 0.0: No externality (neutral transaction)
+    ///
+    /// Per-skill externality rates (externality_rates_per_skill) can override this default.
+    /// Only used when enable_externalities is true.
+    /// Default: 0.0 (no externalities)
+    /// Valid range: -1.0 to 1.0
+    #[serde(default)]
+    pub externality_rate: f64,
+
+    /// Per-skill externality rates.
+    ///
+    /// Allows setting specific externality rates for individual skills,
+    /// enabling realistic modeling of different activities' societal impacts.
+    /// Skills not listed use the default externality_rate.
+    ///
+    /// Example in YAML:
+    /// ```yaml
+    /// externality_rates_per_skill:
+    ///   "Education": 0.25          # 25% positive externality
+    ///   "Healthcare": 0.20         # 20% positive externality
+    ///   "Manufacturing": -0.15     # 15% negative externality
+    ///   "Consulting": 0.0          # Neutral
+    /// ```
+    ///
+    /// This enables studying:
+    /// - Sector-specific market failures
+    /// - Optimal differential taxation (Pigovian taxes per industry)
+    /// - Effects of subsidizing high-externality activities
+    ///
+    /// Only used when enable_externalities is true.
+    /// Default: Empty (all skills use externality_rate)
+    #[serde(default)]
+    pub externality_rates_per_skill: HashMap<String, f64>,
 }
 
 fn default_pool_contribution_rate() -> f64 {
@@ -1476,6 +1538,9 @@ impl Default for SimulationConfig {
             exploration_rate: 0.05,               // 5% exploration (ε-greedy)
             enable_specialization: false,         // Disabled by default
             enable_parallel_trades: false,        // Disabled by default
+            enable_externalities: false,          // Disabled by default
+            externality_rate: 0.0,                // No externalities by default
+            externality_rates_per_skill: HashMap::new(), // No per-skill rates by default
         }
     }
 }
@@ -2196,6 +2261,31 @@ impl SimulationConfig {
                     "exploration_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
                     self.exploration_rate
                 )));
+            }
+        }
+
+        // Externality validation
+        if self.enable_externalities {
+            if !(-1.0..=1.0).contains(&self.externality_rate) {
+                return Err(SimulationError::ValidationError(format!(
+                    "Configuration Error: externality_rate must be between -1.0 and 1.0 (-100% to +100%). \
+                     This parameter sets the default externality for transactions. \
+                     Positive values = positive externalities (benefits), negative = negative externalities (costs). \
+                     Recommended range: -0.5 to 0.5 for realistic scenarios. \
+                     Current value: {}",
+                    self.externality_rate
+                )));
+            }
+
+            // Validate per-skill externality rates
+            for (skill, rate) in &self.externality_rates_per_skill {
+                if !(-1.0..=1.0).contains(rate) {
+                    return Err(SimulationError::ValidationError(format!(
+                        "Configuration Error: externality rate for skill '{}' must be between -1.0 and 1.0. \
+                         Current value: {}",
+                        skill, rate
+                    )));
+                }
             }
         }
 

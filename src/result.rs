@@ -1134,6 +1134,14 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quality_statistics: Option<QualityStats>,
 
+    /// Externality statistics for transactions (only present if externality tracking is enabled).
+    ///
+    /// Tracks positive and negative externalities (costs or benefits affecting third parties)
+    /// from transactions. Enables analysis of market failures, optimal Pigovian taxes/subsidies,
+    /// and total societal welfare.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub externality_statistics: Option<crate::externality::ExternalityStats>,
+
     /// Event log (only present if event tracking is enabled).
     ///
     /// Contains timestamped events for trades, price updates, reputation changes,
@@ -1238,6 +1246,7 @@ impl SimulationResult {
     /// #     centrality_analysis: None,
     /// #     mobility_statistics: None,
     /// #     quality_statistics: None,
+    /// #     externality_statistics: None,
     /// #     events: None,
     /// #     final_persons_data: vec![],
     /// # };
@@ -3384,6 +3393,7 @@ mod tests {
             centrality_analysis: None,
             mobility_statistics: None,
             quality_statistics: None,
+            externality_statistics: None,
             events: None,
             final_persons_data: vec![],
         }
