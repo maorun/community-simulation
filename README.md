@@ -318,6 +318,8 @@ The simulation accepts the following CLI arguments:
     *   Example: `--preset small_economy --steps 200` uses the small economy preset but overrides steps to 200.
 *   `--list-presets`:
     *   Display all available preset configurations with their parameters and exit.
+*   `--list-scenarios`:
+    *   Display all available pricing scenarios with descriptions and exit. Use this to discover available options for the `--scenario` parameter. Shows Original (default), DynamicPricing, AdaptivePricing, and AuctionPricing scenarios with their mechanisms and use cases.
 *   `--config <CONFIG>` or `-c <CONFIG>`:
     *   Path to a configuration file (YAML or TOML format). When provided, configuration is loaded from the file first, then any CLI arguments override those values.
     *   See `config.example.yaml` and `config.example.toml` for example configuration files.
@@ -574,6 +576,9 @@ The simulation accepts the following CLI arguments:
 ```bash
 # List all available presets
 ./target/release/simulation-framework --list-presets
+
+# List all available pricing scenarios
+./target/release/simulation-framework --list-scenarios
 
 # Use a preset for quick testing
 ./target/release/simulation-framework --preset quick_test -o quick_results.json

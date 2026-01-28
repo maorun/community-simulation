@@ -161,10 +161,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 1. **Qualitätsbewertungssystem** - Fügt wichtige Marktdimension hinzu (NOTE: Quality rating is already implemented!)
 2. **Mentorschaft** - Natürliche Erweiterung von Bildung + Freundschaft (NOTE: Mentorship is already implemented!)
 
-### Mittlere Priorität (Mittelfristig - gute Harmonien)
-
-4. **Handelsabkommen** - Erweitert Freundschaft und Verträge
-
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
 8. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
@@ -196,10 +192,8 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 
 ### Soziales Kapital
 - **Freundschaft** ↔ **Vertrauensnetzwerke**: Basis für Vertrauen
-- **Freundschaft** ↔ **Handelsabkommen**: Präferenzielle Behandlung
 - **Freundschaft** ↔ **Mentorschaft**: Mentorschaft führt zu Freundschaft
 - **Freundschaft** ↔ **Gemeinschaftspools**: Solidarität in Gruppen
-- **Verträge** ↔ **Handelsabkommen**: Formalisierte Abkommen
 
 ### Risikomanagement
 - **Ersparnisse** ↔ **Investitionen**: Kapitalallokation
@@ -221,12 +215,6 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - Qualität ist relativ unabhängig und bringt sofort Mehrwert (bereits implementiert!)
 - Mentorschaft rundet soziale Features ab (bereits implementiert!)
 - Event-System ist nun vollständig integriert und ermöglicht besseres Debugging aller Features
-
-### Phase 2: Erweiterte Interaktionen (6-12 Monate)
-4. Handelsabkommen implementieren
-
-**Warum diese Reihenfolge?**
-- Handelsabkommen bauen auf Freundschaften und Verträgen auf
 
 ### Phase 3: Fortgeschrittene Analysen (12+ Monate)
 9. Externalitäten-Analyse

@@ -27,6 +27,10 @@ struct Args {
     #[arg(long, default_value_t = false)]
     list_presets: bool,
 
+    /// List all available pricing scenarios and exit
+    #[arg(long, default_value_t = false)]
+    list_scenarios: bool,
+
     /// Start interactive configuration wizard to create a simulation configuration
     #[arg(long, default_value_t = false)]
     wizard: bool,
@@ -464,6 +468,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             println!();
         }
+        return Ok(());
+    }
+
+    // Handle --list-scenarios flag
+    if args.list_scenarios {
+        println!("Available pricing scenarios:\n");
+
+        for scenario in Scenario::all() {
+            let default_marker = if scenario.is_default() {
+                " (default)"
+            } else {
+                ""
+            };
+            println!("  {}{}", scenario, default_marker);
+            println!("    Description: {}", scenario.description());
+            println!("    Mechanism: {}", scenario.mechanism());
+            println!("    Best for: {}\n", scenario.use_case());
+        }
+
+        println!("Usage: --scenario <SCENARIO>");
+        println!(
+            "Example: {} --scenario AdaptivePricing -s 500 -p 100",
+            std::env::args()
+                .next()
+                .unwrap_or_else(|| "simulation-framework".to_string())
+        );
+
         return Ok(());
     }
 
