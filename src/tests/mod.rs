@@ -1,48 +1,16 @@
 mod comprehensive_scenario_tests;
 mod proptest_tests;
 mod scenario_integration_tests;
+pub mod test_helpers;
 
 #[cfg(test)]
 mod engine_tests {
-    use crate::{scenario::Scenario, SimulationConfig, SimulationEngine};
-
-    fn get_test_config() -> SimulationConfig {
-        SimulationConfig {
-            entity_count: 10,
-            max_steps: 100,
-            initial_money_per_person: 100.0,
-            base_skill_price: 50.0,
-            min_skill_price: 1.0,
-            seed: 42,
-            scenario: Scenario::Original,
-            time_step: 1.0,
-            tech_growth_rate: 0.0,
-            seasonal_amplitude: 0.0,
-            seasonal_period: 100,
-            transaction_fee: 0.0,
-            savings_rate: 0.0,
-            enable_loans: false,
-            loan_interest_rate: 0.01,
-            loan_repayment_period: 20,
-            min_money_to_lend: 50.0,
-            checkpoint_interval: 0,
-            checkpoint_file: None,
-            resume_from_checkpoint: false,
-            tax_rate: 0.0,
-            enable_tax_redistribution: false,
-            skills_per_person: 1,
-            stream_output_path: None,
-            priority_urgency_weight: 0.5,
-            priority_affordability_weight: 0.3,
-            priority_efficiency_weight: 0.1,
-            priority_reputation_weight: 0.1,
-            ..Default::default()
-        }
-    }
+    use crate::tests::test_helpers::test_config;
+    use crate::SimulationEngine;
 
     #[test]
     fn test_simulation_engine_new() {
-        let config = get_test_config();
+        let config = test_config().build();
         let engine = SimulationEngine::new(config);
 
         assert_eq!(engine.get_active_entity_count(), 10);
@@ -51,7 +19,7 @@ mod engine_tests {
 
     #[test]
     fn test_simulation_engine_step() {
-        let config = get_test_config();
+        let config = test_config().build();
         let mut engine = SimulationEngine::new(config);
 
         engine.step();
@@ -62,8 +30,7 @@ mod engine_tests {
 
     #[test]
     fn test_simulation_engine_run() {
-        let mut config = get_test_config();
-        config.max_steps = 2; // Keep the test fast
+        let config = test_config().max_steps(2).build();
         let mut engine = SimulationEngine::new(config);
 
         let result = engine.run();
@@ -75,8 +42,7 @@ mod engine_tests {
 
     #[test]
     fn test_seasonal_factor_disabled() {
-        let mut config = get_test_config();
-        config.seasonal_amplitude = 0.0; // Disabled
+        let config = test_config().seasonality(0.0, 100).build();
         let engine = SimulationEngine::new(config);
 
         // When disabled, seasonal factor should always be 1.0
@@ -86,9 +52,7 @@ mod engine_tests {
 
     #[test]
     fn test_seasonal_factor_enabled() {
-        let mut config = get_test_config();
-        config.seasonal_amplitude = 0.5; // 50% amplitude
-        config.seasonal_period = 100;
+        let config = test_config().seasonality(0.5, 100).build();
         let mut engine = SimulationEngine::new(config);
 
         // Check factor at different steps
@@ -115,9 +79,7 @@ mod engine_tests {
 
     #[test]
     fn test_seasonal_factor_different_skills() {
-        let mut config = get_test_config();
-        config.seasonal_amplitude = 0.5;
-        config.seasonal_period = 100;
+        let config = test_config().seasonality(0.5, 100).build();
         let engine = SimulationEngine::new(config);
 
         // Different skills should have different seasonal factors
@@ -137,10 +99,7 @@ mod engine_tests {
 
     #[test]
     fn test_transaction_fee_collection() {
-        let mut config = get_test_config();
-        config.max_steps = 10;
-        config.transaction_fee = 0.1; // 10% fee
-        config.entity_count = 5;
+        let config = test_config().max_steps(10).transaction_fee(0.1).entity_count(5).build();
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -169,10 +128,7 @@ mod engine_tests {
 
     #[test]
     fn test_zero_transaction_fee() {
-        let mut config = get_test_config();
-        config.max_steps = 10;
-        config.transaction_fee = 0.0; // No fee
-        config.entity_count = 5;
+        let config = test_config().max_steps(10).transaction_fee(0.0).entity_count(5).build();
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -187,7 +143,7 @@ mod engine_tests {
     #[test]
     fn test_panic_recovery_field_exists() {
         // Test that the panic recovery field exists and is initialized correctly
-        let config = get_test_config();
+        let config = test_config().build();
         let mut engine = SimulationEngine::new(config);
 
         let result = engine.run();
@@ -202,7 +158,8 @@ mod engine_tests {
     #[test]
     fn test_panic_recovery_in_result() {
         // Test that SimulationResult properly serializes failed_steps
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 10;
         let mut engine = SimulationEngine::new(config);
 
@@ -233,8 +190,7 @@ mod engine_tests {
         let checkpoint_path = temp_file.path();
 
         // Create and run simulation for a few steps
-        let mut config = get_test_config();
-        config.max_steps = 10;
+        let config = test_config().max_steps(10).build();
         let mut engine = SimulationEngine::new(config);
 
         // Run 5 steps
@@ -265,8 +221,7 @@ mod engine_tests {
         let checkpoint_path = temp_file.path();
 
         // Run first half of simulation
-        let mut config1 = get_test_config();
-        config1.max_steps = 10;
+        let config1 = test_config().max_steps(10).build();
         let mut engine1 = SimulationEngine::new(config1.clone());
 
         for _ in 0..5 {
@@ -303,8 +258,8 @@ mod engine_tests {
         let checkpoint_path = temp_file.path().to_str().unwrap().to_string();
 
         // Configure with auto-checkpoint every 3 steps
-        let mut config = get_test_config();
-        config.max_steps = 10;
+        let config = test_config().max_steps(10).build();
+        let mut config = config;
         config.checkpoint_interval = 3;
         config.checkpoint_file = Some(checkpoint_path.clone());
 
@@ -338,7 +293,8 @@ mod engine_tests {
         let stream_path = temp_file.path().to_str().unwrap().to_string();
 
         // Create simulation config with streaming output enabled
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 5;
         config.entity_count = 5;
         config.stream_output_path = Some(stream_path.clone());
@@ -376,7 +332,8 @@ mod engine_tests {
     #[test]
     fn test_per_skill_trade_statistics() {
         // Test that per-skill trade statistics are correctly tracked and reported
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 50;
         config.entity_count = 20;
 
@@ -439,7 +396,8 @@ mod engine_tests {
     #[test]
     fn test_friendship_system_disabled() {
         // Test that friendship system doesn't affect simulation when disabled
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 50;
         config.enable_friendships = false;
 
@@ -466,7 +424,8 @@ mod engine_tests {
     #[test]
     fn test_friendship_formation() {
         // Test that friendships form during trading
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 100;
         config.enable_friendships = true;
         config.friendship_probability = 0.5; // 50% chance to speed up formation
@@ -525,7 +484,8 @@ mod engine_tests {
     #[test]
     fn test_friendship_discount_applied() {
         // Test that friends receive price discounts
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 50;
         config.entity_count = 10;
         config.enable_friendships = true;
@@ -555,7 +515,8 @@ mod engine_tests {
     #[test]
     fn test_friendship_validation() {
         // Test that invalid friendship parameters are rejected
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.enable_friendships = true;
 
         // Test invalid probability (> 1.0)
@@ -586,7 +547,8 @@ mod engine_tests {
         // Test network density calculation
         const FLOAT_TOLERANCE: f64 = 0.0001; // Tolerance for floating-point comparisons
 
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 200; // More steps = more dense network
         config.entity_count = 15;
         config.enable_friendships = true;
@@ -629,7 +591,8 @@ mod engine_tests {
     #[test]
     fn test_event_tracking_enabled() {
         // Test that events are collected when enabled
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 10;
         config.entity_count = 5;
         config.enable_events = true; // Enable event tracking
@@ -672,7 +635,8 @@ mod engine_tests {
     #[test]
     fn test_event_tracking_disabled() {
         // Test that events are NOT collected when disabled
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.max_steps = 10;
         config.entity_count = 5;
         config.enable_events = false; // Disable event tracking
@@ -688,7 +652,8 @@ mod engine_tests {
     #[test]
     fn test_incremental_money_statistics_accuracy() {
         // Test that incremental statistics produce valid results
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.entity_count = 20;
         config.max_steps = 50;
         config.enable_loans = true; // Allow money to vary more
@@ -734,7 +699,8 @@ mod engine_tests {
 
         // Run multiple simulations and verify statistics are consistent
         for seed in 100..105 {
-            let mut config2 = get_test_config();
+            let config2 = test_config().build();
+            let mut config2 = config2;
             config2.entity_count = 15;
             config2.max_steps = 30;
             config2.seed = seed;
@@ -763,7 +729,8 @@ mod engine_tests {
     fn test_velocity_of_money_integration() {
         // Integration test to verify velocity of money is correctly calculated
         // in the context of a real simulation
-        let mut config = get_test_config();
+        let config = test_config().build();
+        let mut config = config;
         config.entity_count = 10;
         config.max_steps = 50;
         config.initial_money_per_person = 100.0;
@@ -802,7 +769,8 @@ mod engine_tests {
         }
 
         // Test with zero transactions (very short simulation)
-        let mut config_zero = get_test_config();
+        let config_zero = test_config().build();
+        let mut config_zero = config_zero;
         config_zero.max_steps = 1; // Very short, likely no trades
         config_zero.entity_count = 2;
         let mut engine_zero = SimulationEngine::new(config_zero);
@@ -820,7 +788,8 @@ mod engine_tests {
 
         // Test that velocity changes with economic activity
         // More steps should generally lead to higher velocity
-        let mut config_long = get_test_config();
+        let config_long = test_config().build();
+        let mut config_long = config_long;
         config_long.max_steps = 100;
         config_long.entity_count = 20;
         config_long.initial_money_per_person = 100.0;

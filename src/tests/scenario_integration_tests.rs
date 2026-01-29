@@ -3,22 +3,19 @@
 #[cfg(test)]
 mod integration_tests {
     use crate::scenario::Scenario;
+    use crate::tests::test_helpers::test_config;
     use crate::{SimulationConfig, SimulationEngine};
 
     /// Test that Original scenario produces stable results
     #[test]
     fn test_original_scenario_stability() {
-        let config = SimulationConfig {
-            entity_count: 20,
-            max_steps: 100,
-            initial_money_per_person: 100.0,
-            base_skill_price: 10.0,
-            seed: 42,
-            scenario: Scenario::Original,
-            time_step: 1.0,
-            tech_growth_rate: 0.0,
-            ..Default::default()
-        };
+        let config = test_config()
+            .entity_count(20)
+            .max_steps(100)
+            .initial_money(100.0)
+            .base_price(10.0)
+            .scenario(Scenario::Original)
+            .build();
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -40,17 +37,13 @@ mod integration_tests {
     /// Test that DynamicPricing scenario produces stable results
     #[test]
     fn test_dynamic_pricing_scenario_stability() {
-        let config = SimulationConfig {
-            entity_count: 20,
-            max_steps: 100,
-            initial_money_per_person: 100.0,
-            base_skill_price: 10.0,
-            seed: 42,
-            scenario: Scenario::DynamicPricing,
-            time_step: 1.0,
-            tech_growth_rate: 0.0,
-            ..Default::default()
-        };
+        let config = test_config()
+            .entity_count(20)
+            .max_steps(100)
+            .initial_money(100.0)
+            .base_price(10.0)
+            .scenario(Scenario::DynamicPricing)
+            .build();
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -67,17 +60,13 @@ mod integration_tests {
     #[test]
     fn test_varying_population_sizes() {
         for size in [5, 10, 50, 100].iter() {
-            let config = SimulationConfig {
-                entity_count: *size,
-                max_steps: 50,
-                initial_money_per_person: 100.0,
-                base_skill_price: 10.0,
-                seed: 42,
-                scenario: Scenario::Original,
-                time_step: 1.0,
-                tech_growth_rate: 0.0,
-                ..Default::default()
-            };
+            let config = test_config()
+                .entity_count(*size)
+                .max_steps(50)
+                .initial_money(100.0)
+                .base_price(10.0)
+                .scenario(Scenario::Original)
+                .build();
 
             let mut engine = SimulationEngine::new(config);
             let result = engine.run();
@@ -92,34 +81,26 @@ mod integration_tests {
     #[test]
     fn test_extreme_initial_money() {
         // Very low initial money
-        let config_low = SimulationConfig {
-            entity_count: 10,
-            max_steps: 20,
-            initial_money_per_person: 1.0,
-            base_skill_price: 10.0,
-            seed: 42,
-            scenario: Scenario::Original,
-            time_step: 1.0,
-            tech_growth_rate: 0.0,
-            ..Default::default()
-        };
+        let config_low = test_config()
+            .entity_count(10)
+            .max_steps(20)
+            .initial_money(1.0)
+            .base_price(10.0)
+            .scenario(Scenario::Original)
+            .build();
 
         let mut engine_low = SimulationEngine::new(config_low);
         let result_low = engine_low.run();
         assert_eq!(result_low.total_steps, 20);
 
         // Very high initial money
-        let config_high = SimulationConfig {
-            entity_count: 10,
-            max_steps: 20,
-            initial_money_per_person: 10000.0,
-            base_skill_price: 10.0,
-            seed: 42,
-            scenario: Scenario::Original,
-            time_step: 1.0,
-            tech_growth_rate: 0.0,
-            ..Default::default()
-        };
+        let config_high = test_config()
+            .entity_count(10)
+            .max_steps(20)
+            .initial_money(10000.0)
+            .base_price(10.0)
+            .scenario(Scenario::Original)
+            .build();
 
         let mut engine_high = SimulationEngine::new(config_high);
         let result_high = engine_high.run();
@@ -132,17 +113,13 @@ mod integration_tests {
     /// Test that reputation system works correctly
     #[test]
     fn test_reputation_evolution() {
-        let config = SimulationConfig {
-            entity_count: 10,
-            max_steps: 100,
-            initial_money_per_person: 100.0,
-            base_skill_price: 10.0,
-            seed: 42,
-            scenario: Scenario::Original,
-            time_step: 1.0,
-            tech_growth_rate: 0.0,
-            ..Default::default()
-        };
+        let config = test_config()
+            .entity_count(10)
+            .max_steps(100)
+            .initial_money(100.0)
+            .base_price(10.0)
+            .scenario(Scenario::Original)
+            .build();
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
