@@ -273,7 +273,9 @@ fn calculate_betweenness_centrality(
         // BFS
         while let Some(v) = queue.pop_front() {
             stack.push(v);
-            let dist_v = *distance.get(&v).unwrap();
+            // SAFETY: v came from queue, which only contains nodes already in distance map
+            let dist_v =
+                *distance.get(&v).expect("BFS invariant: node in queue must be in distance map");
 
             for neighbor in graph.neighbors(v) {
                 // First time visiting neighbor?
@@ -283,8 +285,14 @@ fn calculate_betweenness_centrality(
                 }
 
                 // Is this shortest path to neighbor via v?
-                if *distance.get(&neighbor).unwrap() == dist_v + 1 {
-                    let paths_v = *paths.get(&v).unwrap();
+                // SAFETY: neighbor was just inserted or already existed in distance map above
+                let neighbor_dist = *distance
+                    .get(&neighbor)
+                    .expect("BFS invariant: neighbor must be in distance map");
+                if neighbor_dist == dist_v + 1 {
+                    // SAFETY: v was already verified to be in paths via the queue invariant
+                    let paths_v =
+                        *paths.get(&v).expect("BFS invariant: node in queue must be in paths map");
                     *paths.entry(neighbor).or_insert(0) += paths_v;
                     predecessors.entry(neighbor).or_insert_with(Vec::new).push(v);
                 }
@@ -297,11 +305,18 @@ fn calculate_betweenness_centrality(
 
         while let Some(w) = stack.pop() {
             if let Some(preds) = predecessors.get(&w) {
-                let paths_w = *paths.get(&w).unwrap() as f64;
+                // SAFETY: w came from stack, which only contains nodes visited in BFS and added to paths
+                let paths_w =
+                    *paths.get(&w).expect("Brandes invariant: node in stack must be in paths map")
+                        as f64;
                 let dep_w = dependency.get(&w).copied().unwrap_or(0.0);
 
                 for &v in preds {
-                    let paths_v = *paths.get(&v).unwrap() as f64;
+                    // SAFETY: predecessors only contains nodes visited in BFS and added to paths
+                    let paths_v = *paths
+                        .get(&v)
+                        .expect("Brandes invariant: predecessor must be in paths map")
+                        as f64;
                     let contribution = (paths_v / paths_w) * (1.0 + dep_w);
                     *dependency.entry(v).or_insert(0.0) += contribution;
                 }
