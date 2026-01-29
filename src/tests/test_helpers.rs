@@ -209,6 +209,48 @@ impl TestConfigBuilder {
         self
     }
 
+    /// Set checkpoint interval
+    pub fn checkpoint_interval(mut self, interval: usize) -> Self {
+        self.config.checkpoint_interval = interval;
+        self
+    }
+
+    /// Set checkpoint file path
+    pub fn checkpoint_file(mut self, path: Option<String>) -> Self {
+        self.config.checkpoint_file = path;
+        self
+    }
+
+    /// Enable or disable friendships
+    pub fn enable_friendships(mut self, enable: bool) -> Self {
+        self.config.enable_friendships = enable;
+        self
+    }
+
+    /// Set friendship probability
+    pub fn friendship_probability(mut self, prob: f64) -> Self {
+        self.config.friendship_probability = prob;
+        self
+    }
+
+    /// Set friendship discount
+    pub fn friendship_discount(mut self, discount: f64) -> Self {
+        self.config.friendship_discount = discount;
+        self
+    }
+
+    /// Enable or disable event tracking
+    pub fn enable_events(mut self, enable: bool) -> Self {
+        self.config.enable_events = enable;
+        self
+    }
+
+    /// Set stream output path
+    pub fn stream_output_path(mut self, path: Option<String>) -> Self {
+        self.config.stream_output_path = path;
+        self
+    }
+
     /// Set priority weights for trading decisions
     pub fn priority_weights(
         mut self,
