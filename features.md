@@ -93,17 +93,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 **Nutzen:** Politikbewertung für Post-Konflikt-Situationen, Hilfsallokation.
 
-#### 4. Gig-Economy-Simulation
-**Beschreibung:** Modellierung von Plattformökonomie mit vermittelten Trades, Plattformgebühren, Ratings und algorithmischem Matching.
-
-**Harmonien:**
-- **Transaktionsgebühren:** Plattformgebühren
-- **Reputation:** Platform-Ratings
-- **Verträge:** Gig-Verträge (kurzfristig)
-- **Preisdynamik:** Surge-Pricing
-
-**Nutzen:** Untersuchung von Plattformökonomie, Worker-Outcomes, Plattformmacht.
-
 ## 🎯 Priorisierung
 
 ### Hohe Priorität (Kurzfristig - hohe Harmonie-Effekte)
@@ -114,9 +103,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
 8. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
-9. **Spezialisierung/Diversifikation** - Erfordert große Überarbeitung
-10. **Externalitäten-Analyse** - Theoretisch wichtig, praktisch herausfordernd
-11. **Spezielle Anwendungsfälle** - Domänenspezifisch
+9. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
 ### Code-Verbesserungen (Kontinuierlich)
 
