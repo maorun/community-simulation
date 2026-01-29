@@ -269,6 +269,15 @@ This repository contains a configurable economic simulation written in Rust. It 
     ./target/release/simulation-framework -o results.json
     ```
 
+4.  Or try a preset scenario:
+    ```bash
+    # Gig Economy simulation (platform with ratings, fees, surge pricing)
+    ./target/release/simulation-framework --preset gig_economy -o gig_results.json
+    
+    # Economic crisis scenario  
+    ./target/release/simulation-framework --preset crisis_scenario -o crisis_results.json
+    ```
+
 ### Interactive Configuration Wizard
 
 For new users or when setting up complex simulations, use the **interactive configuration wizard** to create simulation configurations step-by-step with guided help text and validation:
@@ -359,6 +368,7 @@ The simulation accepts the following CLI arguments:
         *   `high_inflation` (alias: `inflation`) - Dynamic pricing scenario (100 persons, 1000 steps, DynamicPricing scenario)
         *   `tech_growth` (alias: `tech`) - Technology growth (150 persons, 1500 steps, $250 initial money, $8 base price)
         *   `quick_test` (alias: `quick`) - Rapid testing (10 persons, 50 steps)
+        *   `gig_economy` (alias: `gig`) - Platform economy simulation (200 persons, 1000 steps, 15% transaction fees, quality ratings, contracts, surge pricing)
     *   CLI arguments can override preset values when explicitly provided.
     *   Example: `--preset small_economy --steps 200` uses the small economy preset but overrides steps to 200.
 *   `--list-presets`:

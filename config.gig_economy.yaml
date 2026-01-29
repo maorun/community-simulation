@@ -1,0 +1,42 @@
+# Gig Economy Simulation Configuration
+# This preset simulates a platform-based economy (like Uber, Fiverr, TaskRabbit)
+# with workers, platform fees, ratings, and dynamic pricing (surge pricing)
+
+# Simulation parameters
+max_steps: 1000
+entity_count: 200  # Larger workforce for realistic gig market
+seed: 42
+initial_money_per_person: 100.0
+base_skill_price: 15.0
+
+# Pricing scenario - DynamicPricing simulates surge pricing
+scenario: DynamicPricing
+price_elasticity_factor: 0.12  # Responsive to demand changes
+volatility_percentage: 0.03    # Moderate price volatility
+
+# Platform fees (15% commission is typical for gig platforms)
+transaction_fee: 0.15  # 15% platform commission on each transaction
+
+# Quality/Reputation system (critical for platform trust)
+enable_quality: true
+initial_quality: 3.0  # Starting quality rating (scale: 0.0-5.0)
+quality_improvement_rate: 0.15  # Fast improvement through practice
+quality_decay_rate: 0.03  # Slower decay (skills maintained)
+
+# Short-term gig contracts
+enable_contracts: true
+min_contract_duration: 5   # Short gigs (5-20 simulation steps)
+max_contract_duration: 20
+contract_price_discount: 0.05  # 5% discount for contracted work
+
+# Networking and repeat customers
+enable_friendships: true
+friendship_probability: 0.2  # 20% chance after successful trade (platform facilitates connections)
+friendship_discount: 0.1  # 10% discount for repeat customers
+
+# Diverse worker types (behavioral strategies)
+# Conservative (0.7x), Balanced (1.0x), Aggressive (1.3x), Frugal (0.5x)
+# These are automatically distributed evenly across the population
+
+# Output configuration
+output_file: "gig_economy_results.json"
