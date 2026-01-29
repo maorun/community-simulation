@@ -107,7 +107,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### Code-Verbesserungen (Kontinuierlich)
 
-- **Integration-Tests** - Qualitätssicherung
 - **Zeitreihen-DB** - Enterprise-Integration
 - **Erweiterbare Architektur** - Langfristige Wartbarkeit
 
