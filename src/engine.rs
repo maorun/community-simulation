@@ -1021,12 +1021,32 @@ impl SimulationEngine {
                 if step % stats_update_interval == 0 || step == self.config.max_steps - 1 {
                     let active_entities = self.entities.iter().filter(|e| e.active).count();
                     let avg_money = self.calculate_average_money();
+
+                    // Calculate additional metrics for enhanced progress bar
+                    let trades_this_step = self.trades_per_step.last().copied().unwrap_or(0);
+                    let avg_price = self.market.get_average_price();
+
+                    // Calculate Gini coefficient for wealth inequality
+                    // Collect and sort money values
+                    let mut money_values: Vec<f64> = self
+                        .entities
+                        .iter()
+                        .filter(|e| e.active)
+                        .map(|e| e.person_data.money)
+                        .collect();
+                    money_values
+                        .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                    // Calculate sum once and pass to gini coefficient function
+                    let sum: f64 = money_values.iter().sum();
+                    let gini = if sum > 0.0 {
+                        crate::result::calculate_gini_coefficient(&money_values, sum)
+                    } else {
+                        0.0
+                    };
+
                     pb.set_message(format!(
-                        "Step {}/{} | Active: {} | Avg Money: {:.2}",
-                        step + 1,
-                        self.config.max_steps,
-                        active_entities,
-                        avg_money
+                        "Active: {} | $̄: {:.1} | Trades: {} | P̄: {:.1} | Gini: {:.3}",
+                        active_entities, avg_money, trades_this_step, avg_price, gini
                     ));
                 }
             } else {

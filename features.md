@@ -56,22 +56,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. CLI-Verbesserungen
 
-#### 1.1 Simulation-Dashboards
-**Beschreibung:** Live-Dashboard im Terminal während der Simulation mit Sparklines, Gauges und Histogrammen für Schlüsselmetriken.
-
-**Harmonien:**
-- **Progress Bar:** Ersetzt oder ergänzt einfache Progress Bar
-- **Streaming-Output:** Nutzt JSONL-Stream als Datenquelle
-- **Farbausgabe:** Erweitert bestehendes Farbschema
-
-**Nutzen:** Bessere Überwachung langer Simulationen, frühe Probleme-Detektion.
-
-**Implementierung:**
-- TUI-Framework (tui-rs oder ratatui)
-- Multiple Panels: Handelsvolumen, Gini-Koeffizient, Top-Trader
-- Sparklines für Zeitreihen
-- Tastenkombinationen für Panel-Wechsel
-
 ### 2. Debugging-Tools
 
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
