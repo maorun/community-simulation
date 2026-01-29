@@ -2617,15 +2617,35 @@ scenario: Original
     #[test]
     fn test_preset_gig_economy() {
         let config = SimulationConfig::from_preset(PresetName::GigEconomy);
+        // Basic parameters
         assert_eq!(config.max_steps, 1000);
         assert_eq!(config.entity_count, 200);
+        assert_eq!(config.base_skill_price, 15.0);
+
+        // Platform fees
         assert_eq!(config.transaction_fee, 0.15); // 15% platform commission
+
+        // Quality/reputation system
         assert!(config.enable_quality); // Ratings enabled
-        assert!(config.enable_contracts); // Gig contracts enabled
-        assert!(config.enable_friendships); // Networking enabled
-        assert_eq!(config.scenario, Scenario::DynamicPricing); // Surge pricing
+        assert_eq!(config.initial_quality, 3.0);
         assert_eq!(config.quality_improvement_rate, 0.15); // Fast improvement
-        assert_eq!(config.friendship_probability, 0.2); // High networking
+        assert_eq!(config.quality_decay_rate, 0.03); // Slower decay
+
+        // Contracts (gigs)
+        assert!(config.enable_contracts); // Gig contracts enabled
+        assert_eq!(config.min_contract_duration, 5);
+        assert_eq!(config.max_contract_duration, 20);
+        assert_eq!(config.contract_price_discount, 0.05); // 5% discount
+
+        // Friendships (networking/repeat customers)
+        assert!(config.enable_friendships); // Networking enabled
+        assert_eq!(config.friendship_probability, 0.2); // High networking (20%)
+        assert_eq!(config.friendship_discount, 0.1); // 10% discount
+
+        // Pricing scenario and dynamics
+        assert_eq!(config.scenario, Scenario::DynamicPricing); // Surge pricing
+        assert_eq!(config.price_elasticity_factor, 0.12); // Responsive to demand
+        assert_eq!(config.volatility_percentage, 0.03); // Moderate volatility
     }
 
     #[test]
