@@ -2065,7 +2065,9 @@ mod integration_tests {
             }
         }
 
-        // Unregulated skills can be any positive price
+        // Unregulated skills can vary freely (positive prices with no specific bounds)
+        // This demonstrates mixed regulatory regime: Skill_0 has price corridor,
+        // while other skills follow free market dynamics
         for (skill_id, prices) in &result.skill_price_history {
             if skill_id != "Skill_0" {
                 for &price in prices {
@@ -2114,10 +2116,15 @@ mod integration_tests {
         assert_eq!(result.total_steps, 80);
         assert_eq!(result.active_persons, 20);
 
-        // Check externalities were tracked
+        // Check externalities were tracked if any trades occurred
+        // Note: With small populations or specific seeds, it's possible no trades occur
         if let Some(ext_stats) = result.externality_statistics {
+            // If externalities were tracked, verify they make sense
             if ext_stats.total_count > 0 {
-                assert!(ext_stats.total_count > 0, "Should have tracked externalities");
+                assert!(
+                    ext_stats.positive_count > 0 || ext_stats.negative_count > 0,
+                    "Tracked externalities should be classified as positive or negative"
+                );
             }
         }
 
