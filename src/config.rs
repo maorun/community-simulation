@@ -16,6 +16,7 @@ pub enum PresetName {
     HighInflation,
     TechGrowth,
     QuickTest,
+    GigEconomy,
 }
 
 impl PresetName {
@@ -29,6 +30,7 @@ impl PresetName {
             PresetName::HighInflation,
             PresetName::TechGrowth,
             PresetName::QuickTest,
+            PresetName::GigEconomy,
         ]
     }
 
@@ -42,6 +44,7 @@ impl PresetName {
             PresetName::HighInflation => "high_inflation",
             PresetName::TechGrowth => "tech_growth",
             PresetName::QuickTest => "quick_test",
+            PresetName::GigEconomy => "gig_economy",
         }
     }
 
@@ -55,6 +58,9 @@ impl PresetName {
             PresetName::HighInflation => "High inflation scenario with dynamic pricing",
             PresetName::TechGrowth => "Technology growth scenario with high initial capital",
             PresetName::QuickTest => "Very small economy for rapid testing (10 persons, 50 steps)",
+            PresetName::GigEconomy => {
+                "Platform economy with gig workers, ratings, and platform fees"
+            },
         }
     }
 }
@@ -72,6 +78,7 @@ impl FromStr for PresetName {
             "high_inflation" | "inflation" => Ok(PresetName::HighInflation),
             "tech_growth" | "tech" => Ok(PresetName::TechGrowth),
             "quick_test" | "quick" => Ok(PresetName::QuickTest),
+            "gig_economy" | "gig" => Ok(PresetName::GigEconomy),
             _ => Err(format!("Unknown preset: '{}'", s)),
         }
     }
@@ -2353,6 +2360,43 @@ impl SimulationConfig {
                 ..Self::default()
             },
             PresetName::QuickTest => Self { max_steps: 50, entity_count: 10, ..Self::default() },
+            PresetName::GigEconomy => Self {
+                // Gig economy simulation parameters
+                max_steps: 1000,
+                entity_count: 200,               // Larger workforce for gig economy
+                initial_money_per_person: 100.0, // Standard initial capital
+                base_skill_price: 15.0,          // Base service price
+                scenario: Scenario::DynamicPricing, // Surge pricing for gig services
+
+                // Platform fees (transaction fees act as platform commission)
+                transaction_fee: 0.15, // 15% platform commission (typical for gig platforms)
+
+                // Reputation system (critical for platform trust)
+                enable_quality: true, // Quality ratings for service providers
+                initial_quality: 3.0, // Starting quality rating
+                quality_improvement_rate: 0.15, // Fast improvement through practice
+                quality_decay_rate: 0.03, // Slower decay (skills maintained)
+
+                // Contracts (short-term gig contracts)
+                enable_contracts: true,
+                min_contract_duration: 5, // Short gigs (5-20 steps)
+                max_contract_duration: 20,
+                contract_price_discount: 0.05, // Small discount for contract work
+
+                // Friendships (repeat customers and platform networking)
+                enable_friendships: true,
+                friendship_probability: 0.2, // Higher chance (20%) - platform facilitates connections
+                friendship_discount: 0.1,    // 10% discount for repeat customers
+
+                // Behavioral strategies (diverse worker types)
+                // Default enables round-robin strategy assignment
+
+                // Market dynamics
+                price_elasticity_factor: 0.12, // Responsive to demand (surge pricing)
+                volatility_percentage: 0.03,   // Moderate volatility for dynamic pricing
+
+                ..Self::default()
+            },
         }
     }
 
@@ -2571,11 +2615,47 @@ scenario: Original
     }
 
     #[test]
+    fn test_preset_gig_economy() {
+        let config = SimulationConfig::from_preset(PresetName::GigEconomy);
+        // Basic parameters
+        assert_eq!(config.max_steps, 1000);
+        assert_eq!(config.entity_count, 200);
+        assert_eq!(config.base_skill_price, 15.0);
+
+        // Platform fees
+        assert_eq!(config.transaction_fee, 0.15); // 15% platform commission
+
+        // Quality/reputation system
+        assert!(config.enable_quality); // Ratings enabled
+        assert_eq!(config.initial_quality, 3.0);
+        assert_eq!(config.quality_improvement_rate, 0.15); // Fast improvement
+        assert_eq!(config.quality_decay_rate, 0.03); // Slower decay
+
+        // Contracts (gigs)
+        assert!(config.enable_contracts); // Gig contracts enabled
+        assert_eq!(config.min_contract_duration, 5);
+        assert_eq!(config.max_contract_duration, 20);
+        assert_eq!(config.contract_price_discount, 0.05); // 5% discount
+
+        // Friendships (networking/repeat customers)
+        assert!(config.enable_friendships); // Networking enabled
+        assert_eq!(config.friendship_probability, 0.2); // High networking (20%)
+        assert_eq!(config.friendship_discount, 0.1); // 10% discount
+
+        // Pricing scenario and dynamics
+        assert_eq!(config.scenario, Scenario::DynamicPricing); // Surge pricing
+        assert_eq!(config.price_elasticity_factor, 0.12); // Responsive to demand
+        assert_eq!(config.volatility_percentage, 0.03); // Moderate volatility
+    }
+
+    #[test]
     fn test_preset_name_from_str() {
         assert_eq!(PresetName::from_str("default").unwrap(), PresetName::Default);
         assert_eq!(PresetName::from_str("small_economy").unwrap(), PresetName::SmallEconomy);
         assert_eq!(PresetName::from_str("small").unwrap(), PresetName::SmallEconomy);
         assert_eq!(PresetName::from_str("crisis").unwrap(), PresetName::CrisisScenario);
+        assert_eq!(PresetName::from_str("gig_economy").unwrap(), PresetName::GigEconomy);
+        assert_eq!(PresetName::from_str("gig").unwrap(), PresetName::GigEconomy);
         assert!(PresetName::from_str("nonexistent").is_err());
     }
 
@@ -2584,6 +2664,7 @@ scenario: Original
         assert_eq!(PresetName::Default.as_str(), "default");
         assert_eq!(PresetName::SmallEconomy.as_str(), "small_economy");
         assert_eq!(PresetName::QuickTest.as_str(), "quick_test");
+        assert_eq!(PresetName::GigEconomy.as_str(), "gig_economy");
     }
 
     #[test]
