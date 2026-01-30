@@ -331,10 +331,7 @@ mod engine_tests {
     #[test]
     fn test_per_skill_trade_statistics() {
         // Test that per-skill trade statistics are correctly tracked and reported
-        let config = test_config()
-            .max_steps(50)
-            .entity_count(20)
-            .build();
+        let config = test_config().max_steps(50).entity_count(20).build();
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -395,10 +392,7 @@ mod engine_tests {
     #[test]
     fn test_friendship_system_disabled() {
         // Test that friendship system doesn't affect simulation when disabled
-        let config = test_config()
-            .max_steps(50)
-            .enable_friendships(false)
-            .build();
+        let config = test_config().max_steps(50).enable_friendships(false).build();
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -514,9 +508,7 @@ mod engine_tests {
     #[test]
     fn test_friendship_validation() {
         // Test that invalid friendship parameters are rejected
-        let mut config = test_config()
-            .enable_friendships(true)
-            .build();
+        let mut config = test_config().enable_friendships(true).build();
 
         // Test invalid probability (> 1.0)
         config.friendship_probability = 1.5;
@@ -651,11 +643,7 @@ mod engine_tests {
     #[test]
     fn test_incremental_money_statistics_accuracy() {
         // Test that incremental statistics produce valid results
-        let mut config = test_config()
-            .entity_count(20)
-            .max_steps(50)
-            .enable_loans(true)
-            .build();
+        let mut config = test_config().entity_count(20).max_steps(50).enable_loans(true).build();
 
         // Test with different tax configurations
         config.tax_rate = 0.05;
