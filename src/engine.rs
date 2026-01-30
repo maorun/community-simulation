@@ -610,7 +610,7 @@ impl SimulationEngine {
             // Shuffle indices to randomly select who starts sick
             let mut indices: Vec<usize> = (0..entities.len()).collect();
             indices.shuffle(rng);
-            
+
             for i in 0..num_to_infect {
                 entities[indices[i]].person_data.infect(0); // Infect at step 0
                 info!("Person {} starts simulation sick (seed infection)", entities[indices[i]].id);
@@ -2801,12 +2801,14 @@ impl SimulationEngine {
         if self.config.enable_health {
             for entity in &mut self.entities {
                 if entity.active && entity.person_data.is_sick() {
-                    let recovered = entity.person_data.try_recover(
-                        self.current_step,
-                        self.config.disease_recovery_duration,
-                    );
+                    let recovered = entity
+                        .person_data
+                        .try_recover(self.current_step, self.config.disease_recovery_duration);
                     if recovered {
-                        debug!("Person {} recovered from illness at step {}", entity.id, self.current_step);
+                        debug!(
+                            "Person {} recovered from illness at step {}",
+                            entity.id, self.current_step
+                        );
                     }
                 }
             }
@@ -3529,18 +3531,18 @@ impl SimulationEngine {
 
         // Seller receives price minus fee
         let seller_balance_before = self.entities[seller_idx].person_data.money;
-        
+
         // Apply health productivity penalty if enabled and seller is sick
         let health_multiplier = if self.config.enable_health {
             self.entities[seller_idx].person_data.health_productivity_multiplier()
         } else {
             1.0
         };
-        
+
         // Reduce seller proceeds if they're sick (lower productivity)
         let health_adjusted_proceeds = seller_proceeds * health_multiplier;
         self.entities[seller_idx].person_data.money += health_adjusted_proceeds;
-        
+
         // Log productivity penalty if seller was sick
         if health_multiplier < 1.0 {
             trace!(
@@ -3713,8 +3715,7 @@ impl SimulationEngine {
                     self.entities[seller_idx].person_data.infect(self.current_step);
                     debug!(
                         "Disease transmitted: Sick buyer {} infected seller {} during trade",
-                        self.entities[buyer_idx].id,
-                        self.entities[seller_idx].id
+                        self.entities[buyer_idx].id, self.entities[seller_idx].id
                     );
                 }
             } else if seller_sick && !buyer_sick {
@@ -3724,8 +3725,7 @@ impl SimulationEngine {
                     self.entities[buyer_idx].person_data.infect(self.current_step);
                     debug!(
                         "Disease transmitted: Sick seller {} infected buyer {} during trade",
-                        self.entities[seller_idx].id,
-                        self.entities[buyer_idx].id
+                        self.entities[seller_idx].id, self.entities[buyer_idx].id
                     );
                 }
             }

@@ -1608,7 +1608,7 @@ impl Default for SimulationConfig {
             enable_health: false,                 // Disabled by default
             disease_transmission_rate: default_disease_transmission_rate(),
             disease_recovery_duration: default_disease_recovery_duration(),
-            initial_sick_persons: 0,              // No initial infections
+            initial_sick_persons: 0, // No initial infections
         }
     }
 }
