@@ -2666,8 +2666,8 @@ pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
 /// # Performance
 ///
 /// - Time complexity: O(n) - linear scan for statistics
-/// - Space complexity: O(1) - no allocations (Lorenz curve allocation is unavoidable)
-/// - Compared to `calculate_money_stats`: Saves O(n log n) + O(n) allocation
+/// - Space complexity: O(n) - Lorenz curve allocation
+/// - Compared to `calculate_money_stats`: Saves O(n log n) time + O(n) allocation for sorting
 pub fn calculate_money_stats_presorted(sorted_money_values: &[f64]) -> MoneyStats {
     if sorted_money_values.is_empty() {
         return MoneyStats {
