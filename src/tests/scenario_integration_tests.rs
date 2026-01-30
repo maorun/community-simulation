@@ -1662,4 +1662,483 @@ mod integration_tests {
         assert_eq!(result.active_persons, 5);
         assert!(result.money_statistics.average > 0.0);
     }
+
+    /// Test externality analysis system with positive and negative externalities
+    #[test]
+    fn test_externality_analysis_basic() {
+        use std::collections::HashMap;
+
+        // Configure with externalities enabled and different rates per skill
+        let mut externality_rates = HashMap::new();
+        externality_rates.insert("Skill_0".to_string(), 0.25); // 25% positive externality
+        externality_rates.insert("Skill_1".to_string(), -0.15); // 15% negative externality
+
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 50,
+            initial_money_per_person: 200.0,
+            base_skill_price: 20.0,
+            seed: 42,
+            enable_externalities: true,
+            externality_rate: 0.0, // Default rate, overridden per skill
+            externality_rates_per_skill: externality_rates,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify externality statistics exist
+        assert!(
+            result.externality_statistics.is_some(),
+            "Externality statistics should be present"
+        );
+
+        let ext_stats = result.externality_statistics.unwrap();
+
+        // Should have recorded some externalities if trades occurred
+        if ext_stats.total_count > 0 {
+            // Check that both positive and negative externalities were recorded
+            assert!(
+                ext_stats.positive_count > 0 || ext_stats.negative_count > 0,
+                "Should have positive or negative externalities"
+            );
+
+            // Total count should equal sum of positive and negative
+            assert_eq!(
+                ext_stats.total_count,
+                ext_stats.positive_count + ext_stats.negative_count,
+                "Total count should equal positive + negative"
+            );
+
+            // Social value should be private value + external value
+            let expected_social_value =
+                ext_stats.total_private_value + ext_stats.total_external_value;
+            assert!(
+                (ext_stats.total_social_value - expected_social_value).abs() < 0.01,
+                "Social value calculation should be correct"
+            );
+
+            // Check per-skill statistics exist
+            assert!(
+                !ext_stats.per_skill_externalities.is_empty(),
+                "Should have per-skill externality data"
+            );
+
+            // Verify Pigovian correction calculations
+            if ext_stats.positive_count > 0 {
+                assert!(
+                    ext_stats.optimal_pigovian_subsidy_total >= 0.0,
+                    "Positive externalities should suggest subsidies"
+                );
+            }
+            if ext_stats.negative_count > 0 {
+                assert!(
+                    ext_stats.optimal_pigovian_tax_total >= 0.0,
+                    "Negative externalities should suggest taxes"
+                );
+            }
+        }
+    }
+
+    /// Test externality system with only positive externalities
+    #[test]
+    fn test_externality_positive_only() {
+        use std::collections::HashMap;
+
+        // All skills have positive externalities (education, healthcare, research)
+        let mut externality_rates = HashMap::new();
+        externality_rates.insert("Skill_0".to_string(), 0.30); // 30% positive
+        externality_rates.insert("Skill_1".to_string(), 0.20); // 20% positive
+        externality_rates.insert("Skill_2".to_string(), 0.25); // 25% positive
+
+        let config = SimulationConfig {
+            entity_count: 15,
+            max_steps: 30,
+            initial_money_per_person: 150.0,
+            base_skill_price: 15.0,
+            seed: 123,
+            enable_externalities: true,
+            externality_rate: 0.0,
+            externality_rates_per_skill: externality_rates,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        if let Some(ext_stats) = result.externality_statistics {
+            if ext_stats.total_count > 0 {
+                // All externalities should be positive
+                assert_eq!(ext_stats.negative_count, 0, "Should have no negative externalities");
+                assert!(ext_stats.positive_count > 0, "Should have some positive externalities");
+
+                // Total external value should be positive
+                assert!(
+                    ext_stats.total_external_value > 0.0,
+                    "Net external value should be positive"
+                );
+
+                // Social value should exceed private value
+                assert!(
+                    ext_stats.total_social_value > ext_stats.total_private_value,
+                    "Social value should exceed private value with positive externalities"
+                );
+
+                // Subsidies should be positive, taxes should be zero
+                assert!(
+                    ext_stats.optimal_pigovian_subsidy_total > 0.0,
+                    "Should recommend subsidies"
+                );
+                assert_eq!(ext_stats.optimal_pigovian_tax_total, 0.0, "Should not recommend taxes");
+            }
+        }
+    }
+
+    /// Test externality system with mixed externalities
+    #[test]
+    fn test_externality_mixed_rates() {
+        use std::collections::HashMap;
+
+        // Mix of positive, negative, and neutral skills
+        let mut externality_rates = HashMap::new();
+        externality_rates.insert("Skill_0".to_string(), 0.40); // Strong positive
+        externality_rates.insert("Skill_1".to_string(), -0.30); // Strong negative
+        externality_rates.insert("Skill_2".to_string(), 0.10); // Weak positive
+        externality_rates.insert("Skill_3".to_string(), -0.05); // Weak negative
+
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 40,
+            initial_money_per_person: 200.0,
+            base_skill_price: 20.0,
+            seed: 999,
+            enable_externalities: true,
+            externality_rate: 0.0,
+            externality_rates_per_skill: externality_rates,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        if let Some(ext_stats) = result.externality_statistics {
+            if ext_stats.total_count > 0 {
+                // Should have both types
+                // (Note: actual distribution depends on trade patterns)
+                assert!(
+                    ext_stats.total_count == ext_stats.positive_count + ext_stats.negative_count,
+                    "Total should equal sum of positive and negative"
+                );
+
+                // Externality intensity should be calculable
+                if ext_stats.total_private_value > 0.0 {
+                    let expected_intensity =
+                        ext_stats.total_external_value / ext_stats.total_private_value;
+                    assert!(
+                        (ext_stats.externality_intensity - expected_intensity).abs() < 0.01,
+                        "Externality intensity should be correctly calculated"
+                    );
+                }
+
+                // Per-skill stats should track individual skills
+                for (skill_id, skill_stats) in &ext_stats.per_skill_externalities {
+                    assert!(skill_stats.count > 0, "Skill {} should have count > 0", skill_id);
+                    // Verify private and external values are tracked
+                    assert!(
+                        skill_stats.total_private_value >= 0.0,
+                        "Skill {} should have non-negative private value",
+                        skill_id
+                    );
+                }
+            }
+        }
+    }
+
+    /// Test per-skill price limits with minimum prices
+    #[test]
+    fn test_per_skill_price_limits_minimum() {
+        use std::collections::HashMap;
+
+        // Set minimum prices for specific skills
+        let mut price_limits = HashMap::new();
+        price_limits.insert("Skill_0".to_string(), (Some(50.0), None)); // Min 50, no max
+        price_limits.insert("Skill_1".to_string(), (Some(75.0), None)); // Min 75, no max
+
+        let config = SimulationConfig {
+            entity_count: 10,
+            max_steps: 100,
+            initial_money_per_person: 500.0,
+            base_skill_price: 20.0, // Lower base price to test minimum enforcement
+            seed: 456,
+            per_skill_price_limits: price_limits,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Check skill prices respect minimums throughout history
+        // skill_price_history is HashMap<SkillId, Vec<f64>> where Vec contains prices over time
+        if let Some(skill_0_prices) = result.skill_price_history.get("Skill_0") {
+            if !skill_0_prices.is_empty() {
+                let final_price = skill_0_prices[skill_0_prices.len() - 1];
+                assert!(
+                    final_price >= 50.0,
+                    "Skill_0 final price {} should be >= minimum 50.0",
+                    final_price
+                );
+
+                // Check all prices in history respect minimum
+                for &price in skill_0_prices {
+                    assert!(
+                        price >= 50.0,
+                        "Skill_0 price {} should always be >= minimum 50.0",
+                        price
+                    );
+                }
+            }
+        }
+
+        if let Some(skill_1_prices) = result.skill_price_history.get("Skill_1") {
+            if !skill_1_prices.is_empty() {
+                let final_price = skill_1_prices[skill_1_prices.len() - 1];
+                assert!(
+                    final_price >= 75.0,
+                    "Skill_1 final price {} should be >= minimum 75.0",
+                    final_price
+                );
+
+                // Check all prices in history respect minimum
+                for &price in skill_1_prices {
+                    assert!(
+                        price >= 75.0,
+                        "Skill_1 price {} should always be >= minimum 75.0",
+                        price
+                    );
+                }
+            }
+        }
+    }
+
+    /// Test per-skill price limits with maximum prices
+    #[test]
+    fn test_per_skill_price_limits_maximum() {
+        use std::collections::HashMap;
+
+        // Set maximum prices for specific skills
+        let mut price_limits = HashMap::new();
+        price_limits.insert("Skill_0".to_string(), (None, Some(30.0))); // No min, max 30
+        price_limits.insert("Skill_1".to_string(), (None, Some(40.0))); // No min, max 40
+
+        let config = SimulationConfig {
+            entity_count: 15,
+            max_steps: 100,
+            initial_money_per_person: 200.0,
+            base_skill_price: 50.0, // Higher base price to test maximum enforcement
+            seed: 789,
+            per_skill_price_limits: price_limits,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Check skill prices respect maximums throughout history
+        if let Some(skill_0_prices) = result.skill_price_history.get("Skill_0") {
+            if !skill_0_prices.is_empty() {
+                let final_price = skill_0_prices[skill_0_prices.len() - 1];
+                assert!(
+                    final_price <= 30.0,
+                    "Skill_0 final price {} should be <= maximum 30.0",
+                    final_price
+                );
+
+                // Check all prices in history respect maximum
+                for &price in skill_0_prices {
+                    assert!(
+                        price <= 30.0,
+                        "Skill_0 price {} should always be <= maximum 30.0",
+                        price
+                    );
+                }
+            }
+        }
+
+        if let Some(skill_1_prices) = result.skill_price_history.get("Skill_1") {
+            if !skill_1_prices.is_empty() {
+                let final_price = skill_1_prices[skill_1_prices.len() - 1];
+                assert!(
+                    final_price <= 40.0,
+                    "Skill_1 final price {} should be <= maximum 40.0",
+                    final_price
+                );
+
+                // Check all prices in history respect maximum
+                for &price in skill_1_prices {
+                    assert!(
+                        price <= 40.0,
+                        "Skill_1 price {} should always be <= maximum 40.0",
+                        price
+                    );
+                }
+            }
+        }
+    }
+
+    /// Test per-skill price limits with both min and max (price corridor)
+    #[test]
+    fn test_per_skill_price_limits_corridor() {
+        use std::collections::HashMap;
+
+        // Set price corridors for skills
+        let mut price_limits = HashMap::new();
+        price_limits.insert("Skill_0".to_string(), (Some(25.0), Some(75.0))); // 25-75 corridor
+        price_limits.insert("Skill_1".to_string(), (Some(30.0), Some(60.0))); // 30-60 corridor
+
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 150,
+            initial_money_per_person: 300.0,
+            base_skill_price: 50.0,
+            seed: 321,
+            per_skill_price_limits: price_limits,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Check all prices throughout simulation respect corridors
+        if let Some(skill_0_prices) = result.skill_price_history.get("Skill_0") {
+            for &price in skill_0_prices {
+                assert!(
+                    (25.0..=75.0).contains(&price),
+                    "Skill_0 price {} should be within [25.0, 75.0] corridor",
+                    price
+                );
+            }
+        }
+
+        if let Some(skill_1_prices) = result.skill_price_history.get("Skill_1") {
+            for &price in skill_1_prices {
+                assert!(
+                    (30.0..=60.0).contains(&price),
+                    "Skill_1 price {} should be within [30.0, 60.0] corridor",
+                    price
+                );
+            }
+        }
+    }
+
+    /// Test mixed regulatory regime: some skills regulated, others free market
+    #[test]
+    fn test_per_skill_price_limits_mixed_regime() {
+        use std::collections::HashMap;
+
+        // Only regulate some skills, leave others to free market
+        let mut price_limits = HashMap::new();
+        price_limits.insert("Skill_0".to_string(), (Some(40.0), Some(80.0))); // Regulated
+                                                                              // Skill_1, Skill_2, etc. are unregulated
+
+        let config = SimulationConfig {
+            entity_count: 15,
+            max_steps: 100,
+            initial_money_per_person: 250.0,
+            base_skill_price: 20.0,
+            seed: 654,
+            per_skill_price_limits: price_limits,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Regulated skill should respect limits
+        if let Some(skill_0_prices) = result.skill_price_history.get("Skill_0") {
+            for &price in skill_0_prices {
+                assert!(
+                    (40.0..=80.0).contains(&price),
+                    "Regulated Skill_0 price {} should be within [40.0, 80.0]",
+                    price
+                );
+            }
+        }
+
+        // Unregulated skills can vary freely (positive prices with no specific bounds)
+        // This demonstrates mixed regulatory regime: Skill_0 has price corridor,
+        // while other skills follow free market dynamics
+        for (skill_id, prices) in &result.skill_price_history {
+            if skill_id != "Skill_0" {
+                for &price in prices {
+                    assert!(
+                        price > 0.0,
+                        "All prices should be positive, but {} has price {}",
+                        skill_id,
+                        price
+                    );
+                }
+            }
+        }
+    }
+
+    /// Test integration of externalities with price controls
+    #[test]
+    fn test_externalities_with_price_controls() {
+        use std::collections::HashMap;
+
+        // Combine externalities and price controls
+        let mut externality_rates = HashMap::new();
+        externality_rates.insert("Skill_0".to_string(), 0.30); // Positive externality
+        externality_rates.insert("Skill_1".to_string(), -0.20); // Negative externality
+
+        let mut price_limits = HashMap::new();
+        price_limits.insert("Skill_0".to_string(), (Some(50.0), None)); // High minimum for positive externality
+        price_limits.insert("Skill_1".to_string(), (None, Some(30.0))); // Low maximum for negative externality
+
+        let config = SimulationConfig {
+            entity_count: 20,
+            max_steps: 80,
+            initial_money_per_person: 300.0,
+            base_skill_price: 40.0,
+            seed: 888,
+            enable_externalities: true,
+            externality_rate: 0.0,
+            externality_rates_per_skill: externality_rates,
+            per_skill_price_limits: price_limits,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Verify both systems work together
+        assert_eq!(result.total_steps, 80);
+        assert_eq!(result.active_persons, 20);
+
+        // Check externalities were tracked if any trades occurred
+        // Note: With small populations or specific seeds, it's possible no trades occur
+        if let Some(ext_stats) = result.externality_statistics {
+            // If externalities were tracked, verify they make sense
+            if ext_stats.total_count > 0 {
+                assert!(
+                    ext_stats.positive_count > 0 || ext_stats.negative_count > 0,
+                    "Tracked externalities should be classified as positive or negative"
+                );
+            }
+        }
+
+        // Check price controls were enforced
+        if let Some(skill_0_prices) = result.skill_price_history.get("Skill_0") {
+            for &price in skill_0_prices {
+                assert!(price >= 50.0, "Skill_0 price {} should respect minimum 50.0", price);
+            }
+        }
+
+        if let Some(skill_1_prices) = result.skill_price_history.get("Skill_1") {
+            for &price in skill_1_prices {
+                assert!(price <= 30.0, "Skill_1 price {} should respect maximum 30.0", price);
+            }
+        }
+    }
 }
