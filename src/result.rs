@@ -2622,6 +2622,119 @@ pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
     }
 }
 
+/// Calculate comprehensive money/wealth statistics for a pre-sorted distribution.
+///
+/// This is an optimized version of `calculate_money_stats` that accepts already-sorted
+/// data, eliminating the O(n log n) sorting operation. Use this function when you have
+/// already sorted the money values to avoid redundant sorting.
+///
+/// **Performance benefit:** Reduces time complexity from O(n log n) to O(n) when data
+/// is already sorted, saving both computation time and memory allocation.
+///
+/// # Arguments
+///
+/// * `sorted_money_values` - Slice of money/wealth values **that must be sorted in ascending order**
+///
+/// # Returns
+///
+/// `MoneyStats` - Complete wealth distribution statistics
+///
+/// # Panics
+///
+/// This function does NOT validate that input is sorted. Passing unsorted data will
+/// produce incorrect results. Use `calculate_money_stats` if you're unsure whether
+/// data is sorted.
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::result::calculate_money_stats_presorted;
+///
+/// // Data MUST be sorted in ascending order
+/// let mut money_values = vec![250.0, 50.0, 150.0, 100.0, 200.0];
+/// money_values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+///
+/// let stats = calculate_money_stats_presorted(&money_values);
+///
+/// assert_eq!(stats.average, 150.0);
+/// assert_eq!(stats.median, 150.0);
+/// assert_eq!(stats.min_money, 50.0);
+/// assert_eq!(stats.max_money, 250.0);
+/// assert!(stats.gini_coefficient >= 0.0 && stats.gini_coefficient <= 1.0);
+/// ```
+///
+/// # Performance
+///
+/// - Time complexity: O(n) - linear scan for statistics
+/// - Space complexity: O(1) - no allocations (Lorenz curve allocation is unavoidable)
+/// - Compared to `calculate_money_stats`: Saves O(n log n) + O(n) allocation
+pub fn calculate_money_stats_presorted(sorted_money_values: &[f64]) -> MoneyStats {
+    if sorted_money_values.is_empty() {
+        return MoneyStats {
+            average: 0.0,
+            median: 0.0,
+            std_dev: 0.0,
+            min_money: 0.0,
+            max_money: 0.0,
+            gini_coefficient: 0.0,
+            herfindahl_index: 0.0,
+            top_10_percent_share: 0.0,
+            top_1_percent_share: 0.0,
+            bottom_50_percent_share: 0.0,
+            lorenz_curve: vec![(0.0, 0.0), (1.0, 1.0)],
+        };
+    }
+
+    // Calculate statistics directly on the pre-sorted data without cloning
+    let sum: f64 = sorted_money_values.iter().sum();
+    let count = sorted_money_values.len() as f64;
+    let average = sum / count;
+
+    let median = if count as usize % 2 == 1 {
+        sorted_money_values[count as usize / 2]
+    } else {
+        (sorted_money_values[count as usize / 2 - 1] + sorted_money_values[count as usize / 2])
+            / 2.0
+    };
+
+    let variance = sorted_money_values
+        .iter()
+        .map(|value| {
+            let diff = average - value;
+            diff * diff
+        })
+        .sum::<f64>()
+        / count;
+    let std_dev = variance.sqrt();
+
+    // Calculate Gini coefficient using the shared utility function
+    let gini_coefficient = calculate_gini_coefficient(sorted_money_values, sum);
+
+    // Calculate Herfindahl Index using the shared utility function
+    let herfindahl_index = calculate_herfindahl_index(sorted_money_values);
+
+    // Calculate wealth concentration ratios
+    let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
+        calculate_wealth_concentration(sorted_money_values, sum);
+
+    // Calculate Lorenz curve for wealth distribution visualization
+    let lorenz_curve = calculate_lorenz_curve(sorted_money_values, sum);
+
+    MoneyStats {
+        average,
+        median,
+        std_dev,
+        min_money: *sorted_money_values.first().unwrap_or(&0.0),
+        max_money: *sorted_money_values.last().unwrap_or(&0.0),
+        gini_coefficient,
+        herfindahl_index,
+        top_10_percent_share,
+        top_1_percent_share,
+        bottom_50_percent_share,
+        lorenz_curve,
+    }
+}
+
 /// Calculate trading partner statistics from entities' transaction history
 ///
 /// This function analyzes the transaction history of all persons to identify
@@ -3667,6 +3780,89 @@ mod tests {
         // For n=2: G = (2 * (1*25 + 2*75)) / (2 * 100) - 3/2
         // = (2 * (25 + 150)) / 200 - 1.5 = 350 / 200 - 1.5 = 1.75 - 1.5 = 0.25
         assert!((stats.gini_coefficient - 0.25).abs() < 1e-10);
+    }
+
+    // Tests for calculate_money_stats_presorted
+    #[test]
+    fn test_money_stats_presorted_empty() {
+        let stats = calculate_money_stats_presorted(&[]);
+        assert_eq!(stats.average, 0.0);
+        assert_eq!(stats.median, 0.0);
+        assert_eq!(stats.std_dev, 0.0);
+        assert_eq!(stats.min_money, 0.0);
+        assert_eq!(stats.max_money, 0.0);
+        assert_eq!(stats.gini_coefficient, 0.0);
+        assert_eq!(stats.herfindahl_index, 0.0);
+        assert_eq!(stats.top_10_percent_share, 0.0);
+        assert_eq!(stats.top_1_percent_share, 0.0);
+        assert_eq!(stats.bottom_50_percent_share, 0.0);
+    }
+
+    #[test]
+    fn test_money_stats_presorted_single_value() {
+        let sorted_money = [100.0];
+        let stats = calculate_money_stats_presorted(&sorted_money);
+        assert_eq!(stats.average, 100.0);
+        assert_eq!(stats.median, 100.0);
+        assert_eq!(stats.std_dev, 0.0);
+        assert_eq!(stats.min_money, 100.0);
+        assert_eq!(stats.max_money, 100.0);
+        assert_eq!(stats.gini_coefficient, 0.0);
+    }
+
+    #[test]
+    fn test_money_stats_presorted_multiple_values() {
+        // Data is already sorted
+        let sorted_money = [10.0, 20.0, 30.0, 40.0, 50.0];
+        let stats = calculate_money_stats_presorted(&sorted_money);
+        assert_eq!(stats.average, 30.0);
+        assert_eq!(stats.median, 30.0);
+        assert_eq!(stats.min_money, 10.0);
+        assert_eq!(stats.max_money, 50.0);
+        assert!((stats.std_dev - 14.142135623730951).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_money_stats_presorted_vs_unsorted_same_results() {
+        // Test that presorted version produces same results as regular version
+        let unsorted_money = vec![250.0, 50.0, 150.0, 100.0, 200.0];
+
+        // Calculate with regular function
+        let stats_regular = calculate_money_stats(&unsorted_money);
+
+        // Calculate with presorted function after sorting
+        let mut sorted_money = unsorted_money.clone();
+        sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let stats_presorted = calculate_money_stats_presorted(&sorted_money);
+
+        // Results should be identical
+        assert_eq!(stats_regular.average, stats_presorted.average);
+        assert_eq!(stats_regular.median, stats_presorted.median);
+        assert_eq!(stats_regular.std_dev, stats_presorted.std_dev);
+        assert_eq!(stats_regular.min_money, stats_presorted.min_money);
+        assert_eq!(stats_regular.max_money, stats_presorted.max_money);
+        assert_eq!(stats_regular.gini_coefficient, stats_presorted.gini_coefficient);
+        assert_eq!(stats_regular.herfindahl_index, stats_presorted.herfindahl_index);
+        assert_eq!(stats_regular.top_10_percent_share, stats_presorted.top_10_percent_share);
+        assert_eq!(stats_regular.top_1_percent_share, stats_presorted.top_1_percent_share);
+        assert_eq!(stats_regular.bottom_50_percent_share, stats_presorted.bottom_50_percent_share);
+    }
+
+    #[test]
+    fn test_money_stats_presorted_perfect_equality() {
+        let sorted_money = [100.0, 100.0, 100.0, 100.0];
+        let stats = calculate_money_stats_presorted(&sorted_money);
+        assert_eq!(stats.gini_coefficient, 0.0);
+        assert!((stats.herfindahl_index - 2500.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_money_stats_presorted_perfect_inequality() {
+        // One person has all money (already sorted)
+        let sorted_money = [0.0, 0.0, 0.0, 100.0];
+        let stats = calculate_money_stats_presorted(&sorted_money);
+        assert!((stats.gini_coefficient - 0.75).abs() < 1e-10);
+        assert!((stats.herfindahl_index - 10000.0).abs() < 0.1);
     }
 
     #[test]
