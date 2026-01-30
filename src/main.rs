@@ -453,6 +453,27 @@ struct Args {
     /// Only used when --enable-resource-pools is set
     #[arg(long)]
     pool_withdrawal_threshold: Option<f64>,
+
+    /// Enable health system with disease transmission and economic impacts
+    /// Sick persons have reduced productivity and can spread illness through trades
+    #[arg(long, default_value_t = false)]
+    enable_health: bool,
+
+    /// Disease transmission rate per trade with sick person (0.0-1.0, default: 0.05 = 5%)
+    /// Only used when --enable-health is set
+    #[arg(long)]
+    disease_transmission_rate: Option<f64>,
+
+    /// Number of steps a person remains sick before recovering (default: 10)
+    /// Only used when --enable-health is set
+    #[arg(long)]
+    disease_recovery_duration: Option<usize>,
+
+    /// Number of persons who start sick at simulation start (default: 0)
+    /// Seeds the disease spread. Set to 0 for no initial infections
+    /// Only used when --enable-health is set
+    #[arg(long)]
+    initial_sick_persons: Option<usize>,
 }
 
 /// Converts a certification duration argument to an Option.
@@ -936,6 +957,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(threshold) = args.pool_withdrawal_threshold {
                 cfg.pool_withdrawal_threshold = threshold;
             }
+            if args.enable_health {
+                cfg.enable_health = true;
+            }
+            if let Some(rate) = args.disease_transmission_rate {
+                cfg.disease_transmission_rate = rate;
+            }
+            if let Some(duration) = args.disease_recovery_duration {
+                cfg.disease_recovery_duration = duration;
+            }
+            if let Some(count) = args.initial_sick_persons {
+                cfg.initial_sick_persons = count;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -1133,6 +1166,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             enable_externalities: SimulationConfig::default().enable_externalities,
             externality_rate: SimulationConfig::default().externality_rate,
             externality_rates_per_skill: HashMap::new(), // Not configurable via CLI
+            enable_health: args.enable_health,
+            disease_transmission_rate: args
+                .disease_transmission_rate
+                .unwrap_or(SimulationConfig::default().disease_transmission_rate),
+            disease_recovery_duration: args
+                .disease_recovery_duration
+                .unwrap_or(SimulationConfig::default().disease_recovery_duration),
+            initial_sick_persons: args
+                .initial_sick_persons
+                .unwrap_or(SimulationConfig::default().initial_sick_persons),
         }
     };
 
