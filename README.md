@@ -385,6 +385,7 @@ The simulation accepts the following CLI arguments:
         *   `tech_growth` (alias: `tech`) - Technology growth (150 persons, 1500 steps, $250 initial money, $8 base price)
         *   `quick_test` (alias: `quick`) - Rapid testing (10 persons, 50 steps)
         *   `gig_economy` (alias: `gig`) - Platform economy simulation (200 persons, 1000 steps, 15% transaction fees, quality ratings, contracts, surge pricing)
+        *   `post_conflict_reconstruction` (alias: `post_conflict`) - Post-conflict reconstruction scenario (80 persons, 500 steps, $25 initial money, $20 base price). Simulates economic recovery after conflict with: damaged economy (low starting capital), ongoing instability (10% crisis rate), health impacts (10% initial infections), trust rebuilding (reputation system), recovery financing (loans with 2% interest), international aid (15% tax with redistribution), social capital rebuilding (friendships), stability mechanisms (long-term contracts), infrastructure reconstruction (investments), and quality rebuilding. Ideal for studying humanitarian economics, post-conflict recovery policies, and resilience in damaged economies.
     *   CLI arguments can override preset values when explicitly provided.
     *   Example: `--preset small_economy --steps 200` uses the small economy preset but overrides steps to 200.
 *   `--list-presets`:
