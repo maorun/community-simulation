@@ -58,19 +58,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Debugging-Tools
 
-## 🌍 Erweiterungen für spezifische Anwendungsfälle
-
-#### 1. Post-Konflikt-Wiederaufbau
-**Beschreibung:** Simulation von Wirtschafts-Wiederaufbau nach Krisen mit beschädigter Infrastruktur, Vertrauensverlust und knappen Ressourcen.
-
-**Harmonien:**
-- **Krisen-Events:** Extreme Startbedingungen
-- **Reputation:** Vertrauens-Wiederaufbau ist zentral
-- **Infrastruktur-Investitionen:** Wiederaufbau-Investitionen
-- **Internationale Hilfe:** Externe Geldinfusion
-
-**Nutzen:** Politikbewertung für Post-Konflikt-Situationen, Hilfsallokation.
-
 ## 🎯 Priorisierung
 
 ### Hohe Priorität (Kurzfristig - hohe Harmonie-Effekte)

@@ -17,6 +17,7 @@ pub enum PresetName {
     TechGrowth,
     QuickTest,
     GigEconomy,
+    PostConflictReconstruction,
 }
 
 impl PresetName {
@@ -31,6 +32,7 @@ impl PresetName {
             PresetName::TechGrowth,
             PresetName::QuickTest,
             PresetName::GigEconomy,
+            PresetName::PostConflictReconstruction,
         ]
     }
 
@@ -45,6 +47,7 @@ impl PresetName {
             PresetName::TechGrowth => "tech_growth",
             PresetName::QuickTest => "quick_test",
             PresetName::GigEconomy => "gig_economy",
+            PresetName::PostConflictReconstruction => "post_conflict_reconstruction",
         }
     }
 
@@ -60,6 +63,9 @@ impl PresetName {
             PresetName::QuickTest => "Very small economy for rapid testing (10 persons, 50 steps)",
             PresetName::GigEconomy => {
                 "Platform economy with gig workers, ratings, and platform fees"
+            },
+            PresetName::PostConflictReconstruction => {
+                "Post-conflict reconstruction with damaged economy, trust rebuilding, and international aid"
             },
         }
     }
@@ -79,6 +85,9 @@ impl FromStr for PresetName {
             "tech_growth" | "tech" => Ok(PresetName::TechGrowth),
             "quick_test" | "quick" => Ok(PresetName::QuickTest),
             "gig_economy" | "gig" => Ok(PresetName::GigEconomy),
+            "post_conflict_reconstruction" | "post_conflict" => {
+                Ok(PresetName::PostConflictReconstruction)
+            },
             _ => Err(format!("Unknown preset: '{}'", s)),
         }
     }
@@ -2455,6 +2464,70 @@ impl SimulationConfig {
                 // Market dynamics
                 price_elasticity_factor: 0.12, // Responsive to demand (surge pricing)
                 volatility_percentage: 0.03,   // Moderate volatility for dynamic pricing
+
+                ..Self::default()
+            },
+            PresetName::PostConflictReconstruction => Self {
+                // Post-conflict reconstruction simulation parameters
+                max_steps: 500,
+                entity_count: 80, // Medium-sized conflict-affected population
+
+                // Economic devastation (very low starting capital)
+                initial_money_per_person: 25.0, // Damaged economy with minimal resources
+                base_skill_price: 20.0,         // High prices due to scarcity
+                min_skill_price: 5.0,           // Higher floor to prevent collapse
+
+                // Ongoing instability
+                enable_crisis_events: true,
+                crisis_probability: 0.10, // High crisis rate (10% per step) - ongoing instability
+                crisis_severity: 0.6,     // Moderate-to-high severity
+
+                // Trust rebuilding (critical in post-conflict scenarios)
+                // Reputation system is always enabled by default
+
+                // Health crisis (conflict aftermath)
+                enable_health: true,
+                initial_sick_persons: 8, // 10% of population starts sick
+                disease_transmission_rate: 0.08, // Higher transmission (8%) due to poor conditions
+                disease_recovery_duration: 15, // Longer recovery time (15 steps)
+
+                // Recovery financing
+                enable_loans: true,
+                loan_interest_rate: 0.02, // 2% per step - higher due to risk
+                loan_repayment_period: 30, // Longer repayment period
+                min_money_to_lend: 30.0,  // Lower threshold for lending
+
+                // International aid (tax redistribution simulates external aid)
+                tax_rate: 0.15,                  // 15% tax rate
+                enable_tax_redistribution: true, // Redistributed like international aid
+
+                // Stability through contracts
+                enable_contracts: true,
+                min_contract_duration: 20, // Longer contracts for stability
+                max_contract_duration: 80,
+                contract_price_discount: 0.08, // 8% discount for commitment
+
+                // Friendships for social capital rebuilding
+                enable_friendships: true,
+                friendship_probability: 0.15, // Higher probability (15%) - community bonding
+                friendship_discount: 0.12,    // 12% discount among friends
+
+                // Quality system (rebuilding skills and standards)
+                enable_quality: true,
+                initial_quality: 2.0, // Lower starting quality (damaged infrastructure)
+                quality_improvement_rate: 0.12, // Faster improvement (rebuilding skills)
+                quality_decay_rate: 0.04, // Moderate decay
+
+                // Investment in reconstruction
+                enable_investments: true,
+                investment_return_rate: 0.03, // 3% per step - higher returns in rebuilding
+                investment_duration: 25,      // Medium-term investments
+                investment_probability: 0.08, // 8% probability per step
+                min_money_to_invest: 40.0,    // Threshold for investment capacity
+
+                // Market dynamics
+                price_elasticity_factor: 0.15, // Higher volatility due to instability
+                volatility_percentage: 0.04,   // Higher price volatility (4%)
 
                 ..Self::default()
             },
