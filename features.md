@@ -37,17 +37,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Datenmanagement
 
-#### 4.1 Zeitreihen-Datenbank-Integration
-**Beschreibung:** Integration mit Zeitreihen-Datenbanken (InfluxDB, TimescaleDB) für effiziente Speicherung und Abfrage historischer Simulationsdaten.
-
-**Nutzen:** Skalierbare Datenspeicherung, schnelle Zeitreihen-Abfragen, Integration mit Visualisierungs-Tools (Grafana).
-
-**Implementierung:**
-- Optionale TimescaleDB-Integration via Feature-Flag
-- Batch-Inserts für Performance
-- Vordefinierte Dashboards für Grafana
-- Retention-Policies für große Datensätze
-
 ## 📊 Analyse und Forschung
 
 ### 1. Wirtschaftliche Analysen

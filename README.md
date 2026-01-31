@@ -1378,6 +1378,45 @@ When using the `--csv-output` flag, the simulation generates multiple CSV files 
 
 The trade volume CSV provides time-series data perfect for analyzing market activity and economic vitality trends. The wealth stats history CSV contains comprehensive inequality metrics at each step, ideal for studying how wealth distribution evolves over the course of the simulation. The network CSVs enable graph analysis and visualization of trading relationships using tools like NetworkX, igraph, Gephi, or Cytoscape.
 
+### Time-Series Export
+
+When using the `--timeseries-output` flag, the simulation exports data in a standardized "long format" ideal for time-series databases and analysis tools:
+
+*   **Format:** Each row represents a single measurement: `step,metric,value`
+*   **Use Cases:**
+    *   Time-series databases: InfluxDB, TimescaleDB, Prometheus
+    *   Analysis tools: Grafana, Jupyter notebooks, Python pandas, R
+    *   Spreadsheet analysis: Excel, Google Sheets with pivot tables
+    *   Statistical software: SPSS, Stata, SAS
+*   **Metrics Exported:**
+    *   **Trade Activity:** `trade_count`, `trade_volume`, `failed_attempts` - Track market activity levels per step
+    *   **Wealth Distribution:** `avg_money`, `median_money`, `gini_coefficient`, `top_10_percent_share`, `top_1_percent_share`, `bottom_50_percent_share` - Monitor inequality evolution
+    *   **Skill Prices:** `price_skill_{SkillID}` - Individual price series for each skill (e.g., `price_skill_Skill0`, `price_skill_Programming`)
+
+**Example Usage:**
+```bash
+./simulation-framework -s 500 -p 100 --timeseries-output timeseries.csv
+```
+
+**Example Output:**
+```csv
+step,metric,value
+0,trade_count,45
+1,trade_count,52
+0,avg_money,100.0000
+1,avg_money,98.5432
+0,price_skill_Programming,10.0000
+1,price_skill_Programming,12.3456
+```
+
+This format is optimal for:
+*   **Trend Analysis:** Plot any metric over time to visualize simulation dynamics
+*   **Comparative Analysis:** Compare multiple simulation runs by loading into analysis tools
+*   **Database Import:** Direct import into time-series databases for large-scale analysis
+*   **Flexible Querying:** Use SQL, pandas, or R to slice and analyze specific metrics
+*   **Visualization:** Create dashboards in Grafana or custom plots in matplotlib/ggplot2
+
+
 ## Development
 
 For information about developing, testing, and contributing to this project, please see the [Development Guide](DEVELOPMENT.md).
