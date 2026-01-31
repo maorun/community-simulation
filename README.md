@@ -12,6 +12,7 @@ This repository contains a configurable economic simulation written in Rust. It 
   - **DynamicPricing**: Sales-based pricing - prices increase 5% when sold, decrease 5% when not sold
   - **AdaptivePricing**: Gradual price adaptation using exponential moving average with 20% learning rate for smooth convergence
   - **AuctionPricing**: Competitive bidding mechanism where prices increase aggressively when multiple buyers compete for the same skill (simulating auction psychology), with gentler decreases when demand is low. Uses quadratic competition factor to model bidding war intensity. Ideal for studying price spikes in competitive markets and auction-like dynamics.
+  - **ClimateChange**: Simulates gradual cost increases due to environmental degradation. Prices increase deterministically each step (base rate: 0.2% per step) with acceleration over time (+0.1% per 100 steps), representing the economic impact of climate change, resource scarcity, and adaptation costs. Unlike other scenarios, affects all skills equally to model systemic environmental costs. Ideal for studying long-term economic impacts of climate change and environmental policy.
 - **Dynamic Market:** Features a market mechanism where skill prices are adjusted based on supply (fixed per provider) and demand (generated each step).
 - **Demand Generation Strategies:** Configurable strategies for determining how many skills each person needs per step. Three strategies available:
   - **Uniform** (default): Random 2-5 needs with equal probability, creating balanced markets
