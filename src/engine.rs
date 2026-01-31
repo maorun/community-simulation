@@ -1110,9 +1110,10 @@ impl SimulationEngine {
         final_savings_distribution
             .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Calculate money statistics using centralized function, then override incremental values
+        // Calculate money statistics using optimized presorted function, then override incremental values
         let money_stats = if !final_money_distribution.is_empty() {
-            let mut stats = crate::result::calculate_money_stats(&final_money_distribution);
+            let mut stats =
+                crate::result::calculate_money_stats_presorted(&final_money_distribution);
 
             // Override with incrementally tracked values for better performance
             // (these were tracked during simulation with O(1) updates)
@@ -4432,9 +4433,10 @@ impl SimulationEngine {
         final_money_distribution
             .sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Calculate money statistics using centralized function, then override incremental values
+        // Calculate money statistics using optimized presorted function, then override incremental values
         let money_stats = if !final_money_distribution.is_empty() {
-            let mut stats = crate::result::calculate_money_stats(&final_money_distribution);
+            let mut stats =
+                crate::result::calculate_money_stats_presorted(&final_money_distribution);
 
             // Override with incrementally tracked values for better performance
             stats.average = self.money_incremental_stats.mean();
