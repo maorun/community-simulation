@@ -407,20 +407,20 @@ impl SimulationEngine {
         // Initialize skill providers cache
         let mut skill_providers: HashMap<SkillId, Vec<usize>> =
             HashMap::with_capacity(all_skill_ids.len());
-        for entity_idx in 0..entities.len() {
-            if entities[entity_idx].active {
+        for entity in &entities {
+            if entity.active {
                 // Include both own_skills and learned_skills
-                for skill in &entities[entity_idx].person_data.own_skills {
+                for skill in &entity.person_data.own_skills {
                     skill_providers
                         .entry(skill.id.clone())
                         .or_default()
-                        .push(entities[entity_idx].id);
+                        .push(entity.id);
                 }
-                for skill in &entities[entity_idx].person_data.learned_skills {
+                for skill in &entity.person_data.learned_skills {
                     skill_providers
                         .entry(skill.id.clone())
                         .or_default()
-                        .push(entities[entity_idx].id);
+                        .push(entity.id);
                 }
             }
         }
@@ -568,39 +568,6 @@ impl SimulationEngine {
                 std::io::ErrorKind::InvalidInput,
                 "Action recording is not enabled",
             )))
-        }
-    }
-
-    /// Rebuild the skill_providers cache.
-    ///
-    /// This method rebuilds the mapping of skill IDs to entity IDs that can provide those skills.
-    /// It should be called when:
-    /// - The simulation is initialized (done in `new()`)
-    /// - A person learns a new skill
-    /// - A person becomes active/inactive (if tracking inactive entities)
-    ///
-    /// Performance: O(n×m) where n = number of entities, m = average skills per entity
-    fn rebuild_skill_providers_cache(&mut self) {
-        // Pre-allocate capacity to avoid reallocation
-        self.skill_providers.clear();
-        self.skill_providers.reserve(self.all_skill_ids.len());
-
-        for entity_idx in 0..self.entities.len() {
-            if self.entities[entity_idx].active {
-                // Include both own_skills and learned_skills
-                for skill in &self.entities[entity_idx].person_data.own_skills {
-                    self.skill_providers
-                        .entry(skill.id.clone())
-                        .or_default()
-                        .push(self.entities[entity_idx].id);
-                }
-                for skill in &self.entities[entity_idx].person_data.learned_skills {
-                    self.skill_providers
-                        .entry(skill.id.clone())
-                        .or_default()
-                        .push(self.entities[entity_idx].id);
-                }
-            }
         }
     }
 
@@ -4897,20 +4864,20 @@ impl SimulationEngine {
         // Rebuild skill providers cache from checkpoint entities
         let mut skill_providers: HashMap<SkillId, Vec<usize>> =
             HashMap::with_capacity(checkpoint.all_skill_ids.len());
-        for entity_idx in 0..checkpoint.entities.len() {
-            if checkpoint.entities[entity_idx].active {
+        for entity in &checkpoint.entities {
+            if entity.active {
                 // Include both own_skills and learned_skills
-                for skill in &checkpoint.entities[entity_idx].person_data.own_skills {
+                for skill in &entity.person_data.own_skills {
                     skill_providers
                         .entry(skill.id.clone())
                         .or_default()
-                        .push(checkpoint.entities[entity_idx].id);
+                        .push(entity.id);
                 }
-                for skill in &checkpoint.entities[entity_idx].person_data.learned_skills {
+                for skill in &entity.person_data.learned_skills {
                     skill_providers
                         .entry(skill.id.clone())
                         .or_default()
-                        .push(checkpoint.entities[entity_idx].id);
+                        .push(entity.id);
                 }
             }
         }
