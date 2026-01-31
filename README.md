@@ -1391,7 +1391,7 @@ When using the `--timeseries-output` flag, the simulation exports data in a stan
 *   **Metrics Exported:**
     *   **Trade Activity:** `trade_count`, `trade_volume`, `failed_attempts` - Track market activity levels per step
     *   **Wealth Distribution:** `avg_money`, `median_money`, `gini_coefficient`, `top_10_percent_share`, `top_1_percent_share`, `bottom_50_percent_share` - Monitor inequality evolution
-    *   **Skill Prices:** `price_skill_{SkillName}` - Individual price series for each skill in the simulation
+    *   **Skill Prices:** `price_skill_{SkillID}` - Individual price series for each skill (e.g., `price_skill_Skill0`, `price_skill_Programming`)
 
 **Example Usage:**
 ```bash

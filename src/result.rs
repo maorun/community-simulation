@@ -2145,10 +2145,10 @@ impl SimulationResult {
         skill_ids.sort();
 
         for skill_id in skill_ids {
-            if let Some(prices) = self.skill_price_history.get(skill_id) {
-                for (step, &price) in prices.iter().enumerate() {
-                    writeln!(file, "{},price_skill_{},{:.4}", step, skill_id, price)?;
-                }
+            // Safe unwrap: skill_id came from keys(), so it must exist in the map
+            let prices = self.skill_price_history.get(skill_id).unwrap();
+            for (step, &price) in prices.iter().enumerate() {
+                writeln!(file, "{},price_skill_{},{:.4}", step, skill_id, price)?;
             }
         }
 
