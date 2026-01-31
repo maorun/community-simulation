@@ -4910,7 +4910,7 @@ impl SimulationEngine {
         }
 
         // Remove expired agreements first
-        // Use retain_mut to efficiently remove expired agreements from HashMap
+        // Use retain to efficiently remove expired agreements from HashMap
         self.trade_agreements.retain(|_id, agreement| {
             let active = agreement.is_active(self.current_step);
             if !active {
