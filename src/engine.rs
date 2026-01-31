@@ -118,8 +118,9 @@ pub struct SimulationCheckpoint {
     pub total_certification_cost: f64,
     /// Resource pool tracking: group_id -> (balance, total_contributions, total_withdrawals)
     pub resource_pools: HashMap<usize, (f64, f64, f64)>,
-    /// Trade agreement system tracking
-    pub trade_agreements: Vec<crate::trade_agreement::TradeAgreement>,
+    /// Trade agreement system tracking (key: agreement ID, value: TradeAgreement)
+    /// Using HashMap for O(1) lookups instead of O(n) Vec iteration
+    pub trade_agreements: HashMap<usize, crate::trade_agreement::TradeAgreement>,
     pub total_trade_agreements_formed: usize,
     pub total_trade_agreements_expired: usize,
     pub trade_agreement_counter: usize,
@@ -213,8 +214,9 @@ pub struct SimulationEngine {
     voting_system: Option<crate::voting::VotingSystem>,
     // Event bus for tracking simulation events (if enabled)
     event_bus: EventBus,
-    // Trade agreement system tracking
-    trade_agreements: Vec<crate::trade_agreement::TradeAgreement>,
+    // Trade agreement system tracking (key: agreement ID, value: TradeAgreement)
+    // Using HashMap for O(1) lookups
+    trade_agreements: HashMap<usize, crate::trade_agreement::TradeAgreement>,
     total_trade_agreements_formed: usize,
     total_trade_agreements_expired: usize,
     trade_agreement_counter: usize,
@@ -446,7 +448,7 @@ impl SimulationEngine {
             environment,
             voting_system,
             event_bus,
-            trade_agreements: Vec::new(),
+            trade_agreements: HashMap::new(),
             total_trade_agreements_formed: 0,
             total_trade_agreements_expired: 0,
             trade_agreement_counter: 0,
@@ -1735,30 +1737,33 @@ impl SimulationEngine {
                 .map(|trust_network| trust_network.get_statistics()),
             trade_agreement_statistics: if self.config.enable_trade_agreements {
                 // Calculate trade agreement statistics
-                let active_agreements =
-                    self.trade_agreements.iter().filter(|a| a.is_active(self.current_step)).count();
+                let active_agreements = self
+                    .trade_agreements
+                    .values()
+                    .filter(|a| a.is_active(self.current_step))
+                    .count();
 
                 let total_agreement_trades: usize =
-                    self.trade_agreements.iter().map(|a| a.trade_count).sum();
+                    self.trade_agreements.values().map(|a| a.trade_count).sum();
 
                 let total_agreement_trade_value: f64 =
-                    self.trade_agreements.iter().map(|a| a.total_trade_value).sum();
+                    self.trade_agreements.values().map(|a| a.total_trade_value).sum();
 
                 let bilateral_agreements =
-                    self.trade_agreements.iter().filter(|a| a.partner_count() == 2).count();
+                    self.trade_agreements.values().filter(|a| a.partner_count() == 2).count();
 
                 let multilateral_agreements =
-                    self.trade_agreements.iter().filter(|a| a.partner_count() > 2).count();
+                    self.trade_agreements.values().filter(|a| a.partner_count() > 2).count();
 
                 let average_discount_rate = if !self.trade_agreements.is_empty() {
-                    self.trade_agreements.iter().map(|a| a.discount_rate).sum::<f64>()
+                    self.trade_agreements.values().map(|a| a.discount_rate).sum::<f64>()
                         / self.trade_agreements.len() as f64
                 } else {
                     0.0
                 };
 
                 let average_duration = if !self.trade_agreements.is_empty() {
-                    self.trade_agreements.iter().map(|a| a.duration).sum::<usize>() as f64
+                    self.trade_agreements.values().map(|a| a.duration).sum::<usize>() as f64
                         / self.trade_agreements.len() as f64
                 } else {
                     0.0
@@ -2538,10 +2543,11 @@ impl SimulationEngine {
                                 self.entities[buyer_idx].person_data.trade_agreement_ids.clone();
 
                             for agreement_id in buyer_agreements {
-                                if let Some(agreement) = self.trade_agreements.iter().find(|a| {
-                                    a.id == agreement_id && a.is_active(self.current_step)
-                                }) {
-                                    if agreement.includes_both(buyer_id, seller_person_id) {
+                                // O(1) HashMap lookup instead of O(n) Vec iteration
+                                if let Some(agreement) = self.trade_agreements.get(&agreement_id) {
+                                    if agreement.is_active(self.current_step)
+                                        && agreement.includes_both(buyer_id, seller_person_id)
+                                    {
                                         let agreement_multiplier = 1.0 - agreement.discount_rate;
                                         final_price *= agreement_multiplier;
                                         trace!(
@@ -4904,7 +4910,8 @@ impl SimulationEngine {
         }
 
         // Remove expired agreements first
-        self.trade_agreements.retain(|agreement| {
+        // Use retain_mut to efficiently remove expired agreements from HashMap
+        self.trade_agreements.retain(|_id, agreement| {
             let active = agreement.is_active(self.current_step);
             if !active {
                 self.total_trade_agreements_expired += 1;
@@ -4947,7 +4954,7 @@ impl SimulationEngine {
             // Check if an agreement already exists between these two
             let already_has_agreement = self
                 .trade_agreements
-                .iter()
+                .values()
                 .any(|agreement| agreement.includes_both(person_id, friend_id));
 
             if already_has_agreement {
@@ -4979,7 +4986,8 @@ impl SimulationEngine {
                 }
             }
 
-            self.trade_agreements.push(agreement);
+            // Insert agreement into HashMap by ID
+            self.trade_agreements.insert(agreement.id, agreement);
             self.trade_agreement_counter += 1;
             self.total_trade_agreements_formed += 1;
         }
@@ -5005,12 +5013,11 @@ impl SimulationEngine {
             .unwrap_or_default();
 
         for agreement_id in buyer_agreements {
-            if let Some(agreement) = self
-                .trade_agreements
-                .iter_mut()
-                .find(|a| a.id == agreement_id && a.is_active(self.current_step))
-            {
-                if agreement.includes_both(buyer_id, seller_id) {
+            // O(1) HashMap lookup instead of O(n) Vec iteration
+            if let Some(agreement) = self.trade_agreements.get_mut(&agreement_id) {
+                if agreement.is_active(self.current_step)
+                    && agreement.includes_both(buyer_id, seller_id)
+                {
                     agreement.record_trade(trade_value);
                     trace!(
                         "Trade recorded in agreement {}: buyer={}, seller={}, value={}",
