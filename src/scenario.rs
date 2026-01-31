@@ -438,7 +438,9 @@ mod tests {
         }
 
         let final_price = market.get_price(&skill_id).unwrap();
-        // After 100 steps at 0.2% growth: 100 * (1.002)^100 ≈ 122.14
+        // After 100 steps with base 0.2% growth and acceleration, growth rate
+        // varies from 0.2% (steps 0-99) with no acceleration since it only triggers at step 100+
+        // Expected: 100 * (1.002)^100 ≈ 122.14
         assert!(final_price > 120.0);
         assert!(final_price < 125.0);
     }
@@ -958,7 +960,7 @@ impl ClimateChangePriceUpdater {
                 (current_step / acceleration_steps) as f64 * acceleration_factor;
             let current_growth_rate = base_growth_rate + step_acceleration;
 
-            // Cache price limits to avoid duplicate HashMap lookups for better performance
+            // Extract price limits to avoid repeated tuple field access
             let (min_opt, max_opt) = market
                 .per_skill_price_limits
                 .get(skill_id)
