@@ -55,6 +55,21 @@ This repository contains a configurable economic simulation written in Rust. It 
     "Manufacturing": -0.15  # 15% negative externality (pollution)
     "Research": 0.30     # 30% positive externality (knowledge spillovers)
   ```
+- **Health and Epidemiology System:** Simulate disease transmission and economic impacts through trade networks. When enabled, persons can become sick through contact during trades, creating dynamic epidemic patterns that propagate through economic relationships. The system models:
+  - **Disease Transmission:** When a healthy person trades with a sick person, there's a configurable probability (default: 5%) that the disease transmits during the transaction, simulating contagion through economic interactions
+  - **Recovery Process:** Sick persons automatically recover after a set number of steps (default: 10), returning to full health and productivity
+  - **Economic Impact:** Sick persons suffer reduced productivity (50% penalty), receiving only half of their normal trading proceeds when selling skills, simulating reduced work capacity during illness
+  - **Seed Infections:** A configurable number of persons (default: 0) start the simulation already sick, allowing study of epidemic dynamics from various starting conditions
+  
+  The health system enables research on:
+  - Economic impacts of pandemics and health crises
+  - Disease spread through trade networks and economic activity
+  - Productivity losses and GDP reductions from widespread illness
+  - Network effects in epidemic propagation (highly connected traders spread disease faster)
+  - Resilience of economic systems to health shocks
+  - Optimal quarantine and containment strategies (by analyzing transmission patterns)
+  
+  Configure via `--enable-health` flag with optional parameters: `--disease-transmission-rate` (0.0-1.0, default: 0.05 or 5% per trade), `--disease-recovery-duration` (in steps, default: 10), and `--initial-sick-persons` (count, default: 0). Health statistics (sick persons over time, total infections, recoveries, productivity losses) are tracked and included in simulation results. The system integrates naturally with the trading system—more active traders have higher exposure risk, and epidemics can cause economic slowdowns as sick persons earn less and spend less. Perfect for studying pandemic economics, the intersection of public health and economic policy, and the network dynamics of disease spread in markets. Example: `./simulation-framework --enable-health --initial-sick-persons 5 --disease-transmission-rate 0.1 --disease-recovery-duration 15 -s 500 -p 100`
 - **Contract System:** Long-term agreements for stable trading relationships. When enabled, persons can form contracts that lock in prices for multiple simulation steps, providing price stability and predictable income/expenses for both parties. Contracts have configurable duration bounds and offer a price discount to incentivize formation. Enable via `--enable-contracts` flag or configuration file, with parameters `max_contract_duration`, `min_contract_duration`, and `contract_price_discount` (default: 5% discount). Contract statistics (total created, completed, active, average duration, total value) are tracked and included in simulation results. Ideal for studying long-term economic relationships, price stability mechanisms, and the effects of contractual obligations on market dynamics.
 - **Black Market:** Parallel informal market with different pricing rules. When enabled, a configurable percentage of trades are routed to an alternative market that operates with different prices (typically cheaper), simulating informal economy dynamics. Configured via `enable_black_market`, `black_market_price_multiplier` (e.g., 0.8 for 20% discount), and `black_market_participation_rate` (e.g., 0.2 for 20% of trades). Black market statistics (trades, volume, percentages) are tracked separately and included in simulation results.
 - **Behavioral Strategies:** Persons are assigned different behavioral strategies that affect their spending decisions, creating heterogeneous agent behavior. Four strategy types are supported:

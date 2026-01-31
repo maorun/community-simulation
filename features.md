@@ -60,18 +60,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
-#### 1. Epidemiologie-Integration
-**Beschreibung:** Krankheitsausbreitung im Handelsnetzwerk, mit wirtschaftlichen Auswirkungen (Arbeitsausfall, Gesundheitskosten).
-
-**Harmonien:**
-- **Handelsnetzwerk:** Übertragung erfolgt durch Handelsbeziehungen
-- **Krisen-Events:** Epidemie als spezielle Krise
-- **Versicherung:** Krankenversicherung relevant
-- **Geografie:** Räumliche Ausbreitung
-
-**Nutzen:** Modellierung von Pandemien und ihren ökonomischen Auswirkungen.
-
-#### 2. Klimawandel-Szenarios
+#### 1. Klimawandel-Szenarios
 **Beschreibung:** Integration von Klimawandel-Dynamiken mit steigenden Umweltkosten, Ressourcenknappheit und Anpassungsbedarf.
 
 **Harmonien:**
@@ -82,7 +71,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 **Nutzen:** Erforschung von Klimaökonomie, Anpassungsstrategien und Kosten des Nicht-Handelns.
 
-#### 3. Post-Konflikt-Wiederaufbau
+#### 2. Post-Konflikt-Wiederaufbau
 **Beschreibung:** Simulation von Wirtschafts-Wiederaufbau nach Krisen mit beschädigter Infrastruktur, Vertrauensverlust und knappen Ressourcen.
 
 **Harmonien:**

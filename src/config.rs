@@ -1219,6 +1219,63 @@ pub struct SimulationConfig {
     /// Default: Empty (all skills use externality_rate)
     #[serde(default)]
     pub externality_rates_per_skill: HashMap<String, f64>,
+
+    /// Enable health system with disease transmission and economic impacts.
+    ///
+    /// When enabled, persons can become sick through trade interactions, which reduces
+    /// their productivity and ability to trade. Sick persons automatically recover after
+    /// a set number of steps. This enables studying:
+    /// - Economic impacts of health crises
+    /// - Disease transmission through economic networks
+    /// - Productivity losses from illness
+    /// - Resilience of economic systems to health shocks
+    ///
+    /// Set to false to disable health system (default).
+    #[serde(default)]
+    pub enable_health: bool,
+
+    /// Probability of disease transmission during a trade (0.0-1.0).
+    ///
+    /// When a healthy person trades with a sick person, there is this probability
+    /// that the disease is transmitted. Higher values lead to faster disease spread.
+    /// For example, 0.1 means a 10% chance of transmission per trade with a sick person.
+    ///
+    /// Only used when enable_health is true.
+    /// Default: 0.05 (5% transmission rate per trade)
+    /// Valid range: 0.0-1.0
+    #[serde(default = "default_disease_transmission_rate")]
+    pub disease_transmission_rate: f64,
+
+    /// Number of steps a person remains sick before recovering.
+    ///
+    /// After this many steps, a sick person automatically recovers and becomes healthy again.
+    /// Longer durations create more severe economic disruptions.
+    /// For example, a value of 10 means persons are sick for 10 simulation steps.
+    ///
+    /// Only used when enable_health is true.
+    /// Default: 10 steps
+    #[serde(default = "default_disease_recovery_duration")]
+    pub disease_recovery_duration: usize,
+
+    /// Initial number of persons who start sick (seed infections).
+    ///
+    /// At the beginning of the simulation, this many randomly selected persons
+    /// start in the sick state. This seeds the disease and allows studying
+    /// epidemic dynamics from various starting points.
+    /// Set to 0 to start with no sick persons.
+    ///
+    /// Only used when enable_health is true.
+    /// Default: 0 (no initial infections)
+    #[serde(default)]
+    pub initial_sick_persons: usize,
+}
+
+fn default_disease_transmission_rate() -> f64 {
+    0.05 // 5% transmission rate per trade
+}
+
+fn default_disease_recovery_duration() -> usize {
+    10 // Recover after 10 steps
 }
 
 fn default_pool_contribution_rate() -> f64 {
@@ -1548,6 +1605,10 @@ impl Default for SimulationConfig {
             enable_externalities: false,          // Disabled by default
             externality_rate: 0.0,                // No externalities by default
             externality_rates_per_skill: HashMap::new(), // No per-skill rates by default
+            enable_health: false,                 // Disabled by default
+            disease_transmission_rate: default_disease_transmission_rate(),
+            disease_recovery_duration: default_disease_recovery_duration(),
+            initial_sick_persons: 0, // No initial infections
         }
     }
 }

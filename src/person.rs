@@ -9,6 +9,20 @@ use std::collections::{HashMap, HashSet};
 pub type PersonId = usize;
 pub type UrgencyLevel = u8; // Define UrgencyLevel (e.g., 1-3, higher is more urgent)
 
+/// Represents the health status of a person in the simulation.
+///
+/// Health status affects a person's ability to trade and participate in the economy.
+/// Sick persons have reduced trading capacity and can potentially transmit illness
+/// to others during trade interactions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum HealthStatus {
+    /// Person is healthy and can trade normally.
+    Healthy,
+    /// Person is sick and has reduced trading capacity.
+    /// Contains the step when the person became sick for recovery tracking.
+    Sick { infected_at_step: usize },
+}
+
 /// Represents a 2D location in the economic simulation.
 ///
 /// Locations are used to model geographic distance between persons,
@@ -342,6 +356,10 @@ pub struct Person {
     /// Enables agents to learn from experience and adjust their behavioral strategies.
     /// Only meaningful when adaptive strategies system is enabled.
     pub strategy_params: StrategyParameters,
+    /// Current health status of the person.
+    /// Sick persons have reduced trading capacity and may transmit illness during trades.
+    /// Only meaningful when health system is enabled.
+    pub health_status: HealthStatus,
 }
 
 impl Person {
@@ -383,6 +401,7 @@ impl Person {
             credit_score: CreditScore::new(), // Start with default credit score
             insurance_policies: Vec::new(),  // Start with no insurance policies
             strategy_params: StrategyParameters::new(initial_money), // Initialize strategy tracking
+            health_status: HealthStatus::Healthy, // Start healthy
         }
     }
 
@@ -449,6 +468,46 @@ impl Person {
         } else if self.reputation < 1.0 {
             self.reputation += 0.001; // Slow recovery for low reputation
             self.reputation = self.reputation.min(1.0); // Don't go above neutral
+        }
+    }
+
+    /// Returns true if the person is currently healthy.
+    pub fn is_healthy(&self) -> bool {
+        matches!(self.health_status, HealthStatus::Healthy)
+    }
+
+    /// Returns true if the person is currently sick.
+    pub fn is_sick(&self) -> bool {
+        matches!(self.health_status, HealthStatus::Sick { .. })
+    }
+
+    /// Infects the person with illness at the given step.
+    pub fn infect(&mut self, current_step: usize) {
+        self.health_status = HealthStatus::Sick { infected_at_step: current_step };
+    }
+
+    /// Attempts to recover the person if they have been sick long enough.
+    /// Returns true if recovery occurred, false otherwise.
+    ///
+    /// # Arguments
+    /// * `current_step` - The current simulation step
+    /// * `recovery_duration` - Number of steps required to recover
+    pub fn try_recover(&mut self, current_step: usize, recovery_duration: usize) -> bool {
+        if let HealthStatus::Sick { infected_at_step } = self.health_status {
+            if current_step >= infected_at_step + recovery_duration {
+                self.health_status = HealthStatus::Healthy;
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Returns the productivity multiplier based on health status.
+    /// Sick persons have reduced productivity (e.g., 0.5 = 50% productivity).
+    pub fn health_productivity_multiplier(&self) -> f64 {
+        match self.health_status {
+            HealthStatus::Healthy => 1.0,
+            HealthStatus::Sick { .. } => 0.5, // 50% productivity when sick
         }
     }
 

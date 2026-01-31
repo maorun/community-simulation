@@ -604,6 +604,20 @@ impl SimulationEngine {
             entities.push(entity);
         }
 
+        // Infect initial persons if health system is enabled
+        if config.enable_health && config.initial_sick_persons > 0 {
+            let num_to_infect = config.initial_sick_persons.min(entities.len());
+            // Shuffle indices to randomly select who starts sick
+            let mut indices: Vec<usize> = (0..entities.len()).collect();
+            indices.shuffle(rng);
+
+            for i in 0..num_to_infect {
+                entities[indices[i]].person_data.infect(0); // Infect at step 0
+                info!("Person {} starts simulation sick (seed infection)", entities[indices[i]].id);
+            }
+            info!("{} persons start with illness (seed infections)", num_to_infect);
+        }
+
         // Assign groups if configured
         if let Some(num_groups) = config.num_groups {
             for (i, entity) in entities.iter_mut().enumerate() {
@@ -2783,6 +2797,23 @@ impl SimulationEngine {
             }
         }
 
+        // Health system: Apply recovery for sick persons
+        if self.config.enable_health {
+            for entity in &mut self.entities {
+                if entity.active && entity.person_data.is_sick() {
+                    let recovered = entity
+                        .person_data
+                        .try_recover(self.current_step, self.config.disease_recovery_duration);
+                    if recovered {
+                        debug!(
+                            "Person {} recovered from illness at step {}",
+                            entity.id, self.current_step
+                        );
+                    }
+                }
+            }
+        }
+
         // Adapt strategies based on performance (if enabled)
         if self.config.enable_adaptive_strategies {
             for entity in &mut self.entities {
@@ -3500,10 +3531,31 @@ impl SimulationEngine {
 
         // Seller receives price minus fee
         let seller_balance_before = self.entities[seller_idx].person_data.money;
-        self.entities[seller_idx].person_data.money += seller_proceeds;
 
-        // Calculate and collect tax on seller's proceeds (after transaction fee)
-        let tax = seller_proceeds * self.config.tax_rate;
+        // Apply health productivity penalty if enabled and seller is sick
+        let health_multiplier = if self.config.enable_health {
+            self.entities[seller_idx].person_data.health_productivity_multiplier()
+        } else {
+            1.0
+        };
+
+        // Reduce seller proceeds if they're sick (lower productivity)
+        let health_adjusted_proceeds = seller_proceeds * health_multiplier;
+        self.entities[seller_idx].person_data.money += health_adjusted_proceeds;
+
+        // Log productivity penalty if seller was sick
+        if health_multiplier < 1.0 {
+            trace!(
+                "Sick person {} received reduced proceeds: ${:.2} instead of ${:.2} ({}% productivity)",
+                self.entities[seller_idx].id,
+                health_adjusted_proceeds,
+                seller_proceeds,
+                health_multiplier * 100.0
+            );
+        }
+
+        // Calculate and collect tax on seller's proceeds (after transaction fee and health adjustment)
+        let tax = health_adjusted_proceeds * self.config.tax_rate;
         self.entities[seller_idx].person_data.money -= tax;
 
         if tax > 0.0 {
@@ -3644,6 +3696,36 @@ impl SimulationEngine {
                     debug!(
                         "Friendship formed: Person {} and Person {} are now friends after successful trade",
                         buyer_id, seller_id
+                    );
+                }
+            }
+        }
+
+        // Disease transmission (if health system enabled)
+        // After a successful trade, disease may transmit between sick and healthy persons
+        if self.config.enable_health {
+            let buyer_sick = self.entities[buyer_idx].person_data.is_sick();
+            let seller_sick = self.entities[seller_idx].person_data.is_sick();
+
+            // Transmission can occur if exactly one party is sick
+            if buyer_sick && !seller_sick {
+                // Buyer is sick, may transmit to seller
+                let transmission_roll: f64 = self.rng.random();
+                if transmission_roll < self.config.disease_transmission_rate {
+                    self.entities[seller_idx].person_data.infect(self.current_step);
+                    debug!(
+                        "Disease transmitted: Sick buyer {} infected seller {} during trade",
+                        self.entities[buyer_idx].id, self.entities[seller_idx].id
+                    );
+                }
+            } else if seller_sick && !buyer_sick {
+                // Seller is sick, may transmit to buyer
+                let transmission_roll: f64 = self.rng.random();
+                if transmission_roll < self.config.disease_transmission_rate {
+                    self.entities[buyer_idx].person_data.infect(self.current_step);
+                    debug!(
+                        "Disease transmitted: Sick seller {} infected buyer {} during trade",
+                        self.entities[seller_idx].id, self.entities[buyer_idx].id
                     );
                 }
             }
