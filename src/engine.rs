@@ -2185,6 +2185,8 @@ impl SimulationEngine {
                 self.entities[idx].person_data.learned_skills.push(new_skill.clone());
 
                 // Update skill_providers cache with the newly learned skill
+                // Note: No duplicate check needed because has_skill() above ensures
+                // the person doesn't already have this skill (line 2152)
                 self.skill_providers
                     .entry(new_skill.id.clone())
                     .or_default()
@@ -2381,6 +2383,7 @@ impl SimulationEngine {
         // Since multiple persons can now provide the same skill, we use Vec<usize>
         // Performance optimization: Use cached skill_providers instead of rebuilding every step
         // The cache is updated when skills are learned (see production skill learning)
+        // Note: Entities never become inactive during simulation, so no cache invalidation needed
         let skill_providers = &self.skill_providers;
 
         let mut trades_to_execute: Vec<(usize, usize, SkillId, f64)> = Vec::new();
