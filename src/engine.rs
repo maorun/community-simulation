@@ -2332,7 +2332,7 @@ impl SimulationEngine {
         /// Helper struct to hold priority information for purchase decisions.
         /// Combines multiple factors (urgency, affordability, efficiency, reputation)
         /// into a single priority score for sorting purchase options.
-        /// 
+        ///
         /// Performance optimization: Store index instead of cloning NeededSkillItem
         #[derive(Debug, Clone)]
         struct PurchaseOption {
@@ -2460,10 +2460,11 @@ impl SimulationEngine {
 
             for option in purchase_options {
                 // Clone needed data to avoid borrow checker issues when mutating entities later
-                let needed_item = &self.entities[buyer_idx].person_data.needed_skills[option.needed_item_index];
+                let needed_item =
+                    &self.entities[buyer_idx].person_data.needed_skills[option.needed_item_index];
                 let needed_skill_id = needed_item.id.clone();
                 let needed_urgency = needed_item.urgency;
-                
+
                 if self.entities[buyer_idx]
                     .person_data
                     .satisfied_needs_current_step
