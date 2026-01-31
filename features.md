@@ -60,18 +60,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🌍 Erweiterungen für spezifische Anwendungsfälle
 
-#### 1. Klimawandel-Szenarios
-**Beschreibung:** Integration von Klimawandel-Dynamiken mit steigenden Umweltkosten, Ressourcenknappheit und Anpassungsbedarf.
-
-**Harmonien:**
-- **Umwelt-Ressourcen:** Beschleunigte Ressourcenerschöpfung
-- **Krisen-Events:** Klimabedingte Schocks (Dürren, Fluten)
-- **Technologischer Fortschritt:** Grüne Technologien
-- **Regulierung:** Klimapolitik (CO2-Steuer)
-
-**Nutzen:** Erforschung von Klimaökonomie, Anpassungsstrategien und Kosten des Nicht-Handelns.
-
-#### 2. Post-Konflikt-Wiederaufbau
+#### 1. Post-Konflikt-Wiederaufbau
 **Beschreibung:** Simulation von Wirtschafts-Wiederaufbau nach Krisen mit beschädigter Infrastruktur, Vertrauensverlust und knappen Ressourcen.
 
 **Harmonien:**

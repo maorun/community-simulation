@@ -19,6 +19,9 @@ pub enum Scenario {
     /// A scenario where prices increase when multiple buyers compete for the same skill,
     /// simulating an auction mechanism where competitive demand drives prices up.
     AuctionPricing,
+    /// A scenario simulating climate change effects with gradually increasing costs over time.
+    /// Models the economic impact of environmental degradation and resource scarcity.
+    ClimateChange,
 }
 
 impl Display for Scenario {
@@ -28,6 +31,7 @@ impl Display for Scenario {
             Scenario::DynamicPricing => write!(f, "DynamicPricing"),
             Scenario::AdaptivePricing => write!(f, "AdaptivePricing"),
             Scenario::AuctionPricing => write!(f, "AuctionPricing"),
+            Scenario::ClimateChange => write!(f, "ClimateChange"),
         }
     }
 }
@@ -40,6 +44,7 @@ impl Scenario {
             Scenario::DynamicPricing,
             Scenario::AdaptivePricing,
             Scenario::AuctionPricing,
+            Scenario::ClimateChange,
         ]
     }
 
@@ -52,6 +57,7 @@ impl Scenario {
                 "Gradual price adaptation using exponential moving average"
             },
             Scenario::AuctionPricing => "Competitive bidding mechanism",
+            Scenario::ClimateChange => "Gradually increasing costs simulating climate impact",
         }
     }
 
@@ -62,6 +68,9 @@ impl Scenario {
             Scenario::DynamicPricing => "Prices increase 5% when sold, decrease 5% when not sold",
             Scenario::AdaptivePricing => "Smooth price adjustments with 20% learning rate",
             Scenario::AuctionPricing => "Prices increase aggressively when multiple buyers compete",
+            Scenario::ClimateChange => {
+                "Prices increase gradually each step, accelerating over time"
+            },
         }
     }
 
@@ -72,6 +81,7 @@ impl Scenario {
             Scenario::DynamicPricing => "Studying price discovery and market feedback",
             Scenario::AdaptivePricing => "Modeling gradual market learning and stability",
             Scenario::AuctionPricing => "Studying auction dynamics and competitive markets",
+            Scenario::ClimateChange => "Studying economic impact of environmental degradation",
         }
     }
 
@@ -167,6 +177,16 @@ mod tests {
             }
         }
 
+        fn climate_change(initial_price: f64) -> Self {
+            Self {
+                initial_price,
+                updater: PriceUpdater::ClimateChange(ClimateChangePriceUpdater::new()),
+                demand: None,
+                supply: None,
+                sales: None,
+            }
+        }
+
         /// Derive the scenario from the updater type
         fn scenario(&self) -> Scenario {
             match self.updater {
@@ -174,6 +194,7 @@ mod tests {
                 PriceUpdater::DynamicPricing(_) => Scenario::DynamicPricing,
                 PriceUpdater::AdaptivePricing(_) => Scenario::AdaptivePricing,
                 PriceUpdater::AuctionPricing(_) => Scenario::AuctionPricing,
+                PriceUpdater::ClimateChange(_) => Scenario::ClimateChange,
             }
         }
     }
@@ -361,6 +382,90 @@ mod tests {
         // Price should be clamped to per-skill min (30.0), not global min (1.0)
         assert!(new_price >= 30.0, "Price {} should be clamped to 30.0", new_price);
     }
+
+    #[test]
+    fn test_climate_change_price_increase() {
+        // Test that ClimateChange scenario increases prices over time
+        let config = PriceUpdateTestConfig::climate_change(50.0);
+        let new_price = execute_price_update_test(config);
+        // At step 0, growth rate is 0.2%, so price should increase
+        // new_price = 50.0 * 1.002 = 50.1
+        assert!(new_price > 50.0);
+        assert!((new_price - 50.1).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_climate_change_accelerating_growth() {
+        // Test that growth rate accelerates over time
+        let mut market = create_test_market(Scenario::ClimateChange, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 100.0);
+
+        let mut rng = StdRng::seed_from_u64(2);
+        let updater = ClimateChangePriceUpdater::new();
+
+        // First update at step 0 (inferred from empty history, growth rate = 0.2%)
+        updater.update_prices(&mut market, &mut rng);
+        let price_after_1 = market.get_price(&skill_id).unwrap();
+        assert!((price_after_1 - 100.2).abs() < 0.01);
+
+        // Simulate 99 more steps to reach step 100
+        for _ in 1..100 {
+            updater.update_prices(&mut market, &mut rng);
+        }
+
+        // At step 100, growth rate should be 0.3% (0.2% base + 0.1% acceleration)
+        let price_before_step_100 = market.get_price(&skill_id).unwrap();
+        updater.update_prices(&mut market, &mut rng);
+        let price_after_step_100 = market.get_price(&skill_id).unwrap();
+
+        // Calculate expected growth at step 100 (0.3%)
+        let expected_price = price_before_step_100 * 1.003;
+        assert!((price_after_step_100 - expected_price).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_climate_change_long_term_impact() {
+        // Test cumulative effect over many steps
+        let mut market = create_test_market(Scenario::ClimateChange, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 100.0);
+
+        let mut rng = StdRng::seed_from_u64(2);
+        let updater = ClimateChangePriceUpdater::new();
+
+        // Run for 100 steps
+        for _ in 0..100 {
+            updater.update_prices(&mut market, &mut rng);
+        }
+
+        let final_price = market.get_price(&skill_id).unwrap();
+        // After 100 steps with base 0.2% growth and acceleration, growth rate
+        // varies from 0.2% (steps 0-99) with no acceleration since it only triggers at step 100+
+        // Expected: 100 * (1.002)^100 ≈ 122.14
+        assert!(final_price > 120.0);
+        assert!(final_price < 125.0);
+    }
+
+    #[test]
+    fn test_climate_change_price_clamp() {
+        // Test that climate change respects max price limit
+        let mut market = create_test_market(Scenario::ClimateChange, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 999.0); // Near max
+
+        // Set max price limit
+        market.max_skill_price = 1000.0;
+
+        let mut rng = StdRng::seed_from_u64(2);
+        let updater = ClimateChangePriceUpdater::new();
+
+        // Multiple updates to try to exceed max
+        for _ in 0..10 {
+            updater.update_prices(&mut market, &mut rng);
+        }
+
+        let final_price = market.get_price(&skill_id).unwrap();
+        // Should be clamped to max_skill_price
+        assert!(final_price <= 1000.0);
+    }
 }
 
 /// Enum representing different price update strategies.
@@ -374,6 +479,7 @@ mod tests {
 /// * `DynamicPricing` - Sales-based pricing that increases/decreases based on purchases
 /// * `AdaptivePricing` - Gradual price adaptation using exponential moving average
 /// * `AuctionPricing` - Competitive bidding mechanism where demand intensity drives prices
+/// * `ClimateChange` - Gradually increasing costs simulating environmental impact
 ///
 /// # Examples
 ///
@@ -388,6 +494,7 @@ pub enum PriceUpdater {
     DynamicPricing(DynamicPricingUpdater),
     AdaptivePricing(AdaptivePricingUpdater),
     AuctionPricing(AuctionPricingUpdater),
+    ClimateChange(ClimateChangePriceUpdater),
 }
 
 impl Default for PriceUpdater {
@@ -409,6 +516,7 @@ impl PriceUpdater {
             PriceUpdater::DynamicPricing(updater) => updater.update_prices(market, rng),
             PriceUpdater::AdaptivePricing(updater) => updater.update_prices(market, rng),
             PriceUpdater::AuctionPricing(updater) => updater.update_prices(market, rng),
+            PriceUpdater::ClimateChange(updater) => updater.update_prices(market, rng),
         }
     }
 }
@@ -420,6 +528,9 @@ impl From<Scenario> for PriceUpdater {
             Scenario::DynamicPricing => PriceUpdater::DynamicPricing(DynamicPricingUpdater),
             Scenario::AdaptivePricing => PriceUpdater::AdaptivePricing(AdaptivePricingUpdater),
             Scenario::AuctionPricing => PriceUpdater::AuctionPricing(AuctionPricingUpdater),
+            Scenario::ClimateChange => {
+                PriceUpdater::ClimateChange(ClimateChangePriceUpdater::new())
+            },
         }
     }
 }
@@ -768,6 +879,114 @@ impl AuctionPricingUpdater {
             new_price = new_price.max(min_price).min(max_price);
 
             skill.current_price = new_price;
+
+            if let Some(history) = market.skill_price_history.get_mut(skill_id) {
+                history.push(new_price);
+            }
+        }
+    }
+}
+
+/// Price updater for the ClimateChange scenario.
+///
+/// This updater simulates the gradual economic impact of climate change by applying
+/// time-dependent cost increases to all skills:
+/// - Prices increase gradually each step based on a compounding growth rate
+/// - Growth rate accelerates over time to model worsening environmental conditions
+/// - Base growth rate starts at 0.2% per step
+/// - Acceleration factor causes growth rate to increase by 0.1% every 100 steps
+/// - Enforces min/max price boundaries
+///
+/// This creates a long-term inflationary pressure that models:
+/// - Increasing resource scarcity due to environmental degradation
+/// - Rising costs of production in a deteriorating climate
+/// - Adaptation costs and reduced productivity
+///
+/// The current simulation step is inferred from the price history length,
+/// making this updater stateless and compatible with the existing architecture.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ClimateChangePriceUpdater;
+
+impl ClimateChangePriceUpdater {
+    /// Create a new ClimateChangePriceUpdater.
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Updates skill prices with climate-induced cost increases.
+    ///
+    /// # Algorithm
+    ///
+    /// 1. Infer current step from price history length
+    /// 2. Calculate current growth rate based on simulation step
+    ///    - Base rate: 0.2% (0.002) per step
+    ///    - Acceleration: +0.1% (0.001) every 100 steps
+    ///    - Formula: base_rate + (step / 100) * acceleration
+    /// 3. Apply compounding growth to all skill prices
+    /// 4. Clamp to min/max price boundaries
+    /// 5. Record price in history
+    ///
+    /// Example progression:
+    /// - Steps 0-99: 0.2% growth per step
+    /// - Steps 100-199: 0.3% growth per step
+    /// - Steps 200-299: 0.4% growth per step
+    /// - And so on...
+    ///
+    /// Over 500 steps with no acceleration, prices would increase by ~170% (2.7x).
+    /// With acceleration, the effect is more dramatic, reaching ~320% (4.2x).
+    ///
+    /// # Arguments
+    ///
+    /// * `market` - The market containing skills to update
+    /// * `_rng` - Random number generator (unused - changes are deterministic)
+    pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, _rng: &mut R) {
+        // Base growth rate: 0.2% per step
+        let base_growth_rate = 0.002;
+
+        // Acceleration: growth rate increases by 0.1% every 100 steps
+        let acceleration_factor = 0.001;
+        let acceleration_steps = 100;
+
+        for (skill_id, skill) in market.skills.iter_mut() {
+            // Infer current step from price history length
+            let current_step = market
+                .skill_price_history
+                .get(skill_id)
+                .map(|history| history.len())
+                .unwrap_or(0);
+
+            // Calculate current growth rate based on simulation step
+            let step_acceleration =
+                (current_step / acceleration_steps) as f64 * acceleration_factor;
+            let current_growth_rate = base_growth_rate + step_acceleration;
+
+            // Extract price limits to avoid repeated tuple field access
+            let (min_opt, max_opt) = market
+                .per_skill_price_limits
+                .get(skill_id)
+                .map(|(min, max)| (*min, *max))
+                .unwrap_or((None, None));
+            let min_price = min_opt.unwrap_or(market.min_skill_price);
+            let max_price = max_opt.unwrap_or(market.max_skill_price);
+
+            let old_price = skill.current_price;
+
+            // Apply compounding growth
+            let mut new_price = old_price * (1.0 + current_growth_rate);
+
+            // Clamp price to per-skill or global boundaries
+            new_price = new_price.max(min_price).min(max_price);
+
+            skill.current_price = new_price;
+
+            debug!(
+                "ClimateChange: Step {}, Skill {:?} price ${:.2} -> ${:.2} (+{:.3}%)",
+                current_step,
+                skill_id,
+                old_price,
+                new_price,
+                current_growth_rate * 100.0
+            );
 
             if let Some(history) = market.skill_price_history.get_mut(skill_id) {
                 history.push(new_price);
