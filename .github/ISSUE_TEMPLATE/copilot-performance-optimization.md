@@ -323,7 +323,7 @@ Always present results in this format:
 
 ### After Optimization
 - Engine initialization (100 persons): 380 µs ± 20 µs  [**15.6% faster**]
-- Single step (100 persons): 850 µs ± 0.04 ms         [**29.2% faster**]
+- Single step (100 persons): 850 µs ± 40 µs           [**29.2% faster**]
 - Full simulation (100p, 100s): 89 ms ± 4 ms          [**28.8% faster**]
 
 ### Impact
@@ -469,6 +469,8 @@ pub fn calculate_statistics(&self, persons: &[Person]) -> Statistics {
     // Use iterators throughout, no cloning
 }
 ```
+
+**Note:** This example changes the method signature from `Vec<Person>` to `&[Person]`, which is an API change. This would only be acceptable if `calculate_statistics` is a private method or if the change is coordinated with all callers. For public APIs, consider adding a new method with the optimized signature while deprecating the old one.
 
 ### Expected Benefit
 - Eliminate 250MB of allocations per simulation
