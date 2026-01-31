@@ -411,16 +411,10 @@ impl SimulationEngine {
             if entity.active {
                 // Include both own_skills and learned_skills
                 for skill in &entity.person_data.own_skills {
-                    skill_providers
-                        .entry(skill.id.clone())
-                        .or_default()
-                        .push(entity.id);
+                    skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
                 }
                 for skill in &entity.person_data.learned_skills {
-                    skill_providers
-                        .entry(skill.id.clone())
-                        .or_default()
-                        .push(entity.id);
+                    skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
                 }
             }
         }
@@ -4871,16 +4865,10 @@ impl SimulationEngine {
             if entity.active {
                 // Include both own_skills and learned_skills
                 for skill in &entity.person_data.own_skills {
-                    skill_providers
-                        .entry(skill.id.clone())
-                        .or_default()
-                        .push(entity.id);
+                    skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
                 }
                 for skill in &entity.person_data.learned_skills {
-                    skill_providers
-                        .entry(skill.id.clone())
-                        .or_default()
-                        .push(entity.id);
+                    skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
                 }
             }
         }
