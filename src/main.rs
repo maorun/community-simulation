@@ -63,6 +63,12 @@ struct Args {
     #[arg(long)]
     sqlite_output: Option<String>,
 
+    /// Path to time-series CSV output file for time-series analysis
+    /// Exports data in long format (step,metric,value) suitable for time-series databases
+    /// and analysis tools like Grafana, InfluxDB, Jupyter notebooks, or Excel
+    #[arg(long)]
+    timeseries_output: Option<String>,
+
     /// Compress JSON output using gzip (.gz extension will be added automatically)
     #[arg(long, default_value_t = false)]
     compress: bool,
@@ -1310,6 +1316,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(sqlite_path) = args.sqlite_output {
             simulation_framework::database::export_to_sqlite(&result, &sqlite_path)?;
             info!("{}", format!("SQLite database saved to: {}", sqlite_path).bright_blue());
+        }
+
+        if let Some(timeseries_path) = args.timeseries_output {
+            result.save_timeseries_csv(&timeseries_path)?;
+            info!("{}", format!("Time-series data saved to: {}", timeseries_path).bright_blue());
         }
 
         result.print_summary(!args.no_histogram);

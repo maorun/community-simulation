@@ -2052,6 +2052,108 @@ impl SimulationResult {
 
         Ok(())
     }
+
+    /// Save simulation data in time-series format suitable for time-series databases and analysis tools.
+    ///
+    /// This method exports step-by-step simulation metrics in a "long" format where each row represents
+    /// a single measurement at a single point in time. This format is ideal for:
+    /// - Time-series databases (InfluxDB, TimescaleDB, Prometheus)
+    /// - Analysis tools (Grafana, Jupyter notebooks, R, Python pandas)
+    /// - Spreadsheet analysis (Excel, Google Sheets)
+    ///
+    /// # Format
+    ///
+    /// The output CSV contains three columns:
+    /// - `step`: The simulation step number (integer, 0-indexed)
+    /// - `metric`: The name of the metric being measured (string)
+    /// - `value`: The numeric value of the metric at that step (float)
+    ///
+    /// Each metric is exported as a separate series of rows, one per step.
+    ///
+    /// # Metrics Exported
+    ///
+    /// The following metrics are included:
+    /// - Trade volume metrics: `trade_count`, `trade_volume`
+    /// - Failed trade attempts: `failed_attempts`
+    /// - Wealth distribution statistics: `avg_money`, `median_money`, `gini_coefficient`,
+    ///   `top_10_percent_share`, `top_1_percent_share`, `bottom_50_percent_share`
+    /// - Individual skill prices: `price_Skill_X` for each skill X
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Output file path for the time-series CSV
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success, or an error if file I/O fails.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use simulation_framework::{SimulationConfig, SimulationEngine};
+    /// # let config = SimulationConfig::default();
+    /// # let mut engine = SimulationEngine::new(config);
+    /// let result = engine.run();
+    /// result.save_timeseries_csv("timeseries.csv").unwrap();
+    /// ```
+    ///
+    /// Output format example:
+    /// ```text
+    /// step,metric,value
+    /// 0,trade_count,45
+    /// 1,trade_count,52
+    /// 0,avg_money,100.0
+    /// 1,avg_money,98.5
+    /// ```
+    pub fn save_timeseries_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+
+        // Write header
+        writeln!(file, "step,metric,value")?;
+
+        // Export trade volume metrics
+        for (step, &count) in self.trades_per_step.iter().enumerate() {
+            writeln!(file, "{},trade_count,{}", step, count)?;
+        }
+        for (step, &volume) in self.volume_per_step.iter().enumerate() {
+            writeln!(file, "{},trade_volume,{:.4}", step, volume)?;
+        }
+
+        // Export failed attempts
+        for (step, &failed) in self.failed_attempts_per_step.iter().enumerate() {
+            writeln!(file, "{},failed_attempts,{}", step, failed)?;
+        }
+
+        // Export wealth statistics history
+        for snapshot in &self.wealth_stats_history {
+            let step = snapshot.step;
+            writeln!(file, "{},avg_money,{:.4}", step, snapshot.average)?;
+            writeln!(file, "{},median_money,{:.4}", step, snapshot.median)?;
+            writeln!(file, "{},gini_coefficient,{:.6}", step, snapshot.gini_coefficient)?;
+            writeln!(file, "{},top_10_percent_share,{:.6}", step, snapshot.top_10_percent_share)?;
+            writeln!(file, "{},top_1_percent_share,{:.6}", step, snapshot.top_1_percent_share)?;
+            writeln!(
+                file,
+                "{},bottom_50_percent_share,{:.6}",
+                step, snapshot.bottom_50_percent_share
+            )?;
+        }
+
+        // Export skill price history
+        // Sort skill IDs for consistent output
+        let mut skill_ids: Vec<_> = self.skill_price_history.keys().collect();
+        skill_ids.sort();
+
+        for skill_id in skill_ids {
+            if let Some(prices) = self.skill_price_history.get(skill_id) {
+                for (step, &price) in prices.iter().enumerate() {
+                    writeln!(file, "{},price_skill_{},{:.4}", step, skill_id, price)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// Calculate the Gini coefficient for a given distribution of values.
