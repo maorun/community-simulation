@@ -2332,9 +2332,11 @@ impl SimulationEngine {
         /// Helper struct to hold priority information for purchase decisions.
         /// Combines multiple factors (urgency, affordability, efficiency, reputation)
         /// into a single priority score for sorting purchase options.
+        ///
+        /// Performance optimization: Store index instead of cloning NeededSkillItem
         #[derive(Debug, Clone)]
         struct PurchaseOption {
-            needed_item: crate::person::NeededSkillItem,
+            needed_item_index: usize,
             priority_score: f64,
         }
 
@@ -2345,7 +2347,9 @@ impl SimulationEngine {
 
         // Build a map of skill providers
         // Since multiple persons can now provide the same skill, we use Vec<usize>
-        let mut skill_providers: HashMap<SkillId, Vec<usize>> = HashMap::new();
+        // Performance optimization: Pre-allocate HashMap capacity to reduce allocations
+        let mut skill_providers: HashMap<SkillId, Vec<usize>> =
+            HashMap::with_capacity(self.all_skill_ids.len());
         for entity_idx in 0..self.entities.len() {
             if self.entities[entity_idx].active {
                 // Include both own_skills and learned_skills
@@ -2376,7 +2380,9 @@ impl SimulationEngine {
             let buyer_money = self.entities[buyer_idx].person_data.money;
             let mut purchase_options: Vec<PurchaseOption> = Vec::new();
 
-            for needed_item in &self.entities[buyer_idx].person_data.needed_skills {
+            for (needed_item_index, needed_item) in
+                self.entities[buyer_idx].person_data.needed_skills.iter().enumerate()
+            {
                 let needed_skill_id = &needed_item.id;
 
                 // Skip if already satisfied in this step
@@ -2441,8 +2447,7 @@ impl SimulationEngine {
                         reputation_score
                     );
 
-                    purchase_options
-                        .push(PurchaseOption { needed_item: needed_item.clone(), priority_score });
+                    purchase_options.push(PurchaseOption { needed_item_index, priority_score });
                 }
             }
 
@@ -2454,12 +2459,16 @@ impl SimulationEngine {
             });
 
             for option in purchase_options {
-                let needed_item = option.needed_item;
-                let needed_skill_id = &needed_item.id;
+                // Clone needed data to avoid borrow checker issues when mutating entities later
+                let needed_item =
+                    &self.entities[buyer_idx].person_data.needed_skills[option.needed_item_index];
+                let needed_skill_id = needed_item.id.clone();
+                let needed_urgency = needed_item.urgency;
+
                 if self.entities[buyer_idx]
                     .person_data
                     .satisfied_needs_current_step
-                    .contains(needed_skill_id)
+                    .contains(&needed_skill_id)
                 {
                     trace!(
                         "Person {} already satisfied need for skill {:?} in this step",
@@ -2469,15 +2478,15 @@ impl SimulationEngine {
                     continue;
                 }
 
-                if let Some(skill_price) = self.market.get_price(needed_skill_id) {
+                if let Some(skill_price) = self.market.get_price(&needed_skill_id) {
                     // Apply efficiency multiplier - higher efficiency reduces effective price
-                    let efficiency = self.market.get_skill_efficiency(needed_skill_id);
+                    let efficiency = self.market.get_skill_efficiency(&needed_skill_id);
                     let efficiency_adjusted_price = skill_price / efficiency;
 
                     // Find a provider for this skill - select the first available one
                     // (Could be enhanced to select based on reputation or other criteria)
                     let seller_id_opt = skill_providers
-                        .get(needed_skill_id)
+                        .get(&needed_skill_id)
                         .and_then(|providers| providers.first().copied());
 
                     // Apply reputation-based price multiplier for the seller
@@ -2570,7 +2579,7 @@ impl SimulationEngine {
                             if let Some(&quality) = self.entities[seller_id]
                                 .person_data
                                 .skill_qualities
-                                .get(needed_skill_id)
+                                .get(&needed_skill_id)
                             {
                                 // Apply specialization strategy quality bonus if enabled
                                 let effective_quality = if self.config.enable_specialization {
@@ -2621,7 +2630,7 @@ impl SimulationEngine {
 
                     // Apply certification-based price premium if enabled
                     if self.config.enable_certification {
-                        if let Some(skill) = self.market.skills.get(needed_skill_id) {
+                        if let Some(skill) = self.market.skills.get(&needed_skill_id) {
                             if let Some(cert) = &skill.certification {
                                 if !cert.is_expired(self.current_step) {
                                     let cert_multiplier = cert.price_multiplier();
@@ -2685,7 +2694,7 @@ impl SimulationEngine {
                                 needed_skill_id,
                                 seller_id,
                                 final_price,
-                                needed_item.urgency,
+                                needed_urgency,
                                 option.priority_score
                             );
 
