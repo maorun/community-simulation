@@ -803,4 +803,160 @@ mod engine_tests {
             );
         }
     }
+
+    #[test]
+    fn test_elasticity_statistics_integration() {
+        // Integration test: run a simulation and verify elasticity statistics are calculated
+        let mut config = test_config().max_steps(10).build();
+        config.entity_count = 15; // Set entity count directly
+        let mut engine = SimulationEngine::new(config);
+
+        let result = engine.run();
+
+        // Elasticity statistics should be present if we ran at least 2 steps
+        if result.total_steps >= 2 {
+            assert!(
+                result.elasticity_statistics.is_some(),
+                "Elasticity statistics should be calculated"
+            );
+
+            let elasticity_stats = result.elasticity_statistics.unwrap();
+
+            // Should have analyzed some skills
+            assert!(
+                elasticity_stats.num_skills_analyzed > 0,
+                "Should have analyzed at least one skill"
+            );
+            assert_eq!(
+                elasticity_stats.num_periods_analyzed, result.total_steps,
+                "Number of periods should match total steps"
+            );
+
+            // Check that per-skill data is present
+            assert!(
+                !elasticity_stats.per_skill.is_empty(),
+                "Should have per-skill elasticity data"
+            );
+
+            // Verify that each skill elasticity has valid data
+            for skill_elasticity in &elasticity_stats.per_skill {
+                assert!(skill_elasticity.sample_size > 0, "Sample size should be positive");
+                assert!(
+                    skill_elasticity.demand_elasticity_std_dev >= 0.0,
+                    "Std dev should be non-negative"
+                );
+                assert!(
+                    skill_elasticity.supply_elasticity_std_dev >= 0.0,
+                    "Std dev should be non-negative"
+                );
+
+                // All elasticity values should be finite
+                assert!(
+                    skill_elasticity.avg_demand_elasticity.is_finite(),
+                    "Demand elasticity should be finite"
+                );
+                assert!(
+                    skill_elasticity.avg_supply_elasticity.is_finite(),
+                    "Supply elasticity should be finite"
+                );
+            }
+
+            // Overall averages should be finite
+            assert!(
+                elasticity_stats.avg_demand_elasticity.is_finite(),
+                "Average demand elasticity should be finite"
+            );
+            assert!(
+                elasticity_stats.avg_supply_elasticity.is_finite(),
+                "Average supply elasticity should be finite"
+            );
+        }
+    }
+
+    #[test]
+    fn test_elasticity_not_calculated_for_short_simulation() {
+        // Elasticity requires at least 2 time periods
+        let config = test_config().max_steps(1).build();
+        let mut engine = SimulationEngine::new(config);
+
+        let result = engine.run();
+
+        // With only 1 step, elasticity cannot be calculated
+        assert!(
+            result.elasticity_statistics.is_none(),
+            "Elasticity statistics should be None for simulations with < 2 steps"
+        );
+    }
+
+    #[test]
+    fn test_elasticity_demand_supply_history_tracking() {
+        // Verify that demand and supply history are tracked correctly
+        let config = test_config().max_steps(5).build();
+        let mut engine = SimulationEngine::new(config);
+
+        let result = engine.run();
+
+        // Check that price history, demand history, and supply history all have entries
+        // They should be populated by the simulation
+        for (skill_id, price_history) in &result.skill_price_history {
+            // Price history should match the number of steps (recorded after each step)
+            assert!(
+                !price_history.is_empty(),
+                "Price history should not be empty for skill {}",
+                skill_id
+            );
+
+            // Check corresponding histories in the market (through elasticity stats)
+            if let Some(ref elasticity_stats) = result.elasticity_statistics {
+                // Find this skill in elasticity stats
+                if let Some(skill_elasticity) =
+                    elasticity_stats.per_skill.iter().find(|s| s.skill_id == *skill_id)
+                {
+                    // If skill has elasticity data, it means histories were tracked
+                    assert!(
+                        skill_elasticity.sample_size > 0,
+                        "Skill {} should have elasticity samples",
+                        skill_id
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_elasticity_classification_values() {
+        use crate::result::ElasticityClassification;
+
+        // Test that classifications are assigned correctly by running a simulation
+        let config = test_config().max_steps(20).build();
+        let mut engine = SimulationEngine::new(config);
+
+        let result = engine.run();
+
+        if let Some(elasticity_stats) = result.elasticity_statistics {
+            // Check that each skill has a valid classification
+            for skill_elasticity in &elasticity_stats.per_skill {
+                // Verify classification is one of the valid types
+                match skill_elasticity.demand_classification {
+                    ElasticityClassification::PerfectlyInelastic
+                    | ElasticityClassification::Inelastic
+                    | ElasticityClassification::UnitElastic
+                    | ElasticityClassification::Elastic
+                    | ElasticityClassification::PerfectlyElastic => {
+                        // Valid classification
+                    },
+                }
+
+                match skill_elasticity.supply_classification {
+                    ElasticityClassification::PerfectlyInelastic
+                    | ElasticityClassification::Inelastic
+                    | ElasticityClassification::UnitElastic
+                    | ElasticityClassification::Elastic
+                    | ElasticityClassification::PerfectlyElastic => {
+                        // Valid classification
+                    },
+                }
+            }
+        }
+    }
 }

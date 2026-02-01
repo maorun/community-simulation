@@ -978,6 +978,87 @@ pub struct MobilityStatistics {
     pub avg_quintile_changes: f64,
 }
 
+/// Elasticity classification based on absolute value
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum ElasticityClassification {
+    /// Perfectly inelastic (elasticity = 0): Quantity doesn't change with price
+    PerfectlyInelastic,
+    /// Inelastic (0 < |elasticity| < 1): Quantity changes less than proportionally to price
+    Inelastic,
+    /// Unit elastic (|elasticity| = 1): Quantity changes proportionally to price
+    UnitElastic,
+    /// Elastic (|elasticity| > 1): Quantity changes more than proportionally to price
+    Elastic,
+    /// Perfectly elastic (elasticity = infinity): Any price change causes infinite quantity change
+    PerfectlyElastic,
+}
+
+/// Statistics for price elasticity of a single skill.
+///
+/// Elasticity measures the responsiveness of quantity demanded/supplied to price changes.
+/// Calculated using the midpoint method for symmetric results.
+///
+/// # Formula
+///
+/// ```text
+/// Elasticity = (% change in quantity) / (% change in price)
+///            = ((Q2 - Q1) / ((Q2 + Q1) / 2)) / ((P2 - P1) / ((P2 + P1) / 2))
+/// ```
+///
+/// # Interpretation
+///
+/// - **Demand elasticity** is typically negative (price ↑ → demand ↓)
+/// - **Supply elasticity** is typically positive (price ↑ → supply ↑)
+/// - |E| > 1: Elastic (quantity responsive to price)
+/// - |E| < 1: Inelastic (quantity not very responsive to price)
+/// - |E| = 1: Unit elastic (proportional response)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SkillElasticity {
+    /// Skill identifier
+    pub skill_id: SkillId,
+    /// Average price elasticity of demand across all time periods
+    /// Typically negative (higher prices reduce demand)
+    pub avg_demand_elasticity: f64,
+    /// Average price elasticity of supply across all time periods  
+    /// Typically positive (higher prices increase supply)
+    pub avg_supply_elasticity: f64,
+    /// Classification of demand elasticity (elastic, inelastic, etc.)
+    pub demand_classification: ElasticityClassification,
+    /// Classification of supply elasticity (elastic, inelastic, etc.)
+    pub supply_classification: ElasticityClassification,
+    /// Number of time periods used to calculate elasticity
+    pub sample_size: usize,
+    /// Standard deviation of demand elasticity over time
+    pub demand_elasticity_std_dev: f64,
+    /// Standard deviation of supply elasticity over time
+    pub supply_elasticity_std_dev: f64,
+}
+
+/// Complete price elasticity analysis statistics for all skills.
+///
+/// Provides comprehensive elasticity analysis to understand how responsive
+/// demand and supply are to price changes across the economy.
+///
+/// # Use Cases
+///
+/// - **Policy Design**: Identify which skills need price interventions
+/// - **Market Analysis**: Understand supply/demand responsiveness
+/// - **Economic Research**: Compare elasticities with empirical data
+/// - **Intervention Effects**: Quantify impact of price controls or taxes
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ElasticityStats {
+    /// Elasticity statistics for each skill
+    pub per_skill: Vec<SkillElasticity>,
+    /// Average demand elasticity across all skills
+    pub avg_demand_elasticity: f64,
+    /// Average supply elasticity across all skills
+    pub avg_supply_elasticity: f64,
+    /// Number of skills analyzed
+    pub num_skills_analyzed: usize,
+    /// Number of time periods used for analysis
+    pub num_periods_analyzed: usize,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     /// Metadata about this simulation run for reproducibility
@@ -1142,6 +1223,14 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub externality_statistics: Option<crate::externality::ExternalityStats>,
 
+    /// Price elasticity analysis statistics.
+    ///
+    /// Calculates price elasticities of demand and supply for each skill, measuring
+    /// how responsive quantities are to price changes. Always present if simulation
+    /// ran for at least 2 steps (need at least 2 time points to calculate elasticity).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub elasticity_statistics: Option<ElasticityStats>,
+
     /// Event log (only present if event tracking is enabled).
     ///
     /// Contains timestamped events for trades, price updates, reputation changes,
@@ -1247,6 +1336,7 @@ impl SimulationResult {
     /// #     mobility_statistics: None,
     /// #     quality_statistics: None,
     /// #     externality_statistics: None,
+    /// #     elasticity_statistics: None,
     /// #     events: None,
     /// #     final_persons_data: vec![],
     /// # };
@@ -3615,6 +3705,7 @@ mod tests {
             mobility_statistics: None,
             quality_statistics: None,
             externality_statistics: None,
+            elasticity_statistics: None,
             events: None,
             final_persons_data: vec![],
         }

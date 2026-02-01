@@ -395,6 +395,7 @@ mod tests {
             group_statistics: None,
             quality_statistics: None,
             externality_statistics: None,
+            elasticity_statistics: None,
             events: None,
         }
     }

@@ -142,20 +142,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - t-SNE/UMAP für Visualisierung
 - Integration optional via Feature-Flag
 
-#### 5.2 Elastizitäts-Analysen
-**Beschreibung:** Berechnung von Preis-Elastizitäten der Nachfrage und Angebots-Elastizitäten für verschiedene Skills.
-
-**Nutzen:**
-- Quantifizierung von Markt-Sensitivitäten
-- Input für Policy-Design
-- Vergleich mit empirischen Daten
-
-**Implementierung:**
-- Lokale Preis-Variationen und Nachfrage-Messung
-- `ElasticityCalculator` mit Regression
-- Cross-Elastizitäten zwischen komplementären/substitutiven Skills
-- Export für externe Analyse
-
 ### 6. Verschiedene Agentenstrategien
 
 #### 6.1 Bounded Rationality und Heuristiken

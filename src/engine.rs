@@ -2071,6 +2071,7 @@ impl SimulationEngine {
             } else {
                 None
             },
+            elasticity_statistics: self.calculate_elasticity_statistics(),
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {
@@ -2324,6 +2325,9 @@ impl SimulationEngine {
         };
 
         self.market.update_prices(&mut self.rng);
+
+        // Record demand and supply history for elasticity analysis
+        self.market.record_demand_supply_history();
 
         // Emit price update events and record actions for changed prices
         if should_track_prices {
@@ -4412,6 +4416,182 @@ impl SimulationEngine {
         })
     }
 
+    /// Calculate price elasticity statistics for all skills.
+    ///
+    /// Elasticity measures the responsiveness of quantity demanded/supplied to price changes.
+    /// Uses the midpoint method for calculating elasticities to avoid asymmetry.
+    ///
+    /// Returns None if there are fewer than 2 time periods (need at least 2 points to calculate elasticity).
+    fn calculate_elasticity_statistics(&self) -> Option<crate::result::ElasticityStats> {
+        // Need at least 2 time periods to calculate elasticity
+        if self.current_step < 2 {
+            return None;
+        }
+
+        let mut skill_elasticities = Vec::new();
+        let mut total_demand_elasticity = 0.0;
+        let mut total_supply_elasticity = 0.0;
+        let mut skills_with_valid_elasticity = 0;
+
+        for (skill_id, price_history) in &self.market.skill_price_history {
+            // Get corresponding demand and supply histories
+            let demand_history = match self.market.demand_history.get(skill_id) {
+                Some(h) => h,
+                None => continue,
+            };
+            let supply_history = match self.market.supply_history.get(skill_id) {
+                Some(h) => h,
+                None => continue,
+            };
+
+            // All histories should have the same length (one entry per step)
+            let num_periods =
+                price_history.len().min(demand_history.len()).min(supply_history.len());
+
+            if num_periods < 2 {
+                continue; // Need at least 2 data points
+            }
+
+            // Calculate elasticities between consecutive periods using midpoint method
+            let mut demand_elasticities = Vec::new();
+            let mut supply_elasticities = Vec::new();
+
+            for i in 1..num_periods {
+                let p1 = price_history[i - 1];
+                let p2 = price_history[i];
+                let q1_demand = demand_history[i - 1] as f64;
+                let q2_demand = demand_history[i] as f64;
+                let q1_supply = supply_history[i - 1] as f64;
+                let q2_supply = supply_history[i] as f64;
+
+                // Calculate demand elasticity using midpoint method
+                // Ed = ((Q2 - Q1) / ((Q2 + Q1) / 2)) / ((P2 - P1) / ((P2 + P1) / 2))
+                if let Some(demand_elasticity) =
+                    Self::calculate_elasticity(q1_demand, q2_demand, p1, p2)
+                {
+                    demand_elasticities.push(demand_elasticity);
+                }
+
+                // Calculate supply elasticity using midpoint method
+                if let Some(supply_elasticity) =
+                    Self::calculate_elasticity(q1_supply, q2_supply, p1, p2)
+                {
+                    supply_elasticities.push(supply_elasticity);
+                }
+            }
+
+            // Calculate average elasticities and classify
+            // Include skill if we have at least demand elasticity (supply may be fixed/inelastic)
+            if !demand_elasticities.is_empty() {
+                let avg_demand_elasticity: f64 =
+                    demand_elasticities.iter().sum::<f64>() / demand_elasticities.len() as f64;
+
+                // Calculate supply elasticity if available, otherwise use 0.0 (perfectly inelastic)
+                let avg_supply_elasticity: f64 = if !supply_elasticities.is_empty() {
+                    supply_elasticities.iter().sum::<f64>() / supply_elasticities.len() as f64
+                } else {
+                    0.0
+                };
+
+                // Calculate standard deviations
+                let demand_variance = demand_elasticities
+                    .iter()
+                    .map(|&e| (e - avg_demand_elasticity).powi(2))
+                    .sum::<f64>()
+                    / demand_elasticities.len() as f64;
+                let demand_std_dev = demand_variance.sqrt();
+
+                let supply_std_dev = if !supply_elasticities.is_empty() {
+                    let supply_variance = supply_elasticities
+                        .iter()
+                        .map(|&e| (e - avg_supply_elasticity).powi(2))
+                        .sum::<f64>()
+                        / supply_elasticities.len() as f64;
+                    supply_variance.sqrt()
+                } else {
+                    0.0
+                };
+
+                skill_elasticities.push(crate::result::SkillElasticity {
+                    skill_id: skill_id.clone(),
+                    avg_demand_elasticity,
+                    avg_supply_elasticity,
+                    demand_classification: Self::classify_elasticity(avg_demand_elasticity),
+                    supply_classification: Self::classify_elasticity(avg_supply_elasticity),
+                    sample_size: demand_elasticities.len(),
+                    demand_elasticity_std_dev: demand_std_dev,
+                    supply_elasticity_std_dev: supply_std_dev,
+                });
+
+                total_demand_elasticity += avg_demand_elasticity;
+                total_supply_elasticity += avg_supply_elasticity;
+                skills_with_valid_elasticity += 1;
+            }
+        }
+
+        if skills_with_valid_elasticity == 0 {
+            return None;
+        }
+
+        Some(crate::result::ElasticityStats {
+            per_skill: skill_elasticities,
+            avg_demand_elasticity: total_demand_elasticity / skills_with_valid_elasticity as f64,
+            avg_supply_elasticity: total_supply_elasticity / skills_with_valid_elasticity as f64,
+            num_skills_analyzed: skills_with_valid_elasticity,
+            num_periods_analyzed: self.current_step,
+        })
+    }
+
+    /// Calculate elasticity using the midpoint method.
+    ///
+    /// Formula: E = ((Q2 - Q1) / ((Q2 + Q1) / 2)) / ((P2 - P1) / ((P2 + P1) / 2))
+    ///
+    /// Returns None if calculation is not possible (zero midpoint or zero price change).
+    fn calculate_elasticity(q1: f64, q2: f64, p1: f64, p2: f64) -> Option<f64> {
+        // Handle edge cases
+        const EPSILON: f64 = 1e-10;
+
+        let price_change = p2 - p1;
+        let quantity_change = q2 - q1;
+
+        // If price didn't change, elasticity is undefined
+        if price_change.abs() < EPSILON {
+            return None;
+        }
+
+        let price_midpoint = (p1 + p2) / 2.0;
+        let quantity_midpoint = (q1 + q2) / 2.0;
+
+        // If midpoint is zero, can't calculate percentage change
+        if price_midpoint.abs() < EPSILON || quantity_midpoint.abs() < EPSILON {
+            return None;
+        }
+
+        let percent_change_quantity = quantity_change / quantity_midpoint;
+        let percent_change_price = price_change / price_midpoint;
+
+        Some(percent_change_quantity / percent_change_price)
+    }
+
+    /// Classify elasticity magnitude into economic categories.
+    fn classify_elasticity(elasticity: f64) -> crate::result::ElasticityClassification {
+        let abs_elasticity = elasticity.abs();
+
+        const EPSILON: f64 = 1e-10;
+
+        if abs_elasticity < EPSILON {
+            crate::result::ElasticityClassification::PerfectlyInelastic
+        } else if abs_elasticity < 1.0 - EPSILON {
+            crate::result::ElasticityClassification::Inelastic
+        } else if (abs_elasticity - 1.0).abs() < EPSILON {
+            crate::result::ElasticityClassification::UnitElastic
+        } else if abs_elasticity.is_finite() {
+            crate::result::ElasticityClassification::Elastic
+        } else {
+            crate::result::ElasticityClassification::PerfectlyElastic
+        }
+    }
+
     fn calculate_average_money(&self) -> f64 {
         if self.entities.is_empty() {
             return 0.0;
@@ -4688,6 +4868,7 @@ impl SimulationEngine {
             ),
             quality_statistics: None,     // Simplified for interactive mode
             externality_statistics: None, // Simplified for interactive mode
+            elasticity_statistics: None,  // Simplified for interactive mode
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {
