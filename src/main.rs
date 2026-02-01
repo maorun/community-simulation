@@ -1,10 +1,12 @@
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::{generate, Shell};
 use colored::Colorize;
 use log::{debug, info, warn};
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use simulation_framework::{PresetName, SimulationConfig, SimulationEngine};
 use std::collections::HashMap;
+use std::io;
 use std::str::FromStr;
 use std::time::Instant;
 
@@ -34,6 +36,12 @@ struct Args {
     /// Start interactive configuration wizard to create a simulation configuration
     #[arg(long, default_value_t = false)]
     wizard: bool,
+
+    /// Generate shell completion script for the specified shell (bash, zsh, fish, powershell)
+    /// Outputs completion script to stdout. Save to appropriate location for your shell.
+    /// Example: --generate-completion bash > /usr/share/bash-completion/completions/simulation-framework
+    #[arg(long)]
+    generate_completion: Option<String>,
 
     #[arg(short, long)]
     steps: Option<usize>,
@@ -550,6 +558,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::env::args().next().unwrap_or_else(|| "simulation-framework".to_string())
         );
 
+        return Ok(());
+    }
+
+    // Handle --generate-completion flag to generate shell completion scripts
+    if let Some(shell_name) = &args.generate_completion {
+        let shell = match shell_name.to_lowercase().as_str() {
+            "bash" => Shell::Bash,
+            "zsh" => Shell::Zsh,
+            "fish" => Shell::Fish,
+            "powershell" | "pwsh" => Shell::PowerShell,
+            _ => {
+                eprintln!("Error: Unsupported shell '{}'", shell_name);
+                eprintln!("Supported shells: bash, zsh, fish, powershell");
+                std::process::exit(1);
+            },
+        };
+
+        let mut cmd = Args::command();
+        let bin_name = std::env::args()
+            .next()
+            .and_then(|path| {
+                std::path::Path::new(&path)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| "simulation-framework".to_string());
+
+        generate(shell, &mut cmd, bin_name, &mut io::stdout());
         return Ok(());
     }
 

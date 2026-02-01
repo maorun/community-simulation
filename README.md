@@ -349,6 +349,37 @@ This wizard will help you create a simulation configuration.
 [Simulation runs...]
 ```
 
+### Shell Auto-Completion
+
+The simulation framework supports shell auto-completion for all command-line arguments, making it easier to discover and use available options. Generate completion scripts for your shell:
+
+**Bash:**
+```bash
+./target/release/simulation-framework --generate-completion bash > /usr/share/bash-completion/completions/simulation-framework
+# Or for user-level installation:
+./target/release/simulation-framework --generate-completion bash > ~/.local/share/bash-completion/completions/simulation-framework
+```
+
+**Zsh:**
+```bash
+./target/release/simulation-framework --generate-completion zsh > ~/.zsh/completion/_simulation-framework
+# Add to ~/.zshrc if not already present:
+# fpath=(~/.zsh/completion $fpath)
+# autoload -U compinit && compinit
+```
+
+**Fish:**
+```bash
+./target/release/simulation-framework --generate-completion fish > ~/.config/fish/completions/simulation-framework.fish
+```
+
+**PowerShell:**
+```powershell
+./target/release/simulation-framework --generate-completion powershell | Out-File -FilePath $PROFILE.CurrentUserAllHosts -Append
+```
+
+After installing the completion script, restart your shell or source the appropriate configuration file. You can then use tab completion for all simulation-framework commands, flags, and options.
+
 This feature is perfect for:
 - **New users** learning the simulation's capabilities
 - **Experiment design** when exploring parameter combinations
