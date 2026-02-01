@@ -358,20 +358,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - `simulate run`, `simulate analyze`, `simulate compare`
 - Dedizierte Analyse-Tools ohne Simulation
 
-#### 1.2 Shell-Auto-Completion Generierung
-**Beschreibung:** Generierung von Shell-Completion-Scripts für Bash, Zsh, Fish für alle CLI-Argumente und Subcommands.
-
-**Nutzen:**
-- Bessere Developer/User-Experience
-- Weniger Tippfehler
-- Discovery von verfügbaren Optionen
-
-**Implementierung:**
-- `clap_complete` für Completion-Generierung
-- `--generate-completion <shell>` Command
-- Installation-Instructions in Dokumentation
-- Support für Bash, Zsh, Fish, PowerShell
-
 ### 2. Debugging-Tools
 
 #### 2.1 Visualisierung des Simulations-Ablaufs
