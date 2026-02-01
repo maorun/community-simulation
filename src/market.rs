@@ -109,6 +109,20 @@ pub struct Market {
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub skill_price_history: HashMap<SkillId, Vec<f64>>,
 
+    /// Historical demand counts for each skill across all simulation steps
+    ///
+    /// Maps skill IDs to a vector of demand counts (number of persons needing the skill),
+    /// with one entry per simulation step. Used for elasticity calculations.
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub demand_history: HashMap<SkillId, Vec<usize>>,
+
+    /// Historical supply counts for each skill across all simulation steps
+    ///
+    /// Maps skill IDs to a vector of supply counts (number of persons providing the skill),
+    /// with one entry per simulation step. Used for elasticity calculations.
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    pub supply_history: HashMap<SkillId, Vec<usize>>,
+
     /// Strategy used to update prices each step
     #[serde(skip)]
     price_updater: PriceUpdater,
@@ -166,6 +180,8 @@ impl Market {
             max_skill_price: 1000.0,
             per_skill_price_limits: HashMap::new(),
             skill_price_history: HashMap::new(),
+            demand_history: HashMap::new(),
+            supply_history: HashMap::new(),
             price_updater,
             sales_this_step: HashMap::new(),
             cache: MarketStatsCache::default(),
@@ -184,6 +200,8 @@ impl Market {
         self.supply_counts.insert(skill.id.clone(), 0);
         self.demand_counts.insert(skill.id.clone(), 0);
         self.skill_price_history.insert(skill.id.clone(), Vec::new());
+        self.demand_history.insert(skill.id.clone(), Vec::new());
+        self.supply_history.insert(skill.id.clone(), Vec::new());
         self.skills.insert(skill.id.clone(), skill);
         // Invalidate cache since adding a skill changes aggregate statistics
         self.invalidate_cache();
@@ -265,6 +283,24 @@ impl Market {
         updater.update_prices(self, rng);
         // Invalidate cache after price update
         self.invalidate_cache();
+    }
+
+    /// Records the current demand and supply counts to history for elasticity analysis.
+    ///
+    /// This should be called once per simulation step after demand counts are collected
+    /// and before they are reset. The recorded data is used to calculate price elasticities.
+    pub fn record_demand_supply_history(&mut self) {
+        for (skill_id, &demand_count) in &self.demand_counts {
+            if let Some(history) = self.demand_history.get_mut(skill_id) {
+                history.push(demand_count);
+            }
+        }
+
+        for (skill_id, &supply_count) in &self.supply_counts {
+            if let Some(history) = self.supply_history.get_mut(skill_id) {
+                history.push(supply_count);
+            }
+        }
     }
 
     /// Invalidates the cached market statistics.
