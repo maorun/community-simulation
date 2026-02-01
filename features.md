@@ -59,11 +59,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 8. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
 9. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
-### Code-Verbesserungen (Kontinuierlich)
-
-- **Zeitreihen-DB** - Enterprise-Integration
-- **Erweiterbare Architektur** - Langfristige Wartbarkeit
-
 ## 💡 Harmonien-Matrix
 
 Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
