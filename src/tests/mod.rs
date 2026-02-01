@@ -807,8 +807,7 @@ mod engine_tests {
     #[test]
     fn test_elasticity_statistics_integration() {
         // Integration test: run a simulation and verify elasticity statistics are calculated
-        let config = test_config().max_steps(10).build();
-        let mut config = config;
+        let mut config = test_config().max_steps(10).build();
         config.entity_count = 15; // Set entity count directly
         let mut engine = SimulationEngine::new(config);
 

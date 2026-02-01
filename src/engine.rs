@@ -4474,11 +4474,17 @@ impl SimulationEngine {
             }
 
             // Calculate average elasticities and classify
-            if !demand_elasticities.is_empty() && !supply_elasticities.is_empty() {
+            // Include skill if we have at least demand elasticity (supply may be fixed/inelastic)
+            if !demand_elasticities.is_empty() {
                 let avg_demand_elasticity: f64 =
                     demand_elasticities.iter().sum::<f64>() / demand_elasticities.len() as f64;
-                let avg_supply_elasticity: f64 =
-                    supply_elasticities.iter().sum::<f64>() / supply_elasticities.len() as f64;
+
+                // Calculate supply elasticity if available, otherwise use 0.0 (perfectly inelastic)
+                let avg_supply_elasticity: f64 = if !supply_elasticities.is_empty() {
+                    supply_elasticities.iter().sum::<f64>() / supply_elasticities.len() as f64
+                } else {
+                    0.0
+                };
 
                 // Calculate standard deviations
                 let demand_variance = demand_elasticities
@@ -4488,12 +4494,16 @@ impl SimulationEngine {
                     / demand_elasticities.len() as f64;
                 let demand_std_dev = demand_variance.sqrt();
 
-                let supply_variance = supply_elasticities
-                    .iter()
-                    .map(|&e| (e - avg_supply_elasticity).powi(2))
-                    .sum::<f64>()
-                    / supply_elasticities.len() as f64;
-                let supply_std_dev = supply_variance.sqrt();
+                let supply_std_dev = if !supply_elasticities.is_empty() {
+                    let supply_variance = supply_elasticities
+                        .iter()
+                        .map(|&e| (e - avg_supply_elasticity).powi(2))
+                        .sum::<f64>()
+                        / supply_elasticities.len() as f64;
+                    supply_variance.sqrt()
+                } else {
+                    0.0
+                };
 
                 skill_elasticities.push(crate::result::SkillElasticity {
                     skill_id: skill_id.clone(),
