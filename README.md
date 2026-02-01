@@ -1312,6 +1312,134 @@ RUST_LOG=debug ./target/release/simulation-framework -s 100 -p 10 --tax-rate 0.1
 - Combine with `--no-progress` flag to disable the progress bar when using debug/trace logging
 - Redirect stderr to a file for large logs: `RUST_LOG=debug ./target/release/simulation-framework ... 2> debug.log`
 
+## Configuration Files
+
+The simulation supports comprehensive configuration via YAML or TOML files. Configuration files make it easy to set up complex scenarios without long command-line arguments.
+
+### Available Configuration Files
+
+The repository includes several configuration file examples:
+
+1. **config.example.yaml** / **config.example.toml** - Quick-start configuration showcasing commonly-used features with scenario examples
+2. **config.comprehensive.yaml** / **config.comprehensive.toml** - Complete reference with all 108 configuration parameters documented
+3. **config.gig_economy.yaml** - Pre-configured gig economy scenario
+
+### Using Configuration Files
+
+Load a configuration file with the `--config` flag:
+
+```bash
+./target/release/simulation-framework --config config.example.yaml
+```
+
+CLI arguments override configuration file values:
+
+```bash
+./target/release/simulation-framework --config config.example.yaml --steps 2000 --output custom.json
+```
+
+### Quick Start with Common Scenarios
+
+The example configuration files include commented scenario templates. Uncomment a scenario block to try it:
+
+**Social Economy** - Focus on relationships and trust:
+```yaml
+enable_friendships: true
+enable_trade_agreements: true
+enable_contracts: true
+friendship_probability: 0.15
+```
+
+**Quality-Driven Market** - Skills evolve with practice:
+```yaml
+enable_quality: true
+enable_certification: true
+enable_specialization: true
+quality_improvement_rate: 0.15
+```
+
+**Financial Crisis** - Test economic resilience:
+```yaml
+enable_loans: true
+enable_credit_rating: true
+enable_insurance: true
+enable_crisis_events: true
+crisis_probability: 0.05
+```
+
+**Health Pandemic** - Economic impact of disease:
+```yaml
+enable_health: true
+initial_sick_persons: 5
+disease_transmission_rate: 0.1
+enable_insurance: true
+```
+
+**Education & Growth** - Skill development focus:
+```yaml
+enable_education: true
+enable_mentorship: true
+enable_quality: true
+learning_probability: 0.08
+```
+
+**Environmental Economics** - Externalities and climate:
+```yaml
+enable_externalities: true
+scenario: ClimateChange
+externality_rate: -0.1
+```
+
+### Complete Parameter Reference
+
+For a complete list of all 108 configuration parameters with detailed documentation, see:
+- `config.comprehensive.yaml` - YAML format with full documentation
+- `config.comprehensive.toml` - TOML format with full documentation
+
+These files document every available parameter including:
+- Core simulation settings (steps, population, seed)
+- Price controls and market regulations
+- Technology and innovation parameters
+- Economic policies (taxes, savings, transaction fees)
+- Financial systems (loans, credit rating, insurance, investments)
+- Social relationships (friendships, trade agreements, trust networks)
+- Education and skill development (learning, mentorship, certification)
+- Quality systems and specialization strategies
+- Market structures (black markets, contracts, parallel trades)
+- Health and epidemiology (disease transmission, economic impacts)
+- Externalities and environmental effects
+- Voting and governance systems
+- Resource pools and geographic effects
+- Crisis events and risk management
+- Output and checkpointing options
+
+### Creating Custom Configurations
+
+1. Start with `config.example.yaml` or `config.example.toml`
+2. Enable features relevant to your research
+3. Adjust parameters to match your scenario
+4. Test with small population and few steps first
+5. Scale up for full simulation runs
+
+Example custom configuration:
+```yaml
+# Custom Research Configuration
+max_steps: 1000
+entity_count: 200
+seed: 42
+
+# Enable features
+enable_quality: true
+enable_friendships: true
+enable_education: true
+enable_crisis_events: true
+
+# Tune parameters
+quality_improvement_rate: 0.2
+friendship_probability: 0.15
+crisis_probability: 0.03
+```
+
 ## Output Format (`results.json`)
 
 The JSON output file contains a comprehensive summary of the simulation, including:

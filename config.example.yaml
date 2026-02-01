@@ -1,19 +1,24 @@
-# Example YAML configuration file for the Economic Simulation Framework
+# Example YAML Configuration for Economic Simulation Framework
+#
+# This file demonstrates commonly-used configuration parameters.
+# For a complete list of ALL 108 parameters, see config.comprehensive.yaml
 #
 # Usage: ./target/release/simulation-framework --config config.yaml
 #
 # Note: CLI arguments will override values specified in this file.
-# For example: ./target/release/simulation-framework --config config.yaml --steps 2000
-# will use 2000 steps instead of the value below.
+# Example: ./target/release/simulation-framework --config config.yaml --steps 2000
+
+# =============================================================================
+# CORE SIMULATION PARAMETERS
+# =============================================================================
 
 # Number of simulation steps to run
 max_steps: 500
 
-# Number of persons in the simulation (each will have one unique skill)
+# Number of persons in the simulation
 entity_count: 100
 
-# Random seed for reproducibility
-# Use the same seed to get identical simulation results
+# Random seed for reproducibility (use same seed for identical results)
 seed: 42
 
 # Initial amount of money each person starts with
@@ -22,92 +27,284 @@ initial_money_per_person: 100.0
 # Base price for all skills at simulation start
 base_skill_price: 10.0
 
+# Time step value (for discrete turn-based simulation)
+time_step: 1.0
+
+# =============================================================================
+# PRICE CONTROLS
+# =============================================================================
+
 # Minimum price floor for skills
 # Prevents skill prices from dropping below this threshold
 # Models real-world price floors like minimum wages or regulatory price controls
-# Must be positive and less than or equal to base_skill_price
 # Default: 1.0
 min_skill_price: 1.0
 
-# Per-skill price limits for regulatory interventions
-# Allows skill-specific minimum and maximum prices that override global limits
-# Format: skill_name: [min_price, max_price]
-# Use null for no limit on that side
-# Examples:
+# Per-skill price limits for targeted regulatory interventions
+# Uncomment and customize to enable skill-specific min/max prices
 #per_skill_price_limits:
-#  "Programming": [25.0, 100.0]  # min 25, max 100 for Programming skill
-#  "Design": [null, 75.0]         # no min, max 75 for Design skill
-#  "Writing": [15.0, null]        # min 15, no max for Writing skill
-# This enables studying:
-# - Skill-specific minimum wages (e.g., professional licensing requirements)
-# - Skill-specific price caps (e.g., essential services regulation)
-# - Mixed regulatory regimes (some skills regulated, others free-market)
-# Default: {} (empty, no per-skill limits)
+#  "Programming": [25.0, 100.0]  # min 25, max 100
+#  "Design": [null, 75.0]         # no min, max 75
+#  "Writing": [15.0, null]        # min 15, no max
 
-# Time step (for discrete turn-based simulation)
-# This represents one discrete step or turn
-time_step: 1.0
+# =============================================================================
+# MARKET DYNAMICS
+# =============================================================================
 
 # Scenario type - determines price update mechanism
-# Options:
-#   - Original: Supply/demand-based pricing with volatility
-#   - DynamicPricing: Sales-based pricing (increase if sold, decrease if not)
+# Options: Original, DynamicPricing, AdaptivePricing, AuctionPricing, ClimateChange
+# Default: Original
 scenario: Original
 
-# Technology growth rate per simulation step
-# This simulates productivity improvements over time
-# A rate of 0.001 means skills improve by 0.1% per step
-# Set to 0.0 to disable technological progress (default)
-tech_growth_rate: 0.0
+# Demand generation strategy
+# Options: Uniform, Concentrated, Cyclical
+# Default: Uniform
+demand_strategy: Uniform
 
-# Transaction fee rate as a percentage of transaction value
-# Fee is deducted from seller's proceeds on each transaction
-# A value of 0.05 means a 5% fee is charged on each transaction
-# Set to 0.0 to disable transaction fees (default)
-# Valid range: 0.0 to 1.0 (0% to 100%)
+# =============================================================================
+# ECONOMIC POLICIES
+# =============================================================================
+
+# Transaction fee rate (0.0-1.0)
+# Fee deducted from seller proceeds on each trade
+# 0.05 = 5% fee
+# Default: 0.0
 transaction_fee: 0.0
 
-# Contract System Configuration
-# Enable long-term agreements for stable trading relationships
-# When enabled, persons can form contracts that lock in prices for multiple steps
+# Income tax rate (0.0-1.0)
+# Tax on trade proceeds
+# Default: 0.0
+tax_rate: 0.0
+
+# Enable tax redistribution
+# If true, collected taxes are redistributed equally among all persons
+# Default: false
+enable_tax_redistribution: false
+
+# Savings rate (0.0-1.0)
+# Percentage of money saved each step
+# Default: 0.0
+savings_rate: 0.0
+
+# =============================================================================
+# TECHNOLOGY AND INNOVATION
+# =============================================================================
+
+# Technology growth rate per simulation step
+# Simulates productivity improvements over time
+# 0.001 = 0.1% improvement per step
+# Set to 0.0 to disable (default)
+tech_growth_rate: 0.0
+
+# Enable technology breakthrough events
+# Sudden innovations that dramatically boost skill efficiency
+# Default: false
+enable_technology_breakthroughs: false
+
+# =============================================================================
+# SOCIAL RELATIONSHIPS (Popular Feature Set)
+# =============================================================================
+
+# Enable friendship system
+# Trading partners can become friends and receive price discounts
+# Default: false
+enable_friendships: false
+
+# Friendship formation probability per trade (0.0-1.0)
+# Default: 0.1 (10% chance)
+friendship_probability: 0.1
+
+# Friendship discount (0.0-1.0)
+# Price discount for trades between friends
+# Default: 0.1 (10% discount)
+friendship_discount: 0.1
+
+# Enable trade agreements (requires friendships)
+# Bilateral agreements providing mutual discounts
+# Default: false
+enable_trade_agreements: false
+
+# =============================================================================
+# QUALITY AND SKILL DEVELOPMENT (Popular Feature Set)
+# =============================================================================
+
+# Enable quality rating system
+# Skills have quality ratings (0.0-5.0) affecting prices
+# Default: false
+enable_quality: false
+
+# Quality improvement rate per successful trade
+# How much quality increases with practice
+# Default: 0.1
+quality_improvement_rate: 0.1
+
+# Quality decay rate per step without use
+# How much quality decreases from inactivity
+# Default: 0.05
+quality_decay_rate: 0.05
+
+# Enable education system
+# Persons can learn new skills
+# Default: false
+enable_education: false
+
+# Enable mentorship system (requires enable_education: true)
+# Mentors help others learn more efficiently
+# Default: false
+enable_mentorship: false
+
+# =============================================================================
+# FINANCIAL SYSTEMS
+# =============================================================================
+
+# Enable loan system
+# Persons can borrow and lend money with interest
+# Default: false
+enable_loans: false
+
+# Enable credit rating system (requires enable_loans: true)
+# FICO-like credit scoring (300-850 scale) affecting loan rates
+# Default: false
+enable_credit_rating: false
+
+# Enable insurance system
+# Persons can purchase policies for crisis, income, and credit protection
+# Default: false
+enable_insurance: false
+
+# =============================================================================
+# CRISIS AND RISK EVENTS
+# =============================================================================
+
+# Enable crisis events
+# Random economic shocks (market crashes, currency devaluations)
+# Default: false
+enable_crisis_events: false
+
+# Crisis probability per step (0.0-1.0)
+# Default: 0.01 (1% per step)
+crisis_probability: 0.01
+
+# =============================================================================
+# CONTRACTS
+# =============================================================================
+
+# Enable contract system
+# Long-term agreements with locked-in prices
+# Default: false
 enable_contracts: false
 
-# Maximum duration for contracts in simulation steps
-# Determines how long a contract can remain active
+# Maximum contract duration in steps
 # Default: 50
 max_contract_duration: 50
 
-# Minimum duration for contracts in simulation steps
-# Contracts must last at least this many steps
+# Minimum contract duration in steps
 # Default: 10
 min_contract_duration: 10
 
-# Price discount for contract trades as a percentage
-# Contracts offer stability, and this discount incentivizes their formation
-# A value of 0.05 means contract prices are 5% lower than current market price
-# Valid range: 0.0 to 1.0 (0% to 100%)
-# Default: 0.05
+# Contract price discount (0.0-1.0)
+# Default: 0.05 (5% discount)
 contract_price_discount: 0.05
 
-# Example configurations for different use cases:
+# =============================================================================
+# HEALTH AND EPIDEMIOLOGY
+# =============================================================================
 
-# Small economy for quick testing:
+# Enable health system
+# Disease transmission through trade networks
+# Default: false
+enable_health: false
+
+# Disease transmission rate per trade (0.0-1.0)
+# Default: 0.05 (5% per trade)
+disease_transmission_rate: 0.05
+
+# Disease recovery duration in steps
+# Default: 10
+disease_recovery_duration: 10
+
+# Initial number of sick persons at start
+# Default: 0
+initial_sick_persons: 0
+
+# =============================================================================
+# EXTERNALITIES AND ENVIRONMENT
+# =============================================================================
+
+# Enable externality tracking
+# Track positive/negative externalities (costs/benefits to third parties)
+# Default: false
+enable_externalities: false
+
+# Default externality rate for all transactions (-1.0 to 1.0)
+# Default: 0.0
+externality_rate: 0.0
+
+# Per-skill externality rates (uncomment to use)
+#externality_rates_per_skill:
+#  "Education": 0.25       # 25% positive externality
+#  "Healthcare": 0.20      # 20% positive externality
+#  "Manufacturing": -0.15  # 15% negative externality (pollution)
+
+# =============================================================================
+# EXAMPLE SCENARIO CONFIGURATIONS
+# =============================================================================
+
+# Uncomment one of these blocks to try a specific scenario:
+
+# SOCIAL ECONOMY: Focus on relationships and trust
+# enable_friendships: true
+# enable_trade_agreements: true
+# enable_contracts: true
+# friendship_probability: 0.15
+# trade_agreement_probability: 0.08
+
+# QUALITY-DRIVEN MARKET: Skills evolve with use
+# enable_quality: true
+# enable_certification: true
+# enable_specialization: true
+# quality_improvement_rate: 0.15
+# quality_decay_rate: 0.03
+
+# FINANCIAL CRISIS: Test resilience under stress
+# enable_loans: true
+# enable_credit_rating: true
+# enable_insurance: true
+# enable_crisis_events: true
+# crisis_probability: 0.05
+# crisis_severity: 0.7
+# initial_money_per_person: 50.0
+
+# HEALTH PANDEMIC: Economic impact of disease
+# enable_health: true
+# initial_sick_persons: 5
+# disease_transmission_rate: 0.1
+# disease_recovery_duration: 15
+# enable_insurance: true
+
+# EDUCATION AND GROWTH: Skill development focus
+# enable_education: true
+# enable_mentorship: true
+# enable_quality: true
+# learning_probability: 0.08
+# mentorship_cost_reduction: 0.3
+
+# ENVIRONMENTAL ECONOMICS: Externalities and climate
+# enable_externalities: true
+# scenario: ClimateChange
+# externality_rate: -0.1
+# enable_environment: true
+
+# SMALL TEST ECONOMY: Quick testing
 # max_steps: 100
 # entity_count: 20
 # seed: 123
 
-# Large economy for detailed analysis:
+# LARGE DETAILED ECONOMY: Research analysis
 # max_steps: 2000
 # entity_count: 500
 # initial_money_per_person: 200.0
 
-# Crisis scenario (low initial money):
-# max_steps: 1000
-# entity_count: 100
-# initial_money_per_person: 50.0
-# base_skill_price: 20.0
-
-# Dynamic pricing experiment:
-# scenario: DynamicPricing
-# max_steps: 1000
-# base_skill_price: 15.0
+# For complete documentation of all 108 parameters, see:
+# - config.comprehensive.yaml
+# - config.comprehensive.toml
