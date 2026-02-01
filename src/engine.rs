@@ -5,7 +5,7 @@ use crate::{
     environment::Environment,
     event::EventBus,
     loan::{Loan, LoanId},
-    person::{PersonId, Strategy},
+    person::{Person, PersonId, Strategy},
     plugin::{PluginContext, PluginRegistry},
     result::{write_step_to_stream, StepData},
     scenario::{DemandGenerator, PriceUpdater},
@@ -926,7 +926,8 @@ impl SimulationEngine {
         );
 
         // Create plugin context for simulation start
-        let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
+        // Performance optimization: Pass references to person_data instead of cloning
+        let persons: Vec<&Person> = self.entities.iter().map(|e| &e.person_data).collect();
         let start_context = PluginContext {
             config: &self.config,
             current_step: 0,
@@ -968,7 +969,8 @@ impl SimulationEngine {
             let step_start = Instant::now();
 
             // Create plugin context and notify plugins before step starts
-            let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
+            // Performance optimization: Pass references to person_data instead of cloning
+            let persons: Vec<&Person> = self.entities.iter().map(|e| &e.person_data).collect();
             let step_context = PluginContext {
                 config: &self.config,
                 current_step: self.current_step,
@@ -1021,7 +1023,8 @@ impl SimulationEngine {
             step_times.push(step_duration.as_secs_f64());
 
             // Notify plugins after step completes
-            let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
+            // Performance optimization: Pass references to person_data instead of cloning
+            let persons: Vec<&Person> = self.entities.iter().map(|e| &e.person_data).collect();
             let step_end_context = PluginContext {
                 config: &self.config,
                 current_step: self.current_step,
@@ -2077,7 +2080,8 @@ impl SimulationEngine {
         };
 
         // Notify plugins that simulation has ended, allowing them to modify the result
-        let persons: Vec<_> = self.entities.iter().map(|e| e.person_data.clone()).collect();
+        // Performance optimization: Pass references to person_data instead of cloning
+        let persons: Vec<&Person> = self.entities.iter().map(|e| &e.person_data).collect();
         let end_context = PluginContext {
             config: &self.config,
             current_step: self.current_step,

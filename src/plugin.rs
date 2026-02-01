@@ -37,6 +37,12 @@ use crate::result::SimulationResult;
 use std::any::Any;
 
 /// Context provided to plugins containing simulation state.
+///
+/// # Performance Note
+///
+/// The `persons` field contains references to avoid unnecessary cloning of Person data
+/// during plugin callbacks. Each Person struct may contain HashMaps, Vecs, and transaction
+/// history, making cloning expensive in large simulations.
 #[derive(Debug)]
 pub struct PluginContext<'a> {
     /// The simulation configuration
@@ -45,8 +51,8 @@ pub struct PluginContext<'a> {
     pub current_step: usize,
     /// Total number of steps
     pub total_steps: usize,
-    /// Reference to all persons in the simulation
-    pub persons: &'a [Person],
+    /// Reference to all persons in the simulation (as references to avoid cloning)
+    pub persons: &'a [&'a Person],
 }
 
 /// Trait that all plugins must implement.
