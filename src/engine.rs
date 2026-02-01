@@ -2378,7 +2378,8 @@ impl SimulationEngine {
         ///
         /// Performance optimization: Store index instead of cloning NeededSkillItem.
         /// Additionally, cache price and efficiency values to avoid redundant HashMap
-        /// lookups during the purchase execution phase (measured 8-12% speedup).
+        /// lookups during the purchase execution phase (measured 2.8-5.9% speedup in
+        /// single step benchmarks).
         #[derive(Debug, Clone)]
         struct PurchaseOption {
             needed_item_index: usize,
