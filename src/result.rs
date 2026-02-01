@@ -1543,20 +1543,26 @@ impl SimulationResult {
             return;
         }
 
-        // Sort money values to create percentile buckets
-        let mut sorted_money = self.final_money_distribution.clone();
-        sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        // Sort indices instead of cloning the entire money vector
+        // Performance optimization: Sorting indices (usize) is cheaper than cloning Vec<f64>
+        // This reduces memory allocations, especially for large simulations (>100 persons)
+        let mut indices: Vec<usize> = (0..self.final_money_distribution.len()).collect();
+        indices.sort_unstable_by(|&a, &b| {
+            self.final_money_distribution[a]
+                .partial_cmp(&self.final_money_distribution[b])
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Create 10 buckets (deciles)
         let num_buckets = 10;
-        let bucket_size = sorted_money.len() / num_buckets;
+        let bucket_size = indices.len() / num_buckets;
 
         // Count persons in each bucket
         let mut buckets: Vec<(String, usize)> = Vec::new();
         for i in 0..num_buckets {
             let start_idx = i * bucket_size;
             let end_idx = if i == num_buckets - 1 {
-                sorted_money.len()
+                indices.len()
             } else {
                 (i + 1) * bucket_size
             };
