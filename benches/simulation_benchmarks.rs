@@ -140,6 +140,9 @@ fn bench_statistics(c: &mut Criterion) {
     let large_data: Vec<f64> = (0..10000).map(|i| (i as f64) * 1.5 + 50.0).collect();
 
     // Benchmark Gini coefficient calculation
+    // Note: These benchmarks measure only the calculation itself, not the sorting.
+    // The functions expect pre-sorted data as documented in their API.
+    // Sorting is a one-time cost in real usage and would dominate the benchmark.
     for (name, data) in [
         ("gini_100", &small_data),
         ("gini_1000", &medium_data),
@@ -157,6 +160,8 @@ fn bench_statistics(c: &mut Criterion) {
     }
 
     // Benchmark Lorenz curve calculation
+    // Note: Preprocessing (sorting/sum) is done outside the benchmark as these functions
+    // expect pre-sorted data per their API contract.
     for (name, data) in [("lorenz_100", &small_data), ("lorenz_1000", &medium_data)] {
         let sum: f64 = data.iter().sum();
         let mut sorted = data.clone();
@@ -181,6 +186,8 @@ fn bench_statistics(c: &mut Criterion) {
     }
 
     // Benchmark wealth concentration calculation
+    // Note: Preprocessing (sorting/sum) is done outside the benchmark as the function
+    // expects pre-sorted data per its API contract.
     for (name, data) in [
         ("wealth_concentration_100", &small_data),
         ("wealth_concentration_1000", &medium_data),
@@ -209,7 +216,7 @@ fn bench_market_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("market_operations");
 
     // Benchmark market creation with different numbers of skills
-    for num_skills in [10, 50, 100].iter() {
+    for num_skills in &[10, 50, 100] {
         group.bench_with_input(
             BenchmarkId::new("create_market", num_skills),
             num_skills,
@@ -295,7 +302,7 @@ fn bench_incremental_stats(c: &mut Criterion) {
     let mut group = c.benchmark_group("incremental_stats");
 
     // Benchmark updating stats with different data sizes
-    for size in [100, 1000, 10000].iter() {
+    for size in &[100, 1000, 10000] {
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             b.iter(|| {
                 let mut stats = IncrementalStats::new();
