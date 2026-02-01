@@ -235,6 +235,10 @@ pub struct SimulationEngine {
     action_log: Option<crate::replay::ActionLog>,
     // Externality tracking (if enabled)
     externality_stats: crate::externality::ExternalityStats,
+    // Cached skill providers map for performance optimization
+    // Maps skill_id -> Vec of entity IDs that can provide that skill
+    // This cache is rebuilt when skills change (learning, etc.)
+    skill_providers: HashMap<SkillId, Vec<usize>>,
 }
 
 impl SimulationEngine {
@@ -400,6 +404,21 @@ impl SimulationEngine {
             None
         };
 
+        // Initialize skill providers cache
+        let mut skill_providers: HashMap<SkillId, Vec<usize>> =
+            HashMap::with_capacity(all_skill_ids.len());
+        for entity in &entities {
+            if entity.active {
+                // Include both own_skills and learned_skills
+                for skill in &entity.person_data.own_skills {
+                    skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
+                }
+                for skill in &entity.person_data.learned_skills {
+                    skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
+                }
+            }
+        }
+
         Self {
             config,
             entities,
@@ -462,6 +481,7 @@ impl SimulationEngine {
             technology_breakthroughs: Vec::new(),
             action_log: None, // Will be set via enable_action_recording if needed
             externality_stats: crate::externality::ExternalityStats::new(),
+            skill_providers,
         }
     }
 
@@ -2158,6 +2178,14 @@ impl SimulationEngine {
                 // Add skill to person's learned skills
                 self.entities[idx].person_data.learned_skills.push(new_skill.clone());
 
+                // Update skill_providers cache with the newly learned skill
+                // Note: No duplicate check needed because has_skill() above ensures
+                // the person doesn't already have this skill (line 2152)
+                self.skill_providers
+                    .entry(new_skill.id.clone())
+                    .or_default()
+                    .push(self.entities[idx].id);
+
                 // Add skill to market if it doesn't exist yet
                 if !self.market.skills.contains_key(&new_skill.id) {
                     self.market.skills.insert(new_skill.id.clone(), new_skill.clone());
@@ -2347,26 +2375,10 @@ impl SimulationEngine {
 
         // Build a map of skill providers
         // Since multiple persons can now provide the same skill, we use Vec<usize>
-        // Performance optimization: Pre-allocate HashMap capacity to reduce allocations
-        let mut skill_providers: HashMap<SkillId, Vec<usize>> =
-            HashMap::with_capacity(self.all_skill_ids.len());
-        for entity_idx in 0..self.entities.len() {
-            if self.entities[entity_idx].active {
-                // Include both own_skills and learned_skills
-                for skill in &self.entities[entity_idx].person_data.own_skills {
-                    skill_providers
-                        .entry(skill.id.clone())
-                        .or_default()
-                        .push(self.entities[entity_idx].id);
-                }
-                for skill in &self.entities[entity_idx].person_data.learned_skills {
-                    skill_providers
-                        .entry(skill.id.clone())
-                        .or_default()
-                        .push(self.entities[entity_idx].id);
-                }
-            }
-        }
+        // Performance optimization: Use cached skill_providers instead of rebuilding every step
+        // The cache is updated when skills are learned (see production skill learning)
+        // Note: Entities never become inactive during simulation, so no cache invalidation needed
+        let skill_providers = &self.skill_providers;
 
         let mut trades_to_execute: Vec<(usize, usize, SkillId, f64)> = Vec::new();
         let mut failed_attempts_this_step = 0usize;
@@ -4846,6 +4858,21 @@ impl SimulationEngine {
         // Initialize event bus (events from previous run are not preserved)
         let event_bus = EventBus::new(checkpoint.config.enable_events);
 
+        // Rebuild skill providers cache from checkpoint entities
+        let mut skill_providers: HashMap<SkillId, Vec<usize>> =
+            HashMap::with_capacity(checkpoint.all_skill_ids.len());
+        for entity in &checkpoint.entities {
+            if entity.active {
+                // Include both own_skills and learned_skills
+                for skill in &entity.person_data.own_skills {
+                    skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
+                }
+                for skill in &entity.person_data.learned_skills {
+                    skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
+                }
+            }
+        }
+
         Ok(Self {
             config: checkpoint.config,
             entities: checkpoint.entities,
@@ -4908,6 +4935,7 @@ impl SimulationEngine {
             technology_breakthroughs: checkpoint.technology_breakthroughs,
             action_log: checkpoint.action_log,
             externality_stats: checkpoint.externality_stats,
+            skill_providers,
         })
     }
 
