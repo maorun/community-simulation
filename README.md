@@ -355,13 +355,18 @@ The simulation framework supports shell auto-completion for all command-line arg
 
 **Bash:**
 ```bash
-./target/release/simulation-framework --generate-completion bash > /usr/share/bash-completion/completions/simulation-framework
-# Or for user-level installation:
+# User-level installation (recommended):
+mkdir -p ~/.local/share/bash-completion/completions
 ./target/release/simulation-framework --generate-completion bash > ~/.local/share/bash-completion/completions/simulation-framework
+
+# Or system-wide installation (requires sudo):
+sudo ./target/release/simulation-framework --generate-completion bash > /usr/share/bash-completion/completions/simulation-framework
 ```
 
 **Zsh:**
 ```bash
+# Create completion directory if it doesn't exist:
+mkdir -p ~/.zsh/completion
 ./target/release/simulation-framework --generate-completion zsh > ~/.zsh/completion/_simulation-framework
 # Add to ~/.zshrc if not already present:
 # fpath=(~/.zsh/completion $fpath)
