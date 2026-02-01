@@ -2244,6 +2244,11 @@ impl SimulationEngine {
             HashMap::new()
         };
 
+        // Performance optimization: Pre-allocate reusable buffer for potential needs
+        // to avoid repeated allocations in the hot loop below.
+        // Capacity matches max possible needs to avoid reallocation.
+        let mut potential_needs_buffer: Vec<SkillId> = Vec::with_capacity(self.all_skill_ids.len());
+
         for entity in self.entities.iter_mut() {
             if !entity.active {
                 continue;
@@ -2273,17 +2278,19 @@ impl SimulationEngine {
             };
 
             // Filter out skills the person already has (either as own_skills or learned_skills)
-            let mut potential_needs: Vec<SkillId> = self
-                .all_skill_ids
-                .iter()
-                .filter(|&id| !entity.person_data.has_skill(id))
-                .cloned()
-                .collect();
+            // Performance optimization: Reuse pre-allocated buffer instead of allocating new Vec
+            potential_needs_buffer.clear();
+            potential_needs_buffer.extend(
+                self.all_skill_ids
+                    .iter()
+                    .filter(|&id| !entity.person_data.has_skill(id))
+                    .cloned(),
+            );
 
-            potential_needs.shuffle(&mut self.rng);
+            potential_needs_buffer.shuffle(&mut self.rng);
 
             for _ in 0..num_needs {
-                if let Some(needed_skill_id) = potential_needs.pop() {
+                if let Some(needed_skill_id) = potential_needs_buffer.pop() {
                     if !entity
                         .person_data
                         .needed_skills
