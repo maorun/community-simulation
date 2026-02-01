@@ -4438,8 +4438,9 @@ impl SimulationEngine {
             };
 
             // All histories should have the same length (one entry per step)
-            let num_periods = price_history.len().min(demand_history.len()).min(supply_history.len());
-            
+            let num_periods =
+                price_history.len().min(demand_history.len()).min(supply_history.len());
+
             if num_periods < 2 {
                 continue; // Need at least 2 data points
             }
@@ -4458,30 +4459,40 @@ impl SimulationEngine {
 
                 // Calculate demand elasticity using midpoint method
                 // Ed = ((Q2 - Q1) / ((Q2 + Q1) / 2)) / ((P2 - P1) / ((P2 + P1) / 2))
-                if let Some(demand_elasticity) = Self::calculate_elasticity(q1_demand, q2_demand, p1, p2) {
+                if let Some(demand_elasticity) =
+                    Self::calculate_elasticity(q1_demand, q2_demand, p1, p2)
+                {
                     demand_elasticities.push(demand_elasticity);
                 }
 
                 // Calculate supply elasticity using midpoint method
-                if let Some(supply_elasticity) = Self::calculate_elasticity(q1_supply, q2_supply, p1, p2) {
+                if let Some(supply_elasticity) =
+                    Self::calculate_elasticity(q1_supply, q2_supply, p1, p2)
+                {
                     supply_elasticities.push(supply_elasticity);
                 }
             }
 
             // Calculate average elasticities and classify
             if !demand_elasticities.is_empty() && !supply_elasticities.is_empty() {
-                let avg_demand_elasticity: f64 = demand_elasticities.iter().sum::<f64>() / demand_elasticities.len() as f64;
-                let avg_supply_elasticity: f64 = supply_elasticities.iter().sum::<f64>() / supply_elasticities.len() as f64;
+                let avg_demand_elasticity: f64 =
+                    demand_elasticities.iter().sum::<f64>() / demand_elasticities.len() as f64;
+                let avg_supply_elasticity: f64 =
+                    supply_elasticities.iter().sum::<f64>() / supply_elasticities.len() as f64;
 
                 // Calculate standard deviations
-                let demand_variance = demand_elasticities.iter()
+                let demand_variance = demand_elasticities
+                    .iter()
                     .map(|&e| (e - avg_demand_elasticity).powi(2))
-                    .sum::<f64>() / demand_elasticities.len() as f64;
+                    .sum::<f64>()
+                    / demand_elasticities.len() as f64;
                 let demand_std_dev = demand_variance.sqrt();
 
-                let supply_variance = supply_elasticities.iter()
+                let supply_variance = supply_elasticities
+                    .iter()
                     .map(|&e| (e - avg_supply_elasticity).powi(2))
-                    .sum::<f64>() / supply_elasticities.len() as f64;
+                    .sum::<f64>()
+                    / supply_elasticities.len() as f64;
                 let supply_std_dev = supply_variance.sqrt();
 
                 skill_elasticities.push(crate::result::SkillElasticity {
@@ -4522,10 +4533,10 @@ impl SimulationEngine {
     fn calculate_elasticity(q1: f64, q2: f64, p1: f64, p2: f64) -> Option<f64> {
         // Handle edge cases
         const EPSILON: f64 = 1e-10;
-        
+
         let price_change = p2 - p1;
         let quantity_change = q2 - q1;
-        
+
         // If price didn't change, elasticity is undefined
         if price_change.abs() < EPSILON {
             return None;
