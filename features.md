@@ -6,158 +6,116 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Erweiterte Wirtschaftsmechanismen
 
-#### 1.1 Vermögensbildung und Immobilien
-**Beschreibung:** Erweiterung des Wirtschaftssystems um langfristige Vermögenswerte wie Immobilien, Produktionsanlagen oder andere Kapital-Assets, die über Zeit Wert generieren oder verlieren können.
+#### 1.1 Vermögensbildung und langfristige Assets
+**Beschreibung:** Erweiterung um langfristige Vermögenswerte wie Immobilien, Produktionsanlagen oder Kapitalanlagen, die über Zeit Wert generieren, abschreiben oder sich verzinsen.
 
 **Nutzen:** 
-- Realistische Vermögensbildung und Wohlstandsungleichheit
-- Neue Investitionsmöglichkeiten neben Bildung und Produktion
-- Modellierung von Vermögenssteuer-Effekten
+- Realistische Vermögensbildung und Vermögensungleichheit
+- Unterscheidung zwischen Einkommen und Vermögen
+- Modellierung von Vermögenssteuern und Erbschaften
 
 **Implementierung:**
-- `Asset` Trait für verschiedene Vermögenstypen
-- `Property` Struct mit Wert, Wertsteigerung/Abschreibung
-- Integration mit Kreditsystem (Hypotheken)
-- Vermögenssteuer als Config-Parameter
-- Miet- und Verkaufsmarkt für Assets
+- `Asset` Trait für verschiedene Vermögenstypen (Property, Equipment, Stocks)
+- Wertsteigerung/Abschreibung über Zeit
+- Integration mit Kreditsystem (Hypotheken, Asset-backed lending)
+- Optional: Miet- und Verkaufsmarkt für Assets
 
-#### 1.2 Saisonalität und Zyklische Nachfrage
-**Beschreibung:** Modellierung saisonaler Schwankungen in der Nachfrage nach bestimmten Skills und Gütern, ähnlich wie touristische Saisons, Erntezeiten oder Weihnachtsgeschäft.
-
-**Nutzen:**
-- Realistische zyklische Wirtschaftsdynamik
-- Modellierung von Lagerbeständen und Vorratshaltung
-- Test von Anpassungsfähigkeit der Agenten an schwankende Nachfrage
-
-**Implementierung:**
-- `SeasonalPattern` Enum (Linear, Sinusoidal, Custom)
-- Per-Skill Saisonalitäts-Konfiguration
-- Demand-Modulation basierend auf Simulationsschritt
-- Integration mit bestehender `DemandStrategy`
-
-#### 1.3 Marktsegmentierung und Nischenmärkte
-**Beschreibung:** Unterteilung des Marktes in Segmente (Luxus, Mittelklasse, Budget) mit unterschiedlichen Preis-Qualitäts-Erwartungen und Kaufkraft.
+#### 1.2 Marktsegmentierung und Nischenmärkte
+**Beschreibung:** Unterteilung des Marktes in Segmente (Luxus, Mittelklasse, Budget) mit unterschiedlichen Preis-Qualitäts-Erwartungen.
 
 **Nutzen:**
-- Differenzierte Marktpositionierung möglich
-- Modellierung von Preisdiskriminierung
+- Differenzierte Marktpositionierung und Preisdiskriminierung
+- Modellierung von Konsumentenverhalten nach Einkommensklassen
 - Realistische Ungleichheitseffekte
 
 **Implementierung:**
 - `MarketSegment` Enum mit Kaufkraft-Ranges
-- Zuordnung von Personen zu Segmenten basierend auf Vermögen
-- Präferenz-Matching zwischen Anbieter und Käufer
+- Dynamische Zuordnung von Personen zu Segmenten basierend auf Vermögen
+- Präferenz-Matching zwischen Anbieter und Nachfrager
 - Segment-spezifische Preis-Qualitäts-Erwartungen
 
 ### 2. Erweiterte Marktmechanismen
 
-#### 2.1 Peer-to-Peer Lending-Plattformen
-**Beschreibung:** Dezentrales Kredit-Marketplace wo Personen direkt aneinander Kredite vergeben können, ohne zentrale Bank. Mit Reputation-basiertem Risk-Pricing.
+#### 2.1 Peer-to-Peer Lending-Marketplace
+**Beschreibung:** Dezentraler Kredit-Marketplace wo Personen direkt Kredite aneinander vergeben können, ohne zentrale Instanz. Mit Reputation-basiertem Risk-Pricing.
 
 **Nutzen:**
-- Realistische Modellierung moderner FinTech-Plattformen
-- Dezentralisierung des Finanzsystems
-- Untersuchung von Informations-Asymmetrien
+- Modellierung moderner FinTech-Plattformen
+- Dezentralisierung des Kreditsystems
+- Untersuchung von Informationsasymmetrien und Adverse Selection
 
 **Implementierung:**
+- Erweiterung des bestehenden Loan-Systems
 - `LendingOffer` Struct mit angebotenen Konditionen
-- `LendingMarketplace` zur Vermittlung
+- `LendingMarketplace` zur Vermittlung und Matching
 - Automatisches Matching basierend auf Kreditrating und Risikopräferenz
-- Integration mit bestehendem Kreditsystem
+- Plattform-Gebühren und Ausfallrisiko-Management
 
-#### 2.2 Auktionen und Preisfindungsmechanismen
-**Beschreibung:** Alternative Handelsmechanismen wie Vickrey-Auktionen, Niederländische Auktionen oder kontinuierliche Double-Auctions für bestimmte Güter oder Skills.
+#### 2.2 Auktionen und alternative Preisfindungsmechanismen  
+**Beschreibung:** Alternative Handelsmechanismen wie Vickrey-Auktionen, Niederländische Auktionen oder kontinuierliche Double-Auctions für bestimmte Güter.
 
 **Nutzen:**
 - Effizientere Preisfindung bei Knappheit
 - Modellierung verschiedener Marktstrukturen
-- Forschung zu Mechanismus-Design
+- Forschung zu Mechanismus-Design und strategischem Bieten
 
 **Implementierung:**
 - `AuctionType` Enum (English, Dutch, Vickrey, DoubleAuction)
 - `Auction` Struct mit Geboten und Zeitfenster
-- `AuctionMarket` parallel zum normalen Market
-- Per-Skill Konfiguration ob Auktion oder normaler Handel
-
-#### 2.3 Marktplätze mit Handelsgebühren und Platform-Economics
-**Beschreibung:** Zentrale Marktplätze die Transaktionsgebühren erheben und selbst wirtschaftliche Akteure sind. Modellierung von Platform-Economics und Netzwerk-Effekten.
-
-**Nutzen:**
-- Modellierung moderner digitaler Marktplätze
-- Untersuchung von Monopolisierungs-Tendenzen
-- Platform-Competition zwischen mehreren Marketplaces
-
-**Implementierung:**
-- `Marketplace` als eigenständiger Agent mit Cashflow
-- Variable Gebührenstruktur (prozentual, fix, Freemium)
-- Netzwerk-Effekte durch Liquidität
-- Multi-Marketplace mit Wettbewerb
+- `AuctionMarket` als alternative zu normalem bilateralem Handel
+- Per-Skill Konfiguration: Auktion vs. normaler Handel
 
 ### 3. Soziale Netzwerke und Beziehungen
 
 #### 3.1 Soziale Schichten und Mobilität
-**Beschreibung:** Modellierung von sozialen Klassen/Schichten mit unterschiedlichen Zugängen zu Ressourcen, Bildung und Netzwerken. Tracking von sozialer Mobilität über Generationen.
+**Beschreibung:** Modellierung von sozialen Klassen mit unterschiedlichen Zugängen zu Ressourcen, Bildung und Netzwerken. Tracking von sozialer Mobilität über Zeit.
 
 **Nutzen:**
-- Untersuchung von Ungleichheit und Chancengerechtigkeit
+- Untersuchung von Ungleichheit der Chancen vs. Ungleichheit der Ergebnisse
 - Modellierung von "Old Boys Networks" und exklusiven Clubs
 - Langzeit-Analyse von Mobilitäts-Trends
 
 **Implementierung:**
 - `SocialClass` Enum (Lower, Middle, Upper, Elite)
 - Klassen-basierte Zugangsbeschränkungen zu Features
-- Mobilität-Tracking über Zeit
-- Erbe und Generationen-Übergänge (falls generationales Modell)
+- Mobilität-Tracking (Aufstieg/Abstieg zwischen Klassen)
+- Integration mit Gruppen-System
 
 #### 3.2 Influencer und Meinungsführer
 **Beschreibung:** Bestimmte Personen haben überproportionalen Einfluss auf Konsumentscheidungen anderer. Modellierung von Trend-Setting und viralen Effekten.
 
 **Nutzen:**
 - Modellierung von Marketing und Mundpropaganda
-- Untersuchung von Information-Cascades
-- Realistische Diffusion von Innovationen
+- Untersuchung von Information Cascades
+- Realistische Diffusion von Innovationen und Produkten
 
 **Implementierung:**
-- `Influence` Score basierend auf Zentralität im Netzwerk
+- `Influence` Score basierend auf Zentralität im Freundschafts-Netzwerk
 - `TrendAdoption` Mechanismus basierend auf Influencer-Nachbarn
 - Viral-Effekte bei Skill-Popularität
-- Integration mit Freundschafts-System
-
-#### 3.3 Koalitionen und Kollektive Verhandlungsmacht
-**Beschreibung:** Personen können sich zu Koalitionen zusammenschließen um bessere Konditionen auszuhandeln (z.B. Gewerkschaften, Einkaufsgenossenschaften, Kartelle).
-
-**Nutzen:**
-- Modellierung von Gewerkschaften und kollektiver Bargaining
-- Untersuchung von Kartell-Bildung und Wettbewerbspolitik
-- Asymmetrische Verhandlungsmacht
-
-**Implementierung:**
-- `Coalition` Struct mit Mitgliedern und Zielen
-- Kollektive Preisverhandlung mit höherem Erfolg
-- Kartell-Detection und potenzielle Regulierung
-- Integration mit Voting-System für demokratische Koalitionen
+- Integration mit bestehendem Friendship-System
 
 ### 4. Erweiterte Szenarien
 
 #### 4.1 Digitalisierung und Automatisierung
-**Beschreibung:** Szenario wo bestimmte Skills durch Automatisierung ersetzt werden können. Technologischer Wandel der zu struktureller Arbeitslosigkeit führen kann.
+**Beschreibung:** Szenario wo bestimmte Skills durch Automatisierung ersetzt werden können. Technologischer Wandel der zu struktureller Arbeitslosigkeit führt.
 
 **Nutzen:**
 - Modellierung von Technologie-induzierten Arbeitsmarkt-Schocks
-- Untersuchung von Umschulung und Anpassungsfähigkeit
-- Policy-Tests für technologischen Wandel (z.B. UBI)
+- Untersuchung von Umschulung und Anpassungsfähigkeit (mit Education-System)
+- Policy-Tests für technologischen Wandel (z.B. UBI via Redistribution)
 
 **Implementierung:**
-- `AutomationRisk` per Skill
+- `AutomationRisk` per Skill (0.0-1.0)
 - Schrittweise Reduktion der Nachfrage für automatisierbare Skills
-- `Retraining` Programme als Policy-Response
-- Integration mit Bildungssystem
+- `RetrainingIncentive` Programme als Policy-Response
+- Integration mit Education-System
 
 #### 4.2 Globalisierung und Handel zwischen Gemeinschaften
-**Beschreibung:** Erweiterung zu multi-community Simulation mit Handel zwischen verschiedenen Wirtschaftsräumen. Modellierung von Außenhandel, Wechselkursen und Trade-Policies.
+**Beschreibung:** Multi-Community Simulation mit Handel zwischen verschiedenen Wirtschaftsräumen. Modellierung von Außenhandel, Wechselkursen und Handels-Policies.
 
 **Nutzen:**
-- Vergleichende Vorteil-Theorie testen
+- Vergleichende Vorteils-Theorie testen
 - Modellierung von Handelskriegen und Zöllen
 - Globale vs. lokale Produktionsketten
 
@@ -167,82 +125,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Tarife und Handelsbeschränkungen
 - Arbeitsmigration zwischen Communities
 
-#### 4.3 Klimawandel und Umweltkrisen (Erweitert)
-**Beschreibung:** Detailliertes Klimawandel-Szenario mit Carbon-Budget, Emissionshandel, Green-Tech-Transition und Klima-induzierten Schocks.
-
-**Nutzen:**
-- Modellierung von Carbon-Pricing und Cap-and-Trade
-- Untersuchung von Green-Transition-Dynamiken
-- Klima-Gerechtigkeit und internationale Koordination
-
-**Implementierung:**
-- Erweiterung des bestehenden ClimateChange-Szenarios
-- `CarbonFootprint` per Skill/Transaction
-- `EmissionsTradingScheme` 
-- Climate-Disaster Events mit zunehmender Frequenz
-- Green-Tech-Skills mit niedrigeren Emissionen
-
-#### 4.4 Pandemie und Gesundheitskrisen (Erweitert)
-**Beschreibung:** Erweiterung des Health-Systems zu detaillierter Pandemie-Simulation mit NPIs (Non-Pharmaceutical Interventions), Impfungen und wirtschaftlichen Trade-offs.
-
-**Nutzen:**
-- Modellierung von Lockdown-Policies und Compliance
-- Untersuchung von wirtschaftlichen vs. gesundheitlichen Trade-offs
-- Test von Public-Health-Interventionen
-
-**Implementierung:**
-- Erweiterung des bestehenden Health-Systems
-- `NonPharmaceuticalIntervention` Policies (Lockdown, Distancing, Masks)
-- `Vaccination` System mit Verfügbarkeit und Uptake
-- Compliance-Modellierung basierend auf Personen-Eigenschaften
-
 ### 5. Erweiterte Analyse
 
-#### 5.1 Netzwerk-Analyse und Zentralitäts-Metriken
-**Beschreibung:** Erweiterte Analyse der sozialen und ökonomischen Netzwerke mit verschiedenen Zentralitäts-Metriken (Degree, Betweenness, Eigenvector, PageRank).
-
-**Nutzen:**
-- Identifikation von Schlüsselakteuren und Bottlenecks
-- Untersuchung von Netzwerk-Resilienz
-- Korrelation zwischen Netzwerk-Position und ökonomischem Erfolg
-
-**Implementierung:**
-- Erweiterung des bestehenden `centrality.rs` Moduls
-- Verschiedene Zentralitäts-Algorithmen implementieren
-- Graph-Export für externe Visualisierung (GraphML, GEXF)
-- Time-series Analyse von Netzwerk-Evolution
-
-#### 5.2 Gini-Koeffizient und Lorenz-Kurve
-**Beschreibung:** Detaillierte Ungleichheits-Analyse mit Gini-Koeffizient, Lorenz-Kurve und Dezil/Quintil-Analyse der Vermögens- und Einkommensverteilung.
-
-**Nutzen:**
-- Quantifizierung von Ungleichheit über Zeit
-- Vergleich verschiedener Policy-Interventionen
-- Visualisierung von Verteilungs-Gerechtigkeit
-
-**Implementierung:**
-- `InequalityMetrics` Modul
-- Gini-Berechnung für Wealth und Income
-- Lorenz-Kurve Datenpunkte generieren
-- Perzentil und Quintil-Analysen
-- Integration in `SimulationResult`
-
-#### 5.3 Kausalanalyse und Counterfactuals
-**Beschreibung:** Erweiterte kausale Inferenz durch Vergleich von Simulationsläufen mit verschiedenen Interventionen. Was-wäre-wenn-Analysen für Policy-Entscheidungen.
-
-**Nutzen:**
-- Quantifizierung von kausalen Effekten
-- Robustheit-Checks für Policy-Empfehlungen
-- Identifikation von Confounders
-
-**Implementierung:**
-- Erweiterung des bestehenden `causal_analysis.rs`
-- Automated Counterfactual-Generation
-- `InterventionComparison` Framework
-- Difference-in-Differences Analyse
-- Propensity-Score-Matching für Vergleichbarkeit
-
-#### 5.4 Machine Learning auf Simulationsdaten
+#### 5.1 Machine Learning auf Simulationsdaten
 **Beschreibung:** Anwendung von ML-Techniken um Muster zu entdecken: Clustering von Agenten-Typen, Vorhersage von Erfolg, Feature-Importance-Analyse.
 
 **Nutzen:**
@@ -251,11 +136,25 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Dimensionalitäts-Reduktion für Visualisierung
 
 **Implementierung:**
-- Python-Bridge via PyO3 oder JSON-Export
+- Python-Bridge via PyO3 oder JSON-Export für externe Tools
 - K-Means Clustering auf Agenten-Features
 - Random-Forest für Feature-Importance
 - t-SNE/UMAP für Visualisierung
 - Integration optional via Feature-Flag
+
+#### 5.2 Elastizitäts-Analysen
+**Beschreibung:** Berechnung von Preis-Elastizitäten der Nachfrage und Angebots-Elastizitäten für verschiedene Skills.
+
+**Nutzen:**
+- Quantifizierung von Markt-Sensitivitäten
+- Input für Policy-Design
+- Vergleich mit empirischen Daten
+
+**Implementierung:**
+- Lokale Preis-Variationen und Nachfrage-Messung
+- `ElasticityCalculator` mit Regression
+- Cross-Elastizitäten zwischen komplementären/substitutiven Skills
+- Export für externe Analyse
 
 ### 6. Verschiedene Agentenstrategien
 
@@ -264,59 +163,44 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 **Nutzen:**
 - Realistischere Entscheidungs-Modellierung
-- Untersuchung von Heuristik-Effektivität
-- Modellierung von kognitiven Biases
+- Untersuchung von Heuristik-Effektivität in verschiedenen Umgebungen
+- Modellierung von kognitiven Biases (Anchoring, Availability)
 
 **Implementierung:**
 - `DecisionStrategy` Trait mit verschiedenen Implementierungen
 - `SatisficingStrategy` (erstes "gutes" Angebot akzeptieren)
 - `RecognitionHeuristic` (bekannte Partner bevorzugen)
-- `AnchoringBias` (erste Preise beeinflussen spätere)
+- `AnchoringBias` (erste Preise beeinflussen spätere Einschätzungen)
 - Konfigurierbare Strategie-Verteilung in Population
 
-#### 6.2 Adaptives und Reinforcement Learning
-**Beschreibung:** Agenten die aus Erfahrung lernen und ihre Strategien anpassen. Implementierung einfacher RL-Algorithmen wie Q-Learning oder Bandits.
+#### 6.2 Reinforcement Learning Agenten
+**Beschreibung:** Agenten die aus Erfahrung lernen und ihre Strategien dynamisch anpassen. Implementierung einfacher RL-Algorithmen wie Q-Learning oder Multi-Armed Bandits.
 
 **Nutzen:**
-- Emergenz von komplexem Verhalten
-- Untersuchung von Lerngeschwindigkeit
+- Emergenz von komplexem, adaptivem Verhalten
+- Untersuchung von Lerngeschwindigkeit und Konvergenz
 - Co-Evolution von Strategien
 
 **Implementierung:**
+- Erweiterung des bestehenden Adaptive-Strategies-Systems
 - `LearningAgent` mit State-Action-Value-Table
 - Q-Learning Update-Rules
-- Epsilon-Greedy Exploration
+- Epsilon-Greedy Exploration vs. Exploitation
 - Experience-Replay optional
-- Integration mit bestehendem Person-Struct
 
-#### 6.3 Persönlichkeits-Profile und Risikopräferenz
-**Beschreibung:** Heterogene Agenten mit verschiedenen Persönlichkeits-Traits (Risk-Aversion, Time-Preference, Social-Orientation) die Verhalten beeinflussen.
-
-**Nutzen:**
-- Realistische Heterogenität
-- Untersuchung von Persönlichkeits-Effekten auf Outcomes
-- Segmentierung nach Risiko-Typen
-
-**Implementierung:**
-- `Personality` Struct mit Big-Five-inspirierten Traits
-- `RiskPreference` (Risk-Averse, Neutral, Risk-Seeking)
-- `TimePreference` (Discount-Factor für Zukunfts-Nutzen)
-- `SocialOrientation` (Competitive, Cooperative, Altruistic)
-- Trait-basierte Modulation von Entscheidungen
-
-#### 6.4 Evolutionäre Strategien und Replikator-Dynamik
-**Beschreibung:** Erfolgreiche Strategien breiten sich in der Population aus. Agenten imitieren erfolgreiche Nachbarn oder Strategien "reproduzieren" sich.
+#### 6.3 Evolutionäre Strategien und Replikator-Dynamik
+**Beschreibung:** Erfolgreiche Strategien breiten sich in der Population aus. Agenten imitieren erfolgreiche Nachbarn oder Strategien "reproduzieren" sich proportional zu ihrem Erfolg.
 
 **Nutzen:**
 - Modellierung von kultureller Evolution
 - Untersuchung von ESS (Evolutionarily Stable Strategies)
-- Emergenz von Kooperation
+- Emergenz von Kooperation in wiederholten Spielen
 
 **Implementierung:**
 - `StrategyType` Enum mit verschiedenen Basis-Strategien
-- Periodische Strategy-Update-Phase
+- Periodische Strategy-Update-Phase (z.B. alle 50 Steps)
 - Imitation-Learning basierend auf Neighbor-Success
-- Mutation für Exploration
+- Mutation für Exploration neuer Strategien
 - Tracking von Strategie-Verteilung über Zeit
 
 ## 🔧 Code-Verbesserungen
@@ -336,35 +220,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Performance-Optimierungen
 
-#### 2.1 Parallelisierung mit Rayon
-**Beschreibung:** Erweiterte Nutzung von Rayon für parallele Verarbeitung von unabhängigen Agenten-Aktionen und Market-Updates.
-
-**Nutzen:**
-- Schnellere Simulation großer Populationen
-- Bessere CPU-Auslastung auf Multi-Core-Systemen
-- Skalierbarkeit zu 1000+ Agenten
-
-**Implementierung:**
-- Parallele Person-Step-Verarbeitung mit `par_iter_mut`
-- Thread-Pool-Konfiguration
-- Lock-Free-Datenstrukturen wo möglich
-- Benchmarking verschiedener Parallelisierungs-Strategien
-
-#### 2.2 Memory Pooling und Zero-Copy
-**Beschreibung:** Optimierung von Speicher-Allokationen durch Objekt-Pooling und Zero-Copy-Techniken für große Datenstrukturen.
-
-**Nutzen:**
-- Reduzierte Allokations-Overhead
-- Bessere Cache-Locality
-- Niedrigerer Memory-Footprint
-
-**Implementierung:**
-- `Arena` Allocator für Transaction-Objects
-- `Cow<str>` für Skill-Namen
-- Recycling von häufig allokierten Objekten
-- Memory-Profiling mit Valgrind/Heaptrack
-
-#### 2.3 SIMD-Optimierungen für Statistiken
+#### 2.1 SIMD-Optimierungen für Statistiken
 **Beschreibung:** Nutzung von SIMD-Instruktionen für vektorisierte Berechnungen von Statistiken und aggregierten Metriken.
 
 **Nutzen:**
@@ -373,91 +229,63 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Moderne Hardware-Features nutzen
 
 **Implementierung:**
-- `packed_simd` crate für portable SIMD
+- `packed_simd` oder `std::simd` für portable SIMD
 - Vektorisierte Summen, Durchschnitte, Varianzen
-- SIMD-optimierte Sortierung für Median
+- SIMD-optimierte Sortierung für Median-Berechnung
 - Feature-Gate für SIMD (nicht auf allen Plattformen verfügbar)
 
-#### 2.4 Lazy Evaluation und Caching
-**Beschreibung:** Verzögerte Berechnung von Statistiken und Caching häufig angeforderter Werte um redundante Berechnungen zu vermeiden.
+#### 2.2 Memory Pooling und Arena Allocation
+**Beschreibung:** Optimierung von Speicher-Allokationen durch Objekt-Pooling und Arena-Allocatoren für häufig allokierte Strukturen.
 
 **Nutzen:**
-- Reduzierte CPU-Last
-- Schnellere Query-Responses
-- Bessere Skalierbarkeit bei vielen Analyse-Queries
+- Reduzierte Allokations-Overhead
+- Bessere Cache-Locality
+- Niedrigerer Memory-Footprint bei großen Simulationen
 
 **Implementierung:**
-- `OnceCell` für einmalige Berechnungen
-- LRU-Cache für häufige Queries
-- Dirty-Flags für Invalidierung
-- Lazy-Statistiken in `SimulationResult`
+- `Arena` Allocator für Transaction-Objects
+- Recycling von häufig allokierten Event-Objekten
+- Memory-Profiling mit Valgrind/Heaptrack zur Identifikation von Hot-Spots
+- Opt-in via Feature-Flag
 
 ### 3. Code-Qualität
 
-#### 3.1 Property-Based Testing mit PropTest
-**Beschreibung:** Erweiterte Tests die automatisch viele Inputs generieren um Edge-Cases zu finden. Invarianten-Checks für ökonomische Gesetze.
-
-**Nutzen:**
-- Höhere Test-Coverage mit weniger Test-Code
-- Automatische Edge-Case-Entdeckung
-- Confidence in Invarianten-Erhaltung
-
-**Implementierung:**
-- Erweiterung bestehender PropTest-Tests
-- Strategien für komplexe Config-Generation
-- Invarianten wie Geld-Erhaltung testen
-- Shrinking für minimale Fehler-reproduzierende Inputs
-
-#### 3.2 Fuzzing mit cargo-fuzz
-**Beschreibung:** Automatisches Fuzzing der Config-Parsing und Deserialisierung-Logik um Panics und unerwartetes Verhalten zu finden.
-
-**Nutzen:**
-- Robustheit gegenüber ungültigen Inputs
-- Sicherheit bei User-Provided-Configs
-- Automatische Bug-Finding
-
-**Implementierung:**
-- Erweiterung des bestehenden `fuzz/` Verzeichnisses
-- Fuzzing-Targets für YAML/TOML-Parsing
-- Fuzzing der Event-Deserialisierung
-- Integration in CI mit `cargo +nightly fuzz`
-
-#### 3.3 Dokumentations-Tests und Doctests
-**Beschreibung:** Erweiterte Code-Beispiele in Dokumentation die als Tests laufen. Sicherstellen dass Doku aktuell bleibt.
-
-**Nutzen:**
-- Dokumentation bleibt korrekt
-- Code-Beispiele sind getestet
-- Bessere Onboarding-Experience
-
-**Implementierung:**
-- Doctests für alle public API-Funktionen
-- Komplexere Beispiele in `examples/` mit Tests
-- `cargo test --doc` in CI
-- Beispiele mit verschiedenen Feature-Kombinationen
-
-#### 3.4 Code-Coverage und Coverage-Reporting
+#### 3.1 Code-Coverage und Coverage-Reporting
 **Beschreibung:** Automatisches Tracking von Test-Coverage und Integration mit Coverage-Reporting-Tools.
 
 **Nutzen:**
 - Sichtbarkeit über ungetestete Code-Pfade
 - Qualitäts-Metriken für PRs
-- Gezielte Test-Erweiterung
+- Gezielte Test-Erweiterung für kritische Pfade
 
 **Implementierung:**
 - `tarpaulin` oder `llvm-cov` für Coverage
 - Integration mit Codecov oder Coveralls
 - Coverage-Badges in README
-- Minimum-Coverage-Threshold in CI
+- Minimum-Coverage-Threshold in CI (z.B. 70%)
+
+#### 3.2 Benchmarking-Suite Erweitern
+**Beschreibung:** Erweiterte Performance-Benchmarks für kritische Code-Pfade mit Regression-Detection.
+
+**Nutzen:**
+- Früherkennung von Performance-Regressionen
+- Daten-getriebene Optimierungen
+- Vergleich verschiedener Implementierungen
+
+**Implementierung:**
+- Erweiterung bestehender `benches/` mit mehr Szenarien
+- Criterion-Integration für statistische Analyse
+- Baseline-Tracking und Regression-Alerts
+- CI-Integration mit Performance-Reporting
 
 ### 4. Datenmanagement
 
 #### 4.1 Time-Series-Datenbank-Integration
-**Beschreibung:** Optional Integration mit Time-Series-Datenbanken wie InfluxDB oder TimescaleDB für effizientes Speichern und Querying großer Simulationsläufe.
+**Beschreibung:** Optionale Integration mit Time-Series-Datenbanken wie InfluxDB oder TimescaleDB für effizientes Speichern großer Simulationsläufe.
 
 **Nutzen:**
-- Persistenz großer Datenmengen
-- Effiziente Range-Queries
+- Persistenz großer Datenmengen ohne Memory-Overhead
+- Effiziente Range-Queries für Zeitreihen-Analysen
 - Langzeit-Analyse über viele Runs
 
 **Implementierung:**
@@ -467,224 +295,112 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Async-Runtime für Non-Blocking I/O
 
 #### 4.2 Parquet-Export für Big-Data-Analytics
-**Beschreibung:** Export von Simulationsdaten im Apache-Parquet-Format für effiziente Analyse mit Tools wie Pandas, DuckDB, oder Spark.
+**Beschreibung:** Export von Simulationsdaten im Apache-Parquet-Format für effiziente Analyse mit Pandas, DuckDB, oder Spark.
 
 **Nutzen:**
 - Kompakte, spaltenorientierte Speicherung
-- Direkte Analyse mit Data-Science-Tools
-- Effiziente Kompression
+- Direkte Analyse mit Data-Science-Toolchain
+- Effiziente Kompression für große Datasets
 
 **Implementierung:**
 - `parquet` crate Integration
 - Schema-Definition für Simulationsdaten
 - Chunked-Writing für große Datasets
-- Optionaler Export-Modus
-
-#### 4.3 Inkrementelle Snapshots und Checkpointing
-**Beschreibung:** Periodisches Speichern von Simulations-Zustand um lange Runs fortzusetzen oder von Checkpoints zu starten.
-
-**Nutzen:**
-- Fortsetzung nach Crashes
-- Experimente von identischen Startpunkten
-- Branching von Simulationen
-
-**Implementierung:**
-- Serde-Serialisierung des gesamten Zustands
-- Bincode oder MessagePack für Kompaktheit
-- `--checkpoint-interval` CLI-Option
-- `--resume-from` für Fortsetzung
-
-#### 4.4 Streaming-Analytics und Real-Time-Monitoring
-**Beschreibung:** Live-Streaming von Simulations-Metriken via WebSocket oder gRPC für Real-Time-Dashboard-Monitoring.
-
-**Nutzen:**
-- Live-Monitoring laufender Simulationen
-- Frühzeitige Intervention bei Anomalien
-- Demo-Präsentationen mit Live-Updates
-
-**Implementierung:**
-- `tokio` + `tonic` für gRPC-Server
-- Metrics-Streaming-Endpoint
-- Optionaler Prometheus-Exporter
-- Web-Dashboard mit Chart.js/D3.js
+- Optional via CLI-Flag `--export-parquet`
 
 ## 📊 Analyse und Forschung
 
 ### 1. Wirtschaftliche Analysen
 
-#### 1.1 Allgemeines Gleichgewicht und Walras-Gleichgewicht
-**Beschreibung:** Analyse ob und wann die Simulation zu einem allgemeinen Gleichgewicht konvergiert. Berechnung von Überschuss-Nachfrage-Funktionen.
+#### 1.1 Allgemeines Gleichgewicht und Konvergenz-Analyse
+**Beschreibung:** Analyse ob und wann die Simulation zu einem Markt-Gleichgewicht konvergiert. Berechnung von Excess-Demand-Funktionen.
 
 **Nutzen:**
 - Validierung gegen ökonomische Theorie
 - Identifikation von Gleichgewichts-Bedingungen
-- Vergleich verschiedener Szenarien
+- Vergleich verschiedener Szenarien und Policies
 
 **Implementierung:**
 - `EquilibriumAnalysis` Modul
 - Tracking von Excess-Demand per Skill über Zeit
 - Konvergenz-Metriken (Distance to Equilibrium)
-- Tâtonnement-Prozess Simulation
+- Tâtonnement-Prozess Analyse
 
-#### 1.2 Elastizitäts-Analysen
-**Beschreibung:** Berechnung von Preis-Elastizitäten der Nachfrage und Angebots-Elastizitäten für verschiedene Skills und Market-Conditions.
-
-**Nutzen:**
-- Quantifizierung von Markt-Sensitivitäten
-- Input für Policy-Design
-- Vergleich mit empirischen Daten
-
-**Implementierung:**
-- Lokale Preis-Variationen und Nachfrage-Messung
-- `ElasticityCalculator` mit Regression
-- Cross-Elastizitäten zwischen Skills
-- Export für externe Analyse
-
-#### 1.3 Wohlfahrts-Analyse und Konsumentenrente
+#### 1.2 Wohlfahrts-Analyse und Deadweight-Loss
 **Beschreibung:** Berechnung von Konsumentenrente, Produzentenrente und Gesamt-Wohlfahrt. Deadweight-Loss durch Steuern oder Markteingriffe.
 
 **Nutzen:**
 - Quantifizierung von Policy-Effekten auf Wohlfahrt
 - Trade-off-Analyse (Effizienz vs. Gleichheit)
-- Optimale Steuer-Berechnung
+- Optimale Steuer-Design
 
 **Implementierung:**
 - `WelfareMetrics` Modul
-- Konsumenten/Produzenten-Rente aus Transaktionen
-- Deadweight-Loss-Berechnung
+- Konsumenten/Produzenten-Rente aus Transaktionsdaten
+- Deadweight-Loss-Berechnung bei Steuern/Preiskontrollen
 - Integration in Scenario-Comparison
-
-#### 1.4 Multiplikator-Effekte und Spillovers
-**Beschreibung:** Analyse wie lokale Interventionen sich durch die Wirtschaft ausbreiten (Fiscal-Multiplier, Investment-Multiplier).
-
-**Nutzen:**
-- Verständnis von indirekten Effekten
-- Makro-ökonomische Validierung
-- Netzwerk-basierte Effekt-Propagation
-
-**Implementierung:**
-- Input-Output-Analyse basierend auf Produktions-Ketten
-- Shock-Propagation-Tracking
-- Multiplier-Berechnung aus Daten
-- Integration mit Causal-Analysis
 
 ## 🛠️ Entwickler-Tools
 
 ### 1. CLI-Verbesserungen
 
-#### 1.1 Interaktiver Config-Builder
-**Beschreibung:** Interaktiver Wizard zur Erstellung von Config-Files durch geführte Fragen statt manueller YAML/TOML-Editierung.
-
-**Nutzen:**
-- Niedrigere Einstiegshürde für neue Nutzer
-- Validierung während der Eingabe
-- Erklärungen zu jedem Parameter
-
-**Implementierung:**
-- Erweiterung des bestehenden `wizard.rs`
-- `inquire` oder `dialoguer` crate für Prompts
-- Template-Auswahl (Basic, Advanced, Research)
-- Output in YAML oder TOML
-
-#### 1.2 Progress-Bar und Live-Metriken
-**Beschreibung:** Visuelle Fortschrittsanzeige während langer Simulationen mit Live-Updates von Key-Metriken.
-
-**Nutzen:**
-- Besseres User-Feedback
-- Frühe Anomalie-Erkennung
-- Professionellere CLI-Experience
-
-**Implementierung:**
-- `indicatif` crate für Progress-Bars
-- Multi-Bar für verschiedene Metriken
-- ETA-Berechnung
-- Opt-out via `--quiet` Flag
-
-#### 1.3 Subcommands für verschiedene Modi
-**Beschreibung:** Strukturierung der CLI in Subcommands: `run`, `analyze`, `compare`, `validate` statt eines monolithischen Commands.
+#### 1.1 Subcommands für verschiedene Modi
+**Beschreibung:** Strukturierung der CLI in Subcommands: `run`, `analyze`, `compare`, `validate` statt monolithischem Interface.
 
 **Nutzen:**
 - Klarere Trennung von Funktionalität
-- Bessere Help-Messages
-- Erweiterbarkeit
+- Bessere Hilfe-Messages und Dokumentation
+- Erweiterbarkeit für neue Modi
 
 **Implementierung:**
-- Clap-Subcommands
+- Clap-Subcommands-Refactoring
 - Shared-Options als globale Flags
-- Subcommand-spezifische Logik
-- `simulate run`, `simulate analyze`, etc.
+- `simulate run`, `simulate analyze`, `simulate compare`
+- Dedizierte Analyse-Tools ohne Simulation
 
-#### 1.4 Auto-Completion für Shells
-**Beschreibung:** Generierung von Shell-Completion-Scripts für Bash, Zsh, Fish für alle CLI-Argumente.
+#### 1.2 Shell-Auto-Completion Generierung
+**Beschreibung:** Generierung von Shell-Completion-Scripts für Bash, Zsh, Fish für alle CLI-Argumente und Subcommands.
 
 **Nutzen:**
-- Bessere Developer-Experience
+- Bessere Developer/User-Experience
 - Weniger Tippfehler
-- Discovery von Optionen
+- Discovery von verfügbaren Optionen
 
 **Implementierung:**
 - `clap_complete` für Completion-Generierung
 - `--generate-completion <shell>` Command
-- Installation-Instructions in Docs
-- Support für alle major Shells
+- Installation-Instructions in Dokumentation
+- Support für Bash, Zsh, Fish, PowerShell
 
 ### 2. Debugging-Tools
 
-#### 2.1 Transaction-Tracer und Audit-Log
-**Beschreibung:** Detailliertes Logging aller Transaktionen mit Reasoning (warum Trade akzeptiert/abgelehnt). Audit-Trail für Debugging.
+#### 2.1 Visualisierung des Simulations-Ablaufs
+**Beschreibung:** Graphische Visualisierung der Simulation: Netzwerk-Graphen, Preis-Charts, Wealth-Histogramme in Echtzeit oder Post-Hoc.
 
 **Nutzen:**
-- Nachvollziehbarkeit von Entscheidungen
-- Debugging von unerwarteten Outcomes
-- Compliance und Reproduzierbarkeit
+- Intuitive Verständlichkeit für Non-Technical Users
+- Präsentations-Qualität für Forschung/Lehre
+- Pattern-Erkennung durch visuelle Inspektion
 
 **Implementierung:**
-- Erweiterung des Event-Systems
-- `--trace-level` CLI-Option (None, Basic, Verbose)
-- JSON-Lines-Format für maschinelle Verarbeitung
-- Filtrierung nach Person-ID oder Skill
+- Optional Feature mit `plotters` crate für Terminal-Plots
+- HTML-Export mit interaktiven Charts (Chart.js/Plotly)
+- Netzwerk-Visualisierung via GraphML-Export
+- Integration mit Grafana via Prometheus-Exporter
 
-#### 2.2 Breakpoint-System und Step-Debugging
-**Beschreibung:** Möglichkeit die Simulation an bestimmten Bedingungen zu pausieren und Zustand zu inspizieren.
-
-**Nutzen:**
-- Interaktives Debugging
-- Detaillierte Zustand-Inspektion
-- Verstehen komplexer Dynamiken
-
-**Implementierung:**
-- `Breakpoint` Conditions (Step-Number, Event-Type, Person-Condition)
-- REPL-Mode bei Breakpoint-Hit
-- Zustand-Query-Language
-- `--breakpoint "step > 100 && event == Crisis"` Syntax
-
-#### 2.3 Visualisierung des Simulations-Ablaufs
-**Beschreibung:** Graphische Visualisierung der Simulation: Netzwerk-Graphen, Preis-Charts, Wealth-Histograms in Echtzeit oder Post-Hoc.
-
-**Nutzen:**
-- Intuitive Verständlichkeit
-- Präsentations-Qualität
-- Pattern-Erkennung
-
-**Implementierung:**
-- Optional Feature mit `plotters` crate
-- HTML-Export mit interaktiven Charts
-- Animations-Export (PNG-Sequenzen)
-- Integration mit Grafana via Metrics-Export
-
-#### 2.4 Assertion-Framework für Invarianten
-**Beschreibung:** Deklaratives Framework für Invarianten-Checks die während der Simulation validiert werden (z.B. "Geld-Erhaltung", "Kein Negativer Wealth").
+#### 2.2 Assertion-Framework für Invarianten
+**Beschreibung:** Deklaratives Framework für Invarianten-Checks die während der Simulation validiert werden.
 
 **Nutzen:**
 - Frühzeitige Bug-Erkennung
-- Validierung von Annahmen
+- Validierung von ökonomischen Annahmen
 - Selbst-dokumentierender Code
 
 **Implementierung:**
 - `Invariant` Trait mit `check()` Methode
-- Built-in Invarianten (Money-Conservation, Non-Negative-Money)
+- Built-in Invarianten (Money-Conservation, Non-Negative-Wealth)
 - Custom-Invarianten via Config
-- `--strict` Mode der bei Violation abricht
+- `--strict` Mode der bei Violation sofort abbricht vs. nur warnt
 
 ## 🎯 Priorisierung
 
