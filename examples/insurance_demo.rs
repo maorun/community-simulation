@@ -183,7 +183,7 @@ fn main() {
 
         enable_insurance: true,
         insurance_premium_rate: 0.08,         // 8% premium
-        insurance_duration: 0,                // Indefinite coverage
+        insurance_duration: 0,                // 0 = indefinite coverage (never expires)
         insurance_purchase_probability: 0.25, // 25% chance (very high)
         insurance_coverage_amount: 100.0,
 
@@ -214,10 +214,14 @@ fn main() {
         println!("\n   📋 Insurance Performance:");
         println!("   - Policies Issued: {}", insurance_stats.total_policies_issued);
         println!("   - Claims Paid: {}", insurance_stats.total_claims_paid);
-        println!(
-            "   - Coverage Ratio: {:.2}%",
-            (insurance_stats.active_policies as f64 / extreme_result.active_persons as f64) * 100.0
-        );
+
+        if extreme_result.active_persons > 0 {
+            println!(
+                "   - Coverage Ratio: {:.2}%",
+                (insurance_stats.active_policies as f64 / extreme_result.active_persons as f64)
+                    * 100.0
+            );
+        }
 
         if insurance_stats.total_premiums_collected > 0.0 {
             let value_ratio =
