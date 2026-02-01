@@ -250,20 +250,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Coverage-Badges in README
 - Minimum-Coverage-Threshold in CI (z.B. 70%)
 
-#### 3.2 Benchmarking-Suite Erweitern
-**Beschreibung:** Erweiterte Performance-Benchmarks für kritische Code-Pfade mit Regression-Detection.
-
-**Nutzen:**
-- Früherkennung von Performance-Regressionen
-- Daten-getriebene Optimierungen
-- Vergleich verschiedener Implementierungen
-
-**Implementierung:**
-- Erweiterung bestehender `benches/` mit mehr Szenarien
-- Criterion-Integration für statistische Analyse
-- Baseline-Tracking und Regression-Alerts
-- CI-Integration mit Performance-Reporting
-
 ### 4. Datenmanagement
 
 #### 4.1 Time-Series-Datenbank-Integration
