@@ -1188,6 +1188,19 @@ impl SimulationEngine {
             pb.finish_with_message("Simulation complete");
         }
 
+        // Log invariant checking summary if enabled
+        if let Some(ref checker) = self.invariant_checker {
+            let violations = checker.total_violations();
+            if violations > 0 {
+                warn!(
+                    "Invariant checking summary: {} violation(s) detected during simulation",
+                    violations
+                );
+            } else {
+                info!("Invariant checking summary: No violations detected - simulation is valid");
+            }
+        }
+
         let total_duration = start_time.elapsed();
 
         let mut final_money_distribution: Vec<f64> =

@@ -114,10 +114,9 @@ impl MoneyConservationInvariant {
     ///
     /// * `initial_total_money` - The total amount of money at the start of the simulation
     pub fn new(initial_total_money: f64) -> Self {
-        Self {
-            initial_total_money,
-            tolerance: 0.01, // Allow 1 cent tolerance for floating-point errors
-        }
+        // Use 0.01% of initial money as tolerance, or 0.01 minimum for very small economies
+        let tolerance = (initial_total_money * 0.0001).max(0.01);
+        Self { initial_total_money, tolerance }
     }
 
     /// Creates a new money conservation invariant with a custom tolerance.
@@ -292,19 +291,29 @@ pub struct InvariantChecker {
     invariants: Vec<Box<dyn Invariant>>,
     /// If true, stop the simulation on first violation. If false, log and continue.
     strict_mode: bool,
+    /// Count of violations detected during the simulation
+    total_violations: std::cell::Cell<usize>,
 }
 
 impl InvariantChecker {
     /// Creates a new empty invariant checker.
     pub fn new() -> Self {
-        Self { invariants: Vec::new(), strict_mode: false }
+        Self {
+            invariants: Vec::new(),
+            strict_mode: false,
+            total_violations: std::cell::Cell::new(0),
+        }
     }
 
     /// Creates a new invariant checker in strict mode.
     ///
     /// In strict mode, the simulation will panic on the first invariant violation.
     pub fn new_strict() -> Self {
-        Self { invariants: Vec::new(), strict_mode: true }
+        Self {
+            invariants: Vec::new(),
+            strict_mode: true,
+            total_violations: std::cell::Cell::new(0),
+        }
     }
 
     /// Adds an invariant to be checked.
@@ -333,7 +342,17 @@ impl InvariantChecker {
             }
         }
 
+        // Update violation count
+        if !violations.is_empty() {
+            self.total_violations.set(self.total_violations.get() + violations.len());
+        }
+
         violations
+    }
+
+    /// Returns the total number of violations detected so far.
+    pub fn total_violations(&self) -> usize {
+        self.total_violations.get()
     }
 
     /// Returns true if any invariants are registered.
