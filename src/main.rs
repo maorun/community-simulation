@@ -488,6 +488,19 @@ struct Args {
     /// Only used when --enable-health is set
     #[arg(long)]
     initial_sick_persons: Option<usize>,
+
+    /// Enable invariant checking during simulation to validate correctness
+    /// Invariants check conditions that should always hold true (e.g., money conservation)
+    /// Useful for debugging and ensuring simulation validity
+    #[arg(long, default_value_t = false)]
+    enable_invariant_checking: bool,
+
+    /// Use strict mode for invariant violations (panic on first violation)
+    /// When true, the simulation aborts on the first violation
+    /// When false (default), violations are logged but simulation continues
+    /// Only used when --enable-invariant-checking is set
+    #[arg(long, default_value_t = false)]
+    strict_invariant_mode: bool,
 }
 
 /// Converts a certification duration argument to an Option.
@@ -1219,6 +1232,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             initial_sick_persons: args
                 .initial_sick_persons
                 .unwrap_or(SimulationConfig::default().initial_sick_persons),
+            enable_invariant_checking: args.enable_invariant_checking,
+            strict_invariant_mode: args.strict_invariant_mode,
+            check_money_conservation: SimulationConfig::default().check_money_conservation,
+            check_non_negative_wealth: SimulationConfig::default().check_non_negative_wealth,
         }
     };
 

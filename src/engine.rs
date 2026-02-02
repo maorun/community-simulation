@@ -4652,6 +4652,21 @@ impl SimulationEngine {
         &self.market
     }
 
+    /// Get read-only access to the simulation configuration.
+    pub fn get_config(&self) -> &SimulationConfig {
+        &self.config
+    }
+
+    /// Get the total transaction fees collected so far.
+    pub fn get_total_fees_collected(&self) -> f64 {
+        self.total_fees_collected
+    }
+
+    /// Get the total taxes collected so far.
+    pub fn get_total_taxes_collected(&self) -> f64 {
+        self.total_taxes_collected
+    }
+
     /// Get the current simulation result snapshot
     /// This creates a simplified SimulationResult for display in interactive mode
     /// Note: Some complex statistics are omitted for simplicity

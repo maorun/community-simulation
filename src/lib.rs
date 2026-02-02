@@ -71,6 +71,7 @@
 //! - [`environment`] - Environmental resource tracking and sustainability metrics
 //! - [`error`] - Custom error types for robust error handling
 //! - [`event`] - Event system for tracking simulation events
+//! - [`invariant`] - Invariant checking framework for simulation validation
 //! - [`investment`] - Investment system for capital allocation and returns
 //! - [`loan`] - Loan system for credit between persons
 //! - [`market`] - Market mechanisms and price dynamics
@@ -101,6 +102,7 @@ pub mod error;
 pub mod event;
 pub mod externality;
 pub mod insurance;
+pub mod invariant;
 pub mod investment;
 pub mod loan;
 pub mod market;
@@ -133,6 +135,7 @@ pub use error::{Result, SimulationError};
 pub use event::{EventBus, EventType, SimulationEvent};
 pub use externality::{Externality, ExternalityStats, SkillExternalityStats};
 pub use insurance::{Insurance, InsuranceId, InsuranceType};
+pub use invariant::{Invariant, InvariantChecker, InvariantViolation, MoneyConservationInvariant, NonNegativeWealthInvariant};
 pub use investment::{Investment, InvestmentId, InvestmentType};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
