@@ -314,25 +314,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🛠️ Entwickler-Tools
 
-### 1. CLI-Verbesserungen
+### 1. Debugging-Tools
 
-#### 1.1 Subcommands für verschiedene Modi
-**Beschreibung:** Strukturierung der CLI in Subcommands: `run`, `analyze`, `compare`, `validate` statt monolithischem Interface.
-
-**Nutzen:**
-- Klarere Trennung von Funktionalität
-- Bessere Hilfe-Messages und Dokumentation
-- Erweiterbarkeit für neue Modi
-
-**Implementierung:**
-- Clap-Subcommands-Refactoring
-- Shared-Options als globale Flags
-- `simulate run`, `simulate analyze`, `simulate compare`
-- Dedizierte Analyse-Tools ohne Simulation
-
-### 2. Debugging-Tools
-
-#### 2.1 Visualisierung des Simulations-Ablaufs
+#### 1.1 Visualisierung des Simulations-Ablaufs
 **Beschreibung:** Graphische Visualisierung der Simulation: Netzwerk-Graphen, Preis-Charts, Wealth-Histogramme in Echtzeit oder Post-Hoc.
 
 **Nutzen:**
