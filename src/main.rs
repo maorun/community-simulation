@@ -676,11 +676,13 @@ fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
 
     // Run the simulation
     let start = Instant::now();
-    let result = engine.run_with_progress(true); // Always show progress in wizard mode
+    // Always show progress in wizard mode for better interactivity (wizard is inherently interactive)
+    let result = engine.run_with_progress(true);
     let duration = start.elapsed();
 
     // Print results
-    result.print_summary(true); // Always show histogram in wizard mode
+    // Always show histogram in wizard mode for immediate visual feedback
+    result.print_summary(true);
     println!("\n⏱️  Simulation completed in {:.2}s", duration.as_secs_f64());
     println!(
         "⚡ Performance: {:.0} steps/second",
