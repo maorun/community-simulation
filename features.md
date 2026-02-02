@@ -284,21 +284,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Wirtschaftliche Analysen
 
-#### 1.1 Allgemeines Gleichgewicht und Konvergenz-Analyse
-**Beschreibung:** Analyse ob und wann die Simulation zu einem Markt-Gleichgewicht konvergiert. Berechnung von Excess-Demand-Funktionen.
-
-**Nutzen:**
-- Validierung gegen ökonomische Theorie
-- Identifikation von Gleichgewichts-Bedingungen
-- Vergleich verschiedener Szenarien und Policies
-
-**Implementierung:**
-- `EquilibriumAnalysis` Modul
-- Tracking von Excess-Demand per Skill über Zeit
-- Konvergenz-Metriken (Distance to Equilibrium)
-- Tâtonnement-Prozess Analyse
-
-#### 1.2 Wohlfahrts-Analyse und Deadweight-Loss
+#### 1.1 Wohlfahrts-Analyse und Deadweight-Loss
 **Beschreibung:** Berechnung von Konsumentenrente, Produzentenrente und Gesamt-Wohlfahrt. Deadweight-Loss durch Steuern oder Markteingriffe.
 
 **Nutzen:**
