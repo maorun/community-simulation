@@ -1,4 +1,4 @@
-use clap::{CommandFactory, Parser};
+use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use colored::Colorize;
 use log::{debug, info, warn};
@@ -13,35 +13,61 @@ use std::time::Instant;
 use simulation_framework::scenario::Scenario;
 
 #[derive(Parser)]
-#[command(name = "economic_simulation")]
-#[command(about = "Runs an economic simulation with persons, skills, and a market.")]
-struct Args {
+#[command(name = "simulation-framework")]
+#[command(about = "Economic simulation framework with configurable agent-based modeling")]
+#[command(version)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Run the economic simulation
+    #[command(visible_alias = "simulate")]
+    Run(Box<RunArgs>),
+
+    /// Launch interactive configuration wizard
+    Wizard {
+        /// Disable colored terminal output
+        #[arg(long, default_value_t = false)]
+        no_color: bool,
+    },
+
+    /// List available presets, scenarios, or other options
+    List {
+        #[command(subcommand)]
+        list_type: ListType,
+    },
+
+    /// Generate shell completion scripts
+    #[command(name = "completion")]
+    Completion {
+        /// Shell type (bash, zsh, fish, powershell)
+        #[arg(value_name = "SHELL")]
+        shell: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum ListType {
+    /// List available preset configurations
+    Presets,
+    /// List available pricing scenarios
+    Scenarios,
+}
+
+#[derive(Parser)]
+#[command(name = "run")]
+struct RunArgs {
     /// Path to configuration file (YAML or TOML). CLI arguments override config file values.
     #[arg(short, long)]
     config: Option<String>,
 
     /// Use a preset configuration (e.g., 'small_economy', 'crisis_scenario', 'quick_test')
-    /// Use --list-presets to see all available presets
+    /// Use 'list presets' subcommand to see all available presets
     #[arg(long)]
     preset: Option<String>,
-
-    /// List all available preset configurations and exit
-    #[arg(long, default_value_t = false)]
-    list_presets: bool,
-
-    /// List all available pricing scenarios and exit
-    #[arg(long, default_value_t = false)]
-    list_scenarios: bool,
-
-    /// Start interactive configuration wizard to create a simulation configuration
-    #[arg(long, default_value_t = false)]
-    wizard: bool,
-
-    /// Generate shell completion script for the specified shell (bash, zsh, fish, powershell)
-    /// Outputs completion script to stdout. Save to appropriate location for your shell.
-    /// Example: --generate-completion bash > /usr/share/bash-completion/completions/simulation-framework
-    #[arg(long)]
-    generate_completion: Option<String>,
 
     #[arg(short, long)]
     steps: Option<usize>,
@@ -515,8 +541,157 @@ fn certification_duration_from_arg(duration: usize) -> Option<usize> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Args::parse();
+    let cli = Cli::parse();
 
+    match cli.command {
+        Commands::Run(args) => run_simulation(*args),
+        Commands::Wizard { no_color } => run_wizard(no_color),
+        Commands::List { list_type } => run_list(list_type),
+        Commands::Completion { shell } => run_completion(&shell),
+    }
+}
+
+/// Run the list subcommand
+fn run_list(list_type: ListType) -> Result<(), Box<dyn std::error::Error>> {
+    match list_type {
+        ListType::Presets => list_presets(),
+        ListType::Scenarios => list_scenarios(),
+    }
+}
+
+/// List available preset configurations
+fn list_presets() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Available preset configurations:\n");
+    for preset in PresetName::all() {
+        let config = SimulationConfig::from_preset(preset.clone());
+        println!("  {}", preset.as_str());
+        println!("    Description: {}", preset.description());
+        println!(
+            "    Parameters: {} persons, {} steps, ${:.0} initial money, ${:.0} base price, scenario: {:?}",
+            config.entity_count,
+            config.max_steps,
+            config.initial_money_per_person,
+            config.base_skill_price,
+            config.scenario
+        );
+        println!();
+    }
+    Ok(())
+}
+
+/// List available pricing scenarios
+fn list_scenarios() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Available pricing scenarios:\n");
+
+    for scenario in Scenario::all() {
+        let default_marker = if scenario.is_default() {
+            " (default)"
+        } else {
+            ""
+        };
+        println!("  {}{}", scenario, default_marker);
+        println!("    Description: {}", scenario.description());
+        println!("    Mechanism: {}", scenario.mechanism());
+        println!("    Best for: {}\n", scenario.use_case());
+    }
+
+    println!("Usage: simulation-framework run --scenario <SCENARIO>");
+    println!("Example: simulation-framework run --scenario AdaptivePricing -s 500 -p 100");
+
+    Ok(())
+}
+
+/// Generate shell completion script
+fn run_completion(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let shell = match shell_name.to_lowercase().as_str() {
+        "bash" => Shell::Bash,
+        "zsh" => Shell::Zsh,
+        "fish" => Shell::Fish,
+        "powershell" | "pwsh" => Shell::PowerShell,
+        _ => {
+            eprintln!("Error: Unsupported shell '{}'", shell_name);
+            eprintln!("Supported shells: bash, zsh, fish, powershell");
+            std::process::exit(1);
+        },
+    };
+
+    let mut cmd = Cli::command();
+    let bin_name = std::env::args()
+        .next()
+        .and_then(|path| {
+            std::path::Path::new(&path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "simulation-framework".to_string());
+
+    generate(shell, &mut cmd, bin_name, &mut io::stdout());
+    Ok(())
+}
+
+/// Run the interactive configuration wizard
+fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
+    // Handle --no-color flag to disable colored output globally
+    if no_color {
+        colored::control::set_override(false);
+    }
+
+    let (config, output_path) = simulation_framework::wizard::run_wizard()?;
+
+    // Save config if requested
+    if let Some(path) = &output_path {
+        let content = if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+            toml::to_string_pretty(&config)
+                .map_err(|e| format!("Failed to serialize config to TOML: {}", e))?
+        } else {
+            // Default to YAML
+            serde_yaml::to_string(&config)
+                .map_err(|e| format!("Failed to serialize config to YAML: {}", e))?
+        };
+
+        std::fs::write(path, content).map_err(|e| format!("Failed to write config file: {}", e))?;
+        println!("\n✅ Configuration saved to: {}", path.display());
+    }
+
+    // Ask if user wants to run the simulation now
+    use inquire::Confirm;
+    let run_now = Confirm::new("Would you like to run the simulation now?")
+        .with_default(false)
+        .prompt()
+        .map_err(|e| format!("Failed to get confirmation: {}", e))?;
+
+    if !run_now {
+        println!("\n👋 Configuration complete! You can run the simulation later using:");
+        if let Some(path) = output_path {
+            println!("   simulation-framework run --config {}", path.display());
+        } else {
+            println!("   simulation-framework run [with your chosen parameters]");
+        }
+        return Ok(());
+    }
+
+    // Continue with simulation using the wizard-generated config
+    let mut engine = SimulationEngine::new(config.clone());
+
+    // Run the simulation
+    let start = Instant::now();
+    let result = engine.run_with_progress(true); // Always show progress in wizard mode
+    let duration = start.elapsed();
+
+    // Print results
+    result.print_summary(true); // Always show histogram in wizard mode
+    println!("\n⏱️  Simulation completed in {:.2}s", duration.as_secs_f64());
+    println!(
+        "⚡ Performance: {:.0} steps/second",
+        result.total_steps as f64 / duration.as_secs_f64()
+    );
+
+    Ok(())
+}
+
+/// Run the main simulation
+fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Handle --no-color flag to disable colored output globally
     if args.no_color {
         colored::control::set_override(false);
@@ -528,141 +703,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::env::set_var("RUST_LOG", &args.log_level);
     }
     env_logger::init();
-
-    // Handle --list-presets flag
-    if args.list_presets {
-        println!("Available preset configurations:\n");
-        for preset in PresetName::all() {
-            let config = SimulationConfig::from_preset(preset.clone());
-            println!("  {}", preset.as_str());
-            println!("    Description: {}", preset.description());
-            println!(
-                "    Parameters: {} persons, {} steps, ${:.0} initial money, ${:.0} base price, scenario: {:?}",
-                config.entity_count,
-                config.max_steps,
-                config.initial_money_per_person,
-                config.base_skill_price,
-                config.scenario
-            );
-            println!();
-        }
-        return Ok(());
-    }
-
-    // Handle --list-scenarios flag
-    if args.list_scenarios {
-        println!("Available pricing scenarios:\n");
-
-        for scenario in Scenario::all() {
-            let default_marker = if scenario.is_default() {
-                " (default)"
-            } else {
-                ""
-            };
-            println!("  {}{}", scenario, default_marker);
-            println!("    Description: {}", scenario.description());
-            println!("    Mechanism: {}", scenario.mechanism());
-            println!("    Best for: {}\n", scenario.use_case());
-        }
-
-        println!("Usage: --scenario <SCENARIO>");
-        println!(
-            "Example: {} --scenario AdaptivePricing -s 500 -p 100",
-            std::env::args().next().unwrap_or_else(|| "simulation-framework".to_string())
-        );
-
-        return Ok(());
-    }
-
-    // Handle --generate-completion flag to generate shell completion scripts
-    if let Some(shell_name) = &args.generate_completion {
-        let shell = match shell_name.to_lowercase().as_str() {
-            "bash" => Shell::Bash,
-            "zsh" => Shell::Zsh,
-            "fish" => Shell::Fish,
-            "powershell" | "pwsh" => Shell::PowerShell,
-            _ => {
-                eprintln!("Error: Unsupported shell '{}'", shell_name);
-                eprintln!("Supported shells: bash, zsh, fish, powershell");
-                std::process::exit(1);
-            },
-        };
-
-        let mut cmd = Args::command();
-        let bin_name = std::env::args()
-            .next()
-            .and_then(|path| {
-                std::path::Path::new(&path)
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .map(|s| s.to_string())
-            })
-            .unwrap_or_else(|| "simulation-framework".to_string());
-
-        generate(shell, &mut cmd, bin_name, &mut io::stdout());
-        return Ok(());
-    }
-
-    // Handle --wizard flag to run interactive configuration wizard
-    if args.wizard {
-        let (config, output_path) = simulation_framework::wizard::run_wizard()?;
-
-        // Save config if requested
-        if let Some(path) = &output_path {
-            let content = if path.extension().and_then(|s| s.to_str()) == Some("toml") {
-                toml::to_string_pretty(&config)
-                    .map_err(|e| format!("Failed to serialize config to TOML: {}", e))?
-            } else {
-                // Default to YAML
-                serde_yaml::to_string(&config)
-                    .map_err(|e| format!("Failed to serialize config to YAML: {}", e))?
-            };
-
-            std::fs::write(path, content)
-                .map_err(|e| format!("Failed to write config file: {}", e))?;
-            println!("\n✅ Configuration saved to: {}", path.display());
-        }
-
-        // Ask if user wants to run the simulation now
-        use inquire::Confirm;
-        let run_now = Confirm::new("Would you like to run the simulation now?")
-            .with_default(false)
-            .prompt()
-            .map_err(|e| format!("Failed to get confirmation: {}", e))?;
-
-        if !run_now {
-            println!("\n👋 Configuration complete! You can run the simulation later using:");
-            if let Some(path) = output_path {
-                println!("   cargo run -- --config {}", path.display());
-            } else {
-                println!("   cargo run -- [with your chosen parameters]");
-            }
-            return Ok(());
-        }
-
-        // Continue with simulation using the wizard-generated config
-        let mut engine = SimulationEngine::new(config.clone());
-
-        // Run the simulation
-        let start = Instant::now();
-        let result = engine.run_with_progress(!args.no_progress);
-        let duration = start.elapsed();
-
-        // Print results
-        result.print_summary(true); // Show histogram
-
-        println!(
-            "\nPerformance: {:.2} steps/second",
-            config.max_steps as f64 / duration.as_secs_f64()
-        );
-
-        if let Some(output_path) = &args.output {
-            result.save_to_file(output_path, args.compress)?;
-            println!("Results saved to: {}", output_path);
-        }
-
-        return Ok(());
-    }
 
     if let Some(num_threads) = args.threads {
         rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global()?;
