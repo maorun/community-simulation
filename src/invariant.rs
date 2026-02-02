@@ -14,7 +14,7 @@
 /// let config = SimulationConfig::default();
 /// let engine = SimulationEngine::new(config);
 /// let money_conservation = simulation_framework::invariant::MoneyConservationInvariant::new(
-///     engine.entities().iter().map(|e| e.get_money()).sum()
+///     engine.get_entities().iter().map(|e| e.get_money()).sum()
 /// );
 ///
 /// // This should pass since no simulation steps have occurred
@@ -95,7 +95,7 @@ pub trait Invariant: Send + Sync {
 ///
 /// let config = SimulationConfig::default();
 /// let engine = SimulationEngine::new(config);
-/// let initial_money: f64 = engine.entities().iter().map(|e| e.get_money()).sum();
+/// let initial_money: f64 = engine.get_entities().iter().map(|e| e.get_money()).sum();
 /// let invariant = MoneyConservationInvariant::new(initial_money);
 ///
 /// // Check that money is conserved
