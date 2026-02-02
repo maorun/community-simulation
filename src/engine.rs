@@ -2678,12 +2678,14 @@ impl SimulationEngine {
                         let seller_person_id = self.entities[seller_id].id;
 
                         // Check if there's an active agreement between buyer and seller
+                        // Performance optimization: Iterate by reference instead of cloning the Vec.
+                        // This eliminates ~300 unnecessary allocations per step (100 persons × ~3 needs).
                         let buyer_agreements =
-                            self.entities[buyer_idx].person_data.trade_agreement_ids.clone();
+                            &self.entities[buyer_idx].person_data.trade_agreement_ids;
 
                         for agreement_id in buyer_agreements {
                             // O(1) HashMap lookup instead of O(n) Vec iteration
-                            if let Some(agreement) = self.trade_agreements.get(&agreement_id) {
+                            if let Some(agreement) = self.trade_agreements.get(agreement_id) {
                                 if agreement.is_active(self.current_step)
                                     && agreement.includes_both(buyer_id, seller_person_id)
                                 {
@@ -5352,28 +5354,25 @@ impl SimulationEngine {
         }
 
         // Find if there's an active agreement between these two persons
-        let buyer_agreements: Vec<usize> = self
-            .entities
-            .iter()
-            .find(|e| e.id == buyer_id)
-            .map(|e| e.person_data.trade_agreement_ids.clone())
-            .unwrap_or_default();
-
-        for agreement_id in buyer_agreements {
-            // O(1) HashMap lookup instead of O(n) Vec iteration
-            if let Some(agreement) = self.trade_agreements.get_mut(&agreement_id) {
-                if agreement.is_active(self.current_step)
-                    && agreement.includes_both(buyer_id, seller_id)
-                {
-                    agreement.record_trade(trade_value);
-                    trace!(
-                        "Trade recorded in agreement {}: buyer={}, seller={}, value={}",
-                        agreement_id,
-                        buyer_id,
-                        seller_id,
-                        trade_value
-                    );
-                    break;
+        // Performance optimization: Use find_map to avoid cloning the Vec.
+        // Instead of collecting into a temporary Vec, we iterate through references.
+        if let Some(buyer_entity) = self.entities.iter().find(|e| e.id == buyer_id) {
+            for agreement_id in &buyer_entity.person_data.trade_agreement_ids {
+                // O(1) HashMap lookup instead of O(n) Vec iteration
+                if let Some(agreement) = self.trade_agreements.get_mut(agreement_id) {
+                    if agreement.is_active(self.current_step)
+                        && agreement.includes_both(buyer_id, seller_id)
+                    {
+                        agreement.record_trade(trade_value);
+                        trace!(
+                            "Trade recorded in agreement {}: buyer={}, seller={}, value={}",
+                            agreement_id,
+                            buyer_id,
+                            seller_id,
+                            trade_value
+                        );
+                        break;
+                    }
                 }
             }
         }
