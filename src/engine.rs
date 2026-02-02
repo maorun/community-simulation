@@ -2163,6 +2163,7 @@ impl SimulationEngine {
                 None
             },
             elasticity_statistics: self.calculate_elasticity_statistics(),
+            equilibrium_statistics: self.calculate_equilibrium_statistics(),
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {
@@ -4694,6 +4695,174 @@ impl SimulationEngine {
         }
     }
 
+    /// Calculate equilibrium convergence statistics for all skills.
+    ///
+    /// Analyzes whether and how quickly markets converge to equilibrium by tracking
+    /// excess demand (demand - supply) over time. Uses historical demand and supply
+    /// data to compute convergence metrics.
+    ///
+    /// # Returns
+    ///
+    /// `Some(EquilibriumStats)` if sufficient data is available (at least 2 time periods),
+    /// `None` if not enough data exists for meaningful analysis.
+    ///
+    /// # Economic Theory
+    ///
+    /// In Walrasian equilibrium theory, markets should converge to a state where
+    /// supply equals demand through price adjustments (tâtonnement process).
+    /// This analysis tests whether the simulation exhibits this convergence behavior.
+    fn calculate_equilibrium_statistics(&self) -> Option<crate::result::EquilibriumStats> {
+        // Need at least 2 time periods to analyze convergence
+        if self.current_step < 2 {
+            return None;
+        }
+
+        let mut skill_equilibria = Vec::new();
+        let mut total_excess_demand = 0.0;
+        let mut total_abs_excess_demand = 0.0;
+        let mut total_equilibrium_steps = 0;
+        let mut total_steps = 0;
+        let mut num_converging_skills = 0;
+
+        // Calculate initial and final period variances for convergence rate
+        let mut initial_variances = Vec::new();
+        let mut final_variances = Vec::new();
+
+        for (skill_id, demand_history) in &self.market.demand_history {
+            // Get corresponding supply history
+            let supply_history = match self.market.supply_history.get(skill_id) {
+                Some(h) => h,
+                None => continue,
+            };
+
+            // All histories should have the same length
+            let num_periods = demand_history.len().min(supply_history.len());
+
+            if num_periods < 2 {
+                continue; // Need at least 2 data points
+            }
+
+            // Calculate excess demand for each time period
+            let mut excess_demands = Vec::new();
+            let mut equilibrium_count = 0;
+
+            for i in 0..num_periods {
+                let demand = demand_history[i] as i32;
+                let supply = supply_history[i] as i32;
+                let excess_demand = demand - supply;
+
+                excess_demands.push(excess_demand as f64);
+
+                if excess_demand == 0 {
+                    equilibrium_count += 1;
+                }
+
+                total_excess_demand += excess_demand as f64;
+                total_abs_excess_demand += excess_demand.abs() as f64;
+                total_steps += 1;
+            }
+
+            total_equilibrium_steps += equilibrium_count;
+
+            // Calculate statistics for this skill
+            let avg_excess_demand: f64 =
+                excess_demands.iter().sum::<f64>() / excess_demands.len() as f64;
+
+            let variance =
+                excess_demands.iter().map(|&ed| (ed - avg_excess_demand).powi(2)).sum::<f64>()
+                    / excess_demands.len() as f64;
+            let std_dev = variance.sqrt();
+
+            let equilibrium_percentage = (equilibrium_count as f64 / num_periods as f64) * 100.0;
+
+            let final_excess_demand = excess_demands.last().copied().unwrap_or(0.0) as i32;
+            let final_distance_to_equilibrium = final_excess_demand.unsigned_abs() as usize;
+
+            let avg_abs_excess_demand: f64 = excess_demands.iter().map(|&ed| ed.abs()).sum::<f64>()
+                / excess_demands.len() as f64;
+
+            // Determine if converging: compare variance in first half vs second half
+            let is_converging = if num_periods >= 4 {
+                let mid_point = num_periods / 2;
+                let first_half = &excess_demands[0..mid_point];
+                let second_half = &excess_demands[mid_point..];
+
+                let first_avg = first_half.iter().sum::<f64>() / first_half.len() as f64;
+                let second_avg = second_half.iter().sum::<f64>() / second_half.len() as f64;
+
+                let first_variance =
+                    first_half.iter().map(|&ed| (ed - first_avg).powi(2)).sum::<f64>()
+                        / first_half.len() as f64;
+
+                let second_variance =
+                    second_half.iter().map(|&ed| (ed - second_avg).powi(2)).sum::<f64>()
+                        / second_half.len() as f64;
+
+                // Store for overall convergence rate calculation
+                initial_variances.push(first_variance);
+                final_variances.push(second_variance);
+
+                // Converging if second half variance is less than first half
+                second_variance < first_variance
+            } else {
+                false // Not enough data to determine convergence trend
+            };
+
+            if is_converging {
+                num_converging_skills += 1;
+            }
+
+            skill_equilibria.push(crate::result::SkillEquilibrium {
+                skill_id: skill_id.clone(),
+                avg_excess_demand,
+                final_excess_demand,
+                excess_demand_std_dev: std_dev,
+                equilibrium_percentage,
+                final_distance_to_equilibrium,
+                is_converging,
+                avg_abs_excess_demand,
+            });
+        }
+
+        if skill_equilibria.is_empty() {
+            return None;
+        }
+
+        let avg_excess_demand = total_excess_demand / total_steps as f64;
+        let avg_distance_to_equilibrium = total_abs_excess_demand / total_steps as f64;
+        let overall_equilibrium_percentage =
+            (total_equilibrium_steps as f64 / total_steps as f64) * 100.0;
+
+        // Calculate overall convergence rate
+        let convergence_rate = if !initial_variances.is_empty() && !final_variances.is_empty() {
+            let avg_initial_variance =
+                initial_variances.iter().sum::<f64>() / initial_variances.len() as f64;
+            let avg_final_variance =
+                final_variances.iter().sum::<f64>() / final_variances.len() as f64;
+
+            if avg_initial_variance > 0.0 {
+                avg_final_variance / avg_initial_variance
+            } else {
+                1.0 // No change if initial variance was zero
+            }
+        } else {
+            1.0 // Default if not enough data
+        };
+
+        let num_skills_analyzed = skill_equilibria.len();
+
+        Some(crate::result::EquilibriumStats {
+            per_skill: skill_equilibria,
+            avg_excess_demand,
+            avg_distance_to_equilibrium,
+            overall_equilibrium_percentage,
+            num_converging_skills,
+            num_skills_analyzed,
+            num_periods_analyzed: self.current_step,
+            convergence_rate,
+        })
+    }
+
     fn calculate_average_money(&self) -> f64 {
         if self.entities.is_empty() {
             return 0.0;
@@ -4986,6 +5155,7 @@ impl SimulationEngine {
             quality_statistics: None,     // Simplified for interactive mode
             externality_statistics: None, // Simplified for interactive mode
             elasticity_statistics: None,  // Simplified for interactive mode
+            equilibrium_statistics: None, // Simplified for interactive mode
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {

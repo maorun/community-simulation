@@ -396,6 +396,7 @@ mod tests {
             quality_statistics: None,
             externality_statistics: None,
             elasticity_statistics: None,
+            equilibrium_statistics: None,
             events: None,
         }
     }
