@@ -1277,6 +1277,43 @@ pub struct SimulationConfig {
     /// Default: 0 (no initial infections)
     #[serde(default)]
     pub initial_sick_persons: usize,
+
+    /// Enable invariant checking during simulation.
+    ///
+    /// When enabled, the simulation will check configured invariants at each step
+    /// to validate simulation correctness. Invariants are conditions that should
+    /// always hold true (e.g., money conservation, non-negative wealth).
+    /// Useful for debugging and ensuring simulation validity.
+    /// Set to false to disable invariant checking (default).
+    #[serde(default)]
+    pub enable_invariant_checking: bool,
+
+    /// Strict mode for invariant violations.
+    ///
+    /// When true, the simulation will panic and abort on the first invariant violation.
+    /// When false, violations are logged but the simulation continues.
+    /// Only used when enable_invariant_checking is true.
+    /// Default: false (lenient mode, log and continue)
+    #[serde(default)]
+    pub strict_invariant_mode: bool,
+
+    /// Enable money conservation invariant check.
+    ///
+    /// When enabled, checks that the total money in the system remains constant
+    /// (accounting for fees and taxes). Helps detect bugs in money creation/destruction.
+    /// Only used when enable_invariant_checking is true.
+    /// Default: true (check money conservation)
+    #[serde(default = "default_true")]
+    pub check_money_conservation: bool,
+
+    /// Enable non-negative wealth invariant check.
+    ///
+    /// When enabled, checks that no person has negative wealth (unless loans are enabled).
+    /// Helps detect bugs in transaction logic and money handling.
+    /// Only used when enable_invariant_checking is true.
+    /// Default: true (check non-negative wealth)
+    #[serde(default = "default_true")]
+    pub check_non_negative_wealth: bool,
 }
 
 fn default_disease_transmission_rate() -> f64 {
@@ -1285,6 +1322,10 @@ fn default_disease_transmission_rate() -> f64 {
 
 fn default_disease_recovery_duration() -> usize {
     10 // Recover after 10 steps
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_pool_contribution_rate() -> f64 {
@@ -1617,7 +1658,11 @@ impl Default for SimulationConfig {
             enable_health: false,                 // Disabled by default
             disease_transmission_rate: default_disease_transmission_rate(),
             disease_recovery_duration: default_disease_recovery_duration(),
-            initial_sick_persons: 0, // No initial infections
+            initial_sick_persons: 0,          // No initial infections
+            enable_invariant_checking: false, // Disabled by default
+            strict_invariant_mode: false,     // Lenient mode by default
+            check_money_conservation: true,   // Check money conservation by default
+            check_non_negative_wealth: true,  // Check non-negative wealth by default
         }
     }
 }

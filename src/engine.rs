@@ -239,6 +239,8 @@ pub struct SimulationEngine {
     // Maps skill_id -> Vec of entity IDs that can provide that skill
     // This cache is rebuilt when skills change (learning, etc.)
     skill_providers: HashMap<SkillId, Vec<usize>>,
+    // Invariant checker for simulation validation (if enabled)
+    invariant_checker: Option<crate::invariant::InvariantChecker>,
 }
 
 impl SimulationEngine {
@@ -482,6 +484,7 @@ impl SimulationEngine {
             action_log: None, // Will be set via enable_action_recording if needed
             externality_stats: crate::externality::ExternalityStats::new(),
             skill_providers,
+            invariant_checker: None, // Will be initialized after construction if enabled
         }
     }
 
@@ -546,6 +549,73 @@ impl SimulationEngine {
             self.config.max_steps,
         ));
         debug!("Action recording enabled for replay and debugging");
+    }
+
+    /// Initialize invariant checking based on configuration.
+    ///
+    /// This should be called after engine creation to set up invariant checks
+    /// according to the configuration parameters.
+    fn initialize_invariant_checking(&mut self) {
+        if !self.config.enable_invariant_checking {
+            return;
+        }
+
+        use crate::invariant::{
+            InvariantChecker, MoneyConservationInvariant, NonNegativeWealthInvariant,
+        };
+
+        let mut checker = if self.config.strict_invariant_mode {
+            InvariantChecker::new_strict()
+        } else {
+            InvariantChecker::new()
+        };
+
+        // Add money conservation invariant if enabled
+        if self.config.check_money_conservation {
+            let initial_total_money: f64 =
+                self.entities.iter().map(|e| e.get_money() + e.person_data.savings).sum();
+            checker.add_invariant(Box::new(MoneyConservationInvariant::new(initial_total_money)));
+            debug!(
+                "Money conservation invariant enabled (initial total: {:.2})",
+                initial_total_money
+            );
+        }
+
+        // Add non-negative wealth invariant if enabled
+        if self.config.check_non_negative_wealth {
+            checker.add_invariant(Box::new(NonNegativeWealthInvariant::new(true)));
+            debug!("Non-negative wealth invariant enabled");
+        }
+
+        if checker.has_invariants() {
+            info!(
+                "Invariant checking enabled with {} invariant(s) in {} mode",
+                checker.count(),
+                if checker.is_strict() {
+                    "strict"
+                } else {
+                    "lenient"
+                }
+            );
+            self.invariant_checker = Some(checker);
+        }
+    }
+
+    /// Check all registered invariants and handle violations.
+    ///
+    /// Returns true if all invariants pass, false if any violations occurred.
+    /// In strict mode, this will panic on the first violation.
+    fn check_invariants(&self) -> bool {
+        if let Some(checker) = &self.invariant_checker {
+            let violations = checker.check_all(self);
+            if !violations.is_empty() {
+                for violation in &violations {
+                    warn!("Invariant violation: {}", violation);
+                }
+                return false;
+            }
+        }
+        true
     }
 
     /// Save the action log to a file.
@@ -925,6 +995,9 @@ impl SimulationEngine {
             self.config.max_steps, self.config.scenario
         );
 
+        // Initialize invariant checking if enabled
+        self.initialize_invariant_checking();
+
         // Create plugin context for simulation start
         // Performance optimization: Pass references to person_data instead of cloning
         let persons: Vec<&Person> = self.entities.iter().map(|e| &e.person_data).collect();
@@ -1022,6 +1095,11 @@ impl SimulationEngine {
             let step_duration = step_start.elapsed();
             step_times.push(step_duration.as_secs_f64());
 
+            // Check invariants after each step (if enabled)
+            if self.invariant_checker.is_some() {
+                self.check_invariants();
+            }
+
             // Notify plugins after step completes
             // Performance optimization: Pass references to person_data instead of cloning
             let persons: Vec<&Person> = self.entities.iter().map(|e| &e.person_data).collect();
@@ -1108,6 +1186,19 @@ impl SimulationEngine {
         // Finish progress bar
         if let Some(pb) = progress_bar {
             pb.finish_with_message("Simulation complete");
+        }
+
+        // Log invariant checking summary if enabled
+        if let Some(ref checker) = self.invariant_checker {
+            let violations = checker.total_violations();
+            if violations > 0 {
+                warn!(
+                    "Invariant checking summary: {} violation(s) detected during simulation",
+                    violations
+                );
+            } else {
+                info!("Invariant checking summary: No violations detected - simulation is valid");
+            }
         }
 
         let total_duration = start_time.elapsed();
@@ -4652,6 +4743,21 @@ impl SimulationEngine {
         &self.market
     }
 
+    /// Get read-only access to the simulation configuration.
+    pub fn get_config(&self) -> &SimulationConfig {
+        &self.config
+    }
+
+    /// Get the total transaction fees collected so far.
+    pub fn get_total_fees_collected(&self) -> f64 {
+        self.total_fees_collected
+    }
+
+    /// Get the total taxes collected so far.
+    pub fn get_total_taxes_collected(&self) -> f64 {
+        self.total_taxes_collected
+    }
+
     /// Get the current simulation result snapshot
     /// This creates a simplified SimulationResult for display in interactive mode
     /// Note: Some complex statistics are omitted for simplicity
@@ -5139,6 +5245,7 @@ impl SimulationEngine {
             action_log: checkpoint.action_log,
             externality_stats: checkpoint.externality_stats,
             skill_providers,
+            invariant_checker: None, // Invariants will be re-initialized after loading
         })
     }
 

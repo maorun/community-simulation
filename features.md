@@ -346,20 +346,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Netzwerk-Visualisierung via GraphML-Export
 - Integration mit Grafana via Prometheus-Exporter
 
-#### 2.2 Assertion-Framework für Invarianten
-**Beschreibung:** Deklaratives Framework für Invarianten-Checks die während der Simulation validiert werden.
-
-**Nutzen:**
-- Frühzeitige Bug-Erkennung
-- Validierung von ökonomischen Annahmen
-- Selbst-dokumentierender Code
-
-**Implementierung:**
-- `Invariant` Trait mit `check()` Methode
-- Built-in Invarianten (Money-Conservation, Non-Negative-Wealth)
-- Custom-Invarianten via Config
-- `--strict` Mode der bei Violation sofort abbricht vs. nur warnt
-
 ## 🎯 Priorisierung
 
 ### Hohe Priorität (Kurzfristig - hohe Harmonie-Effekte)

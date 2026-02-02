@@ -106,6 +106,15 @@ This repository contains a configurable economic simulation written in Rust. It 
   
   All weights are configurable (0.0-1.0 range), allowing experimentation with different decision strategies. The system combines these factors into a single priority score for each potential purchase, then sorts options by priority (highest first). This enables realistic, heterogeneous agent behavior that considers multiple objectives simultaneously rather than simple urgency-only sorting.
 - **Price Volatility:** Skill prices include a configurable random volatility component.
+- **Invariant Checking Framework:** Built-in validation system for checking simulation correctness during execution. When enabled via `--enable-invariant-checking`, the simulation validates conditions that should always hold true at each step:
+  - **Money Conservation Invariant:** Ensures total money in the system remains constant (accounting for fees, taxes, and savings), helping detect bugs in money creation/destruction logic
+  - **Non-Negative Wealth Invariant:** Ensures no person has negative money balances (automatically skipped when loans are enabled, allowing debt)
+  
+  Supports two modes:
+  - **Lenient mode** (default): Logs violations as warnings but continues simulation, useful for debugging
+  - **Strict mode** (`--strict-invariant-mode`): Panics and aborts on first violation, ensuring perfect correctness
+  
+  The framework is extensible - custom invariants can be added by implementing the `Invariant` trait. Individual invariants can be toggled via configuration (`check_money_conservation`, `check_non_negative_wealth`). Perfect for development, testing, and ensuring simulation validity. Minimal performance overhead when disabled (default).
 - **Configurable Parameters:** Allows customization of simulation parameters via command-line arguments or configuration files (YAML/TOML). CLI arguments override config file values.
 - **Input Validation:** Comprehensive validation of all configuration parameters with clear error messages. Ensures parameters are within acceptable ranges (e.g., positive values for steps/persons, valid ranges for rates/amplitudes) to prevent crashes and provide immediate feedback on configuration errors.
 - **Configuration Files:** Support for YAML and TOML configuration files to easily define complex simulation scenarios without lengthy command lines.
