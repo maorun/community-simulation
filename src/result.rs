@@ -1059,6 +1059,84 @@ pub struct ElasticityStats {
     pub num_periods_analyzed: usize,
 }
 
+/// Equilibrium analysis for a single skill over time.
+///
+/// Analyzes excess demand (demand - supply) patterns to determine whether
+/// and how quickly a skill's market converges to equilibrium.
+///
+/// # Equilibrium Concepts
+///
+/// - **Excess Demand > 0**: More buyers than sellers → upward price pressure
+/// - **Excess Demand < 0**: More sellers than buyers → downward price pressure
+/// - **Excess Demand = 0**: Market clearing → equilibrium state
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SkillEquilibrium {
+    /// Skill identifier
+    pub skill_id: SkillId,
+    /// Average excess demand over all simulation steps (demand - supply)
+    pub avg_excess_demand: f64,
+    /// Final excess demand (at last simulation step)
+    pub final_excess_demand: i32,
+    /// Standard deviation of excess demand over time (measure of volatility)
+    pub excess_demand_std_dev: f64,
+    /// Percentage of steps where market was in equilibrium (excess demand = 0)
+    pub equilibrium_percentage: f64,
+    /// Distance to equilibrium at final step (absolute value of final excess demand)
+    pub final_distance_to_equilibrium: usize,
+    /// Whether the market appears to be converging (excess demand variance decreasing over time)
+    pub is_converging: bool,
+    /// Average absolute excess demand over time (measure of overall market clearing)
+    pub avg_abs_excess_demand: f64,
+}
+
+/// Complete equilibrium convergence analysis for all skills.
+///
+/// Provides comprehensive analysis of market equilibrium dynamics, measuring
+/// whether markets clear efficiently and how quickly they converge.
+///
+/// # Economic Theory
+///
+/// In general equilibrium theory (Walrasian equilibrium), markets should converge
+/// to a state where supply equals demand for all goods through price adjustments.
+/// This analysis validates whether the simulation exhibits this theoretical behavior.
+///
+/// # Use Cases
+///
+/// - **Theory Validation**: Verify simulation matches economic theory
+/// - **Convergence Speed**: Measure how quickly markets reach equilibrium
+/// - **Market Efficiency**: Identify chronically unbalanced markets
+/// - **Policy Effects**: Assess how interventions affect equilibrium convergence
+///
+/// # Example
+///
+/// ```
+/// # use simulation_framework::result::EquilibriumStats;
+/// // Example interpretation:
+/// // - avg_distance_to_equilibrium near 0.0 means markets clear well
+/// // - convergence_rate near 1.0 means markets stabilize over time
+/// // - skills_at_equilibrium near 100% means efficient market coordination
+/// ```
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EquilibriumStats {
+    /// Equilibrium analysis for each skill
+    pub per_skill: Vec<SkillEquilibrium>,
+    /// Average excess demand across all skills and all time periods
+    pub avg_excess_demand: f64,
+    /// Average absolute excess demand across all skills (measure of market clearing)
+    pub avg_distance_to_equilibrium: f64,
+    /// Percentage of skill-steps that were at equilibrium (excess demand = 0)
+    pub overall_equilibrium_percentage: f64,
+    /// Number of skills that appear to be converging to equilibrium
+    pub num_converging_skills: usize,
+    /// Number of skills analyzed
+    pub num_skills_analyzed: usize,
+    /// Number of time periods (simulation steps) used for analysis
+    pub num_periods_analyzed: usize,
+    /// Convergence rate: ratio of final-period variance to initial-period variance
+    /// Values < 1.0 indicate convergence, > 1.0 indicate divergence
+    pub convergence_rate: f64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulationResult {
     /// Metadata about this simulation run for reproducibility
@@ -1231,6 +1309,15 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub elasticity_statistics: Option<ElasticityStats>,
 
+    /// Equilibrium convergence analysis statistics.
+    ///
+    /// Analyzes whether and how quickly the market converges to equilibrium by tracking
+    /// excess demand (demand - supply) for each skill over time. Provides metrics on
+    /// market clearing, convergence speed, and stability. Only present if simulation
+    /// ran for at least 2 steps (need time series data for convergence analysis).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub equilibrium_statistics: Option<EquilibriumStats>,
+
     /// Event log (only present if event tracking is enabled).
     ///
     /// Contains timestamped events for trades, price updates, reputation changes,
@@ -1337,6 +1424,7 @@ impl SimulationResult {
     /// #     quality_statistics: None,
     /// #     externality_statistics: None,
     /// #     elasticity_statistics: None,
+    /// #     equilibrium_statistics: None,
     /// #     events: None,
     /// #     final_persons_data: vec![],
     /// # };
@@ -3706,6 +3794,7 @@ mod tests {
             quality_statistics: None,
             externality_statistics: None,
             elasticity_statistics: None,
+            equilibrium_statistics: None,
             events: None,
             final_persons_data: vec![],
         }
