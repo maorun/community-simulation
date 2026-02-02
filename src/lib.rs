@@ -135,7 +135,10 @@ pub use error::{Result, SimulationError};
 pub use event::{EventBus, EventType, SimulationEvent};
 pub use externality::{Externality, ExternalityStats, SkillExternalityStats};
 pub use insurance::{Insurance, InsuranceId, InsuranceType};
-pub use invariant::{Invariant, InvariantChecker, InvariantViolation, MoneyConservationInvariant, NonNegativeWealthInvariant};
+pub use invariant::{
+    Invariant, InvariantChecker, InvariantViolation, MoneyConservationInvariant,
+    NonNegativeWealthInvariant,
+};
 pub use investment::{Investment, InvestmentId, InvestmentType};
 pub use loan::{Loan, LoanId};
 pub use market::Market;

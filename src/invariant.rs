@@ -16,11 +16,10 @@
 /// let money_conservation = simulation_framework::invariant::MoneyConservationInvariant::new(
 ///     engine.entities().iter().map(|e| e.get_money()).sum()
 /// );
-/// 
+///
 /// // This should pass since no simulation steps have occurred
 /// assert!(money_conservation.check(&engine).is_ok());
 /// ```
-
 use crate::engine::SimulationEngine;
 use std::fmt;
 
@@ -98,7 +97,7 @@ pub trait Invariant: Send + Sync {
 /// let engine = SimulationEngine::new(config);
 /// let initial_money: f64 = engine.entities().iter().map(|e| e.get_money()).sum();
 /// let invariant = MoneyConservationInvariant::new(initial_money);
-/// 
+///
 /// // Check that money is conserved
 /// assert!(invariant.check(&engine).is_ok());
 /// ```
@@ -128,10 +127,7 @@ impl MoneyConservationInvariant {
     /// * `initial_total_money` - The total amount of money at the start of the simulation
     /// * `tolerance` - The acceptable difference in money totals (for floating-point precision)
     pub fn new_with_tolerance(initial_total_money: f64, tolerance: f64) -> Self {
-        Self {
-            initial_total_money,
-            tolerance,
-        }
+        Self { initial_total_money, tolerance }
     }
 }
 
@@ -159,7 +155,7 @@ impl Invariant for MoneyConservationInvariant {
 
         // Check if money is conserved within tolerance
         let difference = (current_total - self.initial_total_money).abs();
-        
+
         if difference > self.tolerance {
             return Err(InvariantViolation {
                 invariant_name: self.name().to_string(),
@@ -199,7 +195,7 @@ impl Invariant for MoneyConservationInvariant {
 /// let config = SimulationConfig::default();
 /// let engine = SimulationEngine::new(config);
 /// let invariant = NonNegativeWealthInvariant::new(false); // No loans enabled
-/// 
+///
 /// // Check that all persons have non-negative wealth
 /// assert!(invariant.check(&engine).is_ok());
 /// ```
@@ -215,9 +211,7 @@ impl NonNegativeWealthInvariant {
     ///
     /// * `allow_negative_when_loans_enabled` - If true, the invariant is skipped when loans are enabled
     pub fn new(allow_negative_when_loans_enabled: bool) -> Self {
-        Self {
-            allow_negative_when_loans_enabled,
-        }
+        Self { allow_negative_when_loans_enabled }
     }
 }
 
@@ -303,20 +297,14 @@ pub struct InvariantChecker {
 impl InvariantChecker {
     /// Creates a new empty invariant checker.
     pub fn new() -> Self {
-        Self {
-            invariants: Vec::new(),
-            strict_mode: false,
-        }
+        Self { invariants: Vec::new(), strict_mode: false }
     }
 
     /// Creates a new invariant checker in strict mode.
     ///
     /// In strict mode, the simulation will panic on the first invariant violation.
     pub fn new_strict() -> Self {
-        Self {
-            invariants: Vec::new(),
-            strict_mode: true,
-        }
+        Self { invariants: Vec::new(), strict_mode: true }
     }
 
     /// Adds an invariant to be checked.
@@ -374,7 +362,7 @@ mod tests {
         let config = SimulationConfig::default();
         let engine = SimulationEngine::new(config);
         let initial_money: f64 = engine.get_entities().iter().map(|e| e.get_money()).sum();
-        
+
         let invariant = MoneyConservationInvariant::new(initial_money);
         assert!(invariant.check(&engine).is_ok());
     }
@@ -383,7 +371,7 @@ mod tests {
     fn test_non_negative_wealth_invariant_passes() {
         let config = SimulationConfig::default();
         let engine = SimulationEngine::new(config);
-        
+
         let invariant = NonNegativeWealthInvariant::new(false);
         assert!(invariant.check(&engine).is_ok());
     }
@@ -400,7 +388,7 @@ mod tests {
     fn test_invariant_checker_strict_mode() {
         let mut checker = InvariantChecker::new_strict();
         assert!(checker.is_strict());
-        
+
         checker.set_strict_mode(false);
         assert!(!checker.is_strict());
     }
@@ -410,14 +398,14 @@ mod tests {
         let config = SimulationConfig::default();
         let engine = SimulationEngine::new(config);
         let initial_money: f64 = engine.get_entities().iter().map(|e| e.get_money()).sum();
-        
+
         let mut checker = InvariantChecker::new();
         checker.add_invariant(Box::new(MoneyConservationInvariant::new(initial_money)));
         checker.add_invariant(Box::new(NonNegativeWealthInvariant::new(false)));
-        
+
         assert_eq!(checker.count(), 2);
         assert!(checker.has_invariants());
-        
+
         let violations = checker.check_all(&engine);
         assert_eq!(violations.len(), 0, "No violations should be found in initial state");
     }
@@ -431,7 +419,7 @@ mod tests {
             expected: Some("100".to_string()),
             actual: Some("95".to_string()),
         };
-        
+
         let display = format!("{}", violation);
         assert!(display.contains("TestInvariant"));
         assert!(display.contains("step 42"));

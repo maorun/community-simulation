@@ -1658,11 +1658,11 @@ impl Default for SimulationConfig {
             enable_health: false,                 // Disabled by default
             disease_transmission_rate: default_disease_transmission_rate(),
             disease_recovery_duration: default_disease_recovery_duration(),
-            initial_sick_persons: 0,              // No initial infections
-            enable_invariant_checking: false,     // Disabled by default
-            strict_invariant_mode: false,         // Lenient mode by default
-            check_money_conservation: true,       // Check money conservation by default
-            check_non_negative_wealth: true,      // Check non-negative wealth by default
+            initial_sick_persons: 0,          // No initial infections
+            enable_invariant_checking: false, // Disabled by default
+            strict_invariant_mode: false,     // Lenient mode by default
+            check_money_conservation: true,   // Check money conservation by default
+            check_non_negative_wealth: true,  // Check non-negative wealth by default
         }
     }
 }
