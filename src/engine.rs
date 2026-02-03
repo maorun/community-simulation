@@ -2164,6 +2164,7 @@ impl SimulationEngine {
             },
             elasticity_statistics: self.calculate_elasticity_statistics(),
             equilibrium_statistics: self.calculate_equilibrium_statistics(),
+            welfare_statistics: self.calculate_welfare_statistics(),
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {
@@ -4717,6 +4718,75 @@ impl SimulationEngine {
     /// In Walrasian equilibrium theory, markets should converge to a state where
     /// supply equals demand through price adjustments (tâtonnement process).
     /// This analysis tests whether the simulation exhibits this convergence behavior.
+    /// Calculate welfare analysis metrics from transaction data.
+    ///
+    /// This method estimates consumer surplus, producer surplus, and deadweight loss
+    /// based on the completed trades during the simulation.
+    ///
+    /// # Methodology
+    ///
+    /// - **Consumer Surplus**: Approximated as 10% of total trade volume, representing
+    ///   the typical buyer gains from trade. In a real economy, buyers pay less than
+    ///   their maximum willingness to pay, creating surplus.
+    ///
+    /// - **Producer Surplus**: Approximated as the seller's proceeds after costs.
+    ///   Estimated as trade proceeds minus transaction fees minus taxes, adjusted for
+    ///   an assumed cost basis (30% of price).
+    ///
+    /// - **Deadweight Loss**: Estimated from failed trade attempts. Each failed trade
+    ///   represents potential welfare that wasn't realized due to market frictions,
+    ///   estimated at 20% of the average trade value.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some(WelfareMetrics)` if at least one trade occurred, `None` otherwise.
+    fn calculate_welfare_statistics(&self) -> Option<crate::result::WelfareMetrics> {
+        let total_trades: usize = self.trades_per_step.iter().sum();
+
+        if total_trades == 0 {
+            return None;
+        }
+
+        let total_volume: f64 = self.volume_per_step.iter().sum();
+        let avg_trade_value = total_volume / total_trades as f64;
+
+        // Estimate consumer surplus: Approximate as 10% of total trade volume
+        // This represents the typical gains to buyers who pay less than their maximum willingness to pay
+        let consumer_surplus = total_volume * 0.10;
+
+        // Estimate producer surplus: Sellers' proceeds after costs
+        // Proceed = price - transaction_fee - tax - production_cost
+        // Assume production cost is ~30% of price on average
+        let effective_seller_proceeds = total_volume
+            * (1.0 - self.config.transaction_fee)
+            * (1.0 - self.config.tax_rate)
+            * 0.70; // 70% is profit margin, 30% is cost
+
+        let producer_surplus = effective_seller_proceeds;
+
+        // Total welfare is the sum of consumer and producer surplus
+        let total_welfare = consumer_surplus + producer_surplus;
+
+        // Estimate deadweight loss from failed trades
+        // Each failed trade represents unrealized welfare
+        let total_failed: usize = self.failed_attempts_per_step.iter().sum();
+        let deadweight_loss = total_failed as f64 * avg_trade_value * 0.20;
+
+        // Calculate per-trade averages
+        let avg_consumer_surplus_per_trade = consumer_surplus / total_trades as f64;
+        let avg_producer_surplus_per_trade = producer_surplus / total_trades as f64;
+
+        Some(crate::result::WelfareMetrics {
+            consumer_surplus,
+            producer_surplus,
+            total_welfare,
+            deadweight_loss,
+            trades_analyzed: total_trades,
+            avg_consumer_surplus_per_trade,
+            avg_producer_surplus_per_trade,
+        })
+    }
+
     fn calculate_equilibrium_statistics(&self) -> Option<crate::result::EquilibriumStats> {
         // Need at least 2 time periods to analyze convergence
         if self.current_step < 2 {
@@ -5162,6 +5232,7 @@ impl SimulationEngine {
             externality_statistics: None, // Simplified for interactive mode
             elasticity_statistics: None,  // Simplified for interactive mode
             equilibrium_statistics: None, // Simplified for interactive mode
+            welfare_statistics: self.calculate_welfare_statistics(),
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {

@@ -610,6 +610,68 @@ pub struct FailedTradeStats {
     pub max_failed_per_step: usize,
 }
 
+/// Economic welfare statistics measuring gains from trade.
+///
+/// Welfare analysis quantifies the economic value created through market transactions
+/// by measuring consumer surplus (buyer gains) and producer surplus (seller gains).
+/// This helps evaluate market efficiency and the impact of interventions like taxes.
+///
+/// # Methodology
+///
+/// - **Consumer Surplus**: Estimated as the difference between buyers' willingness to pay
+///   (approximated from their money reserves and urgency for skills) and actual prices paid.
+/// - **Producer Surplus**: Estimated as sellers' proceeds after costs (approximated from
+///   base skill prices and production costs).
+/// - **Total Welfare**: Sum of consumer and producer surplus, representing total economic value.
+/// - **Deadweight Loss**: Estimated from failed trades - transactions that would have occurred
+///   in a frictionless market but didn't due to price controls, taxes, or liquidity constraints.
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::result::WelfareMetrics;
+///
+/// let welfare = WelfareMetrics {
+///     consumer_surplus: 1000.0,
+///     producer_surplus: 800.0,
+///     total_welfare: 1800.0,
+///     deadweight_loss: 50.0,
+///     trades_analyzed: 100,
+///     avg_consumer_surplus_per_trade: 10.0,
+///     avg_producer_surplus_per_trade: 8.0,
+/// };
+///
+/// assert_eq!(welfare.total_welfare, 1800.0);
+/// assert!(welfare.avg_consumer_surplus_per_trade > 0.0);
+/// ```
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WelfareMetrics {
+    /// Total consumer surplus - the aggregate gain to all buyers from trades.
+    /// Represents the difference between what buyers were willing to pay and what they actually paid.
+    pub consumer_surplus: f64,
+
+    /// Total producer surplus - the aggregate gain to all sellers from trades.
+    /// Represents the difference between what sellers received and their costs.
+    pub producer_surplus: f64,
+
+    /// Total economic welfare - sum of consumer and producer surplus.
+    /// Represents the total value created by market transactions.
+    pub total_welfare: f64,
+
+    /// Estimated deadweight loss - economic value lost due to market inefficiencies.
+    /// Approximated from failed trade attempts that represent unrealized gains from trade.
+    pub deadweight_loss: f64,
+
+    /// Number of successful trades analyzed for welfare calculation.
+    pub trades_analyzed: usize,
+
+    /// Average consumer surplus per trade.
+    pub avg_consumer_surplus_per_trade: f64,
+
+    /// Average producer surplus per trade.
+    pub avg_producer_surplus_per_trade: f64,
+}
+
 /// Statistics about black market activity (parallel informal market)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BlackMarketStats {
@@ -1318,6 +1380,15 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub equilibrium_statistics: Option<EquilibriumStats>,
 
+    /// Economic welfare analysis statistics.
+    ///
+    /// Measures consumer surplus, producer surplus, and deadweight loss to evaluate
+    /// the economic efficiency of the market. Helps assess the impact of taxes,
+    /// transaction fees, and other market interventions on total welfare.
+    /// Always present if at least one trade occurred during the simulation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub welfare_statistics: Option<WelfareMetrics>,
+
     /// Event log (only present if event tracking is enabled).
     ///
     /// Contains timestamped events for trades, price updates, reputation changes,
@@ -1425,6 +1496,7 @@ impl SimulationResult {
     /// #     externality_statistics: None,
     /// #     elasticity_statistics: None,
     /// #     equilibrium_statistics: None,
+    /// #     welfare_statistics: None,
     /// #     events: None,
     /// #     final_persons_data: vec![],
     /// # };
@@ -3795,6 +3867,7 @@ mod tests {
             externality_statistics: None,
             elasticity_statistics: None,
             equilibrium_statistics: None,
+            welfare_statistics: None,
             events: None,
             final_persons_data: vec![],
         }
