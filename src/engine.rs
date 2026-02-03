@@ -2340,6 +2340,7 @@ impl SimulationEngine {
         // Performance optimization: Pre-allocate reusable buffer for potential needs
         // to avoid repeated allocations in the hot loop below.
         // Capacity matches max possible needs to avoid reallocation.
+        // This buffer is cleared and reused for each person to reduce allocation overhead.
         let mut potential_needs_buffer: Vec<SkillId> = Vec::with_capacity(self.all_skill_ids.len());
 
         for entity in self.entities.iter_mut() {
@@ -2504,7 +2505,9 @@ impl SimulationEngine {
 
             // Calculate priority scores for all needed skills
             let buyer_money = self.entities[buyer_idx].person_data.money;
-            let mut purchase_options: Vec<PurchaseOption> = Vec::new();
+            // Performance optimization: Pre-allocate with capacity for typical number of needs (1-5)
+            // to avoid reallocation during push operations. Max needs is clamped to 5 (line 2368).
+            let mut purchase_options: Vec<PurchaseOption> = Vec::with_capacity(5);
 
             for (needed_item_index, needed_item) in
                 self.entities[buyer_idx].person_data.needed_skills.iter().enumerate()
