@@ -280,24 +280,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Chunked-Writing für große Datasets
 - Optional via CLI-Flag `--export-parquet`
 
-## 📊 Analyse und Forschung
-
-### 1. Wirtschaftliche Analysen
-
-#### 1.1 Wohlfahrts-Analyse und Deadweight-Loss
-**Beschreibung:** Berechnung von Konsumentenrente, Produzentenrente und Gesamt-Wohlfahrt. Deadweight-Loss durch Steuern oder Markteingriffe.
-
-**Nutzen:**
-- Quantifizierung von Policy-Effekten auf Wohlfahrt
-- Trade-off-Analyse (Effizienz vs. Gleichheit)
-- Optimale Steuer-Design
-
-**Implementierung:**
-- `WelfareMetrics` Modul
-- Konsumenten/Produzenten-Rente aus Transaktionsdaten
-- Deadweight-Loss-Berechnung bei Steuern/Preiskontrollen
-- Integration in Scenario-Comparison
-
 ## 🛠️ Entwickler-Tools
 
 ### 1. Debugging-Tools
