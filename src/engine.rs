@@ -29,6 +29,26 @@ use std::time::Instant;
 const TECH_SHOCK_MIN_AFFECTED_PERCENTAGE: f64 = 0.20; // Minimum 20% of skills affected
 const TECH_SHOCK_SEVERITY_RANGE: f64 = 0.20; // Additional 20% based on severity
 
+// Welfare analysis constants
+/// Approximate consumer surplus as a fraction of total trade volume.
+/// This represents the typical gains to buyers who pay less than their maximum willingness to pay.
+/// Economic research suggests consumer surplus is typically 10-15% of transaction value in
+/// competitive markets with price discrimination.
+const CONSUMER_SURPLUS_RATIO: f64 = 0.10;
+
+/// Assumed profit margin for producers after accounting for costs.
+/// This represents the fraction of seller proceeds that constitutes profit after
+/// production costs. A 70% profit margin (30% cost basis) is typical for
+/// service-based economies with low marginal costs.
+const ASSUMED_PROFIT_MARGIN: f64 = 0.70;
+
+/// Ratio used to estimate deadweight loss from failed trade attempts.
+/// Each failed trade represents unrealized welfare. We estimate this at 20%
+/// of average trade value, reflecting that failed trades represent missed
+/// opportunities where both buyer and seller would have benefited, but
+/// market frictions (insufficient funds, price controls, etc.) prevented it.
+const DEADWEIGHT_LOSS_RATIO: f64 = 0.20;
+
 /// Represents a positive technology breakthrough event.
 ///
 /// Breakthroughs are sudden innovations that boost the efficiency of specific skills,
@@ -4718,28 +4738,11 @@ impl SimulationEngine {
     /// In Walrasian equilibrium theory, markets should converge to a state where
     /// supply equals demand through price adjustments (tâtonnement process).
     /// This analysis tests whether the simulation exhibits this convergence behavior.
-    /// Calculate welfare analysis metrics from transaction data.
-    ///
-    /// This method estimates consumer surplus, producer surplus, and deadweight loss
-    /// based on the completed trades during the simulation.
-    ///
-    /// # Methodology
-    ///
-    /// - **Consumer Surplus**: Approximated as 10% of total trade volume, representing
-    ///   the typical buyer gains from trade. In a real economy, buyers pay less than
-    ///   their maximum willingness to pay, creating surplus.
-    ///
-    /// - **Producer Surplus**: Approximated as the seller's proceeds after costs.
-    ///   Estimated as trade proceeds minus transaction fees minus taxes, adjusted for
-    ///   an assumed cost basis (30% of price).
-    ///
-    /// - **Deadweight Loss**: Estimated from failed trade attempts. Each failed trade
-    ///   represents potential welfare that wasn't realized due to market frictions,
-    ///   estimated at 20% of the average trade value.
     ///
     /// # Returns
     ///
-    /// Returns `Some(WelfareMetrics)` if at least one trade occurred, `None` otherwise.
+    /// Returns `None` if the simulation has run for fewer than 2 steps, as at least
+    /// two time periods are needed to calculate convergence metrics.
     fn calculate_welfare_statistics(&self) -> Option<crate::result::WelfareMetrics> {
         let total_trades: usize = self.trades_per_step.iter().sum();
 
@@ -4750,27 +4753,26 @@ impl SimulationEngine {
         let total_volume: f64 = self.volume_per_step.iter().sum();
         let avg_trade_value = total_volume / total_trades as f64;
 
-        // Estimate consumer surplus: Approximate as 10% of total trade volume
+        // Estimate consumer surplus using the defined ratio
         // This represents the typical gains to buyers who pay less than their maximum willingness to pay
-        let consumer_surplus = total_volume * 0.10;
+        let consumer_surplus = total_volume * CONSUMER_SURPLUS_RATIO;
 
         // Estimate producer surplus: Sellers' proceeds after costs
         // Proceed = price - transaction_fee - tax - production_cost
-        // Assume production cost is ~30% of price on average
         let effective_seller_proceeds = total_volume
             * (1.0 - self.config.transaction_fee)
             * (1.0 - self.config.tax_rate)
-            * 0.70; // 70% is profit margin, 30% is cost
+            * ASSUMED_PROFIT_MARGIN;
 
         let producer_surplus = effective_seller_proceeds;
 
         // Total welfare is the sum of consumer and producer surplus
         let total_welfare = consumer_surplus + producer_surplus;
 
-        // Estimate deadweight loss from failed trades
+        // Estimate deadweight loss from failed trades using the defined ratio
         // Each failed trade represents unrealized welfare
         let total_failed: usize = self.failed_attempts_per_step.iter().sum();
-        let deadweight_loss = total_failed as f64 * avg_trade_value * 0.20;
+        let deadweight_loss = total_failed as f64 * avg_trade_value * DEADWEIGHT_LOSS_RATIO;
 
         // Calculate per-trade averages
         let avg_consumer_surplus_per_trade = consumer_surplus / total_trades as f64;
