@@ -68,6 +68,7 @@ Coverage is automatically tracked in CI:
 - Reports are uploaded to Codecov
 - Coverage badges in README.md show current coverage status
 - CI will warn (but not fail) if coverage drops below 70%
+- **Caching:** The CI workflow caches cargo-tarpaulin binary and cargo dependencies to significantly speed up subsequent runs (typically 2-3 minutes faster)
 
 ## Understanding Coverage Metrics
 
