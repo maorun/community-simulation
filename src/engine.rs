@@ -2469,9 +2469,10 @@ impl SimulationEngine {
 
         // Performance optimization: Pre-allocate reusable buffer for potential needs
         // to avoid repeated allocations in the hot loop below.
-        // Capacity matches max possible needs to avoid reallocation.
-        // This buffer is cleared and reused for each person to reduce allocation overhead.
-        let mut potential_needs_buffer: Vec<SkillId> = Vec::with_capacity(self.all_skill_ids.len());
+        // Optimization: Store indices instead of cloning SkillIds to avoid ~9,500 String
+        // clones per step (100 entities × ~95 filtered skills). We only clone the 1-5
+        // skills actually selected after shuffling, reducing clones by ~95%.
+        let mut potential_needs_indices: Vec<usize> = Vec::with_capacity(self.all_skill_ids.len());
 
         for entity in self.entities.iter_mut() {
             if !entity.active {
@@ -2502,31 +2503,35 @@ impl SimulationEngine {
             };
 
             // Filter out skills the person already has (either as own_skills or learned_skills)
-            // Performance optimization: Reuse pre-allocated buffer instead of allocating new Vec
-            potential_needs_buffer.clear();
-            potential_needs_buffer.extend(
+            // Performance optimization: Store indices instead of cloning SkillIds.
+            // We filter first, then shuffle, then only clone the few (1-5) actually selected.
+            // This reduces String clones from ~9,500/step to ~300/step (100 entities × ~3 needs).
+            potential_needs_indices.clear();
+            potential_needs_indices.extend(
                 self.all_skill_ids
                     .iter()
-                    .filter(|&id| !entity.person_data.has_skill(id))
-                    .cloned(),
+                    .enumerate()
+                    .filter(|(_idx, id)| !entity.person_data.has_skill(id))
+                    .map(|(idx, _id)| idx),
             );
 
-            potential_needs_buffer.shuffle(&mut self.rng);
+            potential_needs_indices.shuffle(&mut self.rng);
 
             for _ in 0..num_needs {
-                if let Some(needed_skill_id) = potential_needs_buffer.pop() {
+                if let Some(idx) = potential_needs_indices.pop() {
+                    let needed_skill_id = &self.all_skill_ids[idx];
                     if !entity
                         .person_data
                         .needed_skills
                         .iter()
-                        .any(|item| item.id == needed_skill_id)
+                        .any(|item| &item.id == needed_skill_id)
                     {
                         let urgency = self.rng.random_range(1..=3);
                         entity.person_data.needed_skills.push(crate::person::NeededSkillItem {
-                            id: needed_skill_id.clone(),
+                            id: needed_skill_id.clone(),  // Only clone the selected ones (1-5 per entity)
                             urgency,
                         });
-                        self.market.increment_demand(&needed_skill_id);
+                        self.market.increment_demand(needed_skill_id);
                     }
                 } else {
                     break;
