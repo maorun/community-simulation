@@ -896,6 +896,40 @@ mod tests {
     }
 
     #[test]
+    fn test_social_class_ordering() {
+        // Verify that the derived Ord implementation produces the expected ordering
+        // Lower < Middle < Upper < Elite
+        assert!(SocialClass::Lower < SocialClass::Middle);
+        assert!(SocialClass::Middle < SocialClass::Upper);
+        assert!(SocialClass::Upper < SocialClass::Elite);
+        
+        // Verify transitivity
+        assert!(SocialClass::Lower < SocialClass::Upper);
+        assert!(SocialClass::Lower < SocialClass::Elite);
+        assert!(SocialClass::Middle < SocialClass::Elite);
+    }
+
+    #[test]
+    fn test_class_change_is_upward() {
+        let change = ClassChange::new(100, SocialClass::Lower, SocialClass::Middle);
+        assert!(change.is_upward());
+        assert!(!change.is_downward());
+        
+        let change2 = ClassChange::new(100, SocialClass::Middle, SocialClass::Elite);
+        assert!(change2.is_upward());
+    }
+
+    #[test]
+    fn test_class_change_is_downward() {
+        let change = ClassChange::new(100, SocialClass::Upper, SocialClass::Middle);
+        assert!(change.is_downward());
+        assert!(!change.is_upward());
+        
+        let change2 = ClassChange::new(100, SocialClass::Elite, SocialClass::Lower);
+        assert!(change2.is_downward());
+    }
+
+    #[test]
     fn test_person_reputation_initialization() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());

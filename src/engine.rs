@@ -5216,13 +5216,14 @@ impl SimulationEngine {
     /// # Arguments
     /// * `current_step` - The current simulation step number (for recording class changes)
     fn update_social_classes(&mut self, current_step: usize) {
-        // Collect money values and indices for active persons
+        // Collect money values and indices for active persons, filtering out NaN/infinite values
         let mut wealth_data: Vec<(usize, f64)> = self
             .entities
             .iter()
             .enumerate()
             .filter(|(_, e)| e.active)
             .map(|(idx, e)| (idx, e.person_data.money))
+            .filter(|(_, money)| money.is_finite()) // Filter out NaN and infinite values
             .collect();
 
         if wealth_data.is_empty() {
@@ -5230,7 +5231,8 @@ impl SimulationEngine {
         }
 
         // Sort by money to calculate percentiles
-        wealth_data.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        // Safe to unwrap since we filtered out NaN/infinite values
+        wealth_data.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
         let count = wealth_data.len();
 
@@ -5285,8 +5287,9 @@ impl SimulationEngine {
             }
         }
 
-        // Initialize 4x4 transition matrix (Lower=0, Middle=1, Upper=2, Elite=3)
-        let mut transition_matrix = vec![vec![0usize; 4]; 4];
+        // Initialize transition matrix using SocialClass::all_variants().len()
+        let num_classes = SocialClass::all_variants().len();
+        let mut transition_matrix = vec![vec![0usize; num_classes]; num_classes];
         let mut total_upward_movements = 0;
         let mut total_downward_movements = 0;
         let mut persons_with_upward = 0;

@@ -1133,6 +1133,8 @@ pub struct SocialClassStats {
 
 impl Default for SocialClassStats {
     fn default() -> Self {
+        use crate::person::SocialClass;
+        let num_classes = SocialClass::all_variants().len();
         SocialClassStats {
             lower_class_count: 0,
             middle_class_count: 0,
@@ -1140,7 +1142,7 @@ impl Default for SocialClassStats {
             elite_class_count: 0,
             total_upward_movements: 0,
             total_downward_movements: 0,
-            transition_matrix: vec![vec![0; 4]; 4], // 4x4 matrix initialized to 0
+            transition_matrix: vec![vec![0; num_classes]; num_classes],
             avg_class_changes_per_person: 0.0,
             upward_mobility_rate: 0.0,
             downward_mobility_rate: 0.0,
