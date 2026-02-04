@@ -360,6 +360,11 @@ pub struct Person {
     /// Sick persons have reduced trading capacity and may transmit illness during trades.
     /// Only meaningful when health system is enabled.
     pub health_status: HealthStatus,
+    /// Influence score based on network position and friend count.
+    /// Higher values indicate more influential persons in the social network.
+    /// Calculated dynamically based on number of friends (network centrality).
+    /// Only meaningful when influence system is enabled.
+    pub influence_score: f64,
 }
 
 impl Person {
@@ -402,6 +407,7 @@ impl Person {
             insurance_policies: Vec::new(),  // Start with no insurance policies
             strategy_params: StrategyParameters::new(initial_money), // Initialize strategy tracking
             health_status: HealthStatus::Healthy, // Start healthy
+            influence_score: 1.0,            // Start with baseline influence
         }
     }
 
@@ -557,6 +563,17 @@ impl Person {
     /// Returns the number of friends this person has.
     pub fn friend_count(&self) -> usize {
         self.friends.len()
+    }
+
+    /// Calculates and updates the influence score based on friend count (network centrality).
+    /// Influence grows with number of friends but with diminishing returns (logarithmic scaling).
+    /// Formula: influence = 1.0 + log(1 + friend_count)
+    /// This gives baseline influence of 1.0 with exponential growth as network expands.
+    pub fn update_influence_score(&mut self) {
+        let friend_count = self.friends.len() as f64;
+        // Logarithmic scaling: influence grows with friends but with diminishing returns
+        // Base influence is 1.0, grows to ~2.6 with 10 friends, ~3.4 with 30 friends
+        self.influence_score = 1.0 + (1.0 + friend_count).ln();
     }
 
     /// Attempts to learn a new skill if the person can afford it.

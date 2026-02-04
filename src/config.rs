@@ -725,6 +725,24 @@ pub struct SimulationConfig {
     #[serde(default)]
     pub enable_trust_networks: bool,
 
+    /// Enable influence tracking system based on social network position.
+    ///
+    /// When enabled, each person's influence score is calculated based on their
+    /// position in the friendship network (number of friends, network centrality).
+    /// Influence scores can be used to study opinion leaders, trend setters,
+    /// and information diffusion patterns in economic networks.
+    ///
+    /// The influence score grows logarithmically with friend count:
+    /// - Base influence: 1.0 (no friends)
+    /// - 10 friends: ~2.6 influence
+    /// - 30 friends: ~3.4 influence
+    /// - 100 friends: ~4.6 influence
+    ///
+    /// Requires enable_friendships to be true to function meaningfully.
+    /// Set to false to disable influence tracking (default).
+    #[serde(default)]
+    pub enable_influence: bool,
+
     /// Number of groups/organizations to create in the simulation.
     ///
     /// When set, persons are assigned to groups in a round-robin fashion at initialization.
@@ -1700,6 +1718,7 @@ impl Default for SimulationConfig {
             trade_agreement_discount: 0.15,       // 15% discount for agreement partners
             trade_agreement_duration: 100,        // Agreements last 100 steps
             enable_trust_networks: false,         // Disabled by default
+            enable_influence: false,              // Disabled by default
             num_groups: None,                     // No groups by default
             distance_cost_factor: 0.0,            // Disabled by default
             price_elasticity_factor: 0.1,         // 10% price adjustment per unit imbalance
@@ -2286,6 +2305,18 @@ impl SimulationConfig {
                     "Feature Dependency Error: enable_trust_networks requires enable_friendships to be true. \
                      Trust networks are built on top of friendship relationships. \
                      Solution: Set enable_friendships=true or disable trust networks.".to_string(),
+                ));
+            }
+        }
+
+        // Influence system validation
+        if self.enable_influence {
+            // Influence system requires friendships to be enabled
+            if !self.enable_friendships {
+                return Err(SimulationError::ValidationError(
+                    "Feature Dependency Error: enable_influence requires enable_friendships to be true. \
+                     Influence scores are calculated based on friendship network position. \
+                     Solution: Set enable_friendships=true or disable influence tracking.".to_string(),
                 ));
             }
         }

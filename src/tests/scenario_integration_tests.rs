@@ -2118,4 +2118,96 @@ mod integration_tests {
             }
         }
     }
+
+    /// Test that influence tracking system works correctly
+    #[test]
+    fn test_influence_tracking() {
+        let config = test_config()
+            .entity_count(20)
+            .max_steps(50)
+            .initial_money(100.0)
+            .base_price(10.0)
+            .enable_friendships(true)
+            .friendship_probability(0.3) // High probability for testing
+            .enable_influence(true)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Check that influence statistics were calculated
+        assert!(
+            result.influence_statistics.is_some(),
+            "Influence statistics should be present when influence is enabled"
+        );
+
+        let influence_stats = result.influence_statistics.unwrap();
+
+        // Basic sanity checks
+        assert!(
+            influence_stats.avg_influence >= 1.0,
+            "Average influence should be at least 1.0 (baseline)"
+        );
+        assert!(
+            influence_stats.max_influence >= influence_stats.avg_influence,
+            "Max influence should be >= average"
+        );
+        assert!(
+            influence_stats.min_influence <= influence_stats.avg_influence,
+            "Min influence should be <= average"
+        );
+        assert!(
+            influence_stats.influence_std_dev >= 0.0,
+            "Standard deviation should be non-negative"
+        );
+
+        // Check top influencers list
+        assert!(
+            influence_stats.top_influencers.len() <= 5,
+            "Should have at most 5 top influencers"
+        );
+        assert!(
+            influence_stats.top_influencers.len() <= result.active_persons,
+            "Top influencers should not exceed active persons"
+        );
+
+        // Verify top influencers are sorted by influence score (descending)
+        for i in 1..influence_stats.top_influencers.len() {
+            assert!(
+                influence_stats.top_influencers[i - 1].1 >= influence_stats.top_influencers[i].1,
+                "Top influencers should be sorted by influence score in descending order"
+            );
+        }
+
+        // Verify that persons with more friends have higher influence
+        if let Some((_first_id, first_influence, first_friends)) =
+            influence_stats.top_influencers.first()
+        {
+            if let Some((_last_id, last_influence, last_friends)) =
+                influence_stats.top_influencers.last()
+            {
+                if first_friends > last_friends {
+                    assert!(
+                        first_influence >= last_influence,
+                        "Person with more friends should have higher or equal influence"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Test that influence system requires friendships to be enabled
+    #[test]
+    #[should_panic(expected = "enable_influence requires enable_friendships")]
+    fn test_influence_requires_friendships() {
+        let config = test_config()
+            .entity_count(10)
+            .max_steps(10)
+            .enable_friendships(false) // Friendships disabled
+            .enable_influence(true) // But influence enabled - should fail validation
+            .build();
+
+        // Validation should panic
+        config.validate().unwrap();
+    }
 }
