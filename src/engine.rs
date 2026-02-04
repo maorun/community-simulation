@@ -4092,27 +4092,25 @@ impl SimulationEngine {
         let mut mutations = 0;
         let mut imitations = 0;
 
-        // Create a snapshot of current wealth and strategies for comparison
-        let person_wealth: HashMap<usize, f64> = self
-            .entities
-            .iter()
-            .filter(|e| e.active)
-            .map(|e| (e.id, e.person_data.money + e.person_data.savings))
-            .collect();
+        // Create a snapshot of current wealth and strategies for comparison (single pass)
+        let (person_wealth, person_strategies): (HashMap<usize, f64>, HashMap<usize, Strategy>) =
+            self.entities
+                .iter()
+                .filter(|e| e.active)
+                .map(|e| {
+                    let wealth = e.person_data.money + e.person_data.savings;
+                    let strategy = e.person_data.strategy;
+                    ((e.id, wealth), (e.id, strategy))
+                })
+                .unzip();
 
-        let person_strategies: HashMap<usize, Strategy> = self
-            .entities
-            .iter()
-            .filter(|e| e.active)
-            .map(|e| (e.id, e.person_data.strategy))
-            .collect();
+        // Iterate over entity indices directly to avoid linear search
+        for entity_idx in 0..self.entities.len() {
+            if !self.entities[entity_idx].active {
+                continue;
+            }
 
-        // Collect all entities that need evolution (can't mutate while iterating)
-        let entities_to_evolve: Vec<usize> =
-            self.entities.iter().filter(|e| e.active).map(|e| e.id).collect();
-
-        for entity_id in entities_to_evolve {
-            let entity_idx = self.entities.iter().position(|e| e.id == entity_id).unwrap();
+            let entity_id = self.entities[entity_idx].id;
             let old_strategy = self.entities[entity_idx].person_data.strategy;
 
             // Step 1: Mutation - random strategy change with mutation_rate probability

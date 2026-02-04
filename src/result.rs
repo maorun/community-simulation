@@ -457,31 +457,17 @@ pub struct StrategyDistribution {
 impl StrategyDistribution {
     /// Creates a new strategy distribution by counting strategies in entities.
     pub fn from_entities(entities: &[crate::Entity]) -> Self {
-        let active_entities: Vec<_> = entities.iter().filter(|e| e.active).collect();
-        let conservative = active_entities
+        let (conservative, balanced, aggressive, frugal, total) = entities
             .iter()
-            .filter(|e| e.person_data.strategy == crate::person::Strategy::Conservative)
-            .count();
-        let balanced = active_entities
-            .iter()
-            .filter(|e| e.person_data.strategy == crate::person::Strategy::Balanced)
-            .count();
-        let aggressive = active_entities
-            .iter()
-            .filter(|e| e.person_data.strategy == crate::person::Strategy::Aggressive)
-            .count();
-        let frugal = active_entities
-            .iter()
-            .filter(|e| e.person_data.strategy == crate::person::Strategy::Frugal)
-            .count();
+            .filter(|e| e.active)
+            .fold((0, 0, 0, 0, 0), |(cons, bal, agg, frug, tot), e| match e.person_data.strategy {
+                crate::person::Strategy::Conservative => (cons + 1, bal, agg, frug, tot + 1),
+                crate::person::Strategy::Balanced => (cons, bal + 1, agg, frug, tot + 1),
+                crate::person::Strategy::Aggressive => (cons, bal, agg + 1, frug, tot + 1),
+                crate::person::Strategy::Frugal => (cons, bal, agg, frug + 1, tot + 1),
+            });
 
-        StrategyDistribution {
-            conservative,
-            balanced,
-            aggressive,
-            frugal,
-            total: active_entities.len(),
-        }
+        StrategyDistribution { conservative, balanced, aggressive, frugal, total }
     }
 }
 

@@ -1136,6 +1136,10 @@ pub struct SimulationConfig {
     /// Requires enable_friendships to be true for imitation learning to work
     /// (agents imitate strategies of their friends who are more successful).
     ///
+    /// **Note on Checkpoints:** When resuming from a checkpoint, strategy evolution
+    /// history (snapshots and counters) is reset. Only the current strategy distribution
+    /// is preserved. This is by design to keep checkpoint files compact.
+    ///
     /// Set to false to disable strategy evolution (default).
     #[serde(default)]
     pub enable_strategy_evolution: bool,
