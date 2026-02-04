@@ -12,7 +12,7 @@ assignees: ''
 
 ### Instructions for Copilot
 
-You are tasked with autonomously analyzing the codebase for performance bottlenecks, identifying optimization opportunities, and implementing ONE performance optimization. Follow these steps:
+You are tasked with autonomously analyzing the codebase for performance bottlenecks, identifying optimization opportunities, and implementing performance optimization. Follow these steps:
 
 1. **Performance Analysis and Optimization Selection:**
    - **Analyze the codebase** for performance bottlenecks and optimization opportunities
