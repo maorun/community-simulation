@@ -1874,6 +1874,75 @@ impl SimulationEngine {
             } else {
                 None
             },
+            influence_statistics: if self.config.enable_influence && self.config.enable_friendships
+            {
+                // Update all influence scores first
+                let influence_scores: Vec<f64> = self
+                    .entities
+                    .iter()
+                    .filter(|e| e.active)
+                    .map(|e| {
+                        crate::person::Person::calculate_influence_from_friends(
+                            e.person_data.friends.len(),
+                        )
+                    })
+                    .collect();
+
+                if influence_scores.is_empty() {
+                    None
+                } else {
+                    let avg_influence =
+                        influence_scores.iter().sum::<f64>() / influence_scores.len() as f64;
+                    let max_influence =
+                        influence_scores.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                    let min_influence =
+                        influence_scores.iter().cloned().fold(f64::INFINITY, f64::min);
+
+                    // Calculate standard deviation
+                    let variance = influence_scores
+                        .iter()
+                        .map(|score| {
+                            let diff = score - avg_influence;
+                            diff * diff
+                        })
+                        .sum::<f64>()
+                        / influence_scores.len() as f64;
+                    let influence_std_dev = variance.sqrt();
+
+                    // Count high influence persons (score > 2.0)
+                    let high_influence_count =
+                        influence_scores.iter().filter(|&&score| score > 2.0).count();
+
+                    // Get top 5 influencers (ID, influence score, friend count)
+                    let mut influencers: Vec<(usize, f64, usize)> = self
+                        .entities
+                        .iter()
+                        .filter(|e| e.active)
+                        .map(|e| {
+                            let friend_count = e.person_data.friends.len();
+                            let influence = crate::person::Person::calculate_influence_from_friends(
+                                friend_count,
+                            );
+                            (e.id, influence, friend_count)
+                        })
+                        .collect();
+
+                    influencers
+                        .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+                    let top_influencers = influencers.into_iter().take(5).collect();
+
+                    Some(crate::result::InfluenceStats {
+                        avg_influence,
+                        max_influence,
+                        min_influence,
+                        influence_std_dev,
+                        high_influence_count,
+                        top_influencers,
+                    })
+                }
+            } else {
+                None
+            },
             trust_network_statistics: self
                 .trust_network
                 .as_ref()
@@ -3913,6 +3982,12 @@ impl SimulationEngine {
                     self.entities[buyer_idx].person_data.add_friend(seller_id);
                     self.entities[seller_idx].person_data.add_friend(buyer_id);
 
+                    // Update influence scores if influence tracking is enabled
+                    if self.config.enable_influence {
+                        self.entities[buyer_idx].person_data.update_influence_score();
+                        self.entities[seller_idx].person_data.update_influence_score();
+                    }
+
                     // Update trust network if enabled
                     if let Some(ref mut trust_network) = self.trust_network {
                         trust_network.add_friendship(buyer_id, seller_id);
@@ -5388,6 +5463,7 @@ impl SimulationEngine {
             certification_statistics: None,
             environment_statistics: None, // Simplified for interactive mode
             friendship_statistics: None,  // Simplified
+            influence_statistics: None,   // Simplified
             trust_network_statistics: None, // Simplified
             trade_agreement_statistics: None, // Simplified
             insurance_statistics: None,   // Simplified

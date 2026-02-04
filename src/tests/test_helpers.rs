@@ -239,6 +239,12 @@ impl TestConfigBuilder {
         self
     }
 
+    /// Enable or disable influence tracking
+    pub fn enable_influence(mut self, enable: bool) -> Self {
+        self.config.enable_influence = enable;
+        self
+    }
+
     /// Enable or disable event tracking
     pub fn enable_events(mut self, enable: bool) -> Self {
         self.config.enable_events = enable;

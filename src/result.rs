@@ -951,6 +951,23 @@ pub struct FriendshipStats {
     pub network_density: f64,
 }
 
+/// Statistics about the influence system (network centrality and opinion leaders)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InfluenceStats {
+    /// Average influence score across all persons
+    pub avg_influence: f64,
+    /// Maximum influence score in the population
+    pub max_influence: f64,
+    /// Minimum influence score in the population
+    pub min_influence: f64,
+    /// Standard deviation of influence scores
+    pub influence_std_dev: f64,
+    /// Number of persons with influence score > 2.0 (have multiple friends)
+    pub high_influence_count: usize,
+    /// Top 5 most influential persons (ID, influence score, friend count)
+    pub top_influencers: Vec<(usize, f64, usize)>,
+}
+
 /// Statistics for a single group/organization
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SingleGroupStats {
@@ -1376,6 +1393,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub friendship_statistics: Option<FriendshipStats>,
 
+    /// Influence system statistics (only present if influence tracking is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub influence_statistics: Option<InfluenceStats>,
+
     /// Trust network statistics (only present if trust networks are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trust_network_statistics: Option<crate::trust_network::TrustNetworkStats>,
@@ -1549,6 +1570,7 @@ impl SimulationResult {
     /// #     certification_statistics: None,
     /// #     environment_statistics: None,
     /// #     friendship_statistics: None,
+    /// #     influence_statistics: None,
     /// #     trust_network_statistics: None,
     /// #     trade_agreement_statistics: None,
     /// #     insurance_statistics: None,
@@ -3921,6 +3943,7 @@ mod tests {
             certification_statistics: None,
             environment_statistics: None,
             friendship_statistics: None,
+            influence_statistics: None,
             trust_network_statistics: None,
             trade_agreement_statistics: None,
             insurance_statistics: None,

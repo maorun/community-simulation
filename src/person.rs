@@ -360,6 +360,11 @@ pub struct Person {
     /// Sick persons have reduced trading capacity and may transmit illness during trades.
     /// Only meaningful when health system is enabled.
     pub health_status: HealthStatus,
+    /// Influence score based on network position and friend count.
+    /// Higher values indicate more influential persons in the social network.
+    /// Calculated dynamically based on number of friends (network centrality).
+    /// Only meaningful when influence system is enabled.
+    pub influence_score: f64,
 }
 
 impl Person {
@@ -402,6 +407,7 @@ impl Person {
             insurance_policies: Vec::new(),  // Start with no insurance policies
             strategy_params: StrategyParameters::new(initial_money), // Initialize strategy tracking
             health_status: HealthStatus::Healthy, // Start healthy
+            influence_score: 1.0,            // Start with baseline influence
         }
     }
 
@@ -557,6 +563,30 @@ impl Person {
     /// Returns the number of friends this person has.
     pub fn friend_count(&self) -> usize {
         self.friends.len()
+    }
+
+    /// Calculates influence score based on friend count (network centrality).
+    /// Influence grows with number of friends but with diminishing returns (logarithmic scaling).
+    /// Formula: influence = 1.0 + log(1 + friend_count)
+    ///
+    /// # Arguments
+    /// * `friend_count` - Number of friends the person has
+    ///
+    /// # Returns
+    /// Influence score (minimum 1.0, grows logarithmically with friend count)
+    pub fn calculate_influence_from_friends(friend_count: usize) -> f64 {
+        let count = friend_count as f64;
+        // Logarithmic scaling: influence grows with friends but with diminishing returns
+        // Base influence is 1.0, grows to ~2.6 with 10 friends, ~3.4 with 30 friends
+        1.0 + (1.0 + count).ln()
+    }
+
+    /// Calculates and updates the influence score based on friend count (network centrality).
+    /// Influence grows with number of friends but with diminishing returns (logarithmic scaling).
+    /// Formula: influence = 1.0 + log(1 + friend_count)
+    /// This gives baseline influence of 1.0 with logarithmic growth as network expands.
+    pub fn update_influence_score(&mut self) {
+        self.influence_score = Self::calculate_influence_from_friends(self.friends.len());
     }
 
     /// Attempts to learn a new skill if the person can afford it.

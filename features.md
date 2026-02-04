@@ -81,20 +81,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Mobilität-Tracking (Aufstieg/Abstieg zwischen Klassen)
 - Integration mit Gruppen-System
 
-#### 3.2 Influencer und Meinungsführer
-**Beschreibung:** Bestimmte Personen haben überproportionalen Einfluss auf Konsumentscheidungen anderer. Modellierung von Trend-Setting und viralen Effekten.
-
-**Nutzen:**
-- Modellierung von Marketing und Mundpropaganda
-- Untersuchung von Information Cascades
-- Realistische Diffusion von Innovationen und Produkten
-
-**Implementierung:**
-- `Influence` Score basierend auf Zentralität im Freundschafts-Netzwerk
-- `TrendAdoption` Mechanismus basierend auf Influencer-Nachbarn
-- Viral-Effekte bei Skill-Popularität
-- Integration mit bestehendem Friendship-System
-
 ### 4. Erweiterte Szenarien
 
 #### 4.1 Digitalisierung und Automatisierung
