@@ -251,6 +251,11 @@ pub struct SimulationEngine {
     total_payouts_made: f64,
     // Technology breakthrough tracking
     technology_breakthroughs: Vec<TechnologyBreakthrough>,
+    // Strategy evolution tracking (if enabled)
+    strategy_distribution_history: Vec<crate::result::StrategyDistributionSnapshot>,
+    total_strategy_changes: usize,
+    total_strategy_mutations: usize,
+    total_strategy_imitations: usize,
     // Action log for replay recording (optional)
     action_log: Option<crate::replay::ActionLog>,
     // Externality tracking (if enabled)
@@ -501,6 +506,10 @@ impl SimulationEngine {
             total_premiums_collected: 0.0,
             total_payouts_made: 0.0,
             technology_breakthroughs: Vec::new(),
+            strategy_distribution_history: Vec::new(),
+            total_strategy_changes: 0,
+            total_strategy_mutations: 0,
+            total_strategy_imitations: 0,
             action_log: None, // Will be set via enable_action_recording if needed
             externality_stats: crate::externality::ExternalityStats::new(),
             skill_providers,
@@ -2174,6 +2183,22 @@ impl SimulationEngine {
             } else {
                 None
             },
+            strategy_evolution_statistics: if self.config.enable_strategy_evolution {
+                let final_distribution =
+                    crate::result::StrategyDistribution::from_entities(&self.entities);
+                let total_evolution_updates = self.strategy_distribution_history.len();
+
+                Some(crate::result::StrategyEvolutionStats {
+                    strategy_distribution_history: self.strategy_distribution_history.clone(),
+                    total_strategy_changes: self.total_strategy_changes,
+                    total_mutations: self.total_strategy_mutations,
+                    total_imitations: self.total_strategy_imitations,
+                    final_distribution,
+                    total_evolution_updates,
+                })
+            } else {
+                None
+            },
             externality_statistics: if self.config.enable_externalities {
                 // Finalize externality statistics to calculate averages
                 let mut stats = self.externality_stats.clone();
@@ -3010,6 +3035,14 @@ impl SimulationEngine {
                     }
                 }
             }
+        }
+
+        // Evolutionary strategy dynamics (if enabled and on evolution step)
+        if self.config.enable_strategy_evolution
+            && self.current_step.is_multiple_of(self.config.evolution_update_frequency)
+            && self.current_step > 0
+        {
+            self.evolve_strategies();
         }
 
         // Update credit scores and history if credit rating is enabled
@@ -4039,6 +4072,129 @@ impl SimulationEngine {
                 }
             }
         }
+    }
+
+    /// Implements evolutionary strategy dynamics where agents imitate successful friends.
+    ///
+    /// This method performs strategy evolution through:
+    /// 1. Mutation: Random strategy changes for exploration
+    /// 2. Imitation: Copying strategies from more successful friends
+    /// 3. Selection: Successful strategies spread through the population
+    ///
+    /// This creates cultural evolution where good strategies proliferate and bad ones die out.
+    fn evolve_strategies(&mut self) {
+        debug!(
+            "Strategy evolution update at step {} (frequency: every {} steps)",
+            self.current_step, self.config.evolution_update_frequency
+        );
+
+        let mut strategy_changes = 0;
+        let mut mutations = 0;
+        let mut imitations = 0;
+
+        // Create a snapshot of current wealth and strategies for comparison (single pass)
+        let (person_wealth, person_strategies): (HashMap<usize, f64>, HashMap<usize, Strategy>) =
+            self.entities
+                .iter()
+                .filter(|e| e.active)
+                .map(|e| {
+                    let wealth = e.person_data.money + e.person_data.savings;
+                    let strategy = e.person_data.strategy;
+                    ((e.id, wealth), (e.id, strategy))
+                })
+                .unzip();
+
+        // Iterate over entity indices directly to avoid linear search
+        for entity_idx in 0..self.entities.len() {
+            if !self.entities[entity_idx].active {
+                continue;
+            }
+
+            let entity_id = self.entities[entity_idx].id;
+            let old_strategy = self.entities[entity_idx].person_data.strategy;
+
+            // Step 1: Mutation - random strategy change with mutation_rate probability
+            if self.rng.random_range(0.0..1.0) < self.config.mutation_rate {
+                let all_strategies = Strategy::all_variants();
+                let new_strategy = *all_strategies.choose(&mut self.rng).unwrap();
+
+                // Only count as mutation if strategy actually changed
+                if new_strategy != old_strategy {
+                    self.entities[entity_idx].person_data.strategy = new_strategy;
+                    mutations += 1;
+                    strategy_changes += 1;
+
+                    trace!(
+                        "Person {} mutated strategy: {:?} -> {:?}",
+                        entity_id,
+                        old_strategy,
+                        new_strategy
+                    );
+                }
+                continue; // Skip imitation if mutated
+            }
+
+            // Step 2: Imitation - copy strategy from most successful friend
+            let friends: Vec<usize> =
+                self.entities[entity_idx].person_data.friends.iter().copied().collect();
+
+            if friends.is_empty() {
+                continue; // No friends to imitate
+            }
+
+            // Find most successful friend (highest wealth)
+            let my_wealth = person_wealth.get(&entity_id).copied().unwrap_or(0.0);
+            let best_friend = friends.iter().max_by(|&&a, &&b| {
+                let wealth_a = person_wealth.get(&a).copied().unwrap_or(0.0);
+                let wealth_b = person_wealth.get(&b).copied().unwrap_or(0.0);
+                wealth_a.partial_cmp(&wealth_b).unwrap()
+            });
+
+            if let Some(&best_friend_id) = best_friend {
+                let friend_wealth = person_wealth.get(&best_friend_id).copied().unwrap_or(0.0);
+
+                // Only imitate if friend is more successful
+                if friend_wealth > my_wealth {
+                    // Imitate with imitation_probability
+                    if self.rng.random_range(0.0..1.0) < self.config.imitation_probability {
+                        if let Some(&friend_strategy) = person_strategies.get(&best_friend_id) {
+                            // Only count as imitation if strategy actually changed
+                            if friend_strategy != old_strategy {
+                                self.entities[entity_idx].person_data.strategy = friend_strategy;
+                                imitations += 1;
+                                strategy_changes += 1;
+
+                                trace!(
+                                    "Person {} imitated friend {}'s strategy: {:?} -> {:?} (wealth: ${:.2} vs ${:.2})",
+                                    entity_id,
+                                    best_friend_id,
+                                    old_strategy,
+                                    friend_strategy,
+                                    my_wealth,
+                                    friend_wealth
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        info!(
+            "Strategy evolution completed: {} total changes ({} mutations, {} imitations)",
+            strategy_changes, mutations, imitations
+        );
+
+        // Update tracking statistics
+        self.total_strategy_changes += strategy_changes;
+        self.total_strategy_mutations += mutations;
+        self.total_strategy_imitations += imitations;
+
+        // Record strategy distribution snapshot
+        let distribution = crate::result::StrategyDistribution::from_entities(&self.entities);
+        let snapshot =
+            crate::result::StrategyDistributionSnapshot { step: self.current_step, distribution };
+        self.strategy_distribution_history.push(snapshot);
     }
 
     /// Processes loan payments for the current step.
@@ -5234,9 +5390,10 @@ impl SimulationEngine {
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
-            quality_statistics: None,     // Simplified for interactive mode
+            quality_statistics: None, // Simplified for interactive mode
+            strategy_evolution_statistics: None, // Simplified for interactive mode
             externality_statistics: None, // Simplified for interactive mode
-            elasticity_statistics: None,  // Simplified for interactive mode
+            elasticity_statistics: None, // Simplified for interactive mode
             equilibrium_statistics: None, // Simplified for interactive mode
             welfare_statistics: self.calculate_welfare_statistics(),
             events: if self.event_bus.is_enabled() {
@@ -5495,6 +5652,10 @@ impl SimulationEngine {
             total_premiums_collected: checkpoint.total_premiums_collected,
             total_payouts_made: checkpoint.total_payouts_made,
             technology_breakthroughs: checkpoint.technology_breakthroughs,
+            strategy_distribution_history: Vec::new(), // Reset strategy evolution history on resume
+            total_strategy_changes: 0,
+            total_strategy_mutations: 0,
+            total_strategy_imitations: 0,
             action_log: checkpoint.action_log,
             externality_stats: checkpoint.externality_stats,
             skill_providers,

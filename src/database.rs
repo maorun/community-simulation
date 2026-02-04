@@ -394,6 +394,7 @@ mod tests {
             technology_breakthrough_statistics: None,
             group_statistics: None,
             quality_statistics: None,
+            strategy_evolution_statistics: None,
             externality_statistics: None,
             elasticity_statistics: None,
             equilibrium_statistics: None,
