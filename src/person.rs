@@ -54,6 +54,116 @@ impl Location {
     }
 }
 
+/// Represents the social class of a person based on their wealth relative to others.
+///
+/// Social classes are determined by wealth percentiles within the population:
+/// - **Lower**: Bottom 25% (0-25th percentile)
+/// - **Middle**: 25th-75th percentile
+/// - **Upper**: 75th-95th percentile
+/// - **Elite**: Top 5% (95th-100th percentile)
+///
+/// Social class affects access to resources, social networks, and economic opportunities.
+/// The simulation tracks social mobility by recording class changes over time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Hash)]
+pub enum SocialClass {
+    /// Bottom 25% by wealth - limited resources and opportunities
+    Lower,
+    /// 25th-75th percentile - moderate resources and opportunities
+    Middle,
+    /// 75th-95th percentile - above average resources and opportunities
+    Upper,
+    /// Top 5% by wealth - extensive resources and opportunities
+    Elite,
+}
+
+impl SocialClass {
+    /// Determines social class based on wealth percentile.
+    ///
+    /// # Arguments
+    /// * `percentile` - Wealth percentile (0.0 to 1.0, where 1.0 = 100th percentile)
+    ///
+    /// # Returns
+    /// The corresponding social class
+    ///
+    /// # Examples
+    /// ```
+    /// use simulation_framework::person::SocialClass;
+    ///
+    /// assert_eq!(SocialClass::from_percentile(0.10), SocialClass::Lower);
+    /// assert_eq!(SocialClass::from_percentile(0.50), SocialClass::Middle);
+    /// assert_eq!(SocialClass::from_percentile(0.85), SocialClass::Upper);
+    /// assert_eq!(SocialClass::from_percentile(0.97), SocialClass::Elite);
+    /// ```
+    pub fn from_percentile(percentile: f64) -> Self {
+        if percentile >= 0.95 {
+            SocialClass::Elite
+        } else if percentile >= 0.75 {
+            SocialClass::Upper
+        } else if percentile >= 0.25 {
+            SocialClass::Middle
+        } else {
+            SocialClass::Lower
+        }
+    }
+
+    /// Returns all social class variants.
+    pub fn all_variants() -> [SocialClass; 4] {
+        [
+            SocialClass::Lower,
+            SocialClass::Middle,
+            SocialClass::Upper,
+            SocialClass::Elite,
+        ]
+    }
+
+    /// Returns a descriptive string for this social class.
+    pub fn description(&self) -> &str {
+        match self {
+            SocialClass::Lower => "Lower class (bottom 25%)",
+            SocialClass::Middle => "Middle class (25th-75th percentile)",
+            SocialClass::Upper => "Upper class (75th-95th percentile)",
+            SocialClass::Elite => "Elite class (top 5%)",
+        }
+    }
+}
+
+impl Default for SocialClass {
+    fn default() -> Self {
+        SocialClass::Middle
+    }
+}
+
+/// Records a change in social class at a specific simulation step.
+///
+/// Used to track social mobility over time by recording when persons
+/// move between social classes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ClassChange {
+    /// The simulation step when the class change occurred
+    pub step: usize,
+    /// The previous social class
+    pub from_class: SocialClass,
+    /// The new social class
+    pub to_class: SocialClass,
+}
+
+impl ClassChange {
+    /// Creates a new class change record.
+    pub fn new(step: usize, from_class: SocialClass, to_class: SocialClass) -> Self {
+        ClassChange { step, from_class, to_class }
+    }
+
+    /// Returns true if this represents upward mobility.
+    pub fn is_upward(&self) -> bool {
+        self.to_class > self.from_class
+    }
+
+    /// Returns true if this represents downward mobility.
+    pub fn is_downward(&self) -> bool {
+        self.to_class < self.from_class
+    }
+}
+
 /// Defines specialization strategy for skill development in the simulation.
 /// Determines whether agents focus on mastering few skills (specialist) or learning many (generalist).
 ///
@@ -365,6 +475,15 @@ pub struct Person {
     /// Calculated dynamically based on number of friends (network centrality).
     /// Only meaningful when influence system is enabled.
     pub influence_score: f64,
+    /// Current social class based on wealth percentile within the population.
+    /// Determined by comparing this person's wealth to all other persons.
+    /// Updated periodically to reflect changes in relative wealth.
+    /// Only meaningful when social class system is enabled.
+    pub social_class: SocialClass,
+    /// History of social class changes over the simulation.
+    /// Records upward and downward mobility events with timestamps.
+    /// Used to analyze social mobility patterns and class transitions.
+    pub class_history: Vec<ClassChange>,
 }
 
 impl Person {
@@ -408,6 +527,8 @@ impl Person {
             strategy_params: StrategyParameters::new(initial_money), // Initialize strategy tracking
             health_status: HealthStatus::Healthy, // Start healthy
             influence_score: 1.0,            // Start with baseline influence
+            social_class: SocialClass::default(), // Start with middle class (will be updated based on wealth)
+            class_history: Vec::new(),       // Start with no class history
         }
     }
 
@@ -587,6 +708,39 @@ impl Person {
     /// This gives baseline influence of 1.0 with logarithmic growth as network expands.
     pub fn update_influence_score(&mut self) {
         self.influence_score = Self::calculate_influence_from_friends(self.friends.len());
+    }
+
+    /// Updates this person's social class based on their wealth percentile.
+    ///
+    /// If the social class changes, records the change in class_history.
+    ///
+    /// # Arguments
+    /// * `wealth_percentile` - This person's wealth percentile (0.0 to 1.0)
+    /// * `current_step` - The current simulation step number
+    ///
+    /// # Examples
+    /// ```
+    /// use simulation_framework::person::{Person, Strategy, Location, SocialClass};
+    /// use simulation_framework::skill::Skill;
+    ///
+    /// let mut person = Person::new(1, 100.0, vec![Skill::new("Test".to_string(), 10.0)], Strategy::Balanced, Location::new(0.0, 0.0));
+    /// person.update_social_class(0.5, 100); // Middle class at 50th percentile
+    /// assert_eq!(person.social_class, SocialClass::Middle);
+    /// assert_eq!(person.class_history.len(), 0); // No change recorded (started as Middle)
+    ///
+    /// person.update_social_class(0.97, 200); // Move to Elite class
+    /// assert_eq!(person.social_class, SocialClass::Elite);
+    /// assert_eq!(person.class_history.len(), 1); // Change recorded
+    /// assert!(person.class_history[0].is_upward());
+    /// ```
+    pub fn update_social_class(&mut self, wealth_percentile: f64, current_step: usize) {
+        let new_class = SocialClass::from_percentile(wealth_percentile);
+        
+        if new_class != self.social_class {
+            let change = ClassChange::new(current_step, self.social_class, new_class);
+            self.class_history.push(change);
+            self.social_class = new_class;
+        }
     }
 
     /// Attempts to learn a new skill if the person can afford it.

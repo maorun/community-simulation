@@ -1168,6 +1168,9 @@ impl SimulationEngine {
                     let active_entities = self.entities.iter().filter(|e| e.active).count();
                     let avg_money = self.calculate_average_money();
 
+                    // Update social classes periodically based on wealth distribution
+                    self.update_social_classes(self.current_step);
+
                     // Calculate additional metrics for enhanced progress bar
                     let trades_this_step = self.trades_per_step.last().copied().unwrap_or(0);
                     let avg_price = self.market.get_average_price();
@@ -5202,6 +5205,46 @@ impl SimulationEngine {
             return 0.0;
         }
         total_money / active_count as f64
+    }
+
+    /// Updates social classes for all active persons based on their current wealth percentiles.
+    ///
+    /// Calculates each person's wealth percentile and updates their social class accordingly.
+    /// Records any class changes in each person's class history.
+    ///
+    /// # Arguments
+    /// * `current_step` - The current simulation step number (for recording class changes)
+    fn update_social_classes(&mut self, current_step: usize) {
+        // Collect money values and indices for active persons
+        let mut wealth_data: Vec<(usize, f64)> = self
+            .entities
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.active)
+            .map(|(idx, e)| (idx, e.person_data.money))
+            .collect();
+
+        if wealth_data.is_empty() {
+            return;
+        }
+
+        // Sort by money to calculate percentiles
+        wealth_data.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        let count = wealth_data.len();
+
+        // Calculate percentile for each person and update their social class
+        for (rank, (entity_idx, _)) in wealth_data.iter().enumerate() {
+            let percentile = if count > 1 {
+                rank as f64 / (count - 1) as f64
+            } else {
+                0.5 // Middle class for single person
+            };
+
+            self.entities[*entity_idx]
+                .person_data
+                .update_social_class(percentile, current_step);
+        }
     }
 
     pub fn get_active_entity_count(&self) -> usize {
