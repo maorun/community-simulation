@@ -5262,13 +5262,9 @@ impl SimulationEngine {
     /// - Mobility rates and averages
     fn calculate_social_class_statistics(&self) -> crate::result::SocialClassStats {
         use crate::person::SocialClass;
-        
-        let active_persons: Vec<_> = self
-            .entities
-            .iter()
-            .filter(|e| e.active)
-            .map(|e| &e.person_data)
-            .collect();
+
+        let active_persons: Vec<_> =
+            self.entities.iter().filter(|e| e.active).map(|e| &e.person_data).collect();
 
         if active_persons.is_empty() {
             return crate::result::SocialClassStats::default();

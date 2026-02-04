@@ -64,11 +64,12 @@ impl Location {
 ///
 /// Social class affects access to resources, social networks, and economic opportunities.
 /// The simulation tracks social mobility by recording class changes over time.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Hash, Default)]
 pub enum SocialClass {
     /// Bottom 25% by wealth - limited resources and opportunities
     Lower,
     /// 25th-75th percentile - moderate resources and opportunities
+    #[default]
     Middle,
     /// 75th-95th percentile - above average resources and opportunities
     Upper,
@@ -108,12 +109,7 @@ impl SocialClass {
 
     /// Returns all social class variants.
     pub fn all_variants() -> [SocialClass; 4] {
-        [
-            SocialClass::Lower,
-            SocialClass::Middle,
-            SocialClass::Upper,
-            SocialClass::Elite,
-        ]
+        [SocialClass::Lower, SocialClass::Middle, SocialClass::Upper, SocialClass::Elite]
     }
 
     /// Returns a descriptive string for this social class.
@@ -124,12 +120,6 @@ impl SocialClass {
             SocialClass::Upper => "Upper class (75th-95th percentile)",
             SocialClass::Elite => "Elite class (top 5%)",
         }
-    }
-}
-
-impl Default for SocialClass {
-    fn default() -> Self {
-        SocialClass::Middle
     }
 }
 
@@ -528,7 +518,7 @@ impl Person {
             health_status: HealthStatus::Healthy, // Start healthy
             influence_score: 1.0,            // Start with baseline influence
             social_class: SocialClass::default(), // Start with middle class (will be updated based on wealth)
-            class_history: Vec::new(),       // Start with no class history
+            class_history: Vec::new(),            // Start with no class history
         }
     }
 
@@ -735,7 +725,7 @@ impl Person {
     /// ```
     pub fn update_social_class(&mut self, wealth_percentile: f64, current_step: usize) {
         let new_class = SocialClass::from_percentile(wealth_percentile);
-        
+
         if new_class != self.social_class {
             let change = ClassChange::new(current_step, self.social_class, new_class);
             self.class_history.push(change);

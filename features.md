@@ -67,20 +67,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Soziale Netzwerke und Beziehungen
 
-#### 3.1 Soziale Schichten und Mobilität
-**Beschreibung:** Modellierung von sozialen Klassen mit unterschiedlichen Zugängen zu Ressourcen, Bildung und Netzwerken. Tracking von sozialer Mobilität über Zeit.
-
-**Nutzen:**
-- Untersuchung von Ungleichheit der Chancen vs. Ungleichheit der Ergebnisse
-- Modellierung von "Old Boys Networks" und exklusiven Clubs
-- Langzeit-Analyse von Mobilitäts-Trends
-
-**Implementierung:**
-- `SocialClass` Enum (Lower, Middle, Upper, Elite)
-- Klassen-basierte Zugangsbeschränkungen zu Features
-- Mobilität-Tracking (Aufstieg/Abstieg zwischen Klassen)
-- Integration mit Gruppen-System
-
 ### 4. Erweiterte Szenarien
 
 #### 4.1 Digitalisierung und Automatisierung
