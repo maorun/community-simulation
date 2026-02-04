@@ -143,7 +143,9 @@ pub use investment::{Investment, InvestmentId, InvestmentType};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
 pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
-pub use person::{Location, Person, PersonId, Strategy, Transaction, TransactionType};
+pub use person::{
+    ClassChange, Location, Person, PersonId, SocialClass, Strategy, Transaction, TransactionType,
+};
 pub use plugin::{Plugin, PluginContext, PluginRegistry};
 pub use pool::VecPool;
 pub use production::{generate_default_recipes, Recipe};
@@ -152,7 +154,7 @@ pub use result::{
     calculate_statistics, calculate_wealth_concentration, detect_business_cycles,
     write_step_to_stream, BusinessCycle, BusinessCycleStats, ContractStats, CyclePhase,
     IncrementalStats, MonteCarloResult, MonteCarloStats, SimulationMetadata, SimulationResult,
-    StepData,
+    SocialClassStats, StepData,
 };
 pub use scenario::{PriceUpdater, Scenario};
 pub use scenario_comparison::ScenarioComparisonResult;

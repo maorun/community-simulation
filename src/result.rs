@@ -1100,6 +1100,56 @@ pub struct TradingNetworkData {
     pub edges: Vec<NetworkEdge>,
 }
 
+/// Statistics about social class distribution and mobility in the simulation.
+///
+/// Tracks the distribution of persons across social classes (Lower, Middle, Upper, Elite)
+/// and measures social mobility by recording class transitions over time.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SocialClassStats {
+    /// Number of persons in Lower class (bottom 25%)
+    pub lower_class_count: usize,
+    /// Number of persons in Middle class (25th-75th percentile)
+    pub middle_class_count: usize,
+    /// Number of persons in Upper class (75th-95th percentile)
+    pub upper_class_count: usize,
+    /// Number of persons in Elite class (top 5%)
+    pub elite_class_count: usize,
+    /// Total number of upward class movements (e.g., Lower → Middle)
+    pub total_upward_movements: usize,
+    /// Total number of downward class movements (e.g., Middle → Lower)
+    pub total_downward_movements: usize,
+    /// 4x4 transition matrix showing number of moves between classes.
+    /// Rows: from class (Lower=0, Middle=1, Upper=2, Elite=3)
+    /// Columns: to class (Lower=0, Middle=1, Upper=2, Elite=3)
+    /// Entry [i][j] shows how many persons moved from class i to class j
+    pub transition_matrix: Vec<Vec<usize>>,
+    /// Average number of class changes per person
+    pub avg_class_changes_per_person: f64,
+    /// Percentage of population that experienced upward mobility (at least one upward move)
+    pub upward_mobility_rate: f64,
+    /// Percentage of population that experienced downward mobility (at least one downward move)
+    pub downward_mobility_rate: f64,
+}
+
+impl Default for SocialClassStats {
+    fn default() -> Self {
+        use crate::person::SocialClass;
+        let num_classes = SocialClass::all_variants().len();
+        SocialClassStats {
+            lower_class_count: 0,
+            middle_class_count: 0,
+            upper_class_count: 0,
+            elite_class_count: 0,
+            total_upward_movements: 0,
+            total_downward_movements: 0,
+            transition_matrix: vec![vec![0; num_classes]; num_classes],
+            avg_class_changes_per_person: 0.0,
+            upward_mobility_rate: 0.0,
+            downward_mobility_rate: 0.0,
+        }
+    }
+}
+
 /// Statistics about social mobility and wealth transitions between quintiles over time.
 ///
 /// This structure captures how persons move between wealth quintiles (bottom 20%,
@@ -1433,6 +1483,11 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mobility_statistics: Option<MobilityStatistics>,
 
+    /// Social class distribution and mobility statistics.
+    /// Tracks the distribution of persons across social classes (Lower, Middle, Upper, Elite)
+    /// and measures class transitions over time. Always present (uses default if no class changes occurred).
+    pub social_class_statistics: SocialClassStats,
+
     /// Quality rating statistics for skills (only present if quality system is enabled).
     ///
     /// Tracks the distribution of skill quality ratings across all persons.
@@ -1586,6 +1641,7 @@ impl SimulationResult {
     /// #     },
     /// #     centrality_analysis: None,
     /// #     mobility_statistics: None,
+    /// #     social_class_statistics: simulation_framework::result::SocialClassStats::default(),
     /// #     quality_statistics: None,
     /// #     strategy_evolution_statistics: None,
     /// #     externality_statistics: None,
@@ -3930,6 +3986,7 @@ mod tests {
             },
             centrality_analysis: None,
             mobility_statistics: None,
+            social_class_statistics: crate::result::SocialClassStats::default(),
             quality_statistics: None,
             strategy_evolution_statistics: None,
             externality_statistics: None,
