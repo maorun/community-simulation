@@ -2528,7 +2528,7 @@ impl SimulationEngine {
                     {
                         let urgency = self.rng.random_range(1..=3);
                         entity.person_data.needed_skills.push(crate::person::NeededSkillItem {
-                            id: needed_skill_id.clone(),  // Only clone the selected ones (1-5 per entity)
+                            id: needed_skill_id.clone(), // Only clone the selected ones (1-5 per entity)
                             urgency,
                         });
                         self.market.increment_demand(needed_skill_id);
