@@ -2670,7 +2670,8 @@ impl SimulationEngine {
                 // Get price information for priority calculation
                 // Performance optimization: Use combined lookup to get both price and efficiency
                 // in a single HashMap access instead of two separate lookups. This eliminates
-                // ~300 redundant HashMap accesses per step (100 persons × 3 needs).
+                // ~300 redundant HashMap accesses per step (one redundant lookup for each of
+                // the 100 persons × 3 needs).
                 if let Some((skill_price, efficiency)) =
                     self.market.get_price_and_efficiency(needed_skill_id)
                 {
@@ -2768,15 +2769,11 @@ impl SimulationEngine {
 
                 // Find a provider for this skill - select the first available one
                 // Performance optimization: Compute seller_id once and reuse throughout purchase logic.
-                // This eliminates ~2,100 redundant HashMap lookups per step (100 persons × 3 needs × 7 uses).
-                // Previous code pattern repeatedly called `skill_providers.get()` for reputation,
-                // friendship, trade agreements, quality, specialization, distance, and execution.
-                let seller_id_opt = skill_providers
+                // This avoids repeated Option pattern matching in subsequent conditional blocks
+                // (reputation, friendship, trade agreements, quality, specialization, distance, execution).
+                let seller_id = skill_providers
                     .get(&needed_skill_id)
                     .and_then(|providers| providers.first().copied());
-
-                // Extract seller_id into a variable for reuse (avoids repeated Option unwrapping)
-                let seller_id = seller_id_opt;
 
                 // Apply reputation-based price multiplier for the seller
                 let mut final_price = if let Some(seller_idx) = seller_id {
