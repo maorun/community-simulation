@@ -1882,8 +1882,9 @@ impl SimulationEngine {
                     .iter()
                     .filter(|e| e.active)
                     .map(|e| {
-                        let friend_count = e.person_data.friends.len() as f64;
-                        1.0 + (1.0 + friend_count).ln()
+                        crate::person::Person::calculate_influence_from_friends(
+                            e.person_data.friends.len(),
+                        )
                     })
                     .collect();
 
@@ -1919,7 +1920,9 @@ impl SimulationEngine {
                         .filter(|e| e.active)
                         .map(|e| {
                             let friend_count = e.person_data.friends.len();
-                            let influence = 1.0 + (1.0 + friend_count as f64).ln();
+                            let influence = crate::person::Person::calculate_influence_from_friends(
+                                friend_count,
+                            );
                             (e.id, influence, friend_count)
                         })
                         .collect();

@@ -565,15 +565,28 @@ impl Person {
         self.friends.len()
     }
 
+    /// Calculates influence score based on friend count (network centrality).
+    /// Influence grows with number of friends but with diminishing returns (logarithmic scaling).
+    /// Formula: influence = 1.0 + log(1 + friend_count)
+    ///
+    /// # Arguments
+    /// * `friend_count` - Number of friends the person has
+    ///
+    /// # Returns
+    /// Influence score (minimum 1.0, grows logarithmically with friend count)
+    pub fn calculate_influence_from_friends(friend_count: usize) -> f64 {
+        let count = friend_count as f64;
+        // Logarithmic scaling: influence grows with friends but with diminishing returns
+        // Base influence is 1.0, grows to ~2.6 with 10 friends, ~3.4 with 30 friends
+        1.0 + (1.0 + count).ln()
+    }
+
     /// Calculates and updates the influence score based on friend count (network centrality).
     /// Influence grows with number of friends but with diminishing returns (logarithmic scaling).
     /// Formula: influence = 1.0 + log(1 + friend_count)
-    /// This gives baseline influence of 1.0 with exponential growth as network expands.
+    /// This gives baseline influence of 1.0 with logarithmic growth as network expands.
     pub fn update_influence_score(&mut self) {
-        let friend_count = self.friends.len() as f64;
-        // Logarithmic scaling: influence grows with friends but with diminishing returns
-        // Base influence is 1.0, grows to ~2.6 with 10 friends, ~3.4 with 30 friends
-        self.influence_score = 1.0 + (1.0 + friend_count).ln();
+        self.influence_score = Self::calculate_influence_from_friends(self.friends.len());
     }
 
     /// Attempts to learn a new skill if the person can afford it.
