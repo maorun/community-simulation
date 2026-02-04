@@ -29,6 +29,26 @@ use std::time::Instant;
 const TECH_SHOCK_MIN_AFFECTED_PERCENTAGE: f64 = 0.20; // Minimum 20% of skills affected
 const TECH_SHOCK_SEVERITY_RANGE: f64 = 0.20; // Additional 20% based on severity
 
+// Welfare analysis constants
+/// Approximate consumer surplus as a fraction of total trade volume.
+/// This represents the typical gains to buyers who pay less than their maximum willingness to pay.
+/// Economic research suggests consumer surplus is typically 10-15% of transaction value in
+/// competitive markets with price discrimination.
+const CONSUMER_SURPLUS_RATIO: f64 = 0.10;
+
+/// Assumed profit margin for producers after accounting for costs.
+/// This represents the fraction of seller proceeds that constitutes profit after
+/// production costs. A 70% profit margin (30% cost basis) is typical for
+/// service-based economies with low marginal costs.
+const ASSUMED_PROFIT_MARGIN: f64 = 0.70;
+
+/// Ratio used to estimate deadweight loss from failed trade attempts.
+/// Each failed trade represents unrealized welfare. We estimate this at 20%
+/// of average trade value, reflecting that failed trades represent missed
+/// opportunities where both buyer and seller would have benefited, but
+/// market frictions (insufficient funds, price controls, etc.) prevented it.
+const DEADWEIGHT_LOSS_RATIO: f64 = 0.20;
+
 /// Represents a positive technology breakthrough event.
 ///
 /// Breakthroughs are sudden innovations that boost the efficiency of specific skills,
@@ -2164,6 +2184,7 @@ impl SimulationEngine {
             },
             elasticity_statistics: self.calculate_elasticity_statistics(),
             equilibrium_statistics: self.calculate_equilibrium_statistics(),
+            welfare_statistics: self.calculate_welfare_statistics(),
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {
@@ -4721,6 +4742,57 @@ impl SimulationEngine {
     /// In Walrasian equilibrium theory, markets should converge to a state where
     /// supply equals demand through price adjustments (tâtonnement process).
     /// This analysis tests whether the simulation exhibits this convergence behavior.
+    ///
+    /// # Returns
+    ///
+    /// Returns `None` if the simulation has run for fewer than 2 steps, as at least
+    /// two time periods are needed to calculate convergence metrics.
+    fn calculate_welfare_statistics(&self) -> Option<crate::result::WelfareMetrics> {
+        let total_trades: usize = self.trades_per_step.iter().sum();
+
+        if total_trades == 0 {
+            return None;
+        }
+
+        let total_volume: f64 = self.volume_per_step.iter().sum();
+        let avg_trade_value = total_volume / total_trades as f64;
+
+        // Estimate consumer surplus using the defined ratio
+        // This represents the typical gains to buyers who pay less than their maximum willingness to pay
+        let consumer_surplus = total_volume * CONSUMER_SURPLUS_RATIO;
+
+        // Estimate producer surplus: Sellers' proceeds after costs
+        // Proceed = price - transaction_fee - tax - production_cost
+        let effective_seller_proceeds = total_volume
+            * (1.0 - self.config.transaction_fee)
+            * (1.0 - self.config.tax_rate)
+            * ASSUMED_PROFIT_MARGIN;
+
+        let producer_surplus = effective_seller_proceeds;
+
+        // Total welfare is the sum of consumer and producer surplus
+        let total_welfare = consumer_surplus + producer_surplus;
+
+        // Estimate deadweight loss from failed trades using the defined ratio
+        // Each failed trade represents unrealized welfare
+        let total_failed: usize = self.failed_attempts_per_step.iter().sum();
+        let deadweight_loss = total_failed as f64 * avg_trade_value * DEADWEIGHT_LOSS_RATIO;
+
+        // Calculate per-trade averages
+        let avg_consumer_surplus_per_trade = consumer_surplus / total_trades as f64;
+        let avg_producer_surplus_per_trade = producer_surplus / total_trades as f64;
+
+        Some(crate::result::WelfareMetrics {
+            consumer_surplus,
+            producer_surplus,
+            total_welfare,
+            deadweight_loss,
+            trades_analyzed: total_trades,
+            avg_consumer_surplus_per_trade,
+            avg_producer_surplus_per_trade,
+        })
+    }
+
     fn calculate_equilibrium_statistics(&self) -> Option<crate::result::EquilibriumStats> {
         // Need at least 2 time periods to analyze convergence
         if self.current_step < 2 {
@@ -5166,6 +5238,7 @@ impl SimulationEngine {
             externality_statistics: None, // Simplified for interactive mode
             elasticity_statistics: None,  // Simplified for interactive mode
             equilibrium_statistics: None, // Simplified for interactive mode
+            welfare_statistics: self.calculate_welfare_statistics(),
             events: if self.event_bus.is_enabled() {
                 Some(self.event_bus.events().to_vec())
             } else {

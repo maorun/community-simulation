@@ -125,26 +125,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Tarife und Handelsbeschränkungen
 - Arbeitsmigration zwischen Communities
 
-### 5. Erweiterte Analyse
+### 5. Verschiedene Agentenstrategien
 
-#### 5.1 Machine Learning auf Simulationsdaten
-**Beschreibung:** Anwendung von ML-Techniken um Muster zu entdecken: Clustering von Agenten-Typen, Vorhersage von Erfolg, Feature-Importance-Analyse.
-
-**Nutzen:**
-- Emergente Agenten-Typen automatisch identifizieren
-- Prädiktive Modelle für Interventions-Effekte
-- Dimensionalitäts-Reduktion für Visualisierung
-
-**Implementierung:**
-- Python-Bridge via PyO3 oder JSON-Export für externe Tools
-- K-Means Clustering auf Agenten-Features
-- Random-Forest für Feature-Importance
-- t-SNE/UMAP für Visualisierung
-- Integration optional via Feature-Flag
-
-### 6. Verschiedene Agentenstrategien
-
-#### 6.1 Bounded Rationality und Heuristiken
+#### 5.1 Bounded Rationality und Heuristiken
 **Beschreibung:** Agenten mit begrenzter Rationalität die einfache Heuristiken verwenden statt perfekter Optimierung (z.B. Satisficing, Recognition Heuristic).
 
 **Nutzen:**
@@ -159,7 +142,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - `AnchoringBias` (erste Preise beeinflussen spätere Einschätzungen)
 - Konfigurierbare Strategie-Verteilung in Population
 
-#### 6.2 Reinforcement Learning Agenten
+#### 5.2 Reinforcement Learning Agenten
 **Beschreibung:** Agenten die aus Erfahrung lernen und ihre Strategien dynamisch anpassen. Implementierung einfacher RL-Algorithmen wie Q-Learning oder Multi-Armed Bandits.
 
 **Nutzen:**
@@ -174,7 +157,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Epsilon-Greedy Exploration vs. Exploitation
 - Experience-Replay optional
 
-#### 6.3 Evolutionäre Strategien und Replikator-Dynamik
+#### 5.3 Evolutionäre Strategien und Replikator-Dynamik
 **Beschreibung:** Erfolgreiche Strategien breiten sich in der Population aus. Agenten imitieren erfolgreiche Nachbarn oder Strategien "reproduzieren" sich proportional zu ihrem Erfolg.
 
 **Nutzen:**
@@ -280,24 +263,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Chunked-Writing für große Datasets
 - Optional via CLI-Flag `--export-parquet`
 
-## 📊 Analyse und Forschung
-
-### 1. Wirtschaftliche Analysen
-
-#### 1.1 Wohlfahrts-Analyse und Deadweight-Loss
-**Beschreibung:** Berechnung von Konsumentenrente, Produzentenrente und Gesamt-Wohlfahrt. Deadweight-Loss durch Steuern oder Markteingriffe.
-
-**Nutzen:**
-- Quantifizierung von Policy-Effekten auf Wohlfahrt
-- Trade-off-Analyse (Effizienz vs. Gleichheit)
-- Optimale Steuer-Design
-
-**Implementierung:**
-- `WelfareMetrics` Modul
-- Konsumenten/Produzenten-Rente aus Transaktionsdaten
-- Deadweight-Loss-Berechnung bei Steuern/Preiskontrollen
-- Integration in Scenario-Comparison
-
 ## 🛠️ Entwickler-Tools
 
 ### 1. Debugging-Tools
@@ -368,13 +333,6 @@ Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
 - Qualität ist relativ unabhängig und bringt sofort Mehrwert (bereits implementiert!)
 - Mentorschaft rundet soziale Features ab (bereits implementiert!)
 - Event-System ist nun vollständig integriert und ermöglicht besseres Debugging aller Features
-
-### Phase 3: Fortgeschrittene Analysen (12+ Monate)
-9. Externalitäten-Analyse
-
-**Warum diese Reihenfolge?**
-- Analysen profitieren von den reicheren Daten aus Phasen 1-2
-- Externalitäten-Analyse benötigt reife Simulation
 
 ### Kontinuierlich: Code-Qualität und Performance
 - Integration-Tests für jedes neue Feature
