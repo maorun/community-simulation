@@ -1121,6 +1121,69 @@ pub struct SimulationConfig {
     #[serde(default = "default_exploration_rate")]
     pub exploration_rate: f64,
 
+    /// Enable evolutionary strategy dynamics where strategies spread through population.
+    ///
+    /// When enabled, agents periodically imitate successful neighbors' strategies,
+    /// creating cultural evolution dynamics. Successful strategies spread through
+    /// the population while unsuccessful ones die out.
+    ///
+    /// This enables studying:
+    /// - Evolutionarily Stable Strategies (ESS)
+    /// - Cultural evolution and strategy diffusion
+    /// - Emergence of cooperation and coordination
+    /// - Co-evolution of agent behaviors
+    ///
+    /// Requires enable_friendships to be true for imitation learning to work
+    /// (agents imitate strategies of their friends who are more successful).
+    ///
+    /// Set to false to disable strategy evolution (default).
+    #[serde(default)]
+    pub enable_strategy_evolution: bool,
+
+    /// Number of simulation steps between strategy evolution updates.
+    ///
+    /// Strategy evolution is computationally intensive, so it's performed
+    /// periodically rather than every step. Lower values create faster evolution
+    /// but higher computational cost.
+    ///
+    /// For example, 50 means evolution occurs every 50 steps.
+    ///
+    /// Only used when enable_strategy_evolution is true.
+    /// Default: 50 steps (balanced update frequency)
+    /// Valid range: 1-1000 (though values <10 may be too frequent, >200 too slow)
+    #[serde(default = "default_evolution_update_frequency")]
+    pub evolution_update_frequency: usize,
+
+    /// Probability that an agent imitates a successful friend's strategy (0.0-1.0).
+    ///
+    /// When strategy evolution occurs, each agent examines their friends and
+    /// has this probability of copying the strategy of their most successful friend
+    /// (if that friend is more successful than them).
+    ///
+    /// Higher values lead to faster strategy convergence but less diversity.
+    /// Lower values maintain more strategic diversity but slower adaptation.
+    ///
+    /// Only used when enable_strategy_evolution is true.
+    /// Default: 0.3 (30% imitation probability, balanced exploration/exploitation)
+    /// Valid range: 0.0-1.0 (0% to 100%)
+    #[serde(default = "default_imitation_probability")]
+    pub imitation_probability: f64,
+
+    /// Probability of random strategy mutation per agent per evolution step (0.0-1.0).
+    ///
+    /// During strategy evolution, each agent has this probability of randomly
+    /// switching to a different strategy, regardless of success. This maintains
+    /// strategic diversity and enables exploration of new strategies.
+    ///
+    /// Higher values maintain more diversity but reduce convergence to optimal strategies.
+    /// Lower values allow stronger convergence but risk losing valuable strategic diversity.
+    ///
+    /// Only used when enable_strategy_evolution is true.
+    /// Default: 0.05 (5% mutation rate, preserves diversity while allowing convergence)
+    /// Valid range: 0.0-1.0 (0% to 100%)
+    #[serde(default = "default_mutation_rate")]
+    pub mutation_rate: f64,
+
     /// Enable specialization and diversification strategies for skill development.
     ///
     /// When enabled, persons are assigned specialization strategies that affect their
@@ -1342,6 +1405,18 @@ fn default_adaptation_rate() -> f64 {
 
 fn default_exploration_rate() -> f64 {
     0.05 // 5% exploration rate (ε-greedy approach)
+}
+
+fn default_evolution_update_frequency() -> usize {
+    50 // Strategy evolution occurs every 50 steps
+}
+
+fn default_imitation_probability() -> f64 {
+    0.3 // 30% chance to imitate successful friend
+}
+
+fn default_mutation_rate() -> f64 {
+    0.05 // 5% mutation rate for strategic diversity
 }
 
 fn default_certification_cost_multiplier() -> f64 {
@@ -1650,6 +1725,10 @@ impl Default for SimulationConfig {
             enable_adaptive_strategies: false,    // Disabled by default
             adaptation_rate: 0.1,                 // 10% adaptation rate
             exploration_rate: 0.05,               // 5% exploration (ε-greedy)
+            enable_strategy_evolution: false,     // Disabled by default
+            evolution_update_frequency: 50,       // Evolution every 50 steps
+            imitation_probability: 0.3,           // 30% imitation chance
+            mutation_rate: 0.05,                  // 5% mutation rate
             enable_specialization: false,         // Disabled by default
             enable_parallel_trades: false,        // Disabled by default
             enable_externalities: false,          // Disabled by default
@@ -2382,6 +2461,49 @@ impl SimulationConfig {
                 return Err(SimulationError::ValidationError(format!(
                     "exploration_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
                     self.exploration_rate
+                )));
+            }
+        }
+
+        // Strategy evolution validation
+        if self.enable_strategy_evolution {
+            // Dependency check: strategy evolution requires friendships for imitation learning
+            if !self.enable_friendships {
+                return Err(SimulationError::ValidationError(
+                    "Feature Dependency Error: enable_strategy_evolution requires enable_friendships to be true. \
+                     Strategy evolution relies on agents imitating successful friends. \
+                     Solution: Set enable_friendships: true in your configuration, or disable strategy evolution."
+                        .to_string(),
+                ));
+            }
+
+            if self.evolution_update_frequency == 0 {
+                return Err(SimulationError::ValidationError(
+                    "evolution_update_frequency must be greater than 0 (number of steps between updates). \
+                     Recommended range: 10-200 steps. Typical value: 50 steps."
+                        .to_string(),
+                ));
+            }
+
+            if self.evolution_update_frequency > 1000 {
+                return Err(SimulationError::ValidationError(format!(
+                    "evolution_update_frequency must not exceed 1000 steps (too slow for meaningful evolution). \
+                     Current value: {}. Recommended range: 10-200 steps.",
+                    self.evolution_update_frequency
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.imitation_probability) {
+                return Err(SimulationError::ValidationError(format!(
+                    "imitation_probability must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.imitation_probability
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.mutation_rate) {
+                return Err(SimulationError::ValidationError(format!(
+                    "mutation_rate must be between 0.0 and 1.0 (0% to 100%), got: {}",
+                    self.mutation_rate
                 )));
             }
         }

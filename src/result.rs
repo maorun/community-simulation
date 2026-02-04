@@ -407,6 +407,84 @@ pub struct QualityStats {
     pub skills_at_min_quality: usize,
 }
 
+/// Statistics tracking evolutionary strategy dynamics over time.
+///
+/// When strategy evolution is enabled, agents observe and imitate successful friends' strategies,
+/// creating cultural evolution dynamics where successful strategies spread through the population.
+/// This tracks how the distribution of behavioral strategies (Conservative, Balanced, Aggressive, Frugal)
+/// changes over simulation time.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StrategyEvolutionStats {
+    /// Time series of strategy distribution at each evolution update.
+    /// Each entry is a snapshot showing how many agents use each strategy.
+    pub strategy_distribution_history: Vec<StrategyDistributionSnapshot>,
+    /// Total number of strategy changes throughout simulation.
+    pub total_strategy_changes: usize,
+    /// Total number of strategy changes due to mutation (random exploration).
+    pub total_mutations: usize,
+    /// Total number of strategy changes due to imitation (copying successful friends).
+    pub total_imitations: usize,
+    /// Final distribution of strategies at end of simulation.
+    pub final_distribution: StrategyDistribution,
+    /// Number of evolution updates that occurred during simulation.
+    pub total_evolution_updates: usize,
+}
+
+/// Snapshot of strategy distribution at a specific simulation step.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StrategyDistributionSnapshot {
+    /// Simulation step when this snapshot was taken.
+    pub step: usize,
+    /// Distribution of strategies at this step.
+    pub distribution: StrategyDistribution,
+}
+
+/// Distribution of behavioral strategies across the population.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct StrategyDistribution {
+    /// Number of agents using Conservative strategy (0.7x spending multiplier).
+    pub conservative: usize,
+    /// Number of agents using Balanced strategy (1.0x spending multiplier).
+    pub balanced: usize,
+    /// Number of agents using Aggressive strategy (1.3x spending multiplier).
+    pub aggressive: usize,
+    /// Number of agents using Frugal strategy (0.5x spending multiplier).
+    pub frugal: usize,
+    /// Total number of active agents.
+    pub total: usize,
+}
+
+impl StrategyDistribution {
+    /// Creates a new strategy distribution by counting strategies in entities.
+    pub fn from_entities(entities: &[crate::Entity]) -> Self {
+        let active_entities: Vec<_> = entities.iter().filter(|e| e.active).collect();
+        let conservative = active_entities
+            .iter()
+            .filter(|e| e.person_data.strategy == crate::person::Strategy::Conservative)
+            .count();
+        let balanced = active_entities
+            .iter()
+            .filter(|e| e.person_data.strategy == crate::person::Strategy::Balanced)
+            .count();
+        let aggressive = active_entities
+            .iter()
+            .filter(|e| e.person_data.strategy == crate::person::Strategy::Aggressive)
+            .count();
+        let frugal = active_entities
+            .iter()
+            .filter(|e| e.person_data.strategy == crate::person::Strategy::Frugal)
+            .count();
+
+        StrategyDistribution {
+            conservative,
+            balanced,
+            aggressive,
+            frugal,
+            total: active_entities.len(),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SkillPriceInfo {
     pub id: SkillId,
@@ -1355,6 +1433,14 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quality_statistics: Option<QualityStats>,
 
+    /// Strategy evolution statistics (only present if strategy evolution is enabled).
+    ///
+    /// Tracks how behavioral strategies (Conservative, Balanced, Aggressive, Frugal) spread
+    /// through the population via imitation and mutation. Shows cultural evolution dynamics
+    /// where successful strategies proliferate and unsuccessful ones die out.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strategy_evolution_statistics: Option<StrategyEvolutionStats>,
+
     /// Externality statistics for transactions (only present if externality tracking is enabled).
     ///
     /// Tracks positive and negative externalities (costs or benefits affecting third parties)
@@ -1493,6 +1579,7 @@ impl SimulationResult {
     /// #     centrality_analysis: None,
     /// #     mobility_statistics: None,
     /// #     quality_statistics: None,
+    /// #     strategy_evolution_statistics: None,
     /// #     externality_statistics: None,
     /// #     elasticity_statistics: None,
     /// #     equilibrium_statistics: None,
@@ -3864,6 +3951,7 @@ mod tests {
             centrality_analysis: None,
             mobility_statistics: None,
             quality_statistics: None,
+            strategy_evolution_statistics: None,
             externality_statistics: None,
             elasticity_statistics: None,
             equilibrium_statistics: None,
