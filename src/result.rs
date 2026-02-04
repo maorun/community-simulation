@@ -2970,6 +2970,69 @@ pub fn calculate_statistics(values: &[f64]) -> MonteCarloStats {
     MonteCarloStats { mean, std_dev, min, max, median }
 }
 
+/// Internal helper function to calculate money statistics from sorted data.
+///
+/// This function contains the core statistics calculation logic shared by both
+/// `calculate_money_stats` and `calculate_money_stats_presorted`. It assumes
+/// the input data is already sorted and non-empty.
+///
+/// # Arguments
+///
+/// * `sorted_money_values` - Slice of sorted money/wealth values (ascending order, non-empty)
+///
+/// # Returns
+///
+/// `MoneyStats` - Complete wealth distribution statistics
+fn calculate_money_stats_internal(sorted_money_values: &[f64]) -> MoneyStats {
+    let sum: f64 = sorted_money_values.iter().sum();
+    let count = sorted_money_values.len() as f64;
+    let average = sum / count;
+
+    let median = if count as usize % 2 == 1 {
+        sorted_money_values[count as usize / 2]
+    } else {
+        (sorted_money_values[count as usize / 2 - 1] + sorted_money_values[count as usize / 2])
+            / 2.0
+    };
+
+    let variance = sorted_money_values
+        .iter()
+        .map(|value| {
+            let diff = average - value;
+            diff * diff
+        })
+        .sum::<f64>()
+        / count;
+    let std_dev = variance.sqrt();
+
+    // Calculate Gini coefficient using the shared utility function
+    let gini_coefficient = calculate_gini_coefficient(sorted_money_values, sum);
+
+    // Calculate Herfindahl Index using the shared utility function
+    let herfindahl_index = calculate_herfindahl_index(sorted_money_values);
+
+    // Calculate wealth concentration ratios
+    let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
+        calculate_wealth_concentration(sorted_money_values, sum);
+
+    // Calculate Lorenz curve for wealth distribution visualization
+    let lorenz_curve = calculate_lorenz_curve(sorted_money_values, sum);
+
+    MoneyStats {
+        average,
+        median,
+        std_dev,
+        min_money: *sorted_money_values.first().unwrap_or(&0.0),
+        max_money: *sorted_money_values.last().unwrap_or(&0.0),
+        gini_coefficient,
+        herfindahl_index,
+        top_10_percent_share,
+        top_1_percent_share,
+        bottom_50_percent_share,
+        lorenz_curve,
+    }
+}
+
 /// Calculate comprehensive money/wealth statistics for a distribution.
 ///
 /// This function computes a complete set of wealth distribution metrics including:
@@ -3027,52 +3090,7 @@ pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
     let mut sorted_money = money_values.to_vec();
     sorted_money.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
-    let sum: f64 = sorted_money.iter().sum();
-    let count = sorted_money.len() as f64;
-    let average = sum / count;
-
-    let median = if count as usize % 2 == 1 {
-        sorted_money[count as usize / 2]
-    } else {
-        (sorted_money[count as usize / 2 - 1] + sorted_money[count as usize / 2]) / 2.0
-    };
-
-    let variance = sorted_money
-        .iter()
-        .map(|value| {
-            let diff = average - value;
-            diff * diff
-        })
-        .sum::<f64>()
-        / count;
-    let std_dev = variance.sqrt();
-
-    // Calculate Gini coefficient using the shared utility function
-    let gini_coefficient = calculate_gini_coefficient(&sorted_money, sum);
-
-    // Calculate Herfindahl Index using the shared utility function
-    let herfindahl_index = calculate_herfindahl_index(&sorted_money);
-
-    // Calculate wealth concentration ratios
-    let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
-        calculate_wealth_concentration(&sorted_money, sum);
-
-    // Calculate Lorenz curve for wealth distribution visualization
-    let lorenz_curve = calculate_lorenz_curve(&sorted_money, sum);
-
-    MoneyStats {
-        average,
-        median,
-        std_dev,
-        min_money: *sorted_money.first().unwrap_or(&0.0),
-        max_money: *sorted_money.last().unwrap_or(&0.0),
-        gini_coefficient,
-        herfindahl_index,
-        top_10_percent_share,
-        top_1_percent_share,
-        bottom_50_percent_share,
-        lorenz_curve,
-    }
+    calculate_money_stats_internal(&sorted_money)
 }
 
 /// Calculate comprehensive money/wealth statistics for a pre-sorted distribution.
@@ -3138,54 +3156,7 @@ pub fn calculate_money_stats_presorted(sorted_money_values: &[f64]) -> MoneyStat
         };
     }
 
-    // Calculate statistics directly on the pre-sorted data without cloning
-    let sum: f64 = sorted_money_values.iter().sum();
-    let count = sorted_money_values.len() as f64;
-    let average = sum / count;
-
-    let median = if count as usize % 2 == 1 {
-        sorted_money_values[count as usize / 2]
-    } else {
-        (sorted_money_values[count as usize / 2 - 1] + sorted_money_values[count as usize / 2])
-            / 2.0
-    };
-
-    let variance = sorted_money_values
-        .iter()
-        .map(|value| {
-            let diff = average - value;
-            diff * diff
-        })
-        .sum::<f64>()
-        / count;
-    let std_dev = variance.sqrt();
-
-    // Calculate Gini coefficient using the shared utility function
-    let gini_coefficient = calculate_gini_coefficient(sorted_money_values, sum);
-
-    // Calculate Herfindahl Index using the shared utility function
-    let herfindahl_index = calculate_herfindahl_index(sorted_money_values);
-
-    // Calculate wealth concentration ratios
-    let (top_10_percent_share, top_1_percent_share, bottom_50_percent_share) =
-        calculate_wealth_concentration(sorted_money_values, sum);
-
-    // Calculate Lorenz curve for wealth distribution visualization
-    let lorenz_curve = calculate_lorenz_curve(sorted_money_values, sum);
-
-    MoneyStats {
-        average,
-        median,
-        std_dev,
-        min_money: *sorted_money_values.first().unwrap_or(&0.0),
-        max_money: *sorted_money_values.last().unwrap_or(&0.0),
-        gini_coefficient,
-        herfindahl_index,
-        top_10_percent_share,
-        top_1_percent_share,
-        bottom_50_percent_share,
-        lorenz_curve,
-    }
+    calculate_money_stats_internal(sorted_money_values)
 }
 
 /// Calculate trading partner statistics from entities' transaction history
