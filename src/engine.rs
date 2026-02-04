@@ -2196,6 +2196,7 @@ impl SimulationEngine {
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
+            social_class_statistics: self.calculate_social_class_statistics(),
             quality_statistics: if self.config.enable_quality {
                 // Collect all quality ratings from all persons
                 let mut all_qualities: Vec<f64> = Vec::new();
@@ -5247,6 +5248,120 @@ impl SimulationEngine {
         }
     }
 
+    /// Calculates social class distribution and mobility statistics from all persons' class data.
+    ///
+    /// Analyzes the current social class distribution and all historical class changes
+    /// to produce comprehensive social mobility metrics.
+    ///
+    /// # Returns
+    ///
+    /// A `SocialClassStats` struct containing:
+    /// - Current class distribution counts
+    /// - Total upward/downward movements
+    /// - Transition matrix showing moves between classes
+    /// - Mobility rates and averages
+    fn calculate_social_class_statistics(&self) -> crate::result::SocialClassStats {
+        use crate::person::SocialClass;
+        
+        let active_persons: Vec<_> = self
+            .entities
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| &e.person_data)
+            .collect();
+
+        if active_persons.is_empty() {
+            return crate::result::SocialClassStats::default();
+        }
+
+        // Count current class distribution
+        let mut lower_class_count = 0;
+        let mut middle_class_count = 0;
+        let mut upper_class_count = 0;
+        let mut elite_class_count = 0;
+
+        for person in &active_persons {
+            match person.social_class {
+                SocialClass::Lower => lower_class_count += 1,
+                SocialClass::Middle => middle_class_count += 1,
+                SocialClass::Upper => upper_class_count += 1,
+                SocialClass::Elite => elite_class_count += 1,
+            }
+        }
+
+        // Initialize 4x4 transition matrix (Lower=0, Middle=1, Upper=2, Elite=3)
+        let mut transition_matrix = vec![vec![0usize; 4]; 4];
+        let mut total_upward_movements = 0;
+        let mut total_downward_movements = 0;
+        let mut persons_with_upward = 0;
+        let mut persons_with_downward = 0;
+        let mut total_class_changes = 0;
+
+        // Analyze class history for each person
+        for person in &active_persons {
+            let mut has_upward = false;
+            let mut has_downward = false;
+
+            for change in &person.class_history {
+                // Update transition matrix
+                let from_idx = change.from_class as usize;
+                let to_idx = change.to_class as usize;
+                transition_matrix[from_idx][to_idx] += 1;
+
+                // Count movements
+                if change.is_upward() {
+                    total_upward_movements += 1;
+                    has_upward = true;
+                } else if change.is_downward() {
+                    total_downward_movements += 1;
+                    has_downward = true;
+                }
+
+                total_class_changes += 1;
+            }
+
+            if has_upward {
+                persons_with_upward += 1;
+            }
+            if has_downward {
+                persons_with_downward += 1;
+            }
+        }
+
+        // Calculate averages and rates
+        let total_persons = active_persons.len();
+        let avg_class_changes_per_person = if total_persons > 0 {
+            total_class_changes as f64 / total_persons as f64
+        } else {
+            0.0
+        };
+
+        let upward_mobility_rate = if total_persons > 0 {
+            (persons_with_upward as f64 / total_persons as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        let downward_mobility_rate = if total_persons > 0 {
+            (persons_with_downward as f64 / total_persons as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        crate::result::SocialClassStats {
+            lower_class_count,
+            middle_class_count,
+            upper_class_count,
+            elite_class_count,
+            total_upward_movements,
+            total_downward_movements,
+            transition_matrix,
+            avg_class_changes_per_person,
+            upward_mobility_rate,
+            downward_mobility_rate,
+        }
+    }
+
     pub fn get_active_entity_count(&self) -> usize {
         self.entities.iter().filter(|e| e.active).count()
     }
@@ -5524,6 +5639,7 @@ impl SimulationEngine {
             mobility_statistics: crate::result::calculate_mobility_statistics(
                 &self.mobility_quintiles,
             ),
+            social_class_statistics: self.calculate_social_class_statistics(),
             quality_statistics: None, // Simplified for interactive mode
             strategy_evolution_statistics: None, // Simplified for interactive mode
             externality_statistics: None, // Simplified for interactive mode
