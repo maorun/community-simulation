@@ -1,0 +1,30 @@
+# Strategy Evolution Example Configuration
+# This config enables evolutionary strategies where agents imitate successful friends
+
+# Basic simulation parameters
+max_steps: 200
+entity_count: 30
+time_step: 1.0
+initial_money_per_person: 100.0
+base_skill_price: 10.0
+min_skill_price: 1.0
+seed: 42
+skills_per_person: 1
+
+# Enable friendships (required for strategy evolution)
+enable_friendships: true
+friendship_probability: 0.15  # 15% chance per successful trade
+friendship_discount: 0.1      # 10% discount for friends
+
+# Enable strategy evolution
+enable_strategy_evolution: true
+evolution_update_frequency: 50     # Evolution occurs every 50 steps
+imitation_probability: 0.3         # 30% chance to imitate successful friend
+mutation_rate: 0.05                # 5% mutation rate for diversity
+
+# Optional: Enable adaptive strategies for comparison
+enable_adaptive_strategies: false
+
+# Market configuration
+scenario: Original  # Supply/demand pricing with volatility
+demand_strategy: Uniform

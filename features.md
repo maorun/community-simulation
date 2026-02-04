@@ -157,21 +157,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Epsilon-Greedy Exploration vs. Exploitation
 - Experience-Replay optional
 
-#### 5.3 Evolutionäre Strategien und Replikator-Dynamik
-**Beschreibung:** Erfolgreiche Strategien breiten sich in der Population aus. Agenten imitieren erfolgreiche Nachbarn oder Strategien "reproduzieren" sich proportional zu ihrem Erfolg.
-
-**Nutzen:**
-- Modellierung von kultureller Evolution
-- Untersuchung von ESS (Evolutionarily Stable Strategies)
-- Emergenz von Kooperation in wiederholten Spielen
-
-**Implementierung:**
-- `StrategyType` Enum mit verschiedenen Basis-Strategien
-- Periodische Strategy-Update-Phase (z.B. alle 50 Steps)
-- Imitation-Learning basierend auf Neighbor-Success
-- Mutation für Exploration neuer Strategien
-- Tracking von Strategie-Verteilung über Zeit
-
 ## 🔧 Code-Verbesserungen
 
 ### 1. Architektur und Design
