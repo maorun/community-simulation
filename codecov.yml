@@ -1,0 +1,27 @@
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+  
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 2%
+        informational: true
+    patch:
+      default:
+        target: 70%
+        threshold: 2%
+        informational: true
+
+comment:
+  layout: "header, diff, files"
+  behavior: default
+  require_changes: false
+  
+ignore:
+  - "benches/**/*"
+  - "examples/**/*"
+  - "tests/**/*"
+  - "fuzz/**/*"

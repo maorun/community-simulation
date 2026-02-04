@@ -1,0 +1,46 @@
+name: Code Coverage
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      
+    - name: Install Rust toolchain
+      run: |
+        rustup update stable
+        rustup default stable
+        
+    - name: Install tarpaulin
+      run: cargo install cargo-tarpaulin
+      
+    - name: Generate coverage
+      run: cargo tarpaulin --verbose --all-features --workspace --timeout 300 --out xml --output-dir ./coverage
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: ./coverage/cobertura.xml
+        fail_ci_if_error: false
+        verbose: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        
+    - name: Check coverage threshold
+      run: |
+        cargo tarpaulin --verbose --all-features --workspace --timeout 300 --fail-under 70 || echo "⚠️  Warning: Coverage is below 70% threshold"

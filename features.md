@@ -176,20 +176,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Code-Qualität
 
-#### 3.1 Code-Coverage und Coverage-Reporting
-**Beschreibung:** Automatisches Tracking von Test-Coverage und Integration mit Coverage-Reporting-Tools.
-
-**Nutzen:**
-- Sichtbarkeit über ungetestete Code-Pfade
-- Qualitäts-Metriken für PRs
-- Gezielte Test-Erweiterung für kritische Pfade
-
-**Implementierung:**
-- `tarpaulin` oder `llvm-cov` für Coverage
-- Integration mit Codecov oder Coveralls
-- Coverage-Badges in README
-- Minimum-Coverage-Threshold in CI (z.B. 70%)
-
 ### 4. Datenmanagement
 
 #### 4.1 Time-Series-Datenbank-Integration

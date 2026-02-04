@@ -8,6 +8,7 @@ This document provides comprehensive information for developers working on the E
 - [Building the Project](#building-the-project)
 - [Code Structure](#code-structure)
 - [Testing](#testing)
+- [Code Coverage](#code-coverage)
 - [Benchmarks](#benchmarks)
 - [Continuous Integration](#continuous-integration)
 - [Linting and Code Quality](#linting-and-code-quality)
@@ -142,6 +143,43 @@ mod tests {
 }
 ```
 
+## Code Coverage
+
+The project includes comprehensive code coverage tracking and reporting. Coverage is automatically collected in CI and uploaded to Codecov for tracking over time.
+
+### Generating Coverage Locally
+
+Install `cargo-tarpaulin` (one-time setup):
+
+```bash
+cargo install cargo-tarpaulin
+```
+
+Generate a basic terminal coverage report:
+
+```bash
+cargo tarpaulin --verbose --all-features --workspace --timeout 300
+```
+
+Generate an HTML report for detailed line-by-line analysis:
+
+```bash
+cargo tarpaulin --verbose --all-features --workspace --timeout 300 --out html --output-dir ./coverage
+# Open coverage/index.html in your browser
+```
+
+### Coverage Goals
+
+The project aims for **at least 70% code coverage**. You can verify your changes meet this threshold:
+
+```bash
+cargo tarpaulin --verbose --all-features --workspace --timeout 300 --fail-under 70
+```
+
+### More Information
+
+For detailed coverage instructions, troubleshooting, and best practices, see [COVERAGE.md](COVERAGE.md).
+
 ## Benchmarks
 
 The project includes performance benchmarks using `criterion`:
@@ -160,14 +198,25 @@ Results are saved in `target/criterion/` with detailed HTML reports.
 
 ## Continuous Integration
 
-The project uses GitHub Actions for continuous integration, automatically running on every push and pull request to the `master` branch. The workflow configuration is located at `.github/workflows/rust.yml`.
+The project uses GitHub Actions for continuous integration, automatically running on every push and pull request to the `master` branch. Workflow configurations are located in `.github/workflows/`.
 
-The CI pipeline enforces code quality through:
+### Main CI Pipeline (`rust.yml`)
+
+The main CI pipeline enforces code quality through:
 1. **Code Formatting**: Checks that all code follows Rust formatting standards with `cargo fmt --all -- --check`
 2. **Linting**: Runs Clippy to catch common mistakes and enforce best practices with `cargo clippy --all-targets --all-features -- -D warnings -A deprecated`
 3. **Build**: Compiles the project with `cargo build --verbose`
 4. **Tests**: Runs all tests with `cargo test --verbose`
 5. **Release Build**: Verifies that release builds succeed with `cargo build --release --verbose`
+
+### Code Coverage Pipeline (`coverage.yml`)
+
+A separate workflow collects code coverage metrics:
+1. **Coverage Generation**: Uses `cargo-tarpaulin` to instrument tests and measure coverage
+2. **Codecov Upload**: Automatically uploads coverage reports to Codecov for tracking
+3. **Threshold Check**: Verifies coverage meets the 70% threshold (warns but doesn't fail)
+
+Coverage badges are displayed in the README.md header, and detailed coverage reports are available on Codecov.
 
 All PRs must pass these checks before merging, ensuring consistent code style and quality across the project.
 
