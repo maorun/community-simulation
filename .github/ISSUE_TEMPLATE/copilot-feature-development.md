@@ -55,6 +55,7 @@ The feature implementation is complete when:
 - [ ] All doctests pass: `cargo test --doc --verbose`
 - [ ] Code formatted: `cargo fmt`
 - [ ] Code linted: `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass without errors)
+- [ ] **Code coverage:** Maintains or improves coverage (goal: 100%, minimum: 56%)
 - [ ] Feature tested manually with example run
 - [ ] Documentation added (doc comments for public APIs)
 - [ ] Feature **completely removed** from `features.md` (not commented out, not marked as implemented - DELETED)
@@ -79,9 +80,26 @@ cargo fmt
 # Lint (REQUIRED - must pass before completing development)
 cargo clippy --all-targets --all-features -- -D warnings -A deprecated
 
+# Code Coverage (goal: 100%, minimum: 56%)
+cargo tarpaulin --verbose --all-features --workspace --timeout 300
+
 # Run simulation with feature
 ./target/debug/simulation-framework -s 100 -p 10 -o /tmp/test.json
 ```
+
+### Code Coverage Requirements
+
+This project aims for **100% code coverage** with a progressive improvement approach:
+
+- **Current baseline:** 56% (enforced in CI - will fail below this)
+- **Target for new code:** 80%+ coverage
+- **Ultimate goal:** 100% coverage
+
+When implementing features:
+- Write comprehensive tests for all new code paths
+- Aim for 80%+ coverage of your new code
+- Don't decrease overall project coverage
+- See [COVERAGE.md](../../COVERAGE.md) for detailed guidance
 
 ### Feature Selection Guidelines
 
