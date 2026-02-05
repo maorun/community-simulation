@@ -245,6 +245,7 @@ All features are documented in `features.md` at the repository root. The file co
 When implementing features or improvements:
 - ✅ Maintain backward compatibility
 - ✅ Write tests for new functionality
+- ✅ **Aim for 100% code coverage** (minimum: 56%, target for new code: 80%+)
 - ✅ Update documentation
 - ✅ Consider performance implications
 - ✅ Follow existing code style (run `cargo fmt`)

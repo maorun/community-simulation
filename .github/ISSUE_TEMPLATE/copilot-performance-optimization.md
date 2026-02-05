@@ -69,6 +69,7 @@ The performance optimization is complete when:
 - [ ] All doctests pass: `cargo test --doc --verbose`
 - [ ] Code formatted: `cargo fmt`
 - [ ] Code linted: `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass without errors)
+- [ ] **Code coverage:** Maintains or improves coverage (goal: 100%, minimum: 56%)
 - [ ] Optimization tested manually with various simulation sizes
 - [ ] Performance improvement measured with benchmarks
 - [ ] Benchmark results show measurable improvement (include numbers)
@@ -98,6 +99,9 @@ cargo fmt --all
 # Lint (REQUIRED - must pass before completing development)
 cargo clippy --all-targets --all-features -- -D warnings -A deprecated
 
+# Code Coverage (goal: 100%, minimum: 56%)
+cargo tarpaulin --verbose --all-features --workspace --timeout 300
+
 # Run benchmarks (CRITICAL for performance work)
 cargo bench
 
@@ -116,6 +120,21 @@ time ./target/release/simulation-framework -s 500 -p 100 -o /tmp/medium.json
 # Manual performance test (large)
 time ./target/release/simulation-framework -s 1000 -p 500 -o /tmp/large.json
 ```
+
+### Code Coverage Requirements
+
+This project aims for **100% code coverage** with a progressive improvement approach:
+
+- **Current baseline:** 56% (enforced in CI - will fail below this)
+- **Target for optimizations:** Maintain or increase coverage
+- **Ultimate goal:** 100% coverage
+
+When optimizing code:
+- Maintain or improve test coverage for affected code
+- Ensure all optimized code paths are tested
+- Don't decrease overall project coverage
+- Performance is important, but correctness is paramount
+- See [COVERAGE.md](../../COVERAGE.md) for detailed guidance
 
 ### Performance Optimization Categories
 

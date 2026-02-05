@@ -61,6 +61,7 @@ The code improvement is complete when:
 - [ ] All doctests pass: `cargo test --doc --verbose`
 - [ ] Code formatted: `cargo fmt`
 - [ ] Code linted: `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass without errors)
+- [ ] **Code coverage:** Maintains or improves coverage (goal: 100%, minimum: 56%)
 - [ ] Improvement tested manually (if applicable)
 - [ ] Documentation updated (doc comments for affected code)
 - [ ] No regressions in existing functionality
@@ -89,12 +90,29 @@ cargo fmt --all
 # Lint (REQUIRED - must pass before completing development)
 cargo clippy --all-targets --all-features -- -D warnings -A deprecated
 
+# Code Coverage (goal: 100%, minimum: 56%)
+cargo tarpaulin --verbose --all-features --workspace --timeout 300
+
 # Run benchmarks (if performance-related)
 cargo bench
 
 # Run with example parameters
 ./target/debug/simulation-framework -s 100 -p 10 -o /tmp/test.json
 ```
+
+### Code Coverage Requirements
+
+This project aims for **100% code coverage** with a progressive improvement approach:
+
+- **Current baseline:** 56% (enforced in CI - will fail below this)
+- **Target for improvements:** Maintain or increase coverage
+- **Ultimate goal:** 100% coverage
+
+When improving code:
+- Maintain or improve test coverage for affected code
+- Add tests for previously untested code paths
+- Don't decrease overall project coverage
+- See [COVERAGE.md](../../COVERAGE.md) for detailed guidance
 
 ### Code Improvement Categories
 
