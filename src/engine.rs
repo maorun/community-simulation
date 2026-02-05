@@ -1748,6 +1748,11 @@ impl SimulationEngine {
             } else {
                 None
             },
+            automation_statistics: if self.config.enable_automation {
+                self.calculate_automation_statistics()
+            } else {
+                None
+            },
             certification_statistics: if self.config.enable_certification {
                 // Count active (non-expired) certifications
                 let active_certifications = self
@@ -2521,9 +2526,40 @@ impl SimulationEngine {
 
             potential_needs_indices.shuffle(&mut self.rng);
 
+            // Calculate automation progress for demand reduction
+            let automation_progress = if self.config.enable_automation {
+                self.config.automation_rate * self.current_step as f64
+            } else {
+                0.0
+            };
+
             for _ in 0..num_needs {
                 if let Some(idx) = potential_needs_indices.pop() {
                     let needed_skill_id = &self.all_skill_ids[idx];
+
+                    // Apply automation effects: reduce demand for automatable skills
+                    if self.config.enable_automation && automation_progress > 0.0 {
+                        // Get automation risk for this skill (either from per-skill config or skill's own risk)
+                        let automation_risk = self
+                            .config
+                            .automation_risks_per_skill
+                            .get(needed_skill_id)
+                            .copied()
+                            .or_else(|| {
+                                self.market.skills.get(needed_skill_id).map(|s| s.automation_risk)
+                            })
+                            .unwrap_or(0.0);
+
+                        if automation_risk > 0.0 {
+                            // Calculate demand reduction: skill is skipped with probability based on automation progress
+                            let skip_probability = (automation_risk * automation_progress).min(1.0);
+                            if self.rng.random_range(0.0..1.0) < skip_probability {
+                                // Skill demand suppressed by automation - try next skill
+                                continue;
+                            }
+                        }
+                    }
+
                     if !entity
                         .person_data
                         .needed_skills
@@ -4811,6 +4847,98 @@ impl SimulationEngine {
         })
     }
 
+    /// Calculate automation statistics for skills affected by technological unemployment.
+    ///
+    /// Analyzes the impact of automation on skill demand, tracking which skills are at risk
+    /// of being automated and estimating the overall demand reduction across the economy.
+    fn calculate_automation_statistics(&self) -> Option<crate::result::AutomationStats> {
+        // Calculate automation progress
+        let automation_progress = self.config.automation_rate * self.current_step as f64;
+
+        // Collect all skills with their automation risks
+        let mut skill_risks: Vec<(String, f64, usize)> = self
+            .market
+            .skills
+            .iter()
+            .map(|(id, skill)| {
+                // Use per-skill override if available, otherwise use skill's own risk
+                let risk = self
+                    .config
+                    .automation_risks_per_skill
+                    .get(id)
+                    .copied()
+                    .unwrap_or(skill.automation_risk);
+                let demand = self.market.demand_counts.get(id).copied().unwrap_or(0);
+                (id.clone(), risk, demand)
+            })
+            .collect();
+
+        // Filter skills with non-zero risk
+        let skills_at_risk = skill_risks.iter().filter(|(_, risk, _)| *risk > 0.0).count();
+
+        if skills_at_risk == 0 {
+            // No skills at risk, return minimal statistics
+            return Some(crate::result::AutomationStats {
+                skills_at_risk: 0,
+                average_automation_risk: 0.0,
+                min_automation_risk: 0.0,
+                max_automation_risk: 0.0,
+                automation_progress,
+                demand_reduction_percentage: 0.0,
+                most_automated_skills: vec![],
+            });
+        }
+
+        // Calculate statistics
+        let risks: Vec<f64> = skill_risks.iter().map(|(_, risk, _)| *risk).collect();
+        let sum_risks: f64 = risks.iter().sum();
+        let average_automation_risk = sum_risks / risks.len() as f64;
+        let min_automation_risk = risks.iter().copied().fold(f64::INFINITY, f64::min);
+        let max_automation_risk = risks.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+
+        // Calculate estimated demand reduction
+        // For each skill, the demand reduction is: risk * automation_progress
+        // Average across all skills weighted by their current demand
+        let total_demand: usize = skill_risks.iter().map(|(_, _, demand)| *demand).sum();
+        let weighted_reduction = if total_demand > 0 {
+            skill_risks
+                .iter()
+                .map(|(_, risk, demand)| {
+                    let reduction = (*risk * automation_progress).min(1.0);
+                    reduction * (*demand as f64)
+                })
+                .sum::<f64>()
+                / total_demand as f64
+        } else {
+            0.0
+        };
+        let demand_reduction_percentage = weighted_reduction * 100.0;
+
+        // Sort by automation risk (descending) and take top 5
+        // Handle potential NaN values gracefully by treating them as equal
+        skill_risks.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        let most_automated_skills: Vec<crate::result::SkillAutomationInfo> = skill_risks
+            .iter()
+            .take(5)
+            .filter(|(_, risk, _)| *risk > 0.0)
+            .map(|(id, risk, demand)| crate::result::SkillAutomationInfo {
+                skill_id: id.clone(),
+                automation_risk: *risk,
+                current_demand: *demand,
+            })
+            .collect();
+
+        Some(crate::result::AutomationStats {
+            skills_at_risk,
+            average_automation_risk,
+            min_automation_risk,
+            max_automation_risk,
+            automation_progress,
+            demand_reduction_percentage,
+            most_automated_skills,
+        })
+    }
+
     /// Calculate price elasticity statistics for all skills.
     ///
     /// Elasticity measures the responsiveness of quantity demanded/supplied to price changes.
@@ -5628,6 +5756,7 @@ impl SimulationEngine {
             contract_statistics: None,
             education_statistics: None,
             mentorship_statistics: None,
+            automation_statistics: None,
             certification_statistics: None,
             environment_statistics: None, // Simplified for interactive mode
             friendship_statistics: None,  // Simplified

@@ -69,21 +69,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Erweiterte Szenarien
 
-#### 4.1 Digitalisierung und Automatisierung
-**Beschreibung:** Szenario wo bestimmte Skills durch Automatisierung ersetzt werden können. Technologischer Wandel der zu struktureller Arbeitslosigkeit führt.
-
-**Nutzen:**
-- Modellierung von Technologie-induzierten Arbeitsmarkt-Schocks
-- Untersuchung von Umschulung und Anpassungsfähigkeit (mit Education-System)
-- Policy-Tests für technologischen Wandel (z.B. UBI via Redistribution)
-
-**Implementierung:**
-- `AutomationRisk` per Skill (0.0-1.0)
-- Schrittweise Reduktion der Nachfrage für automatisierbare Skills
-- `RetrainingIncentive` Programme als Policy-Response
-- Integration mit Education-System
-
-#### 4.2 Globalisierung und Handel zwischen Gemeinschaften
+#### 4.1 Globalisierung und Handel zwischen Gemeinschaften
 **Beschreibung:** Multi-Community Simulation mit Handel zwischen verschiedenen Wirtschaftsräumen. Modellierung von Außenhandel, Wechselkursen und Handels-Policies.
 
 **Nutzen:**

@@ -1279,6 +1279,9 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             initial_sick_persons: args
                 .initial_sick_persons
                 .unwrap_or(SimulationConfig::default().initial_sick_persons),
+            enable_automation: SimulationConfig::default().enable_automation,
+            automation_rate: SimulationConfig::default().automation_rate,
+            automation_risks_per_skill: HashMap::new(), // Not configurable via CLI
             enable_invariant_checking: args.enable_invariant_checking,
             strict_invariant_mode: args.strict_invariant_mode,
             check_money_conservation: SimulationConfig::default().check_money_conservation,

@@ -129,6 +129,19 @@ pub struct Skill {
     /// When present, certifications increase trust in the skill and allow the provider
     /// to charge higher prices. Certifications can expire and need renewal.
     pub certification: Option<Certification>,
+
+    /// Automation risk level for this skill (0.0 to 1.0).
+    ///
+    /// Represents the susceptibility of this skill to automation and technological
+    /// replacement. Higher values indicate skills more likely to be automated.
+    /// - 0.0: No automation risk (e.g., creative arts, human interaction)
+    /// - 0.5: Moderate automation risk (e.g., data entry, routine analysis)
+    /// - 1.0: High automation risk (e.g., repetitive manual tasks)
+    ///
+    /// When automation is enabled, demand for high-risk skills gradually decreases
+    /// over time, simulating technological unemployment and labor market disruption.
+    #[serde(default)]
+    pub automation_risk: f64,
     // Note: Supply is implicitly 1 per person offering it. Demand is calculated each step.
     // Price management is handled by the Market.
 }
@@ -150,7 +163,13 @@ impl Skill {
     /// let accounting = Skill::new("Accounting".to_string(), 45.0);
     /// ```
     pub fn new(id: SkillId, base_price: f64) -> Self {
-        Self { id, current_price: base_price, efficiency_multiplier: 1.0, certification: None }
+        Self {
+            id,
+            current_price: base_price,
+            efficiency_multiplier: 1.0,
+            certification: None,
+            automation_risk: 0.0,
+        }
     }
 
     /// Returns the effective price for this skill, taking into account certification.
