@@ -1945,19 +1945,19 @@ impl Default for SimulationConfig {
             enable_health: false,               // Disabled by default
             disease_transmission_rate: default_disease_transmission_rate(),
             disease_recovery_duration: default_disease_recovery_duration(),
-            initial_sick_persons: 0,          // No initial infections
-            enable_invariant_checking: false, // Disabled by default
-            strict_invariant_mode: false,     // Lenient mode by default
-            check_money_conservation: true,   // Check money conservation by default
-            check_non_negative_wealth: true,  // Check non-negative wealth by default
-            enable_assets: false,                     // Disabled by default
-            asset_purchase_probability: 0.02,         // 2% chance per step
-            min_money_for_asset_purchase: 200.0,      // Require 200 money
-            property_appreciation_rate: 0.002,        // 0.2% appreciation per step
-            equipment_depreciation_rate: 0.01,        // 1% depreciation per step
-            rental_income_rate: 0.001,                // 0.1% rental income per step
-            stock_return_rate: 0.003,                 // 0.3% expected return per step
-            asset_price_multiplier: 10.0,             // Assets cost 10x base skill price
+            initial_sick_persons: 0,             // No initial infections
+            enable_invariant_checking: false,    // Disabled by default
+            strict_invariant_mode: false,        // Lenient mode by default
+            check_money_conservation: true,      // Check money conservation by default
+            check_non_negative_wealth: true,     // Check non-negative wealth by default
+            enable_assets: false,                // Disabled by default
+            asset_purchase_probability: 0.02,    // 2% chance per step
+            min_money_for_asset_purchase: 200.0, // Require 200 money
+            property_appreciation_rate: 0.002,   // 0.2% appreciation per step
+            equipment_depreciation_rate: 0.01,   // 1% depreciation per step
+            rental_income_rate: 0.001,           // 0.1% rental income per step
+            stock_return_rate: 0.003,            // 0.3% expected return per step
+            asset_price_multiplier: 10.0,        // Assets cost 10x base skill price
         }
     }
 }
