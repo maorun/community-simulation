@@ -1181,6 +1181,11 @@ impl SimulationEngine {
                     // Update social classes periodically based on wealth distribution
                     self.update_social_classes(self.current_step);
 
+                    // Update market segments periodically based on wealth distribution
+                    if self.config.enable_market_segments {
+                        self.update_market_segments();
+                    }
+
                     // Calculate additional metrics for enhanced progress bar
                     let trades_this_step = self.trades_per_step.last().copied().unwrap_or(0);
                     let avg_price = self.market.get_average_price();
@@ -5571,6 +5576,47 @@ impl SimulationEngine {
             self.entities[*entity_idx]
                 .person_data
                 .update_social_class(percentile, current_step);
+        }
+    }
+
+    /// Updates market segments for all persons based on their wealth percentiles.
+    ///
+    /// Market segments categorize persons into Budget (bottom 40%), Mittelklasse (40th-85th),
+    /// or Luxury (top 15%) based on their relative wealth. This affects their price-quality
+    /// preferences and trade matching behavior when market segmentation is enabled.
+    ///
+    /// This method should be called periodically to reflect changes in wealth distribution.
+    fn update_market_segments(&mut self) {
+        // Collect money values and indices for active persons, filtering out NaN/infinite values
+        let mut wealth_data: Vec<(usize, f64)> = self
+            .entities
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.active)
+            .map(|(idx, e)| (idx, e.person_data.money))
+            .filter(|(_, money)| money.is_finite()) // Filter out NaN and infinite values
+            .collect();
+
+        if wealth_data.is_empty() {
+            return;
+        }
+
+        // Sort by money to calculate percentiles
+        // Safe to unwrap since we filtered out NaN/infinite values
+        wealth_data.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+
+        let count = wealth_data.len();
+
+        // Calculate percentile for each person and update their market segment
+        for (rank, (entity_idx, _)) in wealth_data.iter().enumerate() {
+            let percentile = if count > 1 {
+                rank as f64 / (count - 1) as f64
+            } else {
+                0.5 // Middle segment for single person
+            };
+
+            self.entities[*entity_idx].person_data.market_segment =
+                crate::person::MarketSegment::from_percentile(percentile);
         }
     }
 
