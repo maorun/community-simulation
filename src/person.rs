@@ -126,7 +126,7 @@ impl MarketSegment {
     /// Returns (min_multiplier, max_multiplier) tuple.
     ///
     /// # Returns
-    /// * `Budget`: (0.5, 0.9) - will only buy at discounts
+    /// * `Budget`: (0.5, 0.9) - seeks discounts, avoids full market price
     /// * `Mittelklasse`: (0.8, 1.2) - flexible within 20% of market price
     /// * `Luxury`: (1.0, 2.0) - willing to pay premium for quality
     pub fn price_acceptance_range(&self) -> (f64, f64) {
@@ -145,9 +145,11 @@ impl MarketSegment {
     /// Returns a descriptive string for this market segment.
     pub fn description(&self) -> &str {
         match self {
-            MarketSegment::Budget => "Budget segment (bottom 40%, price-conscious)",
+            MarketSegment::Budget => "Budget segment (below 40th percentile, price-conscious)",
             MarketSegment::Mittelklasse => "Middle-market segment (40th-85th percentile)",
-            MarketSegment::Luxury => "Luxury segment (top 15%, quality-focused)",
+            MarketSegment::Luxury => {
+                "Luxury segment (at or above 85th percentile, quality-focused)"
+            },
         }
     }
 }
@@ -1101,9 +1103,9 @@ mod tests {
 
     #[test]
     fn test_market_segment_descriptions() {
-        assert!(MarketSegment::Budget.description().contains("bottom 40%"));
+        assert!(MarketSegment::Budget.description().contains("below 40th"));
         assert!(MarketSegment::Mittelklasse.description().contains("40th-85th"));
-        assert!(MarketSegment::Luxury.description().contains("top 15%"));
+        assert!(MarketSegment::Luxury.description().contains("at or above 85th"));
     }
 
     #[test]

@@ -5581,9 +5581,14 @@ impl SimulationEngine {
 
     /// Updates market segments for all persons based on their wealth percentiles.
     ///
-    /// Market segments categorize persons into Budget (bottom 40%), Mittelklasse (40th-85th),
-    /// or Luxury (top 15%) based on their relative wealth. This affects their price-quality
-    /// preferences and trade matching behavior when market segmentation is enabled.
+    /// Market segments categorize persons into Budget (below 40th percentile),
+    /// Mittelklasse (40th-85th percentile), or Luxury (at or above 85th percentile)
+    /// based on their relative wealth. This affects their price-quality preferences
+    /// and trade matching behavior when market segmentation is enabled.
+    ///
+    /// The percentile calculation produces values in [0.0, 1.0] where 0.0 represents
+    /// the poorest person and 1.0 represents the wealthiest person. Edge case: when
+    /// there's only one person, they are assigned percentile 0.5 (middle segment).
     ///
     /// This method should be called periodically to reflect changes in wealth distribution.
     fn update_market_segments(&mut self) {
