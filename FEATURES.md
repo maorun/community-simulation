@@ -9,15 +9,15 @@ For a quick overview, see the [README](README.md). For development information, 
 - [Core Simulation Features](#core-simulation-features)
 - [Market Mechanisms](#market-mechanisms)
 - [Social Systems](#social-systems)
-- [Economic & Financial Systems](#economic--financial-systems)
-- [Insurance & Risk Management](#insurance--risk-management)
-- [Technology & Innovation](#technology--innovation)
+- [Economic & Financial Systems](#economic-financial-systems)
+- [Insurance & Risk Management](#insurance-risk-management)
+- [Technology & Innovation](#technology-innovation)
 - [Advanced Market Systems](#advanced-market-systems)
 - [Behavioral Systems](#behavioral-systems)
-- [Analysis & Research Tools](#analysis--research-tools)
-- [Output & Export Formats](#output--export-formats)
-- [Configuration & Usability](#configuration--usability)
-- [Development & Debugging](#development--debugging)
+- [Analysis & Research Tools](#analysis-research-tools)
+- [Output & Export Formats](#output-export-formats)
+- [Configuration & Usability](#configuration-usability)
+- [Development & Debugging](#development-debugging)
 
 ---
 
