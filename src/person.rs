@@ -1504,4 +1504,596 @@ mod tests {
             "Specialization strategy should be default (Balanced)"
         );
     }
+
+    #[test]
+    fn test_can_afford_basic() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        assert!(person.can_afford(100.0));
+        assert!(person.can_afford(50.0));
+        assert!(person.can_afford(0.0));
+        assert!(!person.can_afford(100.01));
+        assert!(!person.can_afford(150.0));
+    }
+
+    #[test]
+    fn test_can_afford_negative_money() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, -50.0, vec![skill], Strategy::default(), test_location());
+
+        assert!(!person.can_afford(0.0));
+        assert!(!person.can_afford(10.0));
+    }
+
+    #[test]
+    fn test_record_transaction_buy() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.record_transaction(10, "SomeSkill".to_string(), TransactionType::Buy, 25.0, Some(2));
+
+        assert_eq!(person.transaction_history.len(), 1);
+        assert_eq!(person.transaction_history[0].step, 10);
+        assert_eq!(person.transaction_history[0].skill_id, "SomeSkill");
+        assert_eq!(person.transaction_history[0].amount, 25.0);
+        assert_eq!(person.transaction_history[0].counterparty_id, Some(2));
+    }
+
+    #[test]
+    fn test_record_transaction_sell() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.record_transaction(
+            15,
+            "AnotherSkill".to_string(),
+            TransactionType::Sell,
+            50.0,
+            None,
+        );
+
+        assert_eq!(person.transaction_history.len(), 1);
+        assert_eq!(person.transaction_history[0].step, 15);
+        assert_eq!(person.transaction_history[0].skill_id, "AnotherSkill");
+        assert_eq!(person.transaction_history[0].amount, 50.0);
+        assert_eq!(person.transaction_history[0].counterparty_id, None);
+    }
+
+    #[test]
+    fn test_record_multiple_transactions() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.record_transaction(1, "Skill1".to_string(), TransactionType::Buy, 10.0, Some(2));
+        person.record_transaction(2, "Skill2".to_string(), TransactionType::Sell, 20.0, Some(3));
+        person.record_transaction(3, "Skill3".to_string(), TransactionType::Buy, 15.0, None);
+
+        assert_eq!(person.transaction_history.len(), 3);
+    }
+
+    #[test]
+    fn test_is_healthy_default() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        assert!(person.is_healthy());
+        assert!(!person.is_sick());
+    }
+
+    #[test]
+    fn test_infect_person() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.infect(50);
+
+        assert!(!person.is_healthy());
+        assert!(person.is_sick());
+        match person.health_status {
+            HealthStatus::Sick { infected_at_step } => assert_eq!(infected_at_step, 50),
+            _ => panic!("Expected Sick health status"),
+        }
+    }
+
+    #[test]
+    fn test_try_recover_success() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.infect(10);
+        assert!(person.is_sick());
+
+        // Try to recover before recovery duration - should fail
+        let recovered = person.try_recover(14, 5);
+        assert!(!recovered);
+        assert!(person.is_sick());
+
+        // Try to recover at exactly recovery duration - should succeed
+        let recovered = person.try_recover(15, 5);
+        assert!(recovered);
+        assert!(person.is_healthy());
+        assert!(!person.is_sick());
+    }
+
+    #[test]
+    fn test_try_recover_after_duration() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.infect(10);
+
+        // Try to recover well after recovery duration - should succeed
+        let recovered = person.try_recover(50, 5);
+        assert!(recovered);
+        assert!(person.is_healthy());
+    }
+
+    #[test]
+    fn test_try_recover_when_healthy() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        // Person is healthy, try_recover should return false
+        let recovered = person.try_recover(100, 5);
+        assert!(!recovered);
+        assert!(person.is_healthy());
+    }
+
+    #[test]
+    fn test_health_productivity_multiplier_healthy() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        assert_eq!(person.health_productivity_multiplier(), 1.0);
+    }
+
+    #[test]
+    fn test_health_productivity_multiplier_sick() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.infect(10);
+        assert_eq!(person.health_productivity_multiplier(), 0.5);
+    }
+
+    #[test]
+    fn test_add_friend() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        assert_eq!(person.friend_count(), 0);
+        assert!(!person.is_friend_with(2));
+
+        person.add_friend(2);
+
+        assert_eq!(person.friend_count(), 1);
+        assert!(person.is_friend_with(2));
+        assert!(!person.is_friend_with(3));
+    }
+
+    #[test]
+    fn test_add_multiple_friends() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.add_friend(2);
+        person.add_friend(3);
+        person.add_friend(4);
+
+        assert_eq!(person.friend_count(), 3);
+        assert!(person.is_friend_with(2));
+        assert!(person.is_friend_with(3));
+        assert!(person.is_friend_with(4));
+        assert!(!person.is_friend_with(5));
+    }
+
+    #[test]
+    fn test_add_friend_duplicate() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.add_friend(2);
+        person.add_friend(2); // Add same friend again
+
+        // HashSet should deduplicate
+        assert_eq!(person.friend_count(), 1);
+    }
+
+    #[test]
+    fn test_calculate_influence_from_friends_zero() {
+        let influence = Person::calculate_influence_from_friends(0);
+        assert!(
+            (influence - 1.0).abs() < 0.001,
+            "0 friends should give baseline influence of 1.0"
+        );
+    }
+
+    #[test]
+    fn test_calculate_influence_from_friends_increases() {
+        let influence_0 = Person::calculate_influence_from_friends(0);
+        let influence_10 = Person::calculate_influence_from_friends(10);
+        let influence_30 = Person::calculate_influence_from_friends(30);
+
+        assert!(influence_10 > influence_0, "More friends should increase influence");
+        assert!(
+            influence_30 > influence_10,
+            "Even more friends should further increase influence"
+        );
+    }
+
+    #[test]
+    fn test_calculate_influence_from_friends_logarithmic() {
+        // Verify logarithmic scaling (diminishing returns)
+        let influence_10 = Person::calculate_influence_from_friends(10);
+        let influence_20 = Person::calculate_influence_from_friends(20);
+        let influence_30 = Person::calculate_influence_from_friends(30);
+
+        let growth_10_to_20 = influence_20 - influence_10;
+        let growth_20_to_30 = influence_30 - influence_20;
+
+        // Growth should diminish (logarithmic scaling)
+        assert!(
+            growth_10_to_20 > growth_20_to_30,
+            "Influence growth should have diminishing returns"
+        );
+    }
+
+    #[test]
+    fn test_update_influence_score() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        // Initially 0 friends
+        person.update_influence_score();
+        let initial_influence = person.influence_score;
+        assert!((initial_influence - 1.0).abs() < 0.001);
+
+        // Add friends and update
+        person.add_friend(2);
+        person.add_friend(3);
+        person.add_friend(4);
+        person.update_influence_score();
+
+        assert!(
+            person.influence_score > initial_influence,
+            "Influence should increase with friends"
+        );
+        let expected_influence = Person::calculate_influence_from_friends(3);
+        assert!((person.influence_score - expected_influence).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_update_social_class_no_change() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        // Person starts as Middle class (default)
+        assert_eq!(person.social_class, SocialClass::Middle);
+
+        // Update with percentile that keeps them in Middle
+        person.update_social_class(0.5, 10);
+
+        assert_eq!(person.social_class, SocialClass::Middle);
+        assert_eq!(person.class_history.len(), 0, "No change should not be recorded");
+    }
+
+    #[test]
+    fn test_update_social_class_upward() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        // Person starts as Middle class
+        assert_eq!(person.social_class, SocialClass::Middle);
+
+        // Update to Upper class
+        person.update_social_class(0.85, 100);
+
+        assert_eq!(person.social_class, SocialClass::Upper);
+        assert_eq!(person.class_history.len(), 1);
+        assert_eq!(person.class_history[0].step, 100);
+        assert_eq!(person.class_history[0].from_class, SocialClass::Middle);
+        assert_eq!(person.class_history[0].to_class, SocialClass::Upper);
+        assert!(person.class_history[0].is_upward());
+        assert!(!person.class_history[0].is_downward());
+    }
+
+    #[test]
+    fn test_update_social_class_downward() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        // Start as Middle class, update to Lower
+        person.update_social_class(0.15, 50);
+
+        assert_eq!(person.social_class, SocialClass::Lower);
+        assert_eq!(person.class_history.len(), 1);
+        assert!(person.class_history[0].is_downward());
+        assert!(!person.class_history[0].is_upward());
+    }
+
+    #[test]
+    fn test_update_social_class_multiple_changes() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        person.update_social_class(0.85, 10); // Move to Upper
+        person.update_social_class(0.97, 20); // Move to Elite
+        person.update_social_class(0.80, 30); // Move back to Upper
+
+        assert_eq!(person.class_history.len(), 3);
+        assert_eq!(person.social_class, SocialClass::Upper);
+    }
+
+    #[test]
+    fn test_get_effective_spending_multiplier() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive, test_location());
+
+        // Initial: Aggressive (1.3) * adjustment_factor (1.0) = 1.3
+        let multiplier = person.get_effective_spending_multiplier();
+        assert!((multiplier - 1.3).abs() < 0.001);
+
+        // Change adjustment factor
+        person.strategy_params.adjustment_factor = 1.5;
+        let multiplier = person.get_effective_spending_multiplier();
+        assert!((multiplier - 1.95).abs() < 0.001); // 1.3 * 1.5 = 1.95
+    }
+
+    #[test]
+    fn test_social_class_from_percentile_lower() {
+        assert_eq!(SocialClass::from_percentile(0.0), SocialClass::Lower);
+        assert_eq!(SocialClass::from_percentile(0.10), SocialClass::Lower);
+        assert_eq!(SocialClass::from_percentile(0.24), SocialClass::Lower);
+    }
+
+    #[test]
+    fn test_social_class_from_percentile_middle() {
+        assert_eq!(SocialClass::from_percentile(0.25), SocialClass::Middle);
+        assert_eq!(SocialClass::from_percentile(0.50), SocialClass::Middle);
+        assert_eq!(SocialClass::from_percentile(0.74), SocialClass::Middle);
+    }
+
+    #[test]
+    fn test_social_class_from_percentile_upper() {
+        assert_eq!(SocialClass::from_percentile(0.75), SocialClass::Upper);
+        assert_eq!(SocialClass::from_percentile(0.85), SocialClass::Upper);
+        assert_eq!(SocialClass::from_percentile(0.94), SocialClass::Upper);
+    }
+
+    #[test]
+    fn test_social_class_from_percentile_elite() {
+        assert_eq!(SocialClass::from_percentile(0.95), SocialClass::Elite);
+        assert_eq!(SocialClass::from_percentile(0.99), SocialClass::Elite);
+        assert_eq!(SocialClass::from_percentile(1.0), SocialClass::Elite);
+    }
+
+    #[test]
+    fn test_social_class_all_variants() {
+        let variants = SocialClass::all_variants();
+        assert_eq!(variants.len(), 4);
+        assert_eq!(variants[0], SocialClass::Lower);
+        assert_eq!(variants[1], SocialClass::Middle);
+        assert_eq!(variants[2], SocialClass::Upper);
+        assert_eq!(variants[3], SocialClass::Elite);
+    }
+
+    #[test]
+    fn test_social_class_description() {
+        assert_eq!(SocialClass::Lower.description(), "Lower class (bottom 25%)");
+        assert_eq!(SocialClass::Middle.description(), "Middle class (25th-75th percentile)");
+        assert_eq!(SocialClass::Upper.description(), "Upper class (75th-95th percentile)");
+        assert_eq!(SocialClass::Elite.description(), "Elite class (top 5%)");
+    }
+
+    #[test]
+    fn test_social_class_default() {
+        assert_eq!(SocialClass::default(), SocialClass::Middle);
+    }
+
+    #[test]
+    fn test_strategy_all_variants() {
+        let variants = Strategy::all_variants();
+        assert_eq!(variants.len(), 4);
+        assert_eq!(variants[0], Strategy::Conservative);
+        assert_eq!(variants[1], Strategy::Balanced);
+        assert_eq!(variants[2], Strategy::Aggressive);
+        assert_eq!(variants[3], Strategy::Frugal);
+    }
+
+    #[test]
+    fn test_specialization_strategy_default() {
+        assert_eq!(SpecializationStrategy::default(), SpecializationStrategy::Balanced);
+    }
+
+    #[test]
+    fn test_class_change_new() {
+        let change = ClassChange::new(42, SocialClass::Lower, SocialClass::Upper);
+        assert_eq!(change.step, 42);
+        assert_eq!(change.from_class, SocialClass::Lower);
+        assert_eq!(change.to_class, SocialClass::Upper);
+    }
+
+    #[test]
+    fn test_class_change_same_class() {
+        let change = ClassChange::new(100, SocialClass::Middle, SocialClass::Middle);
+        assert!(!change.is_upward(), "Same class should not be upward");
+        assert!(!change.is_downward(), "Same class should not be downward");
+    }
+
+    #[test]
+    fn test_mentorship_new() {
+        let mentorship = Mentorship::new(1, 2, "Programming".to_string(), 50);
+        assert_eq!(mentorship.mentor_id, 1);
+        assert_eq!(mentorship.mentee_id, 2);
+        assert_eq!(mentorship.skill_id, "Programming");
+        assert_eq!(mentorship.start_step, 50);
+    }
+
+    #[test]
+    fn test_strategy_params_new() {
+        let params = StrategyParameters::new(150.0);
+        assert_eq!(params.initial_money, 150.0);
+        assert_eq!(params.previous_money, 150.0);
+        assert_eq!(params.successful_buys, 0);
+        assert_eq!(params.successful_sells, 0);
+        assert_eq!(params.adjustment_factor, 1.0);
+        assert_eq!(params.adaptation_count, 0);
+    }
+
+    #[test]
+    fn test_strategy_params_update_previous_money() {
+        let mut params = StrategyParameters::new(100.0);
+        assert_eq!(params.previous_money, 100.0);
+
+        params.update_previous_money(120.0);
+        assert_eq!(params.previous_money, 120.0);
+
+        params.update_previous_money(95.0);
+        assert_eq!(params.previous_money, 95.0);
+    }
+
+    #[test]
+    fn test_strategy_params_growth_rate_zero_previous_money() {
+        let params = StrategyParameters::new(0.0);
+        let growth_rate = params.calculate_short_term_growth_rate(100.0);
+        assert_eq!(growth_rate, 0.0, "Should return 0 when previous_money is 0");
+    }
+
+    #[test]
+    fn test_strategy_params_growth_rate_zero_initial_money() {
+        let mut params = StrategyParameters::new(0.0);
+        params.previous_money = 50.0;
+        let long_term_growth = params.calculate_long_term_growth_rate(100.0);
+        assert_eq!(long_term_growth, 0.0, "Should return 0 when initial_money is 0");
+    }
+
+    #[test]
+    fn test_strategy_params_negative_growth() {
+        let mut params = StrategyParameters::new(100.0);
+        params.previous_money = 100.0;
+        let growth_rate = params.calculate_short_term_growth_rate(80.0);
+        assert!((growth_rate - (-0.2)).abs() < 0.01, "Should be -0.2 (20% decline)");
+    }
+
+    #[test]
+    fn test_strategy_params_total_successful_trades_zero() {
+        let params = StrategyParameters::new(100.0);
+        assert_eq!(params.total_successful_trades(), 0);
+    }
+
+    #[test]
+    fn test_needed_skill_item_creation() {
+        let item = NeededSkillItem { id: "TestSkill".to_string(), urgency: 2 };
+        assert_eq!(item.id, "TestSkill");
+        assert_eq!(item.urgency, 2);
+    }
+
+    #[test]
+    fn test_health_status_healthy_equality() {
+        assert_eq!(HealthStatus::Healthy, HealthStatus::Healthy);
+    }
+
+    #[test]
+    fn test_health_status_sick_equality() {
+        let sick1 = HealthStatus::Sick { infected_at_step: 10 };
+        let sick2 = HealthStatus::Sick { infected_at_step: 10 };
+        let sick3 = HealthStatus::Sick { infected_at_step: 20 };
+
+        assert_eq!(sick1, sick2);
+        assert_ne!(sick1, sick3);
+        assert_ne!(HealthStatus::Healthy, sick1);
+    }
+
+    #[test]
+    fn test_location_negative_coordinates() {
+        let loc = Location::new(-10.0, -20.0);
+        assert_eq!(loc.x, -10.0);
+        assert_eq!(loc.y, -20.0);
+    }
+
+    #[test]
+    fn test_location_distance_with_negatives() {
+        let loc1 = Location::new(-3.0, -4.0);
+        let loc2 = Location::new(0.0, 0.0);
+        assert_eq!(loc1.distance_to(&loc2), 5.0);
+    }
+
+    #[test]
+    fn test_person_initialization_all_fields() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let location = Location::new(25.0, 75.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::Conservative, location);
+
+        assert_eq!(person.id, 1);
+        assert_eq!(person.money, 100.0);
+        assert_eq!(person.own_skills.len(), 1);
+        assert_eq!(person.needed_skills.len(), 0);
+        assert_eq!(person.transaction_history.len(), 0);
+        assert_eq!(person.satisfied_needs_current_step.len(), 0);
+        assert_eq!(person.reputation, 1.0);
+        assert_eq!(person.savings, 0.0);
+        assert_eq!(person.borrowed_loans.len(), 0);
+        assert_eq!(person.lent_loans.len(), 0);
+        assert_eq!(person.active_investments.len(), 0);
+        assert_eq!(person.strategy, Strategy::Conservative);
+        assert_eq!(person.specialization_strategy, SpecializationStrategy::Balanced);
+        assert_eq!(person.learned_skills.len(), 0);
+        assert_eq!(person.friends.len(), 0);
+        assert_eq!(person.trade_agreement_ids.len(), 0);
+        assert_eq!(person.group_id, None);
+        assert_eq!(person.location.x, 25.0);
+        assert_eq!(person.location.y, 75.0);
+        assert_eq!(person.skill_qualities.len(), 0);
+        assert_eq!(person.insurance_policies.len(), 0);
+        assert_eq!(person.health_status, HealthStatus::Healthy);
+        assert_eq!(person.influence_score, 1.0);
+        assert_eq!(person.social_class, SocialClass::Middle);
+        assert_eq!(person.class_history.len(), 0);
+        assert_eq!(person.owned_assets.len(), 0);
+    }
+
+    #[test]
+    fn test_person_with_multiple_skills() {
+        let skill1 = Skill::new("Skill1".to_string(), 10.0);
+        let skill2 = Skill::new("Skill2".to_string(), 20.0);
+        let skill3 = Skill::new("Skill3".to_string(), 30.0);
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill1, skill2, skill3],
+            Strategy::default(),
+            test_location(),
+        );
+
+        assert_eq!(person.own_skills.len(), 3);
+        assert_eq!(person.all_skills().len(), 3);
+    }
+
+    #[test]
+    fn test_strategy_adaptation_exploration() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+
+        let _initial_factor = person.strategy_params.adjustment_factor;
+
+        // With 100% exploration rate, should always adapt randomly
+        let adapted = person.adapt_strategy(0.1, &mut rng, 1.0);
+
+        assert!(adapted, "Should adapt with exploration");
+        // Factor may change due to random exploration
+        assert_eq!(person.strategy_params.adaptation_count, 1);
+    }
+
+    #[test]
+    fn test_savings_negative_rate() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+
+        let saved = person.apply_savings(-0.1);
+        assert_eq!(saved, 0.0, "Should not save with negative rate");
+        assert_eq!(person.money, 100.0);
+        assert_eq!(person.savings, 0.0);
+    }
 }

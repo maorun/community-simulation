@@ -334,4 +334,40 @@ mod tests {
         assert!(types.contains(&InsuranceType::Income));
         assert!(types.contains(&InsuranceType::Crisis));
     }
+
+    #[test]
+    fn test_insurance_type_names() {
+        assert_eq!(InsuranceType::Credit.name(), "Credit Insurance");
+        assert_eq!(InsuranceType::Income.name(), "Income Insurance");
+        assert_eq!(InsuranceType::Crisis.name(), "Crisis Insurance");
+    }
+
+    #[test]
+    fn test_deactivate_insurance() {
+        let mut insurance = Insurance::new(1, 42, InsuranceType::Credit, 10.0, 100.0, 50, 0);
+        assert!(insurance.is_active);
+
+        insurance.deactivate();
+        assert!(!insurance.is_active);
+    }
+
+    #[test]
+    fn test_inactive_policy_claim_fails() {
+        let mut insurance = Insurance::new(1, 42, InsuranceType::Credit, 10.0, 100.0, 50, 0);
+        insurance.deactivate();
+
+        let payout = insurance.file_claim(50.0, 10);
+        assert_eq!(payout, 0.0);
+    }
+
+    #[test]
+    fn test_reputation_discount_clamping() {
+        // Very high reputation (beyond 2.0) should be clamped
+        let adjusted = Insurance::apply_reputation_discount(100.0, 5.0);
+        assert_eq!(adjusted, 80.0); // Should be clamped to 20% discount
+
+        // Very low reputation (negative) should be clamped
+        let adjusted = Insurance::apply_reputation_discount(100.0, -5.0);
+        assert_eq!(adjusted, 120.0); // Should be clamped to 20% increase
+    }
 }

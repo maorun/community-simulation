@@ -521,4 +521,304 @@ mod tests {
         // The critical success criterion is that none of the above operations panicked
         // The specific value selected when NaN is involved is implementation-defined
     }
+
+    #[test]
+    fn test_parameter_sweep_save_to_file() {
+        use tempfile::Builder;
+
+        // Create a simple sweep result
+        let config = SimulationConfig {
+            max_steps: 10,
+            entity_count: 5,
+            seed: 42,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            time_step: 1.0,
+            scenario: Scenario::Original,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
+            ..Default::default()
+        };
+
+        let parameter_range = ParameterRange::InitialMoney { min: 80.0, max: 120.0, steps: 2 };
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, false);
+
+        // Save to temp file
+        let temp_file = Builder::new().suffix(".json").tempfile().unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        assert!(result.save_to_file(path).is_ok());
+
+        // Verify file exists and contains valid JSON
+        let contents = std::fs::read_to_string(path).unwrap();
+        let loaded: ParameterSweepResult = serde_json::from_str(&contents).unwrap();
+
+        assert_eq!(loaded.parameter_name, "initial_money");
+        assert_eq!(loaded.runs_per_point, 1);
+        assert_eq!(loaded.sweep_points.len(), 2);
+    }
+
+    #[test]
+    fn test_parameter_sweep_print_summary() {
+        // This test verifies that print_summary doesn't panic
+        // It's difficult to capture stdout in tests, so we just ensure no panic
+
+        let config = SimulationConfig {
+            max_steps: 5,
+            entity_count: 3,
+            seed: 42,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            time_step: 1.0,
+            scenario: Scenario::Original,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
+            ..Default::default()
+        };
+
+        let parameter_range = ParameterRange::BasePrice { min: 8.0, max: 12.0, steps: 2 };
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, false);
+
+        // Should not panic
+        result.print_summary();
+    }
+
+    #[test]
+    fn test_parameter_range_base_price() {
+        let range = ParameterRange::BasePrice { min: 5.0, max: 15.0, steps: 3 };
+
+        assert_eq!(range.name(), "base_price");
+
+        let values = range.values();
+        assert_eq!(values.len(), 3);
+        assert_eq!(values[0], 5.0);
+        assert_eq!(values[1], 10.0);
+        assert_eq!(values[2], 15.0);
+
+        let mut config = SimulationConfig::default();
+        range.apply_to_config(&mut config, 7.5);
+        assert_eq!(config.base_skill_price, 7.5);
+    }
+
+    #[test]
+    fn test_parameter_range_savings_rate() {
+        let range = ParameterRange::SavingsRate { min: 0.0, max: 0.2, steps: 3 };
+
+        assert_eq!(range.name(), "savings_rate");
+
+        let values = range.values();
+        assert_eq!(values.len(), 3);
+        assert_eq!(values[0], 0.0);
+        assert_eq!(values[1], 0.1);
+        assert_eq!(values[2], 0.2);
+
+        let mut config = SimulationConfig::default();
+        range.apply_to_config(&mut config, 0.15);
+        assert_eq!(config.savings_rate, 0.15);
+    }
+
+    #[test]
+    fn test_parameter_range_transaction_fee() {
+        let range = ParameterRange::TransactionFee { min: 0.0, max: 0.1, steps: 3 };
+
+        assert_eq!(range.name(), "transaction_fee");
+
+        let values = range.values();
+        assert_eq!(values.len(), 3);
+        assert_eq!(values[0], 0.0);
+        assert_eq!(values[1], 0.05);
+        assert_eq!(values[2], 0.1);
+
+        let mut config = SimulationConfig::default();
+        range.apply_to_config(&mut config, 0.03);
+        assert_eq!(config.transaction_fee, 0.03);
+    }
+
+    #[test]
+    fn test_parameter_range_zero_steps() {
+        let range = ParameterRange::InitialMoney { min: 100.0, max: 200.0, steps: 0 };
+
+        let values = range.values();
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0], 100.0);
+    }
+
+    #[test]
+    fn test_parameter_sweep_different_ranges() {
+        // Test sweep with savings rate
+        let config = SimulationConfig {
+            max_steps: 5,
+            entity_count: 3,
+            seed: 42,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            time_step: 1.0,
+            scenario: Scenario::Original,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
+            ..Default::default()
+        };
+
+        let parameter_range = ParameterRange::SavingsRate { min: 0.0, max: 0.1, steps: 2 };
+        let result = ParameterSweepResult::run_sweep(config.clone(), parameter_range, 1, false);
+
+        assert_eq!(result.parameter_name, "savings_rate");
+        assert_eq!(result.sweep_points.len(), 2);
+        assert_eq!(result.sweep_points[0].parameter_value, 0.0);
+        assert_eq!(result.sweep_points[1].parameter_value, 0.1);
+
+        // Test sweep with transaction fee
+        let parameter_range2 = ParameterRange::TransactionFee { min: 0.0, max: 0.05, steps: 2 };
+        let result2 = ParameterSweepResult::run_sweep(config, parameter_range2, 1, false);
+
+        assert_eq!(result2.parameter_name, "transaction_fee");
+        assert_eq!(result2.sweep_points.len(), 2);
+    }
+
+    #[test]
+    fn test_parameter_sweep_statistics_calculation() {
+        // Verify that statistics are correctly calculated across runs
+        let config = SimulationConfig {
+            max_steps: 10,
+            entity_count: 5,
+            seed: 100,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            time_step: 1.0,
+            scenario: Scenario::Original,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
+            ..Default::default()
+        };
+
+        let parameter_range = ParameterRange::InitialMoney { min: 100.0, max: 100.0, steps: 1 };
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 3, false);
+
+        assert_eq!(result.sweep_points.len(), 1);
+        let point = &result.sweep_points[0];
+
+        // With 3 runs, statistics should be calculated
+        assert_eq!(point.results.len(), 3);
+        assert!(point.avg_money_stats.mean > 0.0);
+        assert!(point.gini_coefficient_stats.mean >= 0.0);
+        assert!(point.total_trades_stats.mean >= 0.0);
+    }
+
+    #[test]
+    fn test_parameter_sweep_with_show_progress() {
+        // Test that show_progress parameter is accepted (even if not used in current impl)
+        let config = SimulationConfig {
+            max_steps: 5,
+            entity_count: 3,
+            seed: 42,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            time_step: 1.0,
+            scenario: Scenario::Original,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 20,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
+            ..Default::default()
+        };
+
+        let parameter_range = ParameterRange::InitialMoney { min: 80.0, max: 120.0, steps: 2 };
+
+        // Should work with show_progress = true
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, true);
+        assert_eq!(result.sweep_points.len(), 2);
+    }
 }

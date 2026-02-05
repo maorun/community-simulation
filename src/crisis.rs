@@ -219,4 +219,91 @@ mod tests {
         assert!(new_price < base_price * 0.5); // At least 50% drop
         assert!(new_price > base_price * 0.1); // Not complete elimination
     }
+
+    #[test]
+    fn test_crisis_descriptions() {
+        assert!(CrisisEvent::MarketCrash.description().contains("20-40%"));
+        assert!(CrisisEvent::DemandShock.description().contains("30-50%"));
+        assert!(CrisisEvent::SupplyShock.description().contains("20-40%"));
+        assert!(CrisisEvent::CurrencyDevaluation.description().contains("10-30%"));
+        assert!(CrisisEvent::TechnologyShock.description().contains("50-80%"));
+    }
+
+    #[test]
+    fn test_demand_shock_effect() {
+        let mut rng = StdRng::seed_from_u64(7);
+        let base_demand = 100.0;
+        let severity = 0.5;
+
+        let new_demand = CrisisEvent::DemandShock.apply_effect(base_demand, severity, &mut rng);
+
+        // Should reduce demand by 30-50%, with severity=0.5 -> ~40% reduction
+        assert!(new_demand < base_demand);
+        assert!(new_demand > base_demand * 0.4); // Not more than 60% drop
+        assert!(new_demand < base_demand * 0.8); // Some reduction happened
+    }
+
+    #[test]
+    fn test_supply_shock_effect() {
+        let mut rng = StdRng::seed_from_u64(9);
+        let base_supply = 100.0;
+        let severity = 0.5;
+
+        let new_supply = CrisisEvent::SupplyShock.apply_effect(base_supply, severity, &mut rng);
+
+        // Should reduce supply by 20-40%, with severity=0.5 -> ~30% reduction
+        assert!(new_supply < base_supply);
+        assert!(new_supply > base_supply * 0.5); // Not more than 50% drop
+        assert!(new_supply < base_supply * 0.9); // Some reduction happened
+    }
+
+    #[test]
+    fn test_crisis_with_zero_severity() {
+        let mut rng = StdRng::seed_from_u64(11);
+        let base_value = 100.0;
+
+        // With zero severity, should have minimum effect
+        let result = CrisisEvent::MarketCrash.apply_effect(base_value, 0.0, &mut rng);
+        // Minimum drop is 20% plus randomness
+        assert!(result < base_value);
+        assert!(result > base_value * 0.6); // At least 60% remains
+    }
+
+    #[test]
+    fn test_crisis_with_max_severity() {
+        let mut rng = StdRng::seed_from_u64(13);
+        let base_value = 100.0;
+
+        // With max severity, should have maximum effect
+        let result = CrisisEvent::MarketCrash.apply_effect(base_value, 1.0, &mut rng);
+        // Maximum drop is 40% plus randomness
+        assert!(result < base_value);
+        assert!(result < base_value * 0.7); // At most 70% remains (40% drop + randomness)
+    }
+
+    #[test]
+    fn test_crisis_event_equality() {
+        assert_eq!(CrisisEvent::MarketCrash, CrisisEvent::MarketCrash);
+        assert_ne!(CrisisEvent::MarketCrash, CrisisEvent::DemandShock);
+    }
+
+    #[test]
+    fn test_crisis_event_clone() {
+        let crisis = CrisisEvent::TechnologyShock;
+        let cloned = crisis;
+        assert_eq!(crisis, cloned);
+    }
+
+    #[test]
+    fn test_all_crisis_effects_reduce_value() {
+        let mut rng = StdRng::seed_from_u64(15);
+        let base_value = 100.0;
+        let severity = 0.5;
+
+        for crisis in CrisisEvent::all_types() {
+            let result = crisis.apply_effect(base_value, severity, &mut rng);
+            assert!(result < base_value, "Crisis {:?} should reduce value", crisis);
+            assert!(result > 0.0, "Crisis {:?} should not eliminate value completely", crisis);
+        }
+    }
 }

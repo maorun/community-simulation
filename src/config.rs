@@ -3471,4 +3471,652 @@ scenario: Original
         assert_eq!(tech_config.price_elasticity_factor, 0.08);
         assert_eq!(tech_config.volatility_percentage, 0.01);
     }
+
+    #[test]
+    fn test_validate_transaction_fee_out_of_range() {
+        let config = SimulationConfig { transaction_fee: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("transaction_fee must be between 0.0 and 1.0"));
+
+        let config2 = SimulationConfig { transaction_fee: -0.1, ..Default::default() };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_savings_rate_out_of_range() {
+        let config = SimulationConfig { savings_rate: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("savings_rate must be between 0.0 and 1.0"));
+
+        let config2 = SimulationConfig { savings_rate: -0.1, ..Default::default() };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_loan_interest_rate_out_of_range() {
+        let config = SimulationConfig { loan_interest_rate: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("loan_interest_rate must be between 0.0 and 1.0"));
+
+        let config2 = SimulationConfig { loan_interest_rate: -0.1, ..Default::default() };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_loan_repayment_period_zero() {
+        let config = SimulationConfig { loan_repayment_period: 0, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("loan_repayment_period must be greater than 0"));
+    }
+
+    #[test]
+    fn test_validate_min_money_to_lend_negative() {
+        let config = SimulationConfig { min_money_to_lend: -50.0, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("min_money_to_lend must be non-negative"));
+    }
+
+    #[test]
+    fn test_validate_credit_rating_requires_loans() {
+        let config = SimulationConfig {
+            enable_credit_rating: true,
+            enable_loans: false,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("enable_credit_rating requires enable_loans"));
+    }
+
+    #[test]
+    fn test_validate_tax_rate_out_of_range() {
+        let config = SimulationConfig { tax_rate: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("tax_rate must be between 0.0 and 1.0"));
+
+        let config2 = SimulationConfig { tax_rate: -0.1, ..Default::default() };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_black_market_price_multiplier() {
+        let config = SimulationConfig { black_market_price_multiplier: -0.5, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("black_market_price_multiplier must be between 0.0 and 2.0"));
+
+        let config2 = SimulationConfig { black_market_price_multiplier: 2.5, ..Default::default() };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_black_market_participation_rate() {
+        let config =
+            SimulationConfig { black_market_participation_rate: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("black_market_participation_rate must be between 0.0 and 1.0"));
+    }
+
+    #[test]
+    fn test_validate_skills_per_person_zero() {
+        let config = SimulationConfig { skills_per_person: 0, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("skills_per_person must be at least 1"));
+    }
+
+    #[test]
+    fn test_validate_skills_per_person_exceeds_entity_count() {
+        let config =
+            SimulationConfig { entity_count: 10, skills_per_person: 15, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("skills_per_person (15) cannot exceed entity_count (10)"));
+    }
+
+    #[test]
+    fn test_validate_priority_weights() {
+        // urgency_weight out of range
+        let config = SimulationConfig { priority_urgency_weight: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+
+        // affordability_weight out of range
+        let config2 =
+            SimulationConfig { priority_affordability_weight: -0.1, ..Default::default() };
+        assert!(config2.validate().is_err());
+
+        // efficiency_weight out of range
+        let config3 = SimulationConfig { priority_efficiency_weight: 2.0, ..Default::default() };
+        assert!(config3.validate().is_err());
+
+        // reputation_weight out of range
+        let config4 = SimulationConfig { priority_reputation_weight: -0.5, ..Default::default() };
+        assert!(config4.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_contracts_when_enabled() {
+        // min_contract_duration zero
+        let config = SimulationConfig {
+            enable_contracts: true,
+            min_contract_duration: 0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // max_contract_duration zero
+        let config2 = SimulationConfig {
+            enable_contracts: true,
+            max_contract_duration: 0,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+
+        // min > max
+        let config3 = SimulationConfig {
+            enable_contracts: true,
+            min_contract_duration: 50,
+            max_contract_duration: 30,
+            ..Default::default()
+        };
+        assert!(config3.validate().is_err());
+
+        // contract_price_discount out of range
+        let config4 = SimulationConfig {
+            enable_contracts: true,
+            contract_price_discount: 1.5,
+            ..Default::default()
+        };
+        assert!(config4.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_education_when_enabled() {
+        // learning_cost_multiplier negative
+        let config = SimulationConfig {
+            enable_education: true,
+            learning_cost_multiplier: -1.0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // learning_probability out of range
+        let config2 = SimulationConfig {
+            enable_education: true,
+            learning_probability: 1.5,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_mentorship_requires_education() {
+        let config = SimulationConfig {
+            enable_mentorship: true,
+            enable_education: false,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("enable_mentorship requires enable_education"));
+    }
+
+    #[test]
+    fn test_validate_mentorship_parameters() {
+        // mentorship_cost_reduction out of range
+        let config = SimulationConfig {
+            enable_mentorship: true,
+            enable_education: true,
+            mentorship_cost_reduction: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // min_mentor_quality out of range
+        let config2 = SimulationConfig {
+            enable_mentorship: true,
+            enable_education: true,
+            min_mentor_quality: 6.0,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+
+        // mentor_reputation_bonus negative
+        let config3 = SimulationConfig {
+            enable_mentorship: true,
+            enable_education: true,
+            mentor_reputation_bonus: -1.0,
+            ..Default::default()
+        };
+        assert!(config3.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_crisis_events_when_enabled() {
+        // crisis_probability out of range
+        let config = SimulationConfig {
+            enable_crisis_events: true,
+            crisis_probability: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // crisis_severity out of range
+        let config2 = SimulationConfig {
+            enable_crisis_events: true,
+            crisis_severity: 1.5,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_insurance_when_enabled() {
+        // insurance_premium_rate out of range
+        let config = SimulationConfig {
+            enable_insurance: true,
+            insurance_premium_rate: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // insurance_purchase_probability out of range
+        let config2 = SimulationConfig {
+            enable_insurance: true,
+            insurance_purchase_probability: -0.1,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+
+        // insurance_coverage_amount negative
+        let config3 = SimulationConfig {
+            enable_insurance: true,
+            insurance_coverage_amount: -50.0,
+            ..Default::default()
+        };
+        assert!(config3.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_friendships_when_enabled() {
+        // friendship_probability out of range
+        let config = SimulationConfig {
+            enable_friendships: true,
+            friendship_probability: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // friendship_discount out of range
+        let config2 = SimulationConfig {
+            enable_friendships: true,
+            friendship_discount: -0.1,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_trade_agreements_when_enabled() {
+        // trade_agreement_probability out of range
+        let config = SimulationConfig {
+            enable_trade_agreements: true,
+            trade_agreement_probability: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // trade_agreement_discount out of range
+        let config2 = SimulationConfig {
+            enable_trade_agreements: true,
+            trade_agreement_discount: 1.5,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+
+        // trade_agreement_duration zero
+        let config3 = SimulationConfig {
+            enable_trade_agreements: true,
+            trade_agreement_duration: 0,
+            ..Default::default()
+        };
+        assert!(config3.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_trust_networks_requires_friendships() {
+        let config = SimulationConfig {
+            enable_trust_networks: true,
+            enable_friendships: false,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("enable_trust_networks requires enable_friendships"));
+    }
+
+    #[test]
+    fn test_validate_influence_requires_friendships() {
+        let config = SimulationConfig {
+            enable_influence: true,
+            enable_friendships: false,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("enable_influence requires enable_friendships"));
+    }
+
+    #[test]
+    fn test_validate_num_groups() {
+        // num_groups zero
+        let config = SimulationConfig { num_groups: Some(0), ..Default::default() };
+        assert!(config.validate().is_err());
+
+        // num_groups exceeds entity_count
+        let config2 =
+            SimulationConfig { entity_count: 10, num_groups: Some(15), ..Default::default() };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_distance_cost_factor() {
+        // negative
+        let config = SimulationConfig { distance_cost_factor: -0.1, ..Default::default() };
+        assert!(config.validate().is_err());
+
+        // too high
+        let config2 = SimulationConfig { distance_cost_factor: 1.5, ..Default::default() };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_production_probability() {
+        let config = SimulationConfig { production_probability: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("production_probability must be between 0.0 and 1.0"));
+    }
+
+    #[test]
+    fn test_validate_resource_cost_per_transaction() {
+        let config = SimulationConfig { resource_cost_per_transaction: 15.0, ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("resource_cost_per_transaction must be between 0.0 and 10.0"));
+    }
+
+    #[test]
+    fn test_validate_custom_resource_reserves() {
+        use std::collections::HashMap;
+        let mut reserves = HashMap::new();
+        reserves.insert("gold".to_string(), -50.0);
+
+        let config =
+            SimulationConfig { custom_resource_reserves: Some(reserves), ..Default::default() };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("custom_resource_reserves for 'gold' must be non-negative"));
+    }
+
+    #[test]
+    fn test_validate_quality_parameters() {
+        // quality_improvement_rate out of range
+        let config = SimulationConfig { quality_improvement_rate: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+
+        // quality_decay_rate out of range
+        let config2 = SimulationConfig { quality_decay_rate: -0.1, ..Default::default() };
+        assert!(config2.validate().is_err());
+
+        // initial_quality out of range
+        let config3 = SimulationConfig { initial_quality: 6.0, ..Default::default() };
+        assert!(config3.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_certification_when_enabled() {
+        // certification_cost_multiplier out of range
+        let config = SimulationConfig {
+            enable_certification: true,
+            certification_cost_multiplier: 0.05,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        let config2 = SimulationConfig {
+            enable_certification: true,
+            certification_cost_multiplier: 15.0,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+
+        // certification_probability out of range
+        let config3 = SimulationConfig {
+            enable_certification: true,
+            certification_probability: 1.5,
+            ..Default::default()
+        };
+        assert!(config3.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_resource_pools_requires_num_groups() {
+        let config = SimulationConfig {
+            enable_resource_pools: true,
+            num_groups: None,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("enable_resource_pools requires num_groups"));
+    }
+
+    #[test]
+    fn test_validate_resource_pool_parameters() {
+        // pool_contribution_rate out of range
+        let config = SimulationConfig {
+            enable_resource_pools: true,
+            num_groups: Some(5),
+            pool_contribution_rate: 0.6,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // pool_withdrawal_threshold out of range
+        let config2 = SimulationConfig {
+            enable_resource_pools: true,
+            num_groups: Some(5),
+            pool_withdrawal_threshold: 1500.0,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_adaptive_strategies_when_enabled() {
+        // adaptation_rate out of range
+        let config = SimulationConfig {
+            enable_adaptive_strategies: true,
+            adaptation_rate: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // exploration_rate out of range
+        let config2 = SimulationConfig {
+            enable_adaptive_strategies: true,
+            exploration_rate: -0.1,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_strategy_evolution_requires_friendships() {
+        let config = SimulationConfig {
+            enable_strategy_evolution: true,
+            enable_friendships: false,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err
+            .to_string()
+            .contains("enable_strategy_evolution requires enable_friendships"));
+    }
+
+    #[test]
+    fn test_validate_strategy_evolution_parameters() {
+        // evolution_update_frequency zero
+        let config = SimulationConfig {
+            enable_strategy_evolution: true,
+            enable_friendships: true,
+            evolution_update_frequency: 0,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        // evolution_update_frequency too high
+        let config2 = SimulationConfig {
+            enable_strategy_evolution: true,
+            enable_friendships: true,
+            evolution_update_frequency: 1500,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+
+        // imitation_probability out of range
+        let config3 = SimulationConfig {
+            enable_strategy_evolution: true,
+            enable_friendships: true,
+            imitation_probability: 1.5,
+            ..Default::default()
+        };
+        assert!(config3.validate().is_err());
+
+        // mutation_rate out of range
+        let config4 = SimulationConfig {
+            enable_strategy_evolution: true,
+            enable_friendships: true,
+            mutation_rate: -0.1,
+            ..Default::default()
+        };
+        assert!(config4.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_externalities_when_enabled() {
+        // externality_rate out of range
+        let config = SimulationConfig {
+            enable_externalities: true,
+            externality_rate: 1.5,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+
+        let config2 = SimulationConfig {
+            enable_externalities: true,
+            externality_rate: -1.5,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_per_skill_externality_rates() {
+        use std::collections::HashMap;
+        let mut rates = HashMap::new();
+        rates.insert("skill1".to_string(), 1.5);
+
+        let config = SimulationConfig {
+            enable_externalities: true,
+            externality_rates_per_skill: rates,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("externality rate for skill 'skill1'"));
+    }
+
+    #[test]
+    fn test_validate_tech_breakthrough_parameters() {
+        // tech_breakthrough_probability out of range
+        let config = SimulationConfig { tech_breakthrough_probability: 1.5, ..Default::default() };
+        assert!(config.validate().is_err());
+
+        // tech_breakthrough_min_effect out of range
+        let config2 = SimulationConfig { tech_breakthrough_min_effect: 0.5, ..Default::default() };
+        assert!(config2.validate().is_err());
+
+        let config3 = SimulationConfig { tech_breakthrough_min_effect: 2.5, ..Default::default() };
+        assert!(config3.validate().is_err());
+
+        // tech_breakthrough_max_effect out of range
+        let config4 = SimulationConfig { tech_breakthrough_max_effect: 0.8, ..Default::default() };
+        assert!(config4.validate().is_err());
+
+        // max < min
+        let config5 = SimulationConfig {
+            tech_breakthrough_min_effect: 1.5,
+            tech_breakthrough_max_effect: 1.3,
+            ..Default::default()
+        };
+        assert!(config5.validate().is_err());
+    }
+
+    #[test]
+    fn test_preset_post_conflict_reconstruction() {
+        let config = SimulationConfig::from_preset(PresetName::PostConflictReconstruction);
+
+        // Basic parameters
+        assert_eq!(config.max_steps, 500);
+        assert_eq!(config.entity_count, 80);
+        assert_eq!(config.initial_money_per_person, 25.0);
+
+        // Crisis settings
+        assert!(config.enable_crisis_events);
+        assert_eq!(config.crisis_probability, 0.10);
+        assert_eq!(config.crisis_severity, 0.6);
+
+        // Health crisis
+        assert!(config.enable_health);
+        assert_eq!(config.initial_sick_persons, 8);
+
+        // Loans for recovery
+        assert!(config.enable_loans);
+        assert_eq!(config.loan_interest_rate, 0.02);
+
+        // Aid redistribution
+        assert_eq!(config.tax_rate, 0.15);
+        assert!(config.enable_tax_redistribution);
+
+        // Validate it
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_preset_tech_growth() {
+        let config = SimulationConfig::from_preset(PresetName::TechGrowth);
+        assert_eq!(config.max_steps, 1500);
+        assert_eq!(config.tech_growth_rate, 0.001);
+        assert!(config.validate().is_ok());
+    }
 }

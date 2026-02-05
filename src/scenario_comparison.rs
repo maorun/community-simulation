@@ -452,4 +452,95 @@ mod tests {
 
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_scenario_comparison_print_summary() {
+        let config = SimulationConfig {
+            max_steps: 10,
+            entity_count: 5,
+            seed: 42,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            time_step: 1.0,
+            scenario: Scenario::Original,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 10,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
+            ..Default::default()
+        };
+
+        let scenarios = vec![Scenario::Original, Scenario::DynamicPricing];
+        let result = ScenarioComparisonResult::run(config, scenarios, 2).unwrap();
+
+        // This should not panic
+        result.print_summary();
+    }
+
+    #[test]
+    fn test_scenario_comparison_save_to_file() {
+        use tempfile::NamedTempFile;
+
+        let config = SimulationConfig {
+            max_steps: 10,
+            entity_count: 5,
+            seed: 42,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            time_step: 1.0,
+            scenario: Scenario::Original,
+            tech_growth_rate: 0.0,
+            seasonal_amplitude: 0.0,
+            seasonal_period: 100,
+            transaction_fee: 0.0,
+            savings_rate: 0.0,
+            enable_loans: false,
+            loan_interest_rate: 0.01,
+            loan_repayment_period: 10,
+            min_money_to_lend: 50.0,
+            checkpoint_interval: 0,
+            checkpoint_file: None,
+            resume_from_checkpoint: false,
+            tax_rate: 0.0,
+            enable_tax_redistribution: false,
+            skills_per_person: 1,
+            stream_output_path: None,
+            priority_urgency_weight: 0.5,
+            priority_affordability_weight: 0.3,
+            priority_efficiency_weight: 0.1,
+            priority_reputation_weight: 0.1,
+            ..Default::default()
+        };
+
+        let scenarios = vec![Scenario::Original, Scenario::DynamicPricing];
+        let result = ScenarioComparisonResult::run(config, scenarios, 2).unwrap();
+
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        result.save_to_file(path).unwrap();
+
+        // Verify file exists and is readable
+        let content = std::fs::read_to_string(path).unwrap();
+        assert!(content.contains("scenarios"));
+        assert!(content.contains("runs_per_scenario"));
+    }
 }

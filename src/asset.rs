@@ -281,4 +281,73 @@ mod tests {
         assert!(types.contains(&AssetType::Equipment));
         assert!(types.contains(&AssetType::Stocks));
     }
+
+    #[test]
+    fn test_asset_type_description() {
+        assert!(AssetType::Property.description().contains("appreciates"));
+        assert!(AssetType::Property.description().contains("rental income"));
+        assert!(AssetType::Equipment.description().contains("depreciates"));
+        assert!(AssetType::Stocks.description().contains("variable"));
+    }
+
+    #[test]
+    fn test_asset_type_display() {
+        assert_eq!(format!("{}", AssetType::Property), "Property");
+        assert_eq!(format!("{}", AssetType::Equipment), "Equipment");
+        assert_eq!(format!("{}", AssetType::Stocks), "Stocks");
+    }
+
+    #[test]
+    fn test_calculate_roi_zero_purchase_price() {
+        let asset = Asset::new(1, AssetType::Property, 0.0, 42, 0);
+        assert_eq!(asset.calculate_roi(), 0.0);
+    }
+
+    #[test]
+    fn test_asset_age_saturating_sub() {
+        let asset = Asset::new(1, AssetType::Property, 100.0, 42, 10);
+        // Test when current_step < acquired_at_step (shouldn't happen, but should handle gracefully)
+        assert_eq!(asset.age(5), 0);
+    }
+
+    #[test]
+    fn test_stocks_negative_volatility() {
+        let mut asset = Asset::new(3, AssetType::Stocks, 100.0, 42, 0);
+        // Stock return of 0.05 (5%) with negative volatility of -0.03 (-3%)
+        asset.update_value(0.0, 0.0, 0.0, 0.05, -0.03);
+
+        // Total return should be 2% (5% - 3%)
+        assert!((asset.current_value - 102.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_property_multiple_steps() {
+        let mut asset = Asset::new(1, AssetType::Property, 100.0, 42, 0);
+        let mut total_income = 0.0;
+
+        // Apply appreciation and rental income for 5 steps
+        for _ in 0..5 {
+            total_income += asset.update_value(0.01, 0.0, 0.002, 0.0, 0.0);
+        }
+
+        // After 5 steps with 1% appreciation per step
+        // Value ≈ 100 * (1.01)^5 ≈ 105.1
+        assert!(asset.current_value > 105.0 && asset.current_value < 106.0);
+        // Total income should be accumulated
+        assert!(total_income > 0.0);
+        assert!((asset.total_income_generated - total_income).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_asset_type_equality() {
+        assert_eq!(AssetType::Property, AssetType::Property);
+        assert_ne!(AssetType::Property, AssetType::Equipment);
+    }
+
+    #[test]
+    fn test_asset_type_clone() {
+        let asset_type = AssetType::Stocks;
+        let cloned = asset_type;
+        assert_eq!(asset_type, cloned);
+    }
 }
