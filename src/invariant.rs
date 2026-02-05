@@ -446,4 +446,96 @@ mod tests {
         assert!(display.contains("expected: 100"));
         assert!(display.contains("actual: 95"));
     }
+
+    #[test]
+    fn test_invariant_violation_display_without_values() {
+        let violation = InvariantViolation {
+            invariant_name: "TestInvariant".to_string(),
+            description: "Test violation".to_string(),
+            step: 42,
+            expected: None,
+            actual: None,
+        };
+
+        let display = format!("{}", violation);
+        assert!(display.contains("TestInvariant"));
+        assert!(display.contains("step 42"));
+        assert!(!display.contains("expected:"));
+    }
+
+    #[test]
+    fn test_money_conservation_custom_tolerance() {
+        let invariant = MoneyConservationInvariant::new_with_tolerance(1000.0, 5.0);
+        assert_eq!(invariant.tolerance, 5.0);
+        assert_eq!(invariant.initial_total_money, 1000.0);
+    }
+
+    #[test]
+    fn test_money_conservation_description() {
+        let invariant = MoneyConservationInvariant::new(1000.0);
+        let desc = invariant.description();
+        assert!(desc.contains("1000.00"));
+        assert!(desc.contains("total money"));
+    }
+
+    #[test]
+    fn test_non_negative_wealth_description() {
+        let invariant1 = NonNegativeWealthInvariant::new(false);
+        let desc1 = invariant1.description();
+        assert!(desc1.contains("negative wealth"));
+        assert!(!desc1.contains("unless loans"));
+
+        let invariant2 = NonNegativeWealthInvariant::new(true);
+        let desc2 = invariant2.description();
+        assert!(desc2.contains("negative wealth"));
+        assert!(desc2.contains("unless loans are enabled"));
+    }
+
+    #[test]
+    fn test_non_negative_wealth_with_loans_enabled() {
+        let mut config = SimulationConfig::default();
+        config.enable_loans = true;
+        config.max_steps = 5;
+        let engine = SimulationEngine::new(config);
+
+        // With allow_negative_when_loans_enabled=true, should pass
+        let invariant = NonNegativeWealthInvariant::new(true);
+        assert!(invariant.check(&engine).is_ok());
+
+        // With allow_negative_when_loans_enabled=false, should still check
+        let invariant2 = NonNegativeWealthInvariant::new(false);
+        // This should pass initially since no one has negative money yet
+        assert!(invariant2.check(&engine).is_ok());
+    }
+
+    #[test]
+    fn test_invariant_checker_violations_count() {
+        let checker = InvariantChecker::new();
+        assert_eq!(checker.total_violations(), 0);
+    }
+
+    #[test]
+    fn test_invariant_violation_is_error() {
+        let violation = InvariantViolation {
+            invariant_name: "Test".to_string(),
+            description: "Test".to_string(),
+            step: 0,
+            expected: None,
+            actual: None,
+        };
+        
+        // Should implement std::error::Error
+        let _err: &dyn std::error::Error = &violation;
+    }
+
+    #[test]
+    fn test_invariant_default_description() {
+        let config = SimulationConfig::default();
+        let _engine = SimulationEngine::new(config);
+        let invariant = MoneyConservationInvariant::new(1000.0);
+        
+        // The default description should contain the invariant name
+        let desc = invariant.description();
+        assert!(!desc.is_empty());
+    }
 }
