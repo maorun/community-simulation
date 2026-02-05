@@ -1728,6 +1728,7 @@ impl SimulationResult {
     /// #     trust_network_statistics: None,
     /// #     trade_agreement_statistics: None,
     /// #     insurance_statistics: None,
+    /// #     asset_statistics: None,
     /// #     technology_breakthrough_statistics: None,
     /// #     group_statistics: None,
     /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
