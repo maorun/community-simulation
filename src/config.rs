@@ -1457,6 +1457,98 @@ pub struct SimulationConfig {
     /// Default: true (check non-negative wealth)
     #[serde(default = "default_true")]
     pub check_non_negative_wealth: bool,
+
+    /// Enable asset system for long-term wealth building.
+    ///
+    /// When enabled, persons can purchase and own assets (Property, Equipment, Stocks)
+    /// that appreciate or depreciate over time and may generate income.
+    /// Assets enable realistic wealth accumulation beyond liquid money and modeling
+    /// of wealth inequality through different forms of capital.
+    ///
+    /// Set to false to disable asset system (default).
+    #[serde(default)]
+    pub enable_assets: bool,
+
+    /// Probability per step that a person will attempt to purchase an asset (0.0-1.0).
+    ///
+    /// Each simulation step, persons with sufficient money have this probability
+    /// of attempting to buy a new asset. Higher values lead to faster asset accumulation.
+    /// For example, 0.05 means a 5% chance per step.
+    ///
+    /// Only used when enable_assets is true.
+    /// Default: 0.02 (2% chance per step)
+    /// Valid range: 0.0-1.0
+    #[serde(default = "default_asset_purchase_probability")]
+    pub asset_purchase_probability: f64,
+
+    /// Minimum money threshold for asset purchases.
+    ///
+    /// Persons must have at least this much money to be eligible to purchase assets.
+    /// This ensures persons keep enough money for their basic needs and trading.
+    ///
+    /// Only used when enable_assets is true.
+    /// Default: 200.0
+    #[serde(default = "default_min_money_for_asset_purchase")]
+    pub min_money_for_asset_purchase: f64,
+
+    /// Property appreciation rate per step (e.g., 0.002 = 0.2% per step).
+    ///
+    /// Rate at which property values increase each simulation step.
+    /// This simulates real estate market appreciation over time.
+    /// For example, 0.002 means property values increase by 0.2% per step.
+    ///
+    /// Only used when enable_assets is true.
+    /// Default: 0.002 (0.2% per step)
+    /// Valid range: 0.0-0.1
+    #[serde(default = "default_property_appreciation_rate")]
+    pub property_appreciation_rate: f64,
+
+    /// Equipment depreciation rate per step (e.g., 0.01 = 1% per step).
+    ///
+    /// Rate at which equipment values decrease each simulation step.
+    /// This simulates wear and tear on production equipment.
+    /// For example, 0.01 means equipment loses 1% of its value per step.
+    ///
+    /// Only used when enable_assets is true.
+    /// Default: 0.01 (1% per step)
+    /// Valid range: 0.0-0.2
+    #[serde(default = "default_equipment_depreciation_rate")]
+    pub equipment_depreciation_rate: f64,
+
+    /// Rental income rate for property per step (e.g., 0.001 = 0.1% per step).
+    ///
+    /// Rate at which property generates rental income each simulation step.
+    /// Income is calculated as a percentage of the property's current value.
+    /// For example, 0.001 means property generates 0.1% of its value in income per step.
+    ///
+    /// Only used when enable_assets is true.
+    /// Default: 0.001 (0.1% per step)
+    /// Valid range: 0.0-0.05
+    #[serde(default = "default_rental_income_rate")]
+    pub rental_income_rate: f64,
+
+    /// Stock return rate per step (e.g., 0.003 = 0.3% per step).
+    ///
+    /// Expected rate of return for stock investments each simulation step.
+    /// Actual returns will vary based on market volatility.
+    /// For example, 0.003 means an expected 0.3% return per step.
+    ///
+    /// Only used when enable_assets is true.
+    /// Default: 0.003 (0.3% per step)
+    /// Valid range: -0.05-0.1
+    #[serde(default = "default_stock_return_rate")]
+    pub stock_return_rate: f64,
+
+    /// Asset price multiplier relative to base skill price.
+    ///
+    /// Asset purchase prices are calculated as: base_skill_price * asset_price_multiplier.
+    /// For example, with base_skill_price = 10.0 and multiplier = 10.0, assets cost 100.0.
+    ///
+    /// Only used when enable_assets is true.
+    /// Default: 10.0 (assets cost 10x base skill price)
+    /// Valid range: 1.0-100.0
+    #[serde(default = "default_asset_price_multiplier")]
+    pub asset_price_multiplier: f64,
 }
 
 fn default_disease_transmission_rate() -> f64 {
@@ -1707,6 +1799,34 @@ fn default_initial_quality() -> f64 {
     3.0 // Average quality on 0.0-5.0 scale
 }
 
+fn default_asset_purchase_probability() -> f64 {
+    0.02 // 2% chance per step
+}
+
+fn default_min_money_for_asset_purchase() -> f64 {
+    200.0 // Require 200 money to buy assets
+}
+
+fn default_property_appreciation_rate() -> f64 {
+    0.002 // 0.2% appreciation per step
+}
+
+fn default_equipment_depreciation_rate() -> f64 {
+    0.01 // 1% depreciation per step
+}
+
+fn default_rental_income_rate() -> f64 {
+    0.001 // 0.1% rental income per step
+}
+
+fn default_stock_return_rate() -> f64 {
+    0.003 // 0.3% expected return per step
+}
+
+fn default_asset_price_multiplier() -> f64 {
+    10.0 // Assets cost 10x base skill price
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -1830,6 +1950,14 @@ impl Default for SimulationConfig {
             strict_invariant_mode: false,     // Lenient mode by default
             check_money_conservation: true,   // Check money conservation by default
             check_non_negative_wealth: true,  // Check non-negative wealth by default
+            enable_assets: false,                     // Disabled by default
+            asset_purchase_probability: 0.02,         // 2% chance per step
+            min_money_for_asset_purchase: 200.0,      // Require 200 money
+            property_appreciation_rate: 0.002,        // 0.2% appreciation per step
+            equipment_depreciation_rate: 0.01,        // 1% depreciation per step
+            rental_income_rate: 0.001,                // 0.1% rental income per step
+            stock_return_rate: 0.003,                 // 0.3% expected return per step
+            asset_price_multiplier: 10.0,             // Assets cost 10x base skill price
         }
     }
 }

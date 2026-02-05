@@ -1,3 +1,4 @@
+use crate::asset::AssetId;
 use crate::credit_rating::CreditScore;
 use crate::insurance::InsuranceId;
 use crate::investment::InvestmentId;
@@ -476,6 +477,11 @@ pub struct Person {
     /// Records upward and downward mobility events with timestamps.
     /// Used to analyze social mobility patterns and class transitions.
     pub class_history: Vec<ClassChange>,
+    /// Assets owned by this person (property, equipment, stocks).
+    /// Assets represent long-term wealth that can appreciate or depreciate over time.
+    /// Total asset value is included in wealth calculations.
+    /// Only populated when asset system is enabled.
+    pub owned_assets: Vec<AssetId>,
 }
 
 impl Person {
@@ -521,6 +527,7 @@ impl Person {
             influence_score: 1.0,            // Start with baseline influence
             social_class: SocialClass::default(), // Start with middle class (will be updated based on wealth)
             class_history: Vec::new(),            // Start with no class history
+            owned_assets: Vec::new(),             // Start with no assets
         }
     }
 
