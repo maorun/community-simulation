@@ -31,6 +31,7 @@ This framework enables you to simulate and analyze:
 - **Pricing Scenarios**: Supply/demand, dynamic, adaptive, auction, climate change
 - **Demand Strategies**: Uniform, concentrated (Pareto), cyclical (business cycles)
 - **Market Systems**: Dynamic price adjustments, seasonal effects, transaction fees
+- **Market Segmentation**: Budget/Mittelklasse/Luxury segments based on wealth with differentiated price-quality preferences
 - **Wealth Building**: Savings, loans with interest, assets (property/equipment/stocks)
 
 ### Social & Network Systems
@@ -111,6 +112,15 @@ This framework enables you to simulate and analyze:
   --enable-crisis-events \
   --crisis-probability 0.02 \
   -o custom_results.json
+
+# Market segmentation simulation
+./target/release/simulation-framework run \
+  --steps 500 \
+  --persons 100 \
+  --enable-market-segments \
+  --enable-quality \
+  --enable-reputation \
+  -o market_segments.json
 ```
 
 ### Using Configuration Files
