@@ -466,6 +466,552 @@ mod tests {
         // Should be clamped to max_skill_price
         assert!(final_price <= 1000.0);
     }
+
+    // ============================================================================
+    // Tests for Scenario enum methods
+    // ============================================================================
+
+    #[test]
+    fn test_scenario_all() {
+        let scenarios = Scenario::all();
+        assert_eq!(scenarios.len(), 5);
+        assert!(scenarios.contains(&Scenario::Original));
+        assert!(scenarios.contains(&Scenario::DynamicPricing));
+        assert!(scenarios.contains(&Scenario::AdaptivePricing));
+        assert!(scenarios.contains(&Scenario::AuctionPricing));
+        assert!(scenarios.contains(&Scenario::ClimateChange));
+    }
+
+    #[test]
+    fn test_scenario_description_original() {
+        assert_eq!(Scenario::Original.description(), "Supply/demand-based pricing with volatility");
+    }
+
+    #[test]
+    fn test_scenario_description_dynamic_pricing() {
+        assert_eq!(Scenario::DynamicPricing.description(), "Sales-based pricing mechanism");
+    }
+
+    #[test]
+    fn test_scenario_description_adaptive_pricing() {
+        assert_eq!(
+            Scenario::AdaptivePricing.description(),
+            "Gradual price adaptation using exponential moving average"
+        );
+    }
+
+    #[test]
+    fn test_scenario_description_auction_pricing() {
+        assert_eq!(Scenario::AuctionPricing.description(), "Competitive bidding mechanism");
+    }
+
+    #[test]
+    fn test_scenario_description_climate_change() {
+        assert_eq!(
+            Scenario::ClimateChange.description(),
+            "Gradually increasing costs simulating climate impact"
+        );
+    }
+
+    #[test]
+    fn test_scenario_mechanism_original() {
+        assert_eq!(
+            Scenario::Original.mechanism(),
+            "Prices adjust based on the ratio of buyers to sellers"
+        );
+    }
+
+    #[test]
+    fn test_scenario_mechanism_dynamic_pricing() {
+        assert_eq!(
+            Scenario::DynamicPricing.mechanism(),
+            "Prices increase 5% when sold, decrease 5% when not sold"
+        );
+    }
+
+    #[test]
+    fn test_scenario_mechanism_adaptive_pricing() {
+        assert_eq!(
+            Scenario::AdaptivePricing.mechanism(),
+            "Smooth price adjustments with 20% learning rate"
+        );
+    }
+
+    #[test]
+    fn test_scenario_mechanism_auction_pricing() {
+        assert_eq!(
+            Scenario::AuctionPricing.mechanism(),
+            "Prices increase aggressively when multiple buyers compete"
+        );
+    }
+
+    #[test]
+    fn test_scenario_mechanism_climate_change() {
+        assert_eq!(
+            Scenario::ClimateChange.mechanism(),
+            "Prices increase gradually each step, accelerating over time"
+        );
+    }
+
+    #[test]
+    fn test_scenario_use_case_original() {
+        assert_eq!(
+            Scenario::Original.use_case(),
+            "Studying natural market dynamics and equilibrium"
+        );
+    }
+
+    #[test]
+    fn test_scenario_use_case_dynamic_pricing() {
+        assert_eq!(
+            Scenario::DynamicPricing.use_case(),
+            "Studying price discovery and market feedback"
+        );
+    }
+
+    #[test]
+    fn test_scenario_use_case_adaptive_pricing() {
+        assert_eq!(
+            Scenario::AdaptivePricing.use_case(),
+            "Modeling gradual market learning and stability"
+        );
+    }
+
+    #[test]
+    fn test_scenario_use_case_auction_pricing() {
+        assert_eq!(
+            Scenario::AuctionPricing.use_case(),
+            "Studying auction dynamics and competitive markets"
+        );
+    }
+
+    #[test]
+    fn test_scenario_use_case_climate_change() {
+        assert_eq!(
+            Scenario::ClimateChange.use_case(),
+            "Studying economic impact of environmental degradation"
+        );
+    }
+
+    #[test]
+    fn test_scenario_is_default_original() {
+        assert!(Scenario::Original.is_default());
+    }
+
+    #[test]
+    fn test_scenario_is_default_non_original() {
+        assert!(!Scenario::DynamicPricing.is_default());
+        assert!(!Scenario::AdaptivePricing.is_default());
+        assert!(!Scenario::AuctionPricing.is_default());
+        assert!(!Scenario::ClimateChange.is_default());
+    }
+
+    #[test]
+    fn test_scenario_display_original() {
+        assert_eq!(format!("{}", Scenario::Original), "Original");
+    }
+
+    #[test]
+    fn test_scenario_display_dynamic_pricing() {
+        assert_eq!(format!("{}", Scenario::DynamicPricing), "DynamicPricing");
+    }
+
+    #[test]
+    fn test_scenario_display_adaptive_pricing() {
+        assert_eq!(format!("{}", Scenario::AdaptivePricing), "AdaptivePricing");
+    }
+
+    #[test]
+    fn test_scenario_display_auction_pricing() {
+        assert_eq!(format!("{}", Scenario::AuctionPricing), "AuctionPricing");
+    }
+
+    #[test]
+    fn test_scenario_display_climate_change() {
+        assert_eq!(format!("{}", Scenario::ClimateChange), "ClimateChange");
+    }
+
+    #[test]
+    fn test_scenario_default() {
+        assert_eq!(Scenario::default(), Scenario::Original);
+    }
+
+    // ============================================================================
+    // Tests for PriceUpdater enum conversions and defaults
+    // ============================================================================
+
+    #[test]
+    fn test_price_updater_default() {
+        let updater = PriceUpdater::default();
+        assert!(matches!(updater, PriceUpdater::Original(_)));
+    }
+
+    #[test]
+    fn test_price_updater_from_scenario_original() {
+        let updater = PriceUpdater::from(Scenario::Original);
+        assert!(matches!(updater, PriceUpdater::Original(_)));
+    }
+
+    #[test]
+    fn test_price_updater_from_scenario_dynamic_pricing() {
+        let updater = PriceUpdater::from(Scenario::DynamicPricing);
+        assert!(matches!(updater, PriceUpdater::DynamicPricing(_)));
+    }
+
+    #[test]
+    fn test_price_updater_from_scenario_adaptive_pricing() {
+        let updater = PriceUpdater::from(Scenario::AdaptivePricing);
+        assert!(matches!(updater, PriceUpdater::AdaptivePricing(_)));
+    }
+
+    #[test]
+    fn test_price_updater_from_scenario_auction_pricing() {
+        let updater = PriceUpdater::from(Scenario::AuctionPricing);
+        assert!(matches!(updater, PriceUpdater::AuctionPricing(_)));
+    }
+
+    #[test]
+    fn test_price_updater_from_scenario_climate_change() {
+        let updater = PriceUpdater::from(Scenario::ClimateChange);
+        assert!(matches!(updater, PriceUpdater::ClimateChange(_)));
+    }
+
+    // ============================================================================
+    // Additional edge case tests for price updaters
+    // ============================================================================
+
+    #[test]
+    fn test_original_price_updater_equal_supply_demand() {
+        // When supply equals demand, price should remain relatively stable
+        let config = PriceUpdateTestConfig::original(50.0, 5, 5);
+        let new_price = execute_price_update_test(config);
+        // Ratio is 1.0, so adjustment factor is 1.0 (no change before volatility)
+        // With volatility disabled, price should stay at 50.0
+        assert_eq!(new_price, 50.0);
+    }
+
+    #[test]
+    fn test_original_price_updater_zero_demand() {
+        // Zero demand should cause price decrease
+        let config = PriceUpdateTestConfig::original(50.0, 0, 10);
+        let new_price = execute_price_update_test(config);
+        assert!(new_price < 50.0);
+    }
+
+    #[test]
+    fn test_original_price_updater_high_demand() {
+        // Very high demand relative to supply should increase price significantly
+        let config = PriceUpdateTestConfig::original(50.0, 20, 2);
+        let new_price = execute_price_update_test(config);
+        assert!(new_price > 50.0);
+        assert!(new_price > 55.0); // Should increase by more than 10%
+    }
+
+    #[test]
+    fn test_original_price_updater_min_clamp() {
+        // Price should not go below min_skill_price
+        let config = PriceUpdateTestConfig::original(1.0, 0, 100);
+        let new_price = execute_price_update_test(config);
+        assert_eq!(new_price, 1.0); // Clamped at min (TEST_BASE_PRICE = 10.0, but skill starts at 1.0)
+    }
+
+    #[test]
+    fn test_dynamic_pricing_multiple_sales() {
+        // Multiple sales should still result in same percentage increase
+        let config = PriceUpdateTestConfig::dynamic_pricing(50.0, Some(5));
+        let new_price = execute_price_update_test(config);
+        // Should still be 5% increase regardless of sales count
+        assert_eq!(new_price, 52.5);
+    }
+
+    #[test]
+    fn test_dynamic_pricing_max_clamp() {
+        // Price should not exceed max_skill_price
+        let mut market = create_test_market(Scenario::DynamicPricing, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 990.0);
+        market.max_skill_price = 1000.0;
+
+        // Simulate sales to push price up
+        for _ in 0..10 {
+            market.sales_this_step.insert(skill_id.clone(), 1);
+            let mut rng = StdRng::seed_from_u64(2);
+            let updater = DynamicPricingUpdater;
+            updater.update_prices(&mut market, &mut rng);
+        }
+
+        let final_price = market.get_price(&skill_id).unwrap();
+        assert!(final_price <= 1000.0);
+    }
+
+    #[test]
+    fn test_adaptive_pricing_multiple_sales() {
+        // Multiple sales should still use same logic (target increase, not count-based)
+        let config = PriceUpdateTestConfig::adaptive_pricing(50.0, Some(10));
+        let new_price = execute_price_update_test(config);
+        // Should be same as single sale: 50 + 0.2 * (55 - 50) = 51.0
+        assert_eq!(new_price, 51.0);
+    }
+
+    #[test]
+    fn test_adaptive_pricing_max_clamp() {
+        // Price should not exceed max_skill_price
+        let mut market = create_test_market(Scenario::AdaptivePricing, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 990.0);
+        market.max_skill_price = 1000.0;
+
+        // Simulate sales to push price up
+        let mut rng = StdRng::seed_from_u64(2);
+        let updater = AdaptivePricingUpdater;
+        for _ in 0..50 {
+            market.sales_this_step.insert(skill_id.clone(), 1);
+            updater.update_prices(&mut market, &mut rng);
+        }
+
+        let final_price = market.get_price(&skill_id).unwrap();
+        assert!(final_price <= 1000.0);
+    }
+
+    #[test]
+    fn test_auction_pricing_equal_supply_demand() {
+        // Equal supply and demand (low demand, not competitive)
+        let config = PriceUpdateTestConfig::auction_pricing(50.0, 5, 5);
+        let new_price = execute_price_update_test(config);
+        // demand (5) <= supply (5), so 3% decrease
+        assert!(new_price < 50.0);
+    }
+
+    #[test]
+    fn test_auction_pricing_high_competition() {
+        // Very high competition (demand >> supply)
+        let config = PriceUpdateTestConfig::auction_pricing(50.0, 20, 2);
+        let new_price = execute_price_update_test(config);
+        // Should have aggressive increase due to high competition
+        assert!(new_price > 60.0);
+    }
+
+    #[test]
+    fn test_auction_pricing_max_clamp() {
+        // Price should not exceed max_skill_price
+        let mut market = create_test_market(Scenario::AuctionPricing, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 990.0);
+        market.max_skill_price = 1000.0;
+
+        // Simulate high demand
+        let mut rng = StdRng::seed_from_u64(2);
+        let updater = AuctionPricingUpdater;
+        for _ in 0..10 {
+            market.demand_counts.insert(skill_id.clone(), 100);
+            market.supply_counts.insert(skill_id.clone(), 1);
+            updater.update_prices(&mut market, &mut rng);
+        }
+
+        let final_price = market.get_price(&skill_id).unwrap();
+        assert!(final_price <= 1000.0);
+    }
+
+    #[test]
+    fn test_climate_change_initial_step() {
+        // Test first step behavior (step 0)
+        let config = PriceUpdateTestConfig::climate_change(100.0);
+        let new_price = execute_price_update_test(config);
+        // At step 0, growth rate is 0.2%, so price should be 100.0 * 1.002 = 100.2
+        assert!((new_price - 100.2).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_climate_change_min_clamp() {
+        // Ensure min price is respected (though climate change always increases)
+        let mut market = create_test_market(Scenario::ClimateChange, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 10.0);
+
+        let mut rng = StdRng::seed_from_u64(2);
+        let updater = ClimateChangePriceUpdater::new();
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        assert!(new_price >= 10.0);
+    }
+
+    #[test]
+    fn test_climate_change_step_inference() {
+        // Test that step is correctly inferred from price history length
+        let mut market = create_test_market(Scenario::ClimateChange, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 100.0);
+
+        let mut rng = StdRng::seed_from_u64(2);
+        let updater = ClimateChangePriceUpdater::new();
+
+        // Run several steps and verify prices increase
+        let mut previous_price = market.get_price(&skill_id).unwrap();
+        for _ in 0..10 {
+            updater.update_prices(&mut market, &mut rng);
+            let current_price = market.get_price(&skill_id).unwrap();
+            assert!(current_price > previous_price);
+            previous_price = current_price;
+        }
+    }
+
+    #[test]
+    fn test_price_updater_update_prices_dispatch() {
+        // Test that PriceUpdater enum correctly dispatches to implementations
+        let mut market = create_test_market(Scenario::Original, 10.0);
+        let skill_id = setup_skill_in_market(&mut market, 50.0);
+        market.demand_counts.insert(skill_id.clone(), 10);
+        market.supply_counts.insert(skill_id.clone(), 5);
+
+        let mut rng = StdRng::seed_from_u64(2);
+        let updater = PriceUpdater::from(Scenario::Original);
+        updater.update_prices(&mut market, &mut rng);
+
+        let new_price = market.get_price(&skill_id).unwrap();
+        assert!(new_price > 50.0); // Should increase due to high demand
+    }
+
+    // ============================================================================
+    // Tests for DemandStrategy enum
+    // ============================================================================
+
+    #[test]
+    fn test_demand_strategy_display_uniform() {
+        assert_eq!(format!("{}", DemandStrategy::Uniform), "Uniform");
+    }
+
+    #[test]
+    fn test_demand_strategy_display_concentrated() {
+        assert_eq!(format!("{}", DemandStrategy::Concentrated), "Concentrated");
+    }
+
+    #[test]
+    fn test_demand_strategy_display_cyclical() {
+        assert_eq!(format!("{}", DemandStrategy::Cyclical), "Cyclical");
+    }
+
+    #[test]
+    fn test_demand_strategy_default() {
+        assert_eq!(DemandStrategy::default(), DemandStrategy::Uniform);
+    }
+
+    #[test]
+    fn test_demand_generator_default() {
+        let generator = DemandGenerator::default();
+        assert!(matches!(generator, DemandGenerator::Uniform(_)));
+    }
+
+    #[test]
+    fn test_demand_generator_from_uniform() {
+        let generator = DemandGenerator::from(DemandStrategy::Uniform);
+        assert!(matches!(generator, DemandGenerator::Uniform(_)));
+    }
+
+    #[test]
+    fn test_demand_generator_from_concentrated() {
+        let generator = DemandGenerator::from(DemandStrategy::Concentrated);
+        assert!(matches!(generator, DemandGenerator::Concentrated(_)));
+    }
+
+    #[test]
+    fn test_demand_generator_from_cyclical() {
+        let generator = DemandGenerator::from(DemandStrategy::Cyclical);
+        assert!(matches!(generator, DemandGenerator::Cyclical(_)));
+    }
+
+    // ============================================================================
+    // Additional edge cases for demand generators
+    // ============================================================================
+
+    #[test]
+    fn test_uniform_demand_distribution() {
+        let generator = UniformDemandGenerator;
+        let mut rng = StdRng::seed_from_u64(12345);
+
+        // Collect many samples to verify distribution
+        let mut counts = std::collections::HashMap::new();
+        for _ in 0..1000 {
+            let demand = generator.generate_demand_count(0, 0, &mut rng);
+            *counts.entry(demand).or_insert(0) += 1;
+        }
+
+        // All values 2-5 should appear
+        assert!(counts.contains_key(&2));
+        assert!(counts.contains_key(&3));
+        assert!(counts.contains_key(&4));
+        assert!(counts.contains_key(&5));
+    }
+
+    #[test]
+    fn test_concentrated_demand_distribution() {
+        let generator = ConcentratedDemandGenerator;
+        let mut rng = StdRng::seed_from_u64(12345);
+
+        let mut low_count = 0; // 2-3
+        for _ in 0..1000 {
+            let demand = generator.generate_demand_count(0, 0, &mut rng);
+            if demand <= 3 {
+                low_count += 1;
+            }
+        }
+
+        // Roughly 70% should be low (2-3), 30% high (4-5)
+        let low_ratio = low_count as f64 / 1000.0;
+        assert!(low_ratio > 0.6 && low_ratio < 0.8, "Low ratio: {}", low_ratio);
+    }
+
+    #[test]
+    fn test_cyclical_demand_person_phase_offset() {
+        let generator = CyclicalDemandGenerator;
+        let mut rng = StdRng::seed_from_u64(2);
+
+        // Test that phase offset is applied by comparing demands across a wide person ID range
+        // The phase offset (0.1 per person) means person 0 and person 100 should differ by 10 steps
+        let demand_person_0_step_10 = generator.generate_demand_count(0, 10, &mut rng);
+        let demand_person_100_step_0 = generator.generate_demand_count(100, 0, &mut rng);
+
+        // Person 100 at step 0 should be equivalent to person 0 at step 10 (phase offset of 10)
+        // This verifies that phase offset is actually being applied
+        assert_eq!(demand_person_0_step_10, demand_person_100_step_0);
+    }
+
+    #[test]
+    fn test_cyclical_demand_cycle_period() {
+        let generator = CyclicalDemandGenerator;
+        let mut rng = StdRng::seed_from_u64(2);
+
+        // Collect demands over a full cycle
+        let mut demands = Vec::new();
+        for step in 0..100 {
+            demands.push(generator.generate_demand_count(0, step, &mut rng));
+        }
+
+        // Should see both high and low demands within the cycle
+        let min_demand = *demands.iter().min().unwrap();
+        let max_demand = *demands.iter().max().unwrap();
+        assert_eq!(min_demand, 2);
+        assert_eq!(max_demand, 5);
+    }
+
+    #[test]
+    fn test_demand_generator_dispatch_uniform() {
+        let generator = DemandGenerator::Uniform(UniformDemandGenerator);
+        let mut rng = StdRng::seed_from_u64(2);
+        let demand = generator.generate_demand_count(0, 0, &mut rng);
+        assert!((2..=5).contains(&demand));
+    }
+
+    #[test]
+    fn test_demand_generator_dispatch_concentrated() {
+        let generator = DemandGenerator::Concentrated(ConcentratedDemandGenerator);
+        let mut rng = StdRng::seed_from_u64(2);
+        let demand = generator.generate_demand_count(0, 0, &mut rng);
+        assert!((2..=5).contains(&demand));
+    }
+
+    #[test]
+    fn test_demand_generator_dispatch_cyclical() {
+        let generator = DemandGenerator::Cyclical(CyclicalDemandGenerator);
+        let mut rng = StdRng::seed_from_u64(2);
+        let demand = generator.generate_demand_count(0, 0, &mut rng);
+        assert!((2..=5).contains(&demand));
+    }
 }
 
 /// Enum representing different price update strategies.
