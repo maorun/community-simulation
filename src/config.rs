@@ -561,6 +561,63 @@ pub struct SimulationConfig {
     #[serde(default = "default_mentor_reputation_bonus")]
     pub mentor_reputation_bonus: f64,
 
+    /// Enable automation effects that gradually reduce demand for automatable skills.
+    ///
+    /// When enabled, skills with higher automation_risk values experience declining demand
+    /// over time, simulating technological unemployment and labor market disruption from
+    /// automation, AI, and digitalization. The demand reduction is gradual and proportional
+    /// to both the skill's automation_risk and the automation_rate parameter.
+    ///
+    /// This enables research on:
+    /// - Technology-induced structural unemployment
+    /// - Labor market adaptation to automation
+    /// - Skill obsolescence and retraining needs
+    /// - Economic inequality from technological change
+    ///
+    /// Set to false to disable automation effects (default).
+    #[serde(default)]
+    pub enable_automation: bool,
+
+    /// Rate at which automation reduces demand for automatable skills (per step).
+    ///
+    /// This value controls how quickly demand declines for skills with high automation_risk.
+    /// The demand multiplier is calculated as: `1.0 - (automation_risk * automation_rate * current_step)`
+    ///
+    /// For example, with automation_rate = 0.001:
+    /// - A skill with automation_risk = 1.0 loses 0.1% demand per step
+    /// - After 100 steps: demand reduced to 90% of original
+    /// - After 500 steps: demand reduced to 50% of original
+    ///
+    /// Only used when enable_automation is true.
+    /// Default: 0.001 (0.1% reduction per step for fully automatable skills)
+    #[serde(default = "default_automation_rate")]
+    pub automation_rate: f64,
+
+    /// Per-skill automation risk overrides.
+    ///
+    /// Allows setting skill-specific automation risk values that override the default
+    /// risk level specified in the skill definition.
+    /// Format: `HashMap<skill_name, automation_risk>`
+    ///
+    /// Example in YAML:
+    /// ```yaml
+    /// automation_risks_per_skill:
+    ///   "Data Entry": 0.9      # High automation risk
+    ///   "Programming": 0.3      # Low-medium automation risk
+    ///   "Counseling": 0.1      # Low automation risk (human interaction)
+    ///   "Creative Writing": 0.05 # Very low automation risk
+    /// ```
+    ///
+    /// Risk values should be in the range 0.0-1.0:
+    /// - 0.0-0.2: Low risk (creative, interpersonal skills)
+    /// - 0.3-0.6: Medium risk (analytical, routine cognitive work)
+    /// - 0.7-1.0: High risk (repetitive, rule-based tasks)
+    ///
+    /// Only used when enable_automation is true.
+    /// Default: Empty (use default risk from skill definitions)
+    #[serde(default)]
+    pub automation_risks_per_skill: HashMap<String, f64>,
+
     /// Enable crisis events that create economic shocks during the simulation.
     ///
     /// When enabled, random crisis events (market crashes, demand shocks, supply shocks,
@@ -1577,6 +1634,10 @@ fn default_mentor_reputation_bonus() -> f64 {
     0.05 // Small reputation boost for successful mentoring
 }
 
+fn default_automation_rate() -> f64 {
+    0.001 // 0.1% demand reduction per step for fully automatable skills (risk=1.0)
+}
+
 fn default_crisis_probability() -> f64 {
     0.02 // 2% chance per step (approximately once every 50 steps)
 }
@@ -1702,62 +1763,65 @@ impl Default for SimulationConfig {
             mentorship_cost_reduction: 0.5,       // 50% cost reduction for mentees
             min_mentor_quality: 3.5,              // Above average quality required
             mentor_reputation_bonus: 0.05,        // Small reputation boost
-            enable_crisis_events: false,          // Disabled by default
-            crisis_probability: 0.02,             // 2% chance per step
-            crisis_severity: 0.5,                 // Moderate severity
-            enable_insurance: false,              // Disabled by default
-            insurance_premium_rate: 0.05,         // 5% of coverage amount
-            insurance_duration: 100,              // Policies last 100 steps
-            insurance_purchase_probability: 0.05, // 5% chance per step
-            insurance_coverage_amount: 50.0,      // Default coverage of 50
-            enable_friendships: false,            // Disabled by default
-            friendship_probability: 0.1,          // 10% chance per trade
-            friendship_discount: 0.1,             // 10% discount for friends
-            enable_trade_agreements: false,       // Disabled by default
-            trade_agreement_probability: 0.05,    // 5% chance per step
-            trade_agreement_discount: 0.15,       // 15% discount for agreement partners
-            trade_agreement_duration: 100,        // Agreements last 100 steps
-            enable_trust_networks: false,         // Disabled by default
-            enable_influence: false,              // Disabled by default
-            num_groups: None,                     // No groups by default
-            distance_cost_factor: 0.0,            // Disabled by default
-            price_elasticity_factor: 0.1,         // 10% price adjustment per unit imbalance
-            volatility_percentage: 0.02,          // ±2% random price variation
-            enable_events: false,                 // Disabled by default
-            enable_production: false,             // Disabled by default
-            production_probability: 0.05,         // 5% chance per step
-            enable_environment: false,            // Disabled by default
-            resource_cost_per_transaction: 1.0,   // Resource consumption matches transaction value
-            custom_resource_reserves: None,       // Use default reserves
-            enable_voting: false,                 // Disabled by default
+            enable_automation: false,             // Disabled by default
+            automation_rate: default_automation_rate(), // 0.1% demand reduction per step for fully automatable skills
+            automation_risks_per_skill: HashMap::new(), // No per-skill automation risks by default
+            enable_crisis_events: false,                // Disabled by default
+            crisis_probability: 0.02,                   // 2% chance per step
+            crisis_severity: 0.5,                       // Moderate severity
+            enable_insurance: false,                    // Disabled by default
+            insurance_premium_rate: 0.05,               // 5% of coverage amount
+            insurance_duration: 100,                    // Policies last 100 steps
+            insurance_purchase_probability: 0.05,       // 5% chance per step
+            insurance_coverage_amount: 50.0,            // Default coverage of 50
+            enable_friendships: false,                  // Disabled by default
+            friendship_probability: 0.1,                // 10% chance per trade
+            friendship_discount: 0.1,                   // 10% discount for friends
+            enable_trade_agreements: false,             // Disabled by default
+            trade_agreement_probability: 0.05,          // 5% chance per step
+            trade_agreement_discount: 0.15,             // 15% discount for agreement partners
+            trade_agreement_duration: 100,              // Agreements last 100 steps
+            enable_trust_networks: false,               // Disabled by default
+            enable_influence: false,                    // Disabled by default
+            num_groups: None,                           // No groups by default
+            distance_cost_factor: 0.0,                  // Disabled by default
+            price_elasticity_factor: 0.1,               // 10% price adjustment per unit imbalance
+            volatility_percentage: 0.02,                // ±2% random price variation
+            enable_events: false,                       // Disabled by default
+            enable_production: false,                   // Disabled by default
+            production_probability: 0.05,               // 5% chance per step
+            enable_environment: false,                  // Disabled by default
+            resource_cost_per_transaction: 1.0, // Resource consumption matches transaction value
+            custom_resource_reserves: None,     // Use default reserves
+            enable_voting: false,               // Disabled by default
             voting_method: crate::voting::VotingMethod::SimpleMajority, // One person, one vote
-            proposal_duration: 20,                // 20 steps voting period
-            proposal_probability: 0.05,           // 5% chance per step to create proposal
-            voting_participation_rate: 0.3,       // 30% chance per person per step to vote
-            enable_quality: false,                // Disabled by default
-            quality_improvement_rate: 0.1,        // Quality increases by 0.1 per trade
-            quality_decay_rate: 0.05,             // Quality decreases by 0.05 per step
-            initial_quality: 3.0,                 // Average quality (0.0-5.0 scale)
-            enable_certification: false,          // Disabled by default
-            certification_cost_multiplier: 2.0,   // 2x base price per level
-            certification_duration: Some(200),    // Certifications last 200 steps
-            certification_probability: 0.05,      // 5% chance per step to attempt certification
-            enable_resource_pools: false,         // Disabled by default
-            pool_contribution_rate: 0.02,         // 2% contribution per step
-            pool_withdrawal_threshold: 30.0,      // Support for members below $30
-            enable_adaptive_strategies: false,    // Disabled by default
-            adaptation_rate: 0.1,                 // 10% adaptation rate
-            exploration_rate: 0.05,               // 5% exploration (ε-greedy)
-            enable_strategy_evolution: false,     // Disabled by default
-            evolution_update_frequency: 50,       // Evolution every 50 steps
-            imitation_probability: 0.3,           // 30% imitation chance
-            mutation_rate: 0.05,                  // 5% mutation rate
-            enable_specialization: false,         // Disabled by default
-            enable_parallel_trades: false,        // Disabled by default
-            enable_externalities: false,          // Disabled by default
-            externality_rate: 0.0,                // No externalities by default
+            proposal_duration: 20,              // 20 steps voting period
+            proposal_probability: 0.05,         // 5% chance per step to create proposal
+            voting_participation_rate: 0.3,     // 30% chance per person per step to vote
+            enable_quality: false,              // Disabled by default
+            quality_improvement_rate: 0.1,      // Quality increases by 0.1 per trade
+            quality_decay_rate: 0.05,           // Quality decreases by 0.05 per step
+            initial_quality: 3.0,               // Average quality (0.0-5.0 scale)
+            enable_certification: false,        // Disabled by default
+            certification_cost_multiplier: 2.0, // 2x base price per level
+            certification_duration: Some(200),  // Certifications last 200 steps
+            certification_probability: 0.05,    // 5% chance per step to attempt certification
+            enable_resource_pools: false,       // Disabled by default
+            pool_contribution_rate: 0.02,       // 2% contribution per step
+            pool_withdrawal_threshold: 30.0,    // Support for members below $30
+            enable_adaptive_strategies: false,  // Disabled by default
+            adaptation_rate: 0.1,               // 10% adaptation rate
+            exploration_rate: 0.05,             // 5% exploration (ε-greedy)
+            enable_strategy_evolution: false,   // Disabled by default
+            evolution_update_frequency: 50,     // Evolution every 50 steps
+            imitation_probability: 0.3,         // 30% imitation chance
+            mutation_rate: 0.05,                // 5% mutation rate
+            enable_specialization: false,       // Disabled by default
+            enable_parallel_trades: false,      // Disabled by default
+            enable_externalities: false,        // Disabled by default
+            externality_rate: 0.0,              // No externalities by default
             externality_rates_per_skill: HashMap::new(), // No per-skill rates by default
-            enable_health: false,                 // Disabled by default
+            enable_health: false,               // Disabled by default
             disease_transmission_rate: default_disease_transmission_rate(),
             disease_recovery_duration: default_disease_recovery_duration(),
             initial_sick_persons: 0,          // No initial infections

@@ -894,6 +894,38 @@ pub struct MentorshipStats {
     pub unique_mentees: usize,
 }
 
+/// Statistics about automation effects on the labor market.
+///
+/// Tracks the impact of automation on skill demand and labor market dynamics.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AutomationStats {
+    /// Number of skills with non-zero automation risk
+    pub skills_at_risk: usize,
+    /// Average automation risk across all skills (0.0-1.0)
+    pub average_automation_risk: f64,
+    /// Minimum automation risk observed
+    pub min_automation_risk: f64,
+    /// Maximum automation risk observed
+    pub max_automation_risk: f64,
+    /// Current automation progress (automation_rate * current_step)
+    pub automation_progress: f64,
+    /// Estimated total demand reduction from automation (percentage)
+    pub demand_reduction_percentage: f64,
+    /// Skills with highest automation risk (top 5)
+    pub most_automated_skills: Vec<SkillAutomationInfo>,
+}
+
+/// Information about a skill's automation status
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SkillAutomationInfo {
+    /// Skill identifier
+    pub skill_id: String,
+    /// Automation risk level (0.0-1.0)
+    pub automation_risk: f64,
+    /// Current demand count
+    pub current_demand: usize,
+}
+
 /// Statistics about technology breakthrough events
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TechnologyBreakthroughStats {
@@ -1431,6 +1463,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mentorship_statistics: Option<MentorshipStats>,
 
+    /// Automation effects statistics (only present if automation is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub automation_statistics: Option<AutomationStats>,
+
     /// Certification system statistics (only present if certification is enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub certification_statistics: Option<CertificationStats>,
@@ -1622,6 +1658,7 @@ impl SimulationResult {
     /// #     contract_statistics: None,
     /// #     education_statistics: None,
     /// #     mentorship_statistics: None,
+    /// #     automation_statistics: None,
     /// #     certification_statistics: None,
     /// #     environment_statistics: None,
     /// #     friendship_statistics: None,
@@ -3967,6 +4004,7 @@ mod tests {
             contract_statistics: None,
             education_statistics: None,
             mentorship_statistics: None,
+            automation_statistics: None,
             certification_statistics: None,
             environment_statistics: None,
             friendship_statistics: None,
