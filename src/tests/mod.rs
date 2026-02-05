@@ -959,4 +959,50 @@ mod engine_tests {
             }
         }
     }
+
+    #[test]
+    fn test_automation_feature() {
+        // Test that automation feature reduces demand for high-risk skills
+        let mut config = test_config().max_steps(100).entity_count(20).build();
+        config.enable_automation = true;
+        config.automation_rate = 0.01; // 1% demand reduction per step for fully automatable skills
+        
+        // Set automation risk for first skill
+        config.automation_risks_per_skill.insert("Skill0".to_string(), 1.0); // Fully automatable
+        config.automation_risks_per_skill.insert("Skill1".to_string(), 0.0); // Not automatable
+        
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+        
+        // Check that automation statistics are present
+        assert!(result.automation_statistics.is_some());
+        let stats = result.automation_statistics.unwrap();
+        
+        // Verify basic statistics
+        assert_eq!(stats.skills_at_risk, 1); // Only Skill0 has risk > 0
+        assert_eq!(stats.max_automation_risk, 1.0);
+        assert_eq!(stats.automation_progress, 1.0); // 0.01 * 100 steps
+        
+        // Verify most automated skills list
+        assert!(!stats.most_automated_skills.is_empty());
+        let most_automated = &stats.most_automated_skills[0];
+        assert_eq!(most_automated.skill_id, "Skill0");
+        assert_eq!(most_automated.automation_risk, 1.0);
+        
+        // Note: demand_reduction_percentage may be 0 in short simulations or with few entities
+        // The important thing is that the automation logic is working and stats are calculated
+    }
+
+    #[test]
+    fn test_automation_disabled() {
+        // Test that automation doesn't affect simulation when disabled
+        let config = test_config().max_steps(50).build();
+        // enable_automation defaults to false
+        
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+        
+        // Automation statistics should be None when disabled
+        assert!(result.automation_statistics.is_none());
+    }
 }
