@@ -1,5 +1,8 @@
 # Economic Simulation Framework
 
+[![Rust CI](https://github.com/maorun/community-simulation/actions/workflows/rust.yml/badge.svg)](https://github.com/maorun/community-simulation/actions/workflows/rust.yml)
+[![codecov](https://codecov.io/gh/maorun/community-simulation/branch/master/graph/badge.svg)](https://codecov.io/gh/maorun/community-simulation)
+
 This repository contains a configurable economic simulation written in Rust. It simulates a small economy of individuals, each with unique skills and needs, engaging in trade within a dynamic market. The simulation is designed to explore concepts like price formation, wealth distribution, and market equilibrium.
 
 ## Features
@@ -1664,6 +1667,7 @@ For information about developing, testing, and contributing to this project, ple
 - [Building the Project](DEVELOPMENT.md#building-the-project)
 - [Code Structure](DEVELOPMENT.md#code-structure)
 - [Testing](DEVELOPMENT.md#testing)
+- [Code Coverage](COVERAGE.md) - Generate and view coverage reports
 - [Contributing Guidelines](DEVELOPMENT.md#contributing)
 
 ## License
