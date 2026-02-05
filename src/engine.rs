@@ -6235,7 +6235,11 @@ impl SimulationEngine {
             externality_stats: checkpoint.externality_stats,
             skill_providers,
             invariant_checker: None, // Invariants will be re-initialized after loading
-            assets: HashMap::new(),  // Reset assets on resume (could add to checkpoint later)
+            // NOTE: Assets are not persisted in checkpoints yet. When resuming,
+            // asset data is lost and persons' owned_assets vectors will be incorrect.
+            // This is a known limitation. To use assets, avoid checkpoint resume
+            // or add assets to SimulationCheckpoint struct in a future update.
+            assets: HashMap::new(),
             asset_counter: 0,
             total_assets_purchased: 0,
             total_assets_sold: 0,
