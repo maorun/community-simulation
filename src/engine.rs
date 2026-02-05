@@ -4847,9 +4847,10 @@ impl SimulationEngine {
         })
     }
 
-    /// Calculate price elasticity statistics for all skills.
+    /// Calculate automation statistics for skills affected by technological unemployment.
     ///
-    /// Elasticity measures the responsiveness of quantity demanded/supplied to price changes.
+    /// Analyzes the impact of automation on skill demand, tracking which skills are at risk
+    /// of being automated and estimating the overall demand reduction across the economy.
     fn calculate_automation_statistics(&self) -> Option<crate::result::AutomationStats> {
         // Calculate automation progress
         let automation_progress = self.config.automation_rate * self.current_step as f64;
@@ -4914,7 +4915,8 @@ impl SimulationEngine {
         let demand_reduction_percentage = weighted_reduction * 100.0;
 
         // Sort by automation risk (descending) and take top 5
-        skill_risks.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        // Handle potential NaN values gracefully by treating them as equal
+        skill_risks.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
         let most_automated_skills: Vec<crate::result::SkillAutomationInfo> = skill_risks
             .iter()
             .take(5)

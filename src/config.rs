@@ -581,15 +581,16 @@ pub struct SimulationConfig {
     /// Rate at which automation reduces demand for automatable skills (per step).
     ///
     /// This value controls how quickly demand declines for skills with high automation_risk.
-    /// The demand multiplier is calculated as: `1.0 - (automation_risk * automation_rate * current_step)`
+    /// Demand is suppressed probabilistically: each time a skill would be selected for demand,
+    /// there's a `(automation_risk * automation_rate * current_step)` chance it will be skipped.
     ///
     /// For example, with automation_rate = 0.001:
-    /// - A skill with automation_risk = 1.0 loses 0.1% demand per step
-    /// - After 100 steps: demand reduced to 90% of original
-    /// - After 500 steps: demand reduced to 50% of original
+    /// - A skill with automation_risk = 1.0 has 0.1% skip probability per step
+    /// - After 100 steps: ~10% chance to skip (0.001 * 1.0 * 100 = 0.1)
+    /// - After 500 steps: ~50% chance to skip (0.001 * 1.0 * 500 = 0.5)
     ///
     /// Only used when enable_automation is true.
-    /// Default: 0.001 (0.1% reduction per step for fully automatable skills)
+    /// Default: 0.001 (0.1% skip probability increase per step for fully automatable skills)
     #[serde(default = "default_automation_rate")]
     pub automation_rate: f64,
 
