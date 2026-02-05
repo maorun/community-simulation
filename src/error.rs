@@ -131,3 +131,175 @@ impl From<io::Error> for SimulationError {
 
 /// Type alias for Result with SimulationError
 pub type Result<T> = std::result::Result<T, SimulationError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io;
+
+    #[test]
+    fn test_config_file_read_error_display() {
+        let io_err = io::Error::new(io::ErrorKind::NotFound, "file not found");
+        let err = SimulationError::ConfigFileRead(io_err);
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to read configuration file"));
+        assert!(display.contains("file not found"));
+    }
+
+    #[test]
+    fn test_yaml_parse_error_display() {
+        let err = SimulationError::YamlParse("invalid yaml".to_string());
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to parse YAML configuration"));
+        assert!(display.contains("invalid yaml"));
+    }
+
+    #[test]
+    fn test_toml_parse_error_display() {
+        let err = SimulationError::TomlParse("invalid toml".to_string());
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to parse TOML configuration"));
+        assert!(display.contains("invalid toml"));
+    }
+
+    #[test]
+    fn test_unsupported_config_format_error_display() {
+        let err = SimulationError::UnsupportedConfigFormat(".json".to_string());
+        let display = format!("{}", err);
+        assert!(display.contains("Unsupported configuration file format"));
+        assert!(display.contains(".json"));
+        assert!(display.contains("yaml"));
+        assert!(display.contains("toml"));
+    }
+
+    #[test]
+    fn test_validation_error_display() {
+        let err = SimulationError::ValidationError("steps must be positive".to_string());
+        let display = format!("{}", err);
+        assert!(display.contains("Configuration validation failed"));
+        assert!(display.contains("steps must be positive"));
+    }
+
+    #[test]
+    fn test_io_error_display() {
+        let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "permission denied");
+        let err = SimulationError::IoError(io_err);
+        let display = format!("{}", err);
+        assert!(display.contains("I/O error"));
+        assert!(display.contains("permission denied"));
+    }
+
+    #[test]
+    fn test_json_serialize_error_display() {
+        let err = SimulationError::JsonSerialize("invalid json".to_string());
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to serialize JSON"));
+        assert!(display.contains("invalid json"));
+    }
+
+    #[test]
+    fn test_action_log_write_error_display() {
+        let io_err = io::Error::new(io::ErrorKind::Other, "write failed");
+        let err = SimulationError::ActionLogWrite(io_err);
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to write action log file"));
+        assert!(display.contains("write failed"));
+    }
+
+    #[test]
+    fn test_action_log_read_error_display() {
+        let io_err = io::Error::new(io::ErrorKind::Other, "read failed");
+        let err = SimulationError::ActionLogRead(io_err);
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to read action log file"));
+        assert!(display.contains("read failed"));
+    }
+
+    #[test]
+    fn test_action_log_serialize_error_display() {
+        // Create a JSON error by trying to serialize something that will fail
+        let json_err = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
+        let err = SimulationError::ActionLogSerialize(json_err);
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to serialize action log"));
+    }
+
+    #[test]
+    fn test_action_log_deserialize_error_display() {
+        // Create a JSON error by trying to deserialize something that will fail
+        let json_err = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
+        let err = SimulationError::ActionLogDeserialize(json_err);
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to deserialize action log"));
+    }
+
+    #[test]
+    fn test_error_source_config_file_read() {
+        let io_err = io::Error::new(io::ErrorKind::NotFound, "not found");
+        let err = SimulationError::ConfigFileRead(io_err);
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn test_error_source_io_error() {
+        let io_err = io::Error::new(io::ErrorKind::Other, "error");
+        let err = SimulationError::IoError(io_err);
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn test_error_source_action_log_write() {
+        let io_err = io::Error::new(io::ErrorKind::Other, "error");
+        let err = SimulationError::ActionLogWrite(io_err);
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn test_error_source_action_log_read() {
+        let io_err = io::Error::new(io::ErrorKind::Other, "error");
+        let err = SimulationError::ActionLogRead(io_err);
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn test_error_source_action_log_serialize() {
+        let json_err = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
+        let err = SimulationError::ActionLogSerialize(json_err);
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn test_error_source_action_log_deserialize() {
+        let json_err = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
+        let err = SimulationError::ActionLogDeserialize(json_err);
+        assert!(err.source().is_some());
+    }
+
+    #[test]
+    fn test_error_source_none_for_string_errors() {
+        let err = SimulationError::YamlParse("error".to_string());
+        assert!(err.source().is_none());
+
+        let err = SimulationError::TomlParse("error".to_string());
+        assert!(err.source().is_none());
+
+        let err = SimulationError::UnsupportedConfigFormat("error".to_string());
+        assert!(err.source().is_none());
+
+        let err = SimulationError::ValidationError("error".to_string());
+        assert!(err.source().is_none());
+
+        let err = SimulationError::JsonSerialize("error".to_string());
+        assert!(err.source().is_none());
+    }
+
+    #[test]
+    fn test_from_io_error() {
+        let io_err = io::Error::new(io::ErrorKind::Other, "test error");
+        let sim_err: SimulationError = io_err.into();
+        match sim_err {
+            SimulationError::IoError(_) => {},
+            _ => panic!("Expected IoError variant"),
+        }
+    }
+}

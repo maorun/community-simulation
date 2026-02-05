@@ -475,4 +475,237 @@ mod tests {
         assert!((inverse_normal_cdf(0.975) - 1.96).abs() < 0.01);
         assert!((inverse_normal_cdf(0.025) + 1.96).abs() < 0.01);
     }
+
+    #[test]
+    fn test_inverse_normal_cdf_edge_cases() {
+        // Test edge cases
+        assert_eq!(inverse_normal_cdf(0.0), f64::NEG_INFINITY);
+        assert_eq!(inverse_normal_cdf(1.0), f64::INFINITY);
+    }
+
+    #[test]
+    fn test_variance_edge_cases() {
+        // Single value has zero variance
+        assert_eq!(variance(&[5.0], 5.0), 0.0);
+        
+        // Empty vector has zero variance
+        assert_eq!(variance(&[], 0.0), 0.0);
+    }
+
+    #[test]
+    fn test_causal_analysis_config_default() {
+        let config = CausalAnalysisConfig::default();
+        assert_eq!(config.treatment_name, "Treatment");
+        assert_eq!(config.control_name, "Control");
+        assert_eq!(config.confidence_level, 0.95);
+        assert_eq!(config.bootstrap_samples, 1000);
+    }
+
+    #[test]
+    fn test_default_confidence_level() {
+        assert_eq!(default_confidence_level(), 0.95);
+    }
+
+    #[test]
+    fn test_default_bootstrap_samples() {
+        assert_eq!(default_bootstrap_samples(), 1000);
+    }
+
+    #[test]
+    fn test_analyze_empty_treatment() {
+        use crate::{SimulationConfig, SimulationEngine};
+        
+        let treatment = vec![];
+        let mut control_config = SimulationConfig::default();
+        control_config.max_steps = 10;
+        control_config.entity_count = 5;
+        let mut engine = SimulationEngine::new(control_config);
+        let control = vec![engine.run()];
+
+        let config = CausalAnalysisConfig::default();
+        let result = CausalAnalysisResult::analyze(&treatment, &control, config);
+        
+        assert!(result.is_err());
+        match result {
+            Err(SimulationError::ValidationError(msg)) => {
+                assert!(msg.contains("Treatment group cannot be empty"));
+            },
+            _ => panic!("Expected ValidationError for empty treatment"),
+        }
+    }
+
+    #[test]
+    fn test_analyze_empty_control() {
+        use crate::{SimulationConfig, SimulationEngine};
+        
+        let mut treatment_config = SimulationConfig::default();
+        treatment_config.max_steps = 10;
+        treatment_config.entity_count = 5;
+        let mut engine = SimulationEngine::new(treatment_config);
+        let treatment = vec![engine.run()];
+        let control = vec![];
+
+        let config = CausalAnalysisConfig::default();
+        let result = CausalAnalysisResult::analyze(&treatment, &control, config);
+        
+        assert!(result.is_err());
+        match result {
+            Err(SimulationError::ValidationError(msg)) => {
+                assert!(msg.contains("Control group cannot be empty"));
+            },
+            _ => panic!("Expected ValidationError for empty control"),
+        }
+    }
+
+    #[test]
+    fn test_compare_metric_equal_groups() {
+        let treatment = vec![100.0, 100.0, 100.0];
+        let control = vec![100.0, 100.0, 100.0];
+        
+        let test = CausalAnalysisResult::compare_metric(
+            "Test Metric",
+            &treatment,
+            &control,
+            0.95,
+        );
+        
+        assert_eq!(test.metric_name, "Test Metric");
+        assert_eq!(test.treatment_mean, 100.0);
+        assert_eq!(test.control_mean, 100.0);
+        assert_eq!(test.effect_size, 0.0);
+        assert_eq!(test.relative_effect, 0.0);
+        assert!(!test.is_significant);
+    }
+
+    #[test]
+    fn test_compare_metric_different_groups() {
+        let treatment = vec![110.0, 120.0, 130.0];
+        let control = vec![90.0, 100.0, 110.0];
+        
+        let test = CausalAnalysisResult::compare_metric(
+            "Test Metric",
+            &treatment,
+            &control,
+            0.95,
+        );
+        
+        assert_eq!(test.metric_name, "Test Metric");
+        assert!(test.treatment_mean > test.control_mean);
+        assert!(test.effect_size > 0.0);
+        assert!(test.relative_effect > 0.0);
+    }
+
+    #[test]
+    fn test_compare_metric_zero_control_mean() {
+        let treatment = vec![10.0, 20.0, 30.0];
+        let control = vec![0.0, 0.0, 0.0];
+        
+        let test = CausalAnalysisResult::compare_metric(
+            "Test Metric",
+            &treatment,
+            &control,
+            0.95,
+        );
+        
+        assert_eq!(test.control_mean, 0.0);
+        assert_eq!(test.relative_effect, 0.0); // Should be 0 when control mean is 0
+    }
+
+    #[test]
+    fn test_compare_metric_zero_standard_error() {
+        let treatment = vec![100.0, 100.0];
+        let control = vec![100.0, 100.0];
+        
+        let test = CausalAnalysisResult::compare_metric(
+            "Test Metric",
+            &treatment,
+            &control,
+            0.95,
+        );
+        
+        assert_eq!(test.t_statistic, 0.0); // Should be 0 when SE is 0
+    }
+
+    #[test]
+    fn test_analyze_basic() {
+        use crate::{SimulationConfig, SimulationEngine};
+        
+        let mut treatment_config = SimulationConfig::default();
+        treatment_config.max_steps = 10;
+        treatment_config.entity_count = 5;
+        treatment_config.seed = 42;
+        let mut engine1 = SimulationEngine::new(treatment_config);
+        let treatment = vec![engine1.run()];
+
+        let mut control_config = SimulationConfig::default();
+        control_config.max_steps = 10;
+        control_config.entity_count = 5;
+        control_config.seed = 43;
+        let mut engine2 = SimulationEngine::new(control_config);
+        let control = vec![engine2.run()];
+
+        let config = CausalAnalysisConfig::default();
+        let result = CausalAnalysisResult::analyze(&treatment, &control, config).unwrap();
+        
+        assert_eq!(result.treatment_n, 1);
+        assert_eq!(result.control_n, 1);
+        assert!(!result.tests.is_empty());
+        assert!(result.summary.contains("metrics show statistically significant"));
+    }
+
+    #[test]
+    fn test_print_summary() {
+        use crate::{SimulationConfig, SimulationEngine};
+        
+        let mut treatment_config = SimulationConfig::default();
+        treatment_config.max_steps = 10;
+        treatment_config.entity_count = 5;
+        let mut engine1 = SimulationEngine::new(treatment_config);
+        let treatment = vec![engine1.run()];
+
+        let mut control_config = SimulationConfig::default();
+        control_config.max_steps = 10;
+        control_config.entity_count = 5;
+        control_config.seed = 1;
+        let mut engine2 = SimulationEngine::new(control_config);
+        let control = vec![engine2.run()];
+
+        let config = CausalAnalysisConfig::default();
+        let result = CausalAnalysisResult::analyze(&treatment, &control, config).unwrap();
+        
+        // This should not panic
+        result.print_summary();
+    }
+
+    #[test]
+    fn test_save_to_file() {
+        use crate::{SimulationConfig, SimulationEngine};
+        use tempfile::NamedTempFile;
+        
+        let mut treatment_config = SimulationConfig::default();
+        treatment_config.max_steps = 10;
+        treatment_config.entity_count = 5;
+        let mut engine1 = SimulationEngine::new(treatment_config);
+        let treatment = vec![engine1.run()];
+
+        let mut control_config = SimulationConfig::default();
+        control_config.max_steps = 10;
+        control_config.entity_count = 5;
+        control_config.seed = 1;
+        let mut engine2 = SimulationEngine::new(control_config);
+        let control = vec![engine2.run()];
+
+        let config = CausalAnalysisConfig::default();
+        let result = CausalAnalysisResult::analyze(&treatment, &control, config).unwrap();
+        
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path().to_str().unwrap();
+        
+        result.save_to_file(path).unwrap();
+        
+        // Verify file exists and is readable
+        let content = std::fs::read_to_string(path).unwrap();
+        assert!(content.contains("treatment_n"));
+        assert!(content.contains("control_n"));
+    }
 }
