@@ -324,7 +324,7 @@ mod tests {
     fn test_property_multiple_steps() {
         let mut asset = Asset::new(1, AssetType::Property, 100.0, 42, 0);
         let mut total_income = 0.0;
-        
+
         // Apply appreciation and rental income for 5 steps
         for _ in 0..5 {
             total_income += asset.update_value(0.01, 0.0, 0.002, 0.0, 0.0);

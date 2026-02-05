@@ -487,7 +487,7 @@ mod tests {
     fn test_variance_edge_cases() {
         // Single value has zero variance
         assert_eq!(variance(&[5.0], 5.0), 0.0);
-        
+
         // Empty vector has zero variance
         assert_eq!(variance(&[], 0.0), 0.0);
     }
@@ -514,7 +514,7 @@ mod tests {
     #[test]
     fn test_analyze_empty_treatment() {
         use crate::{SimulationConfig, SimulationEngine};
-        
+
         let treatment = vec![];
         let mut control_config = SimulationConfig::default();
         control_config.max_steps = 10;
@@ -524,7 +524,7 @@ mod tests {
 
         let config = CausalAnalysisConfig::default();
         let result = CausalAnalysisResult::analyze(&treatment, &control, config);
-        
+
         assert!(result.is_err());
         match result {
             Err(SimulationError::ValidationError(msg)) => {
@@ -537,7 +537,7 @@ mod tests {
     #[test]
     fn test_analyze_empty_control() {
         use crate::{SimulationConfig, SimulationEngine};
-        
+
         let mut treatment_config = SimulationConfig::default();
         treatment_config.max_steps = 10;
         treatment_config.entity_count = 5;
@@ -547,7 +547,7 @@ mod tests {
 
         let config = CausalAnalysisConfig::default();
         let result = CausalAnalysisResult::analyze(&treatment, &control, config);
-        
+
         assert!(result.is_err());
         match result {
             Err(SimulationError::ValidationError(msg)) => {
@@ -561,14 +561,9 @@ mod tests {
     fn test_compare_metric_equal_groups() {
         let treatment = vec![100.0, 100.0, 100.0];
         let control = vec![100.0, 100.0, 100.0];
-        
-        let test = CausalAnalysisResult::compare_metric(
-            "Test Metric",
-            &treatment,
-            &control,
-            0.95,
-        );
-        
+
+        let test = CausalAnalysisResult::compare_metric("Test Metric", &treatment, &control, 0.95);
+
         assert_eq!(test.metric_name, "Test Metric");
         assert_eq!(test.treatment_mean, 100.0);
         assert_eq!(test.control_mean, 100.0);
@@ -581,14 +576,9 @@ mod tests {
     fn test_compare_metric_different_groups() {
         let treatment = vec![110.0, 120.0, 130.0];
         let control = vec![90.0, 100.0, 110.0];
-        
-        let test = CausalAnalysisResult::compare_metric(
-            "Test Metric",
-            &treatment,
-            &control,
-            0.95,
-        );
-        
+
+        let test = CausalAnalysisResult::compare_metric("Test Metric", &treatment, &control, 0.95);
+
         assert_eq!(test.metric_name, "Test Metric");
         assert!(test.treatment_mean > test.control_mean);
         assert!(test.effect_size > 0.0);
@@ -599,14 +589,9 @@ mod tests {
     fn test_compare_metric_zero_control_mean() {
         let treatment = vec![10.0, 20.0, 30.0];
         let control = vec![0.0, 0.0, 0.0];
-        
-        let test = CausalAnalysisResult::compare_metric(
-            "Test Metric",
-            &treatment,
-            &control,
-            0.95,
-        );
-        
+
+        let test = CausalAnalysisResult::compare_metric("Test Metric", &treatment, &control, 0.95);
+
         assert_eq!(test.control_mean, 0.0);
         assert_eq!(test.relative_effect, 0.0); // Should be 0 when control mean is 0
     }
@@ -615,21 +600,16 @@ mod tests {
     fn test_compare_metric_zero_standard_error() {
         let treatment = vec![100.0, 100.0];
         let control = vec![100.0, 100.0];
-        
-        let test = CausalAnalysisResult::compare_metric(
-            "Test Metric",
-            &treatment,
-            &control,
-            0.95,
-        );
-        
+
+        let test = CausalAnalysisResult::compare_metric("Test Metric", &treatment, &control, 0.95);
+
         assert_eq!(test.t_statistic, 0.0); // Should be 0 when SE is 0
     }
 
     #[test]
     fn test_analyze_basic() {
         use crate::{SimulationConfig, SimulationEngine};
-        
+
         let mut treatment_config = SimulationConfig::default();
         treatment_config.max_steps = 10;
         treatment_config.entity_count = 5;
@@ -646,7 +626,7 @@ mod tests {
 
         let config = CausalAnalysisConfig::default();
         let result = CausalAnalysisResult::analyze(&treatment, &control, config).unwrap();
-        
+
         assert_eq!(result.treatment_n, 1);
         assert_eq!(result.control_n, 1);
         assert!(!result.tests.is_empty());
@@ -656,7 +636,7 @@ mod tests {
     #[test]
     fn test_print_summary() {
         use crate::{SimulationConfig, SimulationEngine};
-        
+
         let mut treatment_config = SimulationConfig::default();
         treatment_config.max_steps = 10;
         treatment_config.entity_count = 5;
@@ -672,7 +652,7 @@ mod tests {
 
         let config = CausalAnalysisConfig::default();
         let result = CausalAnalysisResult::analyze(&treatment, &control, config).unwrap();
-        
+
         // This should not panic
         result.print_summary();
     }
@@ -681,7 +661,7 @@ mod tests {
     fn test_save_to_file() {
         use crate::{SimulationConfig, SimulationEngine};
         use tempfile::NamedTempFile;
-        
+
         let mut treatment_config = SimulationConfig::default();
         treatment_config.max_steps = 10;
         treatment_config.entity_count = 5;
@@ -697,12 +677,12 @@ mod tests {
 
         let config = CausalAnalysisConfig::default();
         let result = CausalAnalysisResult::analyze(&treatment, &control, config).unwrap();
-        
+
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path().to_str().unwrap();
-        
+
         result.save_to_file(path).unwrap();
-        
+
         // Verify file exists and is readable
         let content = std::fs::read_to_string(path).unwrap();
         assert!(content.contains("treatment_n"));

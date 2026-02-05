@@ -5478,4 +5478,625 @@ mod tests {
         let small_supply_velocity = 1000.0 / 500.0;
         assert!(small_supply_velocity > large_supply_velocity);
     }
+
+    #[test]
+    fn test_simulation_metadata_capture() {
+        let metadata = SimulationMetadata::capture(42, 100, 500);
+
+        assert_eq!(metadata.seed, 42);
+        assert_eq!(metadata.entity_count, 100);
+        assert_eq!(metadata.max_steps, 500);
+        assert!(!metadata.timestamp.is_empty());
+        assert!(!metadata.rust_version.is_empty());
+        assert!(!metadata.framework_version.is_empty());
+
+        // timestamp should be in ISO 8601 format
+        assert!(metadata.timestamp.contains('T'));
+
+        // framework version should match package version
+        assert_eq!(metadata.framework_version, env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn test_simulation_metadata_git_commit_hash() {
+        let metadata = SimulationMetadata::capture(1, 1, 1);
+
+        // git_commit_hash may be Some or None depending on environment
+        // Just verify it doesn't panic and is a valid option
+        if let Some(hash) = metadata.git_commit_hash {
+            // If present, should be a hex string
+            assert!(!hash.is_empty());
+            assert!(hash.len() >= 7); // Short hash is at least 7 chars
+        }
+    }
+
+    #[test]
+    fn test_save_to_csv_with_wealth_stats_history() {
+        let mut result = get_test_result();
+
+        // Add wealth stats history
+        result.wealth_stats_history = vec![
+            WealthStatsSnapshot {
+                step: 0,
+                average: 100.0,
+                median: 95.0,
+                std_dev: 20.0,
+                min_money: 50.0,
+                max_money: 150.0,
+                gini_coefficient: 0.2,
+                herfindahl_index: 2200.0,
+                top_10_percent_share: 0.3,
+                top_1_percent_share: 0.15,
+                bottom_50_percent_share: 0.25,
+            },
+            WealthStatsSnapshot {
+                step: 5,
+                average: 110.0,
+                median: 105.0,
+                std_dev: 25.0,
+                min_money: 45.0,
+                max_money: 160.0,
+                gini_coefficient: 0.25,
+                herfindahl_index: 2400.0,
+                top_10_percent_share: 0.35,
+                top_1_percent_share: 0.18,
+                bottom_50_percent_share: 0.22,
+            },
+        ];
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir.path().join("test_wealth").to_str().unwrap().to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Verify wealth stats history file was created
+        let wealth_stats_file = format!("{}_wealth_stats_history.csv", path_prefix);
+        assert!(std::path::Path::new(&wealth_stats_file).exists());
+
+        // Read and verify content
+        let mut contents = String::new();
+        File::open(&wealth_stats_file).unwrap().read_to_string(&mut contents).unwrap();
+
+        assert!(contents.contains("Step,Average,Median"));
+        assert!(contents.contains("0,100.0000"));
+        assert!(contents.contains("5,110.0000"));
+    }
+
+    #[test]
+    fn test_save_to_csv_without_price_history() {
+        let mut result = get_test_result();
+        result.skill_price_history.clear(); // Ensure no price history
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir.path().join("test_no_price").to_str().unwrap().to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        // Verify price history file was NOT created
+        let price_history_file = format!("{}_price_history.csv", path_prefix);
+        assert!(!std::path::Path::new(&price_history_file).exists());
+
+        // But other files should exist
+        let summary_file = format!("{}_summary.csv", path_prefix);
+        assert!(std::path::Path::new(&summary_file).exists());
+    }
+
+    #[test]
+    fn test_save_skill_prices_csv() {
+        let mut result = get_test_result();
+        result.final_skill_prices = vec![
+            SkillPriceInfo { id: "Skill0".to_string(), price: 10.5 },
+            SkillPriceInfo { id: "Skill1".to_string(), price: 20.75 },
+            SkillPriceInfo { id: "Skill2".to_string(), price: 15.25 },
+        ];
+
+        let contents = read_csv_file_from_test(&result, "skill_prices");
+
+        assert!(contents.contains("Skill_ID,Final_Price"));
+        assert!(contents.contains("Skill0,10.5000"));
+        assert!(contents.contains("Skill1,20.7500"));
+        assert!(contents.contains("Skill2,15.2500"));
+    }
+
+    #[test]
+    fn test_save_summary_csv_includes_basics() {
+        let result = get_test_result();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir.path().join("test_summary").to_str().unwrap().to_string();
+
+        result.save_to_csv(&path_prefix).unwrap();
+
+        let summary_file = format!("{}_summary.csv", path_prefix);
+        let mut contents = String::new();
+        File::open(&summary_file).unwrap().read_to_string(&mut contents).unwrap();
+
+        // Verify basic statistics are present
+        assert!(contents.contains("Total Steps"));
+        assert!(contents.contains("Total Duration"));
+        assert!(contents.contains("Money Statistics"));
+        assert!(contents.contains("Reputation Statistics"));
+        assert!(contents.contains("Trade Volume Statistics"));
+    }
+
+    #[test]
+    fn test_print_summary_with_empty_step_times() {
+        let mut result = get_test_result();
+        result.step_times.clear();
+
+        // Should not panic even with empty step_times
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_failed_steps() {
+        let mut result = get_test_result();
+        result.failed_steps = 5;
+
+        // Should display failed steps information
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_quality_statistics() {
+        let mut result = get_test_result();
+        result.quality_statistics = Some(QualityStats {
+            average_quality: 3.5,
+            median_quality: 3.8,
+            std_dev_quality: 0.7,
+            min_quality: 1.2,
+            max_quality: 5.0,
+            skills_at_max_quality: 10,
+            skills_at_min_quality: 2,
+        });
+
+        // Should display quality statistics section
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_business_cycle_stats() {
+        let mut result = get_test_result();
+        result.business_cycle_statistics = Some(BusinessCycleStats {
+            total_cycles: 3,
+            avg_cycle_duration: 25.5,
+            avg_expansion_duration: 15.0,
+            avg_contraction_duration: 10.5,
+            detected_cycles: vec![
+                BusinessCycle {
+                    phase: CyclePhase::Expansion,
+                    start_step: 10,
+                    end_step: 40,
+                    duration: 30,
+                    avg_volume: 150.0,
+                    peak_volume: 200.0,
+                    trough_volume: 100.0,
+                },
+                BusinessCycle {
+                    phase: CyclePhase::Contraction,
+                    start_step: 50,
+                    end_step: 65,
+                    duration: 15,
+                    avg_volume: 80.0,
+                    peak_volume: 120.0,
+                    trough_volume: 50.0,
+                },
+            ],
+        });
+
+        // Should display business cycle information
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_welfare_metrics() {
+        let mut result = get_test_result();
+        result.welfare_statistics = Some(WelfareMetrics {
+            consumer_surplus: 3000.0,
+            producer_surplus: 2000.0,
+            total_welfare: 5000.0,
+            deadweight_loss: 200.0,
+            trades_analyzed: 100,
+            avg_consumer_surplus_per_trade: 30.0,
+            avg_producer_surplus_per_trade: 20.0,
+        });
+
+        // Should display welfare metrics
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_strategy_evolution_stats() {
+        let mut result = get_test_result();
+        result.strategy_evolution_statistics = Some(StrategyEvolutionStats {
+            strategy_distribution_history: vec![
+                StrategyDistributionSnapshot {
+                    step: 0,
+                    distribution: StrategyDistribution {
+                        conservative: 25,
+                        balanced: 25,
+                        aggressive: 25,
+                        frugal: 25,
+                        total: 100,
+                    },
+                },
+                StrategyDistributionSnapshot {
+                    step: 100,
+                    distribution: StrategyDistribution {
+                        conservative: 20,
+                        balanced: 30,
+                        aggressive: 35,
+                        frugal: 15,
+                        total: 100,
+                    },
+                },
+            ],
+            total_strategy_changes: 50,
+            total_mutations: 20,
+            total_imitations: 30,
+            final_distribution: StrategyDistribution {
+                conservative: 20,
+                balanced: 30,
+                aggressive: 35,
+                frugal: 15,
+                total: 100,
+            },
+            total_evolution_updates: 10,
+        });
+
+        // Should display strategy evolution information
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_loan_statistics() {
+        let mut result = get_test_result();
+        result.loan_statistics =
+            Some(LoanStats { total_loans_issued: 50, total_loans_repaid: 40, active_loans: 10 });
+
+        // Should display loan statistics
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_taxes_collected() {
+        let mut result = get_test_result();
+        result.total_taxes_collected = Some(1500.0);
+        result.total_taxes_redistributed = Some(1400.0);
+
+        // Should display tax information
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_black_market_stats() {
+        let mut result = get_test_result();
+        result.black_market_statistics = Some(BlackMarketStats {
+            total_black_market_trades: 25,
+            total_black_market_volume: 500.0,
+            avg_black_market_trades_per_step: 2.5,
+            avg_black_market_volume_per_step: 50.0,
+            black_market_trade_percentage: 0.05,
+            black_market_volume_percentage: 0.04,
+        });
+
+        // Should display black market statistics
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_summary_with_zero_duration() {
+        let mut result = get_test_result();
+        result.total_duration = 0.0;
+
+        // Should handle zero duration gracefully (avoid division by zero)
+        result.print_summary(false);
+    }
+
+    #[test]
+    fn test_print_wealth_histogram_with_empty_distribution() {
+        let mut result = get_test_result();
+        result.final_money_distribution.clear();
+
+        // Should handle empty distribution gracefully
+        result.print_summary(true);
+    }
+
+    #[test]
+    fn test_print_wealth_histogram_with_single_person() {
+        let mut result = get_test_result();
+        result.final_money_distribution = vec![100.0];
+
+        // Should handle single person distribution
+        result.print_summary(true);
+    }
+
+    #[test]
+    fn test_print_wealth_histogram_with_many_persons() {
+        let mut result = get_test_result();
+        result.final_money_distribution = (0..100).map(|i| i as f64 * 10.0).collect();
+
+        // Should handle large distribution
+        result.print_summary(true);
+    }
+
+    #[test]
+    fn test_save_trading_network_json_basic() {
+        let mut result = get_test_result();
+
+        // Add some trading partner data
+        result.trading_partner_statistics.per_person = vec![
+            crate::result::PersonTradingStats {
+                person_id: 0,
+                unique_partners: 2,
+                total_trades_as_buyer: 5,
+                total_trades_as_seller: 3,
+                top_partners: vec![
+                    crate::result::PartnerInfo { partner_id: 1, trade_count: 3, total_value: 30.0 },
+                    crate::result::PartnerInfo { partner_id: 2, trade_count: 5, total_value: 50.0 },
+                ],
+            },
+            crate::result::PersonTradingStats {
+                person_id: 1,
+                unique_partners: 1,
+                total_trades_as_buyer: 3,
+                total_trades_as_seller: 5,
+                top_partners: vec![crate::result::PartnerInfo {
+                    partner_id: 0,
+                    trade_count: 3,
+                    total_value: 30.0,
+                }],
+            },
+        ];
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("network.json");
+        let path_str = path.to_str().unwrap();
+
+        result.save_trading_network_json(path_str).unwrap();
+
+        // Verify file was created and is not empty
+        assert!(std::path::Path::new(path_str).exists());
+
+        let metadata = std::fs::metadata(path_str).unwrap();
+        assert!(metadata.len() > 0, "JSON file should not be empty");
+
+        // Read and verify content has JSON structure
+        let mut contents = String::new();
+        File::open(path_str).unwrap().read_to_string(&mut contents).unwrap();
+
+        assert!(contents.contains("\"nodes\""));
+        assert!(contents.contains("\"edges\""));
+    }
+
+    #[test]
+    fn test_save_trading_network_csv_basic() {
+        let mut result = get_test_result();
+
+        // Add some trading partner data
+        result.trading_partner_statistics.per_person = vec![
+            crate::result::PersonTradingStats {
+                person_id: 0,
+                unique_partners: 2,
+                total_trades_as_buyer: 5,
+                total_trades_as_seller: 3,
+                top_partners: vec![
+                    crate::result::PartnerInfo { partner_id: 1, trade_count: 3, total_value: 30.0 },
+                    crate::result::PartnerInfo { partner_id: 2, trade_count: 5, total_value: 50.0 },
+                ],
+            },
+            crate::result::PersonTradingStats {
+                person_id: 1,
+                unique_partners: 1,
+                total_trades_as_buyer: 3,
+                total_trades_as_seller: 5,
+                top_partners: vec![crate::result::PartnerInfo {
+                    partner_id: 0,
+                    trade_count: 3,
+                    total_value: 30.0,
+                }],
+            },
+        ];
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir.path().join("test_network").to_str().unwrap().to_string();
+
+        result.save_trading_network_csv(&path_prefix).unwrap();
+
+        // Verify files were created
+        let nodes_file = format!("{}_network_nodes.csv", path_prefix);
+        let edges_file = format!("{}_network_edges.csv", path_prefix);
+
+        assert!(std::path::Path::new(&nodes_file).exists());
+        assert!(std::path::Path::new(&edges_file).exists());
+
+        // Read and verify node content
+        let mut node_contents = String::new();
+        File::open(&nodes_file).unwrap().read_to_string(&mut node_contents).unwrap();
+
+        // Check for actual CSV headers from save_trading_network_csv
+        assert!(node_contents.contains("id"));
+        assert!(node_contents.contains("unique_partners"));
+
+        // Read and verify edge content
+        let mut edge_contents = String::new();
+        File::open(&edges_file).unwrap().read_to_string(&mut edge_contents).unwrap();
+
+        assert!(edge_contents.contains("source"));
+        assert!(edge_contents.contains("target"));
+        assert!(edge_contents.contains("weight"));
+    }
+
+    #[test]
+    fn test_save_trading_network_with_empty_data() {
+        let mut result = get_test_result();
+        result.trading_partner_statistics.per_person.clear();
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path_prefix = temp_dir.path().join("empty_network").to_str().unwrap().to_string();
+
+        // Should handle empty data gracefully
+        result.save_trading_network_csv(&path_prefix).unwrap();
+
+        // Files should still be created (with headers only)
+        let nodes_file = format!("{}_network_nodes.csv", path_prefix);
+        assert!(std::path::Path::new(&nodes_file).exists());
+    }
+
+    #[test]
+    fn test_incremental_stats_negative_values() {
+        let mut stats = IncrementalStats::new();
+        let values = vec![-10.0, -5.0, 0.0, 5.0, 10.0];
+
+        for &v in &values {
+            stats.update(v);
+        }
+
+        assert_eq!(stats.count(), 5);
+        assert_eq!(stats.mean(), 0.0);
+        assert!(stats.variance() > 0.0);
+    }
+
+    #[test]
+    fn test_incremental_stats_all_same_values() {
+        let mut stats = IncrementalStats::new();
+        for _ in 0..10 {
+            stats.update(42.0);
+        }
+
+        assert_eq!(stats.count(), 10);
+        assert_eq!(stats.mean(), 42.0);
+        assert_eq!(stats.variance(), 0.0);
+        assert_eq!(stats.std_dev(), 0.0);
+    }
+
+    #[test]
+    fn test_incremental_stats_large_values() {
+        let mut stats = IncrementalStats::new();
+        let values = vec![1e15, 1e15 + 1.0, 1e15 + 2.0, 1e15 + 3.0];
+
+        for &v in &values {
+            stats.update(v);
+        }
+
+        // Should handle large values without overflow
+        assert!(stats.mean() > 1e15);
+        assert!(stats.variance() > 0.0);
+    }
+
+    #[test]
+    fn test_asset_stats_default() {
+        let stats = AssetStats::default();
+        assert_eq!(stats.total_assets_purchased, 0);
+        assert_eq!(stats.total_asset_value, 0.0);
+        assert_eq!(stats.avg_assets_per_person, 0.0);
+        assert_eq!(stats.asset_ownership_rate, 0.0);
+    }
+
+    #[test]
+    fn test_asset_stats_with_income() {
+        let stats = AssetStats {
+            total_assets_purchased: 100,
+            active_assets: 95,
+            total_asset_value: 10000.0,
+            avg_asset_value: 105.26,
+            median_asset_value: 100.0,
+            min_asset_value: 50.0,
+            max_asset_value: 500.0,
+            total_income_generated: 500.0,
+            avg_roi: 0.05,
+            assets_by_type: HashMap::new(),
+            value_by_type: HashMap::new(),
+            avg_assets_per_person: 1.0,
+            asset_ownership_rate: 0.95,
+        };
+
+        assert_eq!(stats.total_income_generated, 500.0);
+        assert!(stats.avg_asset_value > 0.0);
+        assert_eq!(stats.avg_roi, 0.05);
+    }
+
+    #[test]
+    fn test_strategy_distribution_total_field() {
+        let dist = StrategyDistribution {
+            conservative: 10,
+            balanced: 20,
+            aggressive: 30,
+            frugal: 40,
+            total: 100,
+        };
+
+        assert_eq!(dist.total, 100);
+        assert_eq!(dist.conservative + dist.balanced + dist.aggressive + dist.frugal, 100);
+    }
+
+    #[test]
+    fn test_strategy_distribution_empty() {
+        let dist = StrategyDistribution {
+            conservative: 0,
+            balanced: 0,
+            aggressive: 0,
+            frugal: 0,
+            total: 0,
+        };
+
+        assert_eq!(dist.total, 0);
+    }
+
+    #[test]
+    fn test_save_price_history_with_empty_history() {
+        let mut result = get_test_result();
+        result.skill_price_history.clear();
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("empty_price_history.csv");
+
+        // Should handle empty history gracefully
+        let write_result = result.save_price_history_csv(path.to_str().unwrap());
+        assert!(write_result.is_ok());
+    }
+
+    #[test]
+    fn test_save_trade_volume_with_empty_data() {
+        let mut result = get_test_result();
+        result.trades_per_step.clear();
+        result.volume_per_step.clear();
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("empty_trade_volume.csv");
+
+        // Should handle empty data gracefully
+        let write_result = result.save_trade_volume_csv(path.to_str().unwrap());
+        assert!(write_result.is_ok());
+    }
+
+    #[test]
+    fn test_save_money_csv_with_large_distribution() {
+        let mut result = get_test_result();
+        result.final_money_distribution = (0..1000).map(|i| i as f64 * 0.5).collect();
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("large_money.csv");
+
+        result.save_money_csv(path.to_str().unwrap()).unwrap();
+
+        // Verify file was created and has correct number of lines
+        let contents = std::fs::read_to_string(path).unwrap();
+        let line_count = contents.lines().count();
+        assert_eq!(line_count, 1001); // Header + 1000 data lines
+    }
+
+    #[test]
+    fn test_save_reputation_csv_with_extreme_values() {
+        let mut result = get_test_result();
+        result.final_reputation_distribution = vec![0.0, 0.5, 1.0, 1.5, 2.0];
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("reputation.csv");
+
+        result.save_reputation_csv(path.to_str().unwrap()).unwrap();
+
+        let contents = std::fs::read_to_string(path).unwrap();
+        assert!(contents.contains("0.000000"));
+        assert!(contents.contains("2.000000"));
+    }
 }

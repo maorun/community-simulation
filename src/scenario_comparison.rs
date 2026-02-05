@@ -489,7 +489,7 @@ mod tests {
 
         let scenarios = vec![Scenario::Original, Scenario::DynamicPricing];
         let result = ScenarioComparisonResult::run(config, scenarios, 2).unwrap();
-        
+
         // This should not panic
         result.print_summary();
     }
@@ -497,7 +497,7 @@ mod tests {
     #[test]
     fn test_scenario_comparison_save_to_file() {
         use tempfile::NamedTempFile;
-        
+
         let config = SimulationConfig {
             max_steps: 10,
             entity_count: 5,
@@ -532,12 +532,12 @@ mod tests {
 
         let scenarios = vec![Scenario::Original, Scenario::DynamicPricing];
         let result = ScenarioComparisonResult::run(config, scenarios, 2).unwrap();
-        
+
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path().to_str().unwrap();
-        
+
         result.save_to_file(path).unwrap();
-        
+
         // Verify file exists and is readable
         let content = std::fs::read_to_string(path).unwrap();
         assert!(content.contains("scenarios"));

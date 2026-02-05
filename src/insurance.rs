@@ -346,7 +346,7 @@ mod tests {
     fn test_deactivate_insurance() {
         let mut insurance = Insurance::new(1, 42, InsuranceType::Credit, 10.0, 100.0, 50, 0);
         assert!(insurance.is_active);
-        
+
         insurance.deactivate();
         assert!(!insurance.is_active);
     }
@@ -355,7 +355,7 @@ mod tests {
     fn test_inactive_policy_claim_fails() {
         let mut insurance = Insurance::new(1, 42, InsuranceType::Credit, 10.0, 100.0, 50, 0);
         insurance.deactivate();
-        
+
         let payout = insurance.file_claim(50.0, 10);
         assert_eq!(payout, 0.0);
     }

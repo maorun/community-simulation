@@ -523,7 +523,7 @@ mod tests {
             expected: None,
             actual: None,
         };
-        
+
         // Should implement std::error::Error
         let _err: &dyn std::error::Error = &violation;
     }
@@ -533,7 +533,7 @@ mod tests {
         let config = SimulationConfig::default();
         let _engine = SimulationEngine::new(config);
         let invariant = MoneyConservationInvariant::new(1000.0);
-        
+
         // The default description should contain the invariant name
         let desc = invariant.description();
         assert!(!desc.is_empty());
