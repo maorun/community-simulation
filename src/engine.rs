@@ -2772,11 +2772,12 @@ impl SimulationEngine {
         let skill_providers = &self.skill_providers;
 
         // Performance optimization: Pre-allocate trades_to_execute with capacity based on entity count.
-        // Typical simulations have ~0.5-1.0 successful trades per active entity per step.
+        // Typical simulations have ~0.5-1.0 successful trades per entity per step.
+        // Since entities never become inactive (as noted in the skill_providers comment above),
+        // we use entities.len() directly without filtering, avoiding the O(n) filter operation.
         // Starting with capacity = entity_count avoids most reallocations while not over-allocating.
-        let active_entities = self.entities.iter().filter(|e| e.active).count();
         let mut trades_to_execute: Vec<(usize, usize, SkillId, f64)> =
-            Vec::with_capacity(active_entities);
+            Vec::with_capacity(self.entities.len());
         let mut failed_attempts_this_step = 0usize;
 
         for buyer_idx in 0..self.entities.len() {
