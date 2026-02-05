@@ -2076,7 +2076,7 @@ mod tests {
         let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
         let mut rng = rand::rngs::StdRng::seed_from_u64(42);
 
-        let initial_factor = person.strategy_params.adjustment_factor;
+        let _initial_factor = person.strategy_params.adjustment_factor;
 
         // With 100% exploration rate, should always adapt randomly
         let adapted = person.adapt_strategy(0.1, &mut rng, 1.0);

@@ -290,7 +290,7 @@ mod tests {
     #[test]
     fn test_crisis_event_clone() {
         let crisis = CrisisEvent::TechnologyShock;
-        let cloned = crisis.clone();
+        let cloned = crisis;
         assert_eq!(crisis, cloned);
     }
 

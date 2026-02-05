@@ -516,9 +516,8 @@ mod tests {
         use crate::{SimulationConfig, SimulationEngine};
 
         let treatment = vec![];
-        let mut control_config = SimulationConfig::default();
-        control_config.max_steps = 10;
-        control_config.entity_count = 5;
+        let control_config =
+            SimulationConfig { max_steps: 10, entity_count: 5, ..Default::default() };
         let mut engine = SimulationEngine::new(control_config);
         let control = vec![engine.run()];
 
@@ -538,9 +537,8 @@ mod tests {
     fn test_analyze_empty_control() {
         use crate::{SimulationConfig, SimulationEngine};
 
-        let mut treatment_config = SimulationConfig::default();
-        treatment_config.max_steps = 10;
-        treatment_config.entity_count = 5;
+        let treatment_config =
+            SimulationConfig { max_steps: 10, entity_count: 5, ..Default::default() };
         let mut engine = SimulationEngine::new(treatment_config);
         let treatment = vec![engine.run()];
         let control = vec![];
@@ -610,17 +608,13 @@ mod tests {
     fn test_analyze_basic() {
         use crate::{SimulationConfig, SimulationEngine};
 
-        let mut treatment_config = SimulationConfig::default();
-        treatment_config.max_steps = 10;
-        treatment_config.entity_count = 5;
-        treatment_config.seed = 42;
+        let treatment_config =
+            SimulationConfig { max_steps: 10, entity_count: 5, seed: 42, ..Default::default() };
         let mut engine1 = SimulationEngine::new(treatment_config);
         let treatment = vec![engine1.run()];
 
-        let mut control_config = SimulationConfig::default();
-        control_config.max_steps = 10;
-        control_config.entity_count = 5;
-        control_config.seed = 43;
+        let control_config =
+            SimulationConfig { max_steps: 10, entity_count: 5, seed: 43, ..Default::default() };
         let mut engine2 = SimulationEngine::new(control_config);
         let control = vec![engine2.run()];
 
@@ -637,16 +631,13 @@ mod tests {
     fn test_print_summary() {
         use crate::{SimulationConfig, SimulationEngine};
 
-        let mut treatment_config = SimulationConfig::default();
-        treatment_config.max_steps = 10;
-        treatment_config.entity_count = 5;
+        let treatment_config =
+            SimulationConfig { max_steps: 10, entity_count: 5, ..Default::default() };
         let mut engine1 = SimulationEngine::new(treatment_config);
         let treatment = vec![engine1.run()];
 
-        let mut control_config = SimulationConfig::default();
-        control_config.max_steps = 10;
-        control_config.entity_count = 5;
-        control_config.seed = 1;
+        let control_config =
+            SimulationConfig { max_steps: 10, entity_count: 5, seed: 1, ..Default::default() };
         let mut engine2 = SimulationEngine::new(control_config);
         let control = vec![engine2.run()];
 
@@ -662,16 +653,13 @@ mod tests {
         use crate::{SimulationConfig, SimulationEngine};
         use tempfile::NamedTempFile;
 
-        let mut treatment_config = SimulationConfig::default();
-        treatment_config.max_steps = 10;
-        treatment_config.entity_count = 5;
+        let treatment_config =
+            SimulationConfig { max_steps: 10, entity_count: 5, ..Default::default() };
         let mut engine1 = SimulationEngine::new(treatment_config);
         let treatment = vec![engine1.run()];
 
-        let mut control_config = SimulationConfig::default();
-        control_config.max_steps = 10;
-        control_config.entity_count = 5;
-        control_config.seed = 1;
+        let control_config =
+            SimulationConfig { max_steps: 10, entity_count: 5, seed: 1, ..Default::default() };
         let mut engine2 = SimulationEngine::new(control_config);
         let control = vec![engine2.run()];
 

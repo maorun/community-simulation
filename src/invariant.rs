@@ -493,9 +493,7 @@ mod tests {
 
     #[test]
     fn test_non_negative_wealth_with_loans_enabled() {
-        let mut config = SimulationConfig::default();
-        config.enable_loans = true;
-        config.max_steps = 5;
+        let config = SimulationConfig { enable_loans: true, max_steps: 5, ..Default::default() };
         let engine = SimulationEngine::new(config);
 
         // With allow_negative_when_loans_enabled=true, should pass

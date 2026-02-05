@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_action_log_write_error_display() {
-        let io_err = io::Error::new(io::ErrorKind::Other, "write failed");
+        let io_err = io::Error::other("write failed");
         let err = SimulationError::ActionLogWrite(io_err);
         let display = format!("{}", err);
         assert!(display.contains("Failed to write action log file"));
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_action_log_read_error_display() {
-        let io_err = io::Error::new(io::ErrorKind::Other, "read failed");
+        let io_err = io::Error::other("read failed");
         let err = SimulationError::ActionLogRead(io_err);
         let display = format!("{}", err);
         assert!(display.contains("Failed to read action log file"));
@@ -242,21 +242,21 @@ mod tests {
 
     #[test]
     fn test_error_source_io_error() {
-        let io_err = io::Error::new(io::ErrorKind::Other, "error");
+        let io_err = io::Error::other("error");
         let err = SimulationError::IoError(io_err);
         assert!(err.source().is_some());
     }
 
     #[test]
     fn test_error_source_action_log_write() {
-        let io_err = io::Error::new(io::ErrorKind::Other, "error");
+        let io_err = io::Error::other("error");
         let err = SimulationError::ActionLogWrite(io_err);
         assert!(err.source().is_some());
     }
 
     #[test]
     fn test_error_source_action_log_read() {
-        let io_err = io::Error::new(io::ErrorKind::Other, "error");
+        let io_err = io::Error::other("error");
         let err = SimulationError::ActionLogRead(io_err);
         assert!(err.source().is_some());
     }
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_from_io_error() {
-        let io_err = io::Error::new(io::ErrorKind::Other, "test error");
+        let io_err = io::Error::other("test error");
         let sim_err: SimulationError = io_err.into();
         match sim_err {
             SimulationError::IoError(_) => {},

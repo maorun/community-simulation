@@ -347,7 +347,7 @@ mod tests {
     #[test]
     fn test_asset_type_clone() {
         let asset_type = AssetType::Stocks;
-        let cloned = asset_type.clone();
+        let cloned = asset_type;
         assert_eq!(asset_type, cloned);
     }
 }
