@@ -28,7 +28,7 @@ jobs:
         rustup default stable
     
     - name: Cache cargo registry
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cargo/registry
         key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
@@ -36,7 +36,7 @@ jobs:
           ${{ runner.os }}-cargo-registry-
     
     - name: Cache cargo index
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cargo/git
         key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
@@ -44,7 +44,7 @@ jobs:
           ${{ runner.os }}-cargo-git-
     
     - name: Cache cargo binaries
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cargo/bin
         key: ${{ runner.os }}-cargo-bin-tarpaulin-${{ hashFiles('~/.cargo/bin/cargo-tarpaulin') }}
