@@ -1,22 +1,22 @@
 coverage:
   precision: 2
   round: down
-  range: "70...100"
+  range: "56...100"
   
   status:
     project:
       default:
-        target: 70%
-        threshold: 2%
-        informational: true
+        target: 80%         # Progressive target toward 100%
+        threshold: 0%       # Don't allow any coverage decrease
+        informational: false # Make this a required check
     patch:
       default:
-        target: 70%
-        threshold: 2%
-        informational: true
+        target: 80%         # New code should have high coverage
+        threshold: 0%       # Don't allow coverage decrease in patches
+        informational: false # Make this a required check
 
 comment:
-  layout: "header, diff, files"
+  layout: "header, diff, files, footer"
   behavior: default
   require_changes: false
   
