@@ -2781,10 +2781,11 @@ impl SimulationEngine {
 
             // Calculate priority scores for all needed skills
             let buyer_money = self.entities[buyer_idx].person_data.money;
-            // Performance optimization: Pre-allocate with capacity for typical number of needs (1-5)
-            // to avoid reallocation during push operations. Max needs is clamped to 5 when applying
-            // seasonal modulation (search for `.clamp(1, 5)` in the needs generation logic above).
-            let mut purchase_options: Vec<PurchaseOption> = Vec::with_capacity(5);
+            // Performance optimization: Pre-allocate with exact capacity based on needed_skills length
+            // to avoid reallocation. Max needs is clamped to 5 during generation, but actual count
+            // may be lower. Using exact capacity eliminates unnecessary allocations.
+            let needed_count = self.entities[buyer_idx].person_data.needed_skills.len();
+            let mut purchase_options: Vec<PurchaseOption> = Vec::with_capacity(needed_count);
 
             for (needed_item_index, needed_item) in
                 self.entities[buyer_idx].person_data.needed_skills.iter().enumerate()
