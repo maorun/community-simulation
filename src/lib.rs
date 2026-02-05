@@ -60,6 +60,7 @@
 //!
 //! ## Modules
 //!
+//! - [`asset`] - Asset system for long-term wealth building (property, equipment, stocks)
 //! - [`causal_analysis`] - Causal inference framework for policy evaluation
 //! - [`centrality`] - Network centrality analysis for trading networks
 //! - [`config`] - Simulation configuration parameters
@@ -88,6 +89,7 @@
 //! - [`voting`] - Voting system for governance and collective decision-making
 //! - [`wizard`] - Interactive configuration wizard for guided setup
 
+pub mod asset;
 pub mod causal_analysis;
 pub mod centrality;
 pub mod config;
@@ -122,6 +124,7 @@ pub mod trust_network;
 pub mod voting;
 pub mod wizard;
 
+pub use asset::{Asset, AssetId, AssetType};
 pub use causal_analysis::{CausalAnalysisConfig, CausalAnalysisResult, StatisticalTest};
 pub use centrality::{calculate_centrality, CentralityAnalysis, NodeCentrality};
 pub use config::{PresetName, SimulationConfig};

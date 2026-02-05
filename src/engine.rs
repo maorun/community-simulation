@@ -266,6 +266,12 @@ pub struct SimulationEngine {
     skill_providers: HashMap<SkillId, Vec<usize>>,
     // Invariant checker for simulation validation (if enabled)
     invariant_checker: Option<crate::invariant::InvariantChecker>,
+    // Asset system tracking (if enabled)
+    assets: HashMap<crate::asset::AssetId, crate::asset::Asset>,
+    asset_counter: usize,
+    total_assets_purchased: usize,
+    #[allow(dead_code)] // Reserved for future asset selling feature
+    total_assets_sold: usize,
 }
 
 impl SimulationEngine {
@@ -514,6 +520,10 @@ impl SimulationEngine {
             externality_stats: crate::externality::ExternalityStats::new(),
             skill_providers,
             invariant_checker: None, // Will be initialized after construction if enabled
+            assets: HashMap::new(),
+            asset_counter: 0,
+            total_assets_purchased: 0,
+            total_assets_sold: 0,
         }
     }
 
@@ -1452,6 +1462,92 @@ impl SimulationEngine {
             None
         };
 
+        // Calculate asset statistics if enabled
+        let asset_statistics = if self.config.enable_assets && !self.assets.is_empty() {
+            let mut asset_values: Vec<f64> = Vec::new();
+            let mut total_income = 0.0;
+            let mut total_roi = 0.0;
+            let mut assets_by_type: HashMap<String, usize> = HashMap::new();
+            let mut value_by_type: HashMap<String, f64> = HashMap::new();
+
+            for asset in self.assets.values() {
+                asset_values.push(asset.current_value);
+                total_income += asset.total_income_generated;
+                total_roi += asset.calculate_roi();
+
+                let type_name = asset.asset_type.to_string();
+                *assets_by_type.entry(type_name.clone()).or_insert(0) += 1;
+                *value_by_type.entry(type_name).or_insert(0.0) += asset.current_value;
+            }
+
+            asset_values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+            let total_asset_value: f64 = asset_values.iter().sum();
+            let active_assets = self.assets.len();
+            let avg_asset_value = if active_assets > 0 {
+                total_asset_value / active_assets as f64
+            } else {
+                0.0
+            };
+
+            let median_asset_value = if !asset_values.is_empty() {
+                let mid = asset_values.len() / 2;
+                if asset_values.len().is_multiple_of(2) {
+                    (asset_values[mid - 1] + asset_values[mid]) / 2.0
+                } else {
+                    asset_values[mid]
+                }
+            } else {
+                0.0
+            };
+
+            let min_asset_value = asset_values.first().copied().unwrap_or(0.0);
+            let max_asset_value = asset_values.last().copied().unwrap_or(0.0);
+
+            let avg_roi = if active_assets > 0 {
+                total_roi / active_assets as f64
+            } else {
+                0.0
+            };
+
+            let active_persons = self.entities.iter().filter(|e| e.active).count();
+            let persons_with_assets = self
+                .entities
+                .iter()
+                .filter(|e| e.active && !e.person_data.owned_assets.is_empty())
+                .count();
+
+            let asset_ownership_rate = if active_persons > 0 {
+                persons_with_assets as f64 / active_persons as f64
+            } else {
+                0.0
+            };
+
+            let avg_assets_per_person = if active_persons > 0 {
+                active_assets as f64 / active_persons as f64
+            } else {
+                0.0
+            };
+
+            Some(crate::result::AssetStats {
+                total_assets_purchased: self.total_assets_purchased,
+                active_assets,
+                total_asset_value,
+                avg_asset_value,
+                median_asset_value,
+                min_asset_value,
+                max_asset_value,
+                total_income_generated: total_income,
+                avg_roi,
+                assets_by_type,
+                value_by_type,
+                avg_assets_per_person,
+                asset_ownership_rate,
+            })
+        } else {
+            None
+        };
+
         // Calculate technology breakthrough statistics if enabled
         let technology_breakthrough_statistics = if self.config.enable_technology_breakthroughs
             && !self.technology_breakthroughs.is_empty()
@@ -2011,6 +2107,7 @@ impl SimulationEngine {
                 None
             },
             insurance_statistics,
+            asset_statistics,
             technology_breakthrough_statistics,
             group_statistics: if let Some(num_groups) = self.config.num_groups {
                 // Calculate group statistics
@@ -3223,6 +3320,94 @@ impl SimulationEngine {
                             entity.person_data.money
                         );
                     }
+                }
+            }
+        }
+
+        // Asset system: Update asset values and attempt purchases (if enabled)
+        if self.config.enable_assets {
+            // Step 1: Update all existing asset values and generate income
+            let asset_ids: Vec<crate::asset::AssetId> = self.assets.keys().copied().collect();
+            for asset_id in asset_ids {
+                if let Some(asset) = self.assets.get_mut(&asset_id) {
+                    // Generate random volatility factor for stocks
+                    let volatility_factor =
+                        if matches!(asset.asset_type, crate::asset::AssetType::Stocks) {
+                            let volatility_range = 0.02; // ±2% random variation
+                            self.rng.random_range(-volatility_range..=volatility_range)
+                        } else {
+                            0.0
+                        };
+
+                    let income = asset.update_value(
+                        self.config.property_appreciation_rate,
+                        self.config.equipment_depreciation_rate,
+                        self.config.rental_income_rate,
+                        self.config.stock_return_rate,
+                        volatility_factor,
+                    );
+
+                    // Add income to owner's money
+                    if income > 0.0 {
+                        if let Some(entity) =
+                            self.entities.iter_mut().find(|e| e.id == asset.owner_id)
+                        {
+                            entity.person_data.money += income;
+                            trace!(
+                                "Person {} received ${:.2} income from asset {} ({})",
+                                entity.id,
+                                income,
+                                asset_id,
+                                asset.asset_type
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Step 2: Attempt asset purchases for eligible persons
+            let asset_price = self.config.base_skill_price * self.config.asset_price_multiplier;
+            let min_money_threshold = self.config.min_money_for_asset_purchase;
+
+            for entity in &mut self.entities {
+                if !entity.active {
+                    continue;
+                }
+
+                // Check if person has enough money and should attempt purchase
+                if entity.person_data.money >= min_money_threshold
+                    && self.rng.random_range(0.0..=1.0) < self.config.asset_purchase_probability
+                {
+                    // Randomly select asset type
+                    let asset_types = crate::asset::AssetType::all_variants();
+                    let asset_type = asset_types[self.rng.random_range(0..asset_types.len())];
+
+                    // Deduct purchase price
+                    entity.person_data.money -= asset_price;
+
+                    // Create new asset
+                    let asset_id = self.asset_counter;
+                    self.asset_counter += 1;
+
+                    let asset = crate::asset::Asset::new(
+                        asset_id,
+                        asset_type,
+                        asset_price,
+                        entity.id,
+                        self.current_step,
+                    );
+
+                    // Add asset to person's owned assets
+                    entity.person_data.owned_assets.push(asset_id);
+
+                    // Add asset to simulation tracking
+                    self.assets.insert(asset_id, asset);
+                    self.total_assets_purchased += 1;
+
+                    debug!(
+                        "Person {} purchased {} asset for ${:.2} (new balance: ${:.2})",
+                        entity.id, asset_type, asset_price, entity.person_data.money
+                    );
                 }
             }
         }
@@ -5764,6 +5949,7 @@ impl SimulationEngine {
             trust_network_statistics: None, // Simplified
             trade_agreement_statistics: None, // Simplified
             insurance_statistics: None,   // Simplified
+            asset_statistics: None,       // Simplified for interactive mode
             technology_breakthrough_statistics: None, // Simplified
             group_statistics: None,
             trading_partner_statistics: crate::result::TradingPartnerStats {
@@ -6049,6 +6235,14 @@ impl SimulationEngine {
             externality_stats: checkpoint.externality_stats,
             skill_providers,
             invariant_checker: None, // Invariants will be re-initialized after loading
+            // NOTE: Assets are not persisted in checkpoints yet. When resuming,
+            // asset data is lost and persons' owned_assets vectors will be incorrect.
+            // This is a known limitation. To use assets, avoid checkpoint resume
+            // or add assets to SimulationCheckpoint struct in a future update.
+            assets: HashMap::new(),
+            asset_counter: 0,
+            total_assets_purchased: 0,
+            total_assets_sold: 0,
         })
     }
 

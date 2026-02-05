@@ -6,21 +6,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Erweiterte Wirtschaftsmechanismen
 
-#### 1.1 Vermögensbildung und langfristige Assets
-**Beschreibung:** Erweiterung um langfristige Vermögenswerte wie Immobilien, Produktionsanlagen oder Kapitalanlagen, die über Zeit Wert generieren, abschreiben oder sich verzinsen.
-
-**Nutzen:** 
-- Realistische Vermögensbildung und Vermögensungleichheit
-- Unterscheidung zwischen Einkommen und Vermögen
-- Modellierung von Vermögenssteuern und Erbschaften
-
-**Implementierung:**
-- `Asset` Trait für verschiedene Vermögenstypen (Property, Equipment, Stocks)
-- Wertsteigerung/Abschreibung über Zeit
-- Integration mit Kreditsystem (Hypotheken, Asset-backed lending)
-- Optional: Miet- und Verkaufsmarkt für Assets
-
-#### 1.2 Marktsegmentierung und Nischenmärkte
+#### 1.1 Marktsegmentierung und Nischenmärkte
 **Beschreibung:** Unterteilung des Marktes in Segmente (Luxus, Mittelklasse, Budget) mit unterschiedlichen Preis-Qualitäts-Erwartungen.
 
 **Nutzen:**

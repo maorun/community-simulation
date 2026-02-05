@@ -1286,6 +1286,14 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             strict_invariant_mode: args.strict_invariant_mode,
             check_money_conservation: SimulationConfig::default().check_money_conservation,
             check_non_negative_wealth: SimulationConfig::default().check_non_negative_wealth,
+            enable_assets: SimulationConfig::default().enable_assets,
+            asset_purchase_probability: SimulationConfig::default().asset_purchase_probability,
+            min_money_for_asset_purchase: SimulationConfig::default().min_money_for_asset_purchase,
+            property_appreciation_rate: SimulationConfig::default().property_appreciation_rate,
+            equipment_depreciation_rate: SimulationConfig::default().equipment_depreciation_rate,
+            rental_income_rate: SimulationConfig::default().rental_income_rate,
+            stock_return_rate: SimulationConfig::default().stock_return_rate,
+            asset_price_multiplier: SimulationConfig::default().asset_price_multiplier,
         }
     };
 
