@@ -160,8 +160,8 @@ fn test_engine_with_many_features_enabled() {
 fn test_engine_checkpoint_save_and_load() {
     use tempfile::TempDir;
     
-    let temp_dir = TempDir::new().unwrap();
-    let checkpoint_path = temp_dir.path().join("checkpoint.json");
+    let _temp_dir = TempDir::new().unwrap();
+    let checkpoint_path = _temp_dir.path().join("checkpoint.json");
     
     let config = SimulationConfig {
         max_steps: 40,
