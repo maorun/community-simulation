@@ -381,4 +381,45 @@ mod tests {
         assert_eq!(stats.direct_trust_relationships, 2);
         assert_eq!(stats.second_degree_trust_relationships, 1); // 1-3
     }
+
+    #[test]
+    fn test_trust_network_default() {
+        let network = TrustNetwork::default();
+        assert_eq!(network.graph.node_count(), 0);
+        assert_eq!(network.person_to_node.len(), 0);
+    }
+
+    #[test]
+    fn test_clear_cache() {
+        let mut network = TrustNetwork::new();
+        network.add_friendship(1, 2);
+
+        // Access trust level to populate cache
+        let _ = network.get_trust_level(1, 2);
+        assert!(!network.trust_cache.is_empty());
+
+        // Clear cache
+        network.clear_cache();
+        assert!(network.trust_cache.is_empty());
+    }
+
+    #[test]
+    fn test_same_person_trust() {
+        let mut network = TrustNetwork::new();
+        network.add_person(1);
+
+        // Same person should have no trust relationship with themselves
+        assert_eq!(network.get_trust_level(1, 1), TrustLevel::None);
+    }
+
+    #[test]
+    fn test_add_person_idempotent() {
+        let mut network = TrustNetwork::new();
+        network.add_person(1);
+        assert_eq!(network.graph.node_count(), 1);
+
+        // Adding same person again should not create duplicate node
+        network.add_person(1);
+        assert_eq!(network.graph.node_count(), 1);
+    }
 }
