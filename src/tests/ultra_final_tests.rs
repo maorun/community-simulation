@@ -1,4 +1,4 @@
-//! Ultra-simplified tests to cover specific small gaps in crisis.rs, error.rs, voting.rs, 
+//! Ultra-simplified tests to cover specific small gaps in crisis.rs, error.rs, voting.rs,
 //! parameter_sweep.rs, and market.rs Display/Debug implementations
 
 use crate::config::SimulationConfig;
@@ -23,7 +23,7 @@ fn test_incremental_stats_new_state() {
 fn test_incremental_stats_single_value() {
     let mut stats = IncrementalStats::new();
     stats.update(42.0);
-    
+
     assert_eq!(stats.count(), 1);
     assert_eq!(stats.mean(), 42.0);
     assert_eq!(stats.variance(), 0.0);
@@ -36,7 +36,7 @@ fn test_incremental_stats_multiple_values() {
     stats.update(10.0);
     stats.update(20.0);
     stats.update(30.0);
-    
+
     assert_eq!(stats.count(), 3);
     assert_eq!(stats.mean(), 20.0);
     assert!((stats.variance() - 100.0).abs() < 1e-10);
@@ -49,9 +49,9 @@ fn test_incremental_stats_reset() {
     stats.update(10.0);
     stats.update(20.0);
     stats.update(30.0);
-    
+
     stats.reset();
-    
+
     assert_eq!(stats.count(), 0);
     assert_eq!(stats.mean(), 0.0);
     assert_eq!(stats.variance(), 0.0);
@@ -112,25 +112,21 @@ fn test_engine_run_all_scenarios() {
         let mut config = SimulationConfig::default();
         config.scenario = scenario;
         config.max_steps = 15;
-        
+
         let mut engine = SimulationEngine::new(config);
-        
+
         for _ in 0..15 {
             engine.step();
         }
-        
+
         assert_eq!(engine.get_current_step(), 15);
     }
 }
 
 #[test]
 fn test_engine_with_many_features_enabled() {
-    let mut config = SimulationConfig {
-        max_steps: 25,
-        entity_count: 20,
-        ..Default::default()
-    };
-    
+    let mut config = SimulationConfig { max_steps: 25, entity_count: 20, ..Default::default() };
+
     // Enable many features
     config.enable_loans = true;
     config.enable_contracts = true;
@@ -144,14 +140,14 @@ fn test_engine_with_many_features_enabled() {
     config.enable_externalities = true;
     config.enable_technology_breakthroughs = true;
     config.enable_resource_pools = true;
-    
+
     let mut engine = SimulationEngine::new(config);
-    
+
     // Run simulation
     for _ in 0..25 {
         engine.step();
     }
-    
+
     assert_eq!(engine.get_current_step(), 25);
     assert!(engine.get_entities().len() > 0);
 }
@@ -159,37 +155,33 @@ fn test_engine_with_many_features_enabled() {
 #[test]
 fn test_engine_checkpoint_save_and_load() {
     use tempfile::TempDir;
-    
+
     let _temp_dir = TempDir::new().unwrap();
     let checkpoint_path = _temp_dir.path().join("checkpoint.json");
-    
-    let config = SimulationConfig {
-        max_steps: 40,
-        entity_count: 15,
-        ..Default::default()
-    };
-    
+
+    let config = SimulationConfig { max_steps: 40, entity_count: 15, ..Default::default() };
+
     let mut engine = SimulationEngine::new(config);
-    
+
     // Run halfway
     for _ in 0..20 {
         engine.step();
     }
-    
+
     // Save checkpoint
     engine.save_checkpoint(&checkpoint_path).unwrap();
     assert!(checkpoint_path.exists());
-    
+
     // Load checkpoint
     let loaded = SimulationEngine::load_checkpoint(&checkpoint_path).unwrap();
     assert_eq!(loaded.get_current_step(), 20);
     assert_eq!(loaded.get_entities().len(), 15);
-    
+
     // Continue running
     let mut continued = loaded;
     for _ in 0..20 {
         continued.step();
     }
-    
+
     assert_eq!(continued.get_current_step(), 40);
 }

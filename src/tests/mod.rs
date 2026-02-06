@@ -4,8 +4,8 @@ mod coverage_push_tests;
 mod final_push_tests;
 mod proptest_tests;
 mod scenario_integration_tests;
-mod ultra_final_tests;
 pub mod test_helpers;
+mod ultra_final_tests;
 
 #[cfg(test)]
 mod engine_tests {
