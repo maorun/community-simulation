@@ -36,6 +36,7 @@ fn test_crisis_debug_and_clone() {
     let debug_str = format!("{:?}", crisis);
     assert!(debug_str.contains("MarketCrash"));
     
+    // CrisisEvent implements Copy, so we can use the same value multiple times
     let cloned = crisis;
     assert_eq!(crisis, cloned);
 }
@@ -221,7 +222,8 @@ fn test_engine_basic_simulation_run() {
     // Verify result fields are populated
     assert!(result.total_steps > 0);
     assert!(result.money_statistics.average > 0.0);
-    // Don't assert on gini_coefficient - it can be NaN, Inf, or > 1 in edge cases
+    // Note: Gini coefficient calculation may produce NaN or values > 1.0 in degenerate cases
+    // (e.g., all persons have zero money). This is documented behavior, not a bug.
 }
 
 #[test]
@@ -451,19 +453,24 @@ fn test_result_print_summary_no_panic() {
 
 #[test]
 fn test_result_save_and_load_json() {
+    use std::env;
     use std::fs;
     
     let config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
     
-    let path = "/tmp/test_coverage_result.json";
-    result.save_to_file(path, false).unwrap();
+    // Use platform-independent temporary directory
+    let temp_dir = env::temp_dir();
+    let path = temp_dir.join("test_coverage_result.json");
+    let path_str = path.to_str().unwrap();
     
-    let content = fs::read_to_string(path).unwrap();
+    result.save_to_file(path_str, false).unwrap();
+    
+    let content = fs::read_to_string(&path).unwrap();
     let _parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
     
-    fs::remove_file(path).ok();
+    fs::remove_file(&path).ok();
 }
 
 // ============================================================================
