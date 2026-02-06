@@ -440,4 +440,182 @@ mod tests {
         score.record_new_loan(60);
         assert_eq!(score.recent_loans_count, 1, "Recent loans should reset after 50 steps");
     }
+
+    #[test]
+    fn test_calculate_score_with_no_history() {
+        let mut score = CreditScore::new();
+        // With no credit history, score should remain at default
+        score.calculate_score(0.0, 100.0, 10);
+        assert_eq!(score.score, 650);
+    }
+
+    #[test]
+    fn test_debt_factor_with_zero_debt() {
+        let score = CreditScore::new();
+        let factor = score.calculate_debt_factor(0.0, 100.0);
+        assert_eq!(factor, 1.0, "Zero debt should give perfect debt factor");
+    }
+
+    #[test]
+    fn test_debt_factor_with_negative_assets() {
+        let score = CreditScore::new();
+        // total_assets = current_money + current_debt
+        // For negative net worth: -150 + 100 = -50 (negative total assets)
+        let factor = score.calculate_debt_factor(100.0, -150.0);
+        assert_eq!(factor, 0.3, "Negative total assets should heavily penalize");
+    }
+
+    #[test]
+    fn test_payment_history_factor_no_payments() {
+        let score = CreditScore::new();
+        let factor = score.calculate_payment_history_factor();
+        assert_eq!(factor, 0.7, "No payment history should be neutral");
+    }
+
+    #[test]
+    fn test_credit_history_factor_no_history() {
+        let score = CreditScore::new();
+        let factor = score.calculate_credit_history_factor();
+        assert_eq!(factor, 0.5, "No credit history should be neutral");
+    }
+
+    #[test]
+    fn test_new_credit_factor_multiple_loans() {
+        let score = CreditScore {
+            recent_loans_count: 4,
+            recent_loans_reset_step: 0,
+            ..Default::default()
+        };
+        let factor = score.calculate_new_credit_factor(10);
+        assert_eq!(factor, 0.3, "4+ recent loans should give lowest factor");
+    }
+
+    #[test]
+    fn test_new_credit_factor_reset_after_50_steps() {
+        let score = CreditScore {
+            recent_loans_count: 3,
+            recent_loans_reset_step: 0,
+            ..Default::default()
+        };
+        let factor = score.calculate_new_credit_factor(60);
+        assert_eq!(factor, 1.0, "Recent loans should reset after 50 steps");
+    }
+
+    #[test]
+    fn test_credit_mix_factor_no_credit() {
+        let score = CreditScore::new();
+        let factor = score.calculate_credit_mix_factor();
+        assert_eq!(factor, 0.5, "No credit should be neutral");
+    }
+
+    #[test]
+    fn test_credit_mix_factor_with_credit() {
+        let mut score = CreditScore::new();
+        score.credit_mix = 1;
+        let factor = score.calculate_credit_mix_factor();
+        assert_eq!(factor, 0.7, "Single credit type should give 0.7 factor");
+    }
+
+    #[test]
+    fn test_start_credit_history_only_once() {
+        let mut score = CreditScore::new();
+        score.start_credit_history(0);
+        assert_eq!(score.credit_history_steps, 1);
+        assert_eq!(score.credit_mix, 1);
+
+        // Starting again should not reset
+        score.credit_history_steps = 50;
+        score.start_credit_history(100);
+        assert_eq!(score.credit_history_steps, 50, "Should not reset existing history");
+    }
+
+    #[test]
+    fn test_increment_credit_history() {
+        let mut score = CreditScore::new();
+        score.start_credit_history(0);
+        assert_eq!(score.credit_history_steps, 1);
+
+        score.increment_credit_history();
+        assert_eq!(score.credit_history_steps, 2);
+
+        score.increment_credit_history();
+        assert_eq!(score.credit_history_steps, 3);
+    }
+
+    #[test]
+    fn test_increment_credit_history_no_history() {
+        let mut score = CreditScore::new();
+        // Without starting history, increment should do nothing
+        score.increment_credit_history();
+        assert_eq!(score.credit_history_steps, 0);
+    }
+
+    #[test]
+    fn test_interest_rate_edge_cases() {
+        let base_rate = 0.02;
+
+        // Test boundary values
+        let score_800 = CreditScore { score: 800, ..Default::default() };
+        assert_eq!(score_800.calculate_interest_rate(base_rate), base_rate * 0.5);
+
+        let score_740 = CreditScore { score: 740, ..Default::default() };
+        assert_eq!(score_740.calculate_interest_rate(base_rate), base_rate * 0.7);
+
+        let score_670 = CreditScore { score: 670, ..Default::default() };
+        assert_eq!(score_670.calculate_interest_rate(base_rate), base_rate * 1.0);
+
+        let score_580 = CreditScore { score: 580, ..Default::default() };
+        assert_eq!(score_580.calculate_interest_rate(base_rate), base_rate * 1.5);
+
+        let score_300 = CreditScore { score: 300, ..Default::default() };
+        assert_eq!(score_300.calculate_interest_rate(base_rate), base_rate * 2.5);
+    }
+
+    #[test]
+    fn test_rating_category_edge_cases() {
+        // Test boundary values
+        assert_eq!(CreditScore { score: 800, ..Default::default() }.rating_category(), "Excellent");
+        assert_eq!(CreditScore { score: 850, ..Default::default() }.rating_category(), "Excellent");
+        assert_eq!(CreditScore { score: 739, ..Default::default() }.rating_category(), "Good");
+        assert_eq!(CreditScore { score: 669, ..Default::default() }.rating_category(), "Fair");
+        assert_eq!(CreditScore { score: 579, ..Default::default() }.rating_category(), "Poor");
+        assert_eq!(CreditScore { score: 299, ..Default::default() }.rating_category(), "No Rating");
+    }
+
+    #[test]
+    fn test_record_new_loan_resets_counter() {
+        let mut score = CreditScore::new();
+        score.start_credit_history(0);
+        score.recent_loans_reset_step = 0;
+        score.recent_loans_count = 5;
+
+        // Recording new loan after 50+ steps should reset
+        score.record_new_loan(60);
+        assert_eq!(score.recent_loans_count, 1);
+        assert_eq!(score.recent_loans_reset_step, 60);
+    }
+
+    #[test]
+    fn test_calculate_score_comprehensive() {
+        let mut score = CreditScore::new();
+        score.start_credit_history(0);
+
+        // Build up a credit profile
+        for _ in 0..10 {
+            score.record_successful_payment();
+        }
+        score.record_missed_payment();
+
+        for _ in 0..50 {
+            score.increment_credit_history();
+        }
+
+        score.record_new_loan(10);
+        score.record_new_loan(20);
+
+        score.calculate_score(50.0, 200.0, 60);
+
+        // Score should be calculated based on all factors
+        assert!(score.score >= 300 && score.score <= 850, "Score should be in valid range");
+    }
 }

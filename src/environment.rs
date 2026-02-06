@@ -275,4 +275,42 @@ mod tests {
         env.step();
         assert_eq!(env.current_step, 1);
     }
+
+    #[test]
+    fn test_sustainability_score_no_reserves() {
+        let mut reserves = HashMap::new();
+        // No reserves for Energy
+        reserves.insert(Resource::Water, 1000.0);
+
+        let mut env = Environment::new(reserves);
+        let mut costs = HashMap::new();
+        costs.insert(Resource::Energy, 100.0); // Consume with no reserves
+
+        env.consume_resources(&costs);
+
+        let scores = env.sustainability_scores();
+        let energy_score = scores.get(&Resource::Energy).unwrap();
+        assert_eq!(*energy_score, -100.0, "No reserves but consumption should give negative score");
+    }
+
+    #[test]
+    fn test_sustainability_score_no_reserves_no_consumption() {
+        let mut reserves = HashMap::new();
+        // No reserves for Energy
+        reserves.insert(Resource::Water, 1000.0);
+
+        let env = Environment::new(reserves);
+
+        let scores = env.sustainability_scores();
+        let energy_score = scores.get(&Resource::Energy).unwrap();
+        assert_eq!(*energy_score, 0.0, "No reserves and no consumption should give neutral score");
+    }
+
+    #[test]
+    fn test_resource_names() {
+        assert_eq!(Resource::Energy.name(), "Energy");
+        assert_eq!(Resource::Water.name(), "Water");
+        assert_eq!(Resource::Materials.name(), "Materials");
+        assert_eq!(Resource::Land.name(), "Land");
+    }
 }
