@@ -481,22 +481,16 @@ mod tests {
 
     #[test]
     fn test_new_credit_factor_multiple_loans() {
-        let score = CreditScore {
-            recent_loans_count: 4,
-            recent_loans_reset_step: 0,
-            ..Default::default()
-        };
+        let score =
+            CreditScore { recent_loans_count: 4, recent_loans_reset_step: 0, ..Default::default() };
         let factor = score.calculate_new_credit_factor(10);
         assert_eq!(factor, 0.3, "4+ recent loans should give lowest factor");
     }
 
     #[test]
     fn test_new_credit_factor_reset_after_50_steps() {
-        let score = CreditScore {
-            recent_loans_count: 3,
-            recent_loans_reset_step: 0,
-            ..Default::default()
-        };
+        let score =
+            CreditScore { recent_loans_count: 3, recent_loans_reset_step: 0, ..Default::default() };
         let factor = score.calculate_new_credit_factor(60);
         assert_eq!(factor, 1.0, "Recent loans should reset after 50 steps");
     }

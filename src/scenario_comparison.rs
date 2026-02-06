@@ -543,4 +543,34 @@ mod tests {
         assert!(content.contains("scenarios"));
         assert!(content.contains("runs_per_scenario"));
     }
+
+    #[test]
+    fn test_scenario_comparison_validation_message() {
+        let config = SimulationConfig::default();
+
+        // Test empty scenarios error message
+        let result = ScenarioComparisonResult::run(config.clone(), vec![], 2);
+        assert!(result.is_err());
+        if let Err(SimulationError::ValidationError(msg)) = result {
+            assert!(msg.contains("At least one scenario"));
+        }
+
+        // Test single scenario error message
+        let result = ScenarioComparisonResult::run(config.clone(), vec![Scenario::Original], 2);
+        assert!(result.is_err());
+        if let Err(SimulationError::ValidationError(msg)) = result {
+            assert!(msg.contains("At least two different scenarios"));
+        }
+
+        // Test zero runs error message
+        let result = ScenarioComparisonResult::run(
+            config,
+            vec![Scenario::Original, Scenario::DynamicPricing],
+            0,
+        );
+        assert!(result.is_err());
+        if let Err(SimulationError::ValidationError(msg)) = result {
+            assert!(msg.contains("Runs per scenario must be at least 1"));
+        }
+    }
 }
