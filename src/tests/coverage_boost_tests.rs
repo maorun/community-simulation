@@ -44,10 +44,7 @@ fn test_original_updater_with_per_skill_limits() {
     updater.update_prices(&mut market, &mut rng);
 
     let final_price = market.skills.get(&skill_id).unwrap().current_price;
-    assert!(
-        final_price >= 40.0 && final_price <= 60.0,
-        "Price should respect per-skill limits"
-    );
+    assert!((40.0..=60.0).contains(&final_price), "Price should respect per-skill limits");
 }
 
 #[test]
@@ -109,7 +106,7 @@ fn test_dynamic_pricing_updater_with_per_skill_limits() {
     updater.update_prices(&mut market, &mut rng);
 
     let final_price = market.skills.get(&skill_id).unwrap().current_price;
-    assert!(final_price >= 45.0 && final_price <= 55.0);
+    assert!((45.0..=55.0).contains(&final_price));
 }
 
 #[test]
@@ -167,7 +164,7 @@ fn test_adaptive_pricing_with_per_skill_limits() {
     updater.update_prices(&mut market, &mut rng);
 
     let final_price = market.skills.get(&skill_id).unwrap().current_price;
-    assert!(final_price >= 48.0 && final_price <= 52.0);
+    assert!((48.0..=52.0).contains(&final_price));
 }
 
 #[test]
@@ -206,7 +203,7 @@ fn test_auction_pricing_with_per_skill_limits() {
     updater.update_prices(&mut market, &mut rng);
 
     let final_price = market.skills.get(&skill_id).unwrap().current_price;
-    assert!(final_price >= 45.0 && final_price <= 60.0);
+    assert!((45.0..=60.0).contains(&final_price));
 }
 
 #[test]
@@ -336,7 +333,7 @@ fn test_climate_change_with_per_skill_limits() {
     updater.update_prices(&mut market, &mut rng);
 
     let final_price = market.skills.get(&skill_id).unwrap().current_price;
-    assert!(final_price >= 45.0 && final_price <= 55.0);
+    assert!((45.0..=55.0).contains(&final_price));
 }
 
 #[test]
