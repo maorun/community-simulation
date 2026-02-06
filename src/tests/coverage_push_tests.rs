@@ -575,10 +575,10 @@ fn test_insurance_types_comprehensive() {
     config.enable_insurance = true;
     config.insurance_purchase_probability = 0.8;
     config.max_steps = 20;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 20);
 }
 
@@ -589,10 +589,10 @@ fn test_asset_system_operations() {
     config.enable_assets = true;
     config.asset_purchase_probability = 0.6;
     config.max_steps = 20;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     if let Some(_asset_stats) = result.asset_statistics {
         // Assets were enabled
         assert_eq!(result.total_steps, 20);
@@ -606,10 +606,10 @@ fn test_loan_system_comprehensive() {
     config.enable_loans = true;
     config.enable_credit_rating = true;
     config.max_steps = 30;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     if let Some(_loan_stats) = result.loan_statistics {
         assert_eq!(result.total_steps, 30);
     }
@@ -622,10 +622,10 @@ fn test_production_comprehensive() {
     config.enable_production = true;
     config.production_probability = 0.4;
     config.max_steps = 20;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 20);
 }
 
@@ -636,10 +636,10 @@ fn test_technology_breakthroughs_flow() {
     config.enable_technology_breakthroughs = true;
     config.tech_breakthrough_probability = 0.3;
     config.max_steps = 30;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 30);
 }
 
@@ -650,10 +650,10 @@ fn test_tax_redistribution_comprehensive() {
     config.enable_tax_redistribution = true;
     config.tax_rate = 0.15;
     config.max_steps = 25;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 25);
     // Should have collected taxes
     if let Some(taxes) = result.total_taxes_collected {
@@ -669,10 +669,10 @@ fn test_certification_system() {
     config.enable_certification = true;
     config.certification_duration = Some(10);
     config.max_steps = 30;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 30);
 }
 
@@ -683,10 +683,10 @@ fn test_crisis_events_comprehensive() {
     config.enable_crisis_events = true;
     config.crisis_probability = 0.4;
     config.max_steps = 25;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 25);
 }
 
@@ -696,10 +696,10 @@ fn test_black_market_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_black_market = true;
     config.max_steps = 20;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 20);
 }
 
@@ -709,10 +709,10 @@ fn test_voting_system_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_voting = true;
     config.max_steps = 25;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 25);
 }
 
@@ -722,10 +722,10 @@ fn test_market_segments_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_market_segments = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -735,10 +735,10 @@ fn test_reputation_system() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_insurance = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -747,7 +747,7 @@ fn test_reputation_system() {
 fn test_plugin_registration() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.max_steps = 5;
-    
+
     let engine = SimulationEngine::new(config);
     // Just test engine creates successfully
     assert_eq!(engine.get_current_step(), 0);
@@ -758,7 +758,7 @@ fn test_plugin_registration() {
 fn test_engine_state_getters() {
     let config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     let engine = SimulationEngine::new(config);
-    
+
     assert_eq!(engine.get_current_step(), 0);
     assert!(engine.get_entities().len() > 0);
     assert!(engine.get_market().skills.len() > 0);
@@ -769,10 +769,10 @@ fn test_engine_state_getters() {
 fn test_trade_history_collection() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.max_steps = 20;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     // Check trade volume stats exist
     assert!(result.trade_volume_statistics.total_trades >= 0);
 }
@@ -782,10 +782,10 @@ fn test_trade_history_collection() {
 fn test_skill_price_history_collection() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.max_steps = 10;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     // Price history should exist
     assert!(!result.skill_price_history.is_empty());
 }
@@ -795,10 +795,10 @@ fn test_skill_price_history_collection() {
 fn test_wealth_statistics() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.max_steps = 10;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     // Check money statistics
     assert!(result.money_statistics.average >= 0.0);
     assert!(result.money_statistics.median >= 0.0);
@@ -812,27 +812,27 @@ fn test_wealth_statistics() {
 #[test]
 fn test_result_csv_export_basic() {
     use std::env;
-    
+
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.max_steps = 5;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     let temp_dir = env::temp_dir();
     let prefix = temp_dir.join("test_csv_basic");
     let prefix_str = prefix.to_str().unwrap();
-    
+
     // CSV export creates multiple files with prefix
     result.save_to_csv(prefix_str).unwrap();
-    
+
     // Check that summary file was created
     let summary_path = temp_dir.join("test_csv_basic_summary.csv");
     assert!(summary_path.exists());
-    
+
     let content = std::fs::read_to_string(&summary_path).unwrap();
     assert!(content.contains("Total Steps"));
-    
+
     // Cleanup
     std::fs::remove_file(&summary_path).ok();
     std::fs::remove_file(temp_dir.join("test_csv_basic_money.csv")).ok();
@@ -844,26 +844,26 @@ fn test_result_csv_export_basic() {
 #[test]
 fn test_result_csv_with_features() {
     use std::env;
-    
+
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_loans = true;
     config.enable_credit_rating = true;
     config.enable_insurance = true;
     config.max_steps = 5;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     let temp_dir = env::temp_dir();
     let prefix = temp_dir.join("test_csv_features");
     let prefix_str = prefix.to_str().unwrap();
-    
+
     result.save_to_csv(prefix_str).unwrap();
-    
+
     // Check that summary file was created
     let summary_path = temp_dir.join("test_csv_features_summary.csv");
     assert!(summary_path.exists());
-    
+
     // Cleanup
     std::fs::remove_file(&summary_path).ok();
     std::fs::remove_file(temp_dir.join("test_csv_features_money.csv")).ok();
@@ -875,17 +875,17 @@ fn test_result_csv_with_features() {
 #[test]
 fn test_result_compressed_json() {
     use std::env;
-    
+
     let config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     let temp_dir = env::temp_dir();
     let path = temp_dir.join("test_compressed.json.gz");
     let path_str = path.to_str().unwrap();
-    
+
     result.save_to_file(path_str, true).unwrap();
-    
+
     assert!(path.exists());
     std::fs::remove_file(&path).ok();
 }
@@ -899,7 +899,7 @@ fn test_result_compressed_json() {
 fn test_crisis_descriptions_comprehensive() {
     let crises = CrisisEvent::all_types();
     assert!(crises.len() > 0);
-    
+
     for crisis in crises {
         let desc = crisis.description();
         assert!(!desc.is_empty());
@@ -911,18 +911,18 @@ fn test_crisis_descriptions_comprehensive() {
 #[test]
 fn test_market_operations_comprehensive() {
     use crate::scenario::PriceUpdater;
-    
+
     let updater = PriceUpdater::from(Scenario::Original);
     let mut market = Market::new(10.0, 1.0, 0.1, 0.02, updater);
-    
+
     // Add multiple skills
     for i in 0..5 {
         let skill = Skill::new(format!("Skill{}", i), 10.0 + i as f64);
         market.add_skill(skill);
     }
-    
+
     assert_eq!(market.skills.len(), 5);
-    
+
     // Update prices
     let mut rng = StdRng::seed_from_u64(42);
     market.update_prices(&mut rng);
@@ -931,11 +931,8 @@ fn test_market_operations_comprehensive() {
 // Test voting methods
 #[test]
 fn test_voting_methods_all() {
-    let methods = vec![
-        VotingMethod::SimpleMajority,
-        VotingMethod::WeightedByWealth,
-    ];
-    
+    let methods = vec![VotingMethod::SimpleMajority, VotingMethod::WeightedByWealth];
+
     for method in methods {
         let system = VotingSystem::new(method);
         assert_eq!(system.method(), method);
@@ -955,7 +952,7 @@ fn test_voting_proposals() {
 fn test_simulation_errors() {
     let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "test");
     let sim_error: SimulationError = io_err.into();
-    
+
     let error_str = format!("{}", sim_error);
     assert!(!error_str.is_empty());
 }
@@ -967,7 +964,7 @@ fn test_simulation_errors() {
 #[test]
 fn test_engine_all_features_enabled() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
-    
+
     // Enable major features
     config.enable_loans = true;
     config.enable_credit_rating = true;
@@ -990,12 +987,12 @@ fn test_engine_all_features_enabled() {
     config.enable_trade_agreements = true;
     config.enable_externalities = true;
     config.enable_adaptive_strategies = true;
-    
+
     config.max_steps = 20;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 20);
 }
 
@@ -1004,10 +1001,10 @@ fn test_engine_extreme_entity_count() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.entity_count = 200;
     config.max_steps = 5;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 5);
 }
 
@@ -1016,19 +1013,19 @@ fn test_engine_minimal_setup() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.entity_count = 5;
     config.max_steps = 3;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 3);
 }
 
 #[test]
 fn test_result_metadata() {
     use crate::result::SimulationMetadata;
-    
+
     let metadata = SimulationMetadata::capture(42, 100, 500);
-    
+
     assert_eq!(metadata.seed, 42);
     assert_eq!(metadata.entity_count, 100);
     assert_eq!(metadata.max_steps, 500);
@@ -1039,13 +1036,13 @@ fn test_result_metadata() {
 #[test]
 fn test_gini_coefficient_calculations() {
     use crate::result::calculate_gini_coefficient;
-    
+
     // Equal distribution
     let equal = vec![100.0, 100.0, 100.0, 100.0];
     let sum: f64 = equal.iter().sum();
     let gini = calculate_gini_coefficient(&equal, sum);
     assert!(gini < 0.1);
-    
+
     // Unequal distribution
     let unequal = vec![10.0, 20.0, 30.0, 940.0];
     let sum: f64 = unequal.iter().sum();
@@ -1057,7 +1054,7 @@ fn test_gini_coefficient_calculations() {
 fn test_engine_step_by_step() {
     let config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     let mut engine = SimulationEngine::new(config);
-    
+
     for i in 0..5 {
         engine.step();
         assert_eq!(engine.get_current_step(), i + 1);
@@ -1068,15 +1065,15 @@ fn test_engine_step_by_step() {
 fn test_engine_pause_and_resume() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.max_steps = 10;
-    
+
     let mut engine = SimulationEngine::new(config);
-    
+
     // Run 5 steps
     for _ in 0..5 {
         engine.step();
     }
     assert_eq!(engine.get_current_step(), 5);
-    
+
     // Continue to completion
     let result = engine.run();
     assert_eq!(result.total_steps, 10);
@@ -1085,14 +1082,19 @@ fn test_engine_pause_and_resume() {
 // Test different scenario types
 #[test]
 fn test_all_scenario_types_execution() {
-    for scenario in &[Scenario::Original, Scenario::DynamicPricing, Scenario::AdaptivePricing, Scenario::AuctionPricing] {
+    for scenario in &[
+        Scenario::Original,
+        Scenario::DynamicPricing,
+        Scenario::AdaptivePricing,
+        Scenario::AuctionPricing,
+    ] {
         let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
         config.scenario = scenario.clone();
         config.max_steps = 5;
-        
+
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
-        
+
         assert_eq!(result.total_steps, 5);
     }
 }
@@ -1103,10 +1105,10 @@ fn test_resource_pools_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_resource_pools = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -1116,10 +1118,10 @@ fn test_trade_agreements_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_trade_agreements = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -1129,10 +1131,10 @@ fn test_externalities_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_externalities = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -1142,10 +1144,10 @@ fn test_adaptive_strategies_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_adaptive_strategies = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -1155,10 +1157,10 @@ fn test_friendships_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_friendships = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -1168,10 +1170,10 @@ fn test_trust_networks_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_trust_networks = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -1182,10 +1184,10 @@ fn test_mentorship_comprehensive() {
     config.enable_education = true;
     config.enable_mentorship = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
 
@@ -1195,9 +1197,9 @@ fn test_contracts_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_contracts = true;
     config.max_steps = 15;
-    
+
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
-    
+
     assert_eq!(result.total_steps, 15);
 }
