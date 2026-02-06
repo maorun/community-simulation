@@ -4,25 +4,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🚀 Neue Features
 
-### 1. Erweiterte Wirtschaftsmechanismen
+### 1. Erweiterte Marktmechanismen
 
-#### 1.1 Marktsegmentierung und Nischenmärkte
-**Beschreibung:** Unterteilung des Marktes in Segmente (Luxus, Mittelklasse, Budget) mit unterschiedlichen Preis-Qualitäts-Erwartungen.
-
-**Nutzen:**
-- Differenzierte Marktpositionierung und Preisdiskriminierung
-- Modellierung von Konsumentenverhalten nach Einkommensklassen
-- Realistische Ungleichheitseffekte
-
-**Implementierung:**
-- `MarketSegment` Enum mit Kaufkraft-Ranges
-- Dynamische Zuordnung von Personen zu Segmenten basierend auf Vermögen
-- Präferenz-Matching zwischen Anbieter und Nachfrager
-- Segment-spezifische Preis-Qualitäts-Erwartungen
-
-### 2. Erweiterte Marktmechanismen
-
-#### 2.1 Peer-to-Peer Lending-Marketplace
+#### 1.1 Peer-to-Peer Lending-Marketplace
 **Beschreibung:** Dezentraler Kredit-Marketplace wo Personen direkt Kredite aneinander vergeben können, ohne zentrale Instanz. Mit Reputation-basiertem Risk-Pricing.
 
 **Nutzen:**
@@ -37,7 +21,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Automatisches Matching basierend auf Kreditrating und Risikopräferenz
 - Plattform-Gebühren und Ausfallrisiko-Management
 
-#### 2.2 Auktionen und alternative Preisfindungsmechanismen  
+#### 1.2 Auktionen und alternative Preisfindungsmechanismen  
 **Beschreibung:** Alternative Handelsmechanismen wie Vickrey-Auktionen, Niederländische Auktionen oder kontinuierliche Double-Auctions für bestimmte Güter.
 
 **Nutzen:**
@@ -51,11 +35,11 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - `AuctionMarket` als alternative zu normalem bilateralem Handel
 - Per-Skill Konfiguration: Auktion vs. normaler Handel
 
-### 3. Soziale Netzwerke und Beziehungen
+### 2. Soziale Netzwerke und Beziehungen
 
-### 4. Erweiterte Szenarien
+### 3. Erweiterte Szenarien
 
-#### 4.1 Globalisierung und Handel zwischen Gemeinschaften
+#### 3.1 Globalisierung und Handel zwischen Gemeinschaften
 **Beschreibung:** Multi-Community Simulation mit Handel zwischen verschiedenen Wirtschaftsräumen. Modellierung von Außenhandel, Wechselkursen und Handels-Policies.
 
 **Nutzen:**
@@ -69,9 +53,9 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Tarife und Handelsbeschränkungen
 - Arbeitsmigration zwischen Communities
 
-### 5. Verschiedene Agentenstrategien
+### 4. Verschiedene Agentenstrategien
 
-#### 5.1 Bounded Rationality und Heuristiken
+#### 4.1 Bounded Rationality und Heuristiken
 **Beschreibung:** Agenten mit begrenzter Rationalität die einfache Heuristiken verwenden statt perfekter Optimierung (z.B. Satisficing, Recognition Heuristic).
 
 **Nutzen:**
@@ -86,7 +70,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - `AnchoringBias` (erste Preise beeinflussen spätere Einschätzungen)
 - Konfigurierbare Strategie-Verteilung in Population
 
-#### 5.2 Reinforcement Learning Agenten
+#### 4.2 Reinforcement Learning Agenten
 **Beschreibung:** Agenten die aus Erfahrung lernen und ihre Strategien dynamisch anpassen. Implementierung einfacher RL-Algorithmen wie Q-Learning oder Multi-Armed Bandits.
 
 **Nutzen:**
