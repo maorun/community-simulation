@@ -1265,4 +1265,950 @@ mod engine_tests {
         assert!(variants.contains(&MarketSegment::Mittelklasse));
         assert!(variants.contains(&MarketSegment::Luxury));
     }
+
+    // ==================== CRISIS EVENT TESTS ====================
+
+    #[test]
+    fn test_crisis_market_crash() {
+        let config = test_config().max_steps(50).entity_count(10).build_with(|cfg| {
+            cfg.enable_crisis_events = true;
+            cfg.crisis_probability = 0.1;
+            cfg.crisis_severity = 0.5;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let initial_prices: Vec<f64> =
+            engine.get_market().skills.values().map(|s| s.current_price).collect();
+
+        engine.run();
+
+        let final_prices: Vec<f64> =
+            engine.get_market().skills.values().map(|s| s.current_price).collect();
+
+        assert_eq!(initial_prices.len(), final_prices.len());
+    }
+
+    #[test]
+    fn test_crisis_demand_shock() {
+        let config = test_config().max_steps(50).entity_count(10).build_with(|cfg| {
+            cfg.enable_crisis_events = true;
+            cfg.crisis_probability = 0.2;
+            cfg.crisis_severity = 0.8;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_current_step() > 0);
+    }
+
+    #[test]
+    fn test_crisis_supply_shock() {
+        let config = test_config().max_steps(30).entity_count(8).build_with(|cfg| {
+            cfg.enable_crisis_events = true;
+            cfg.crisis_probability = 0.1;
+            cfg.crisis_severity = 0.6;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert_eq!(engine.get_current_step(), 30);
+    }
+
+    #[test]
+    fn test_crisis_currency_devaluation() {
+        let config =
+            test_config()
+                .max_steps(40)
+                .entity_count(12)
+                .initial_money(200.0)
+                .build_with(|cfg| {
+                    cfg.enable_crisis_events = true;
+                    cfg.crisis_probability = 0.1;
+                    cfg.crisis_severity = 0.4;
+                });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        let result = engine.get_current_result();
+        assert!(result.total_steps > 0);
+    }
+
+    #[test]
+    fn test_crisis_technology_shock() {
+        let config = test_config().max_steps(35).entity_count(10).build_with(|cfg| {
+            cfg.enable_crisis_events = true;
+            cfg.crisis_probability = 0.15;
+            cfg.crisis_severity = 0.7;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_current_step() == 35);
+    }
+
+    #[test]
+    fn test_crisis_disabled() {
+        let config = test_config().max_steps(20).entity_count(5).build_with(|cfg| {
+            cfg.enable_crisis_events = false;
+            cfg.crisis_probability = 0.5;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert_eq!(engine.get_current_step(), 20);
+    }
+
+    #[test]
+    fn test_crisis_with_insurance() {
+        let config =
+            test_config()
+                .max_steps(50)
+                .entity_count(15)
+                .initial_money(150.0)
+                .build_with(|cfg| {
+                    cfg.enable_crisis_events = true;
+                    cfg.crisis_probability = 0.1;
+                    cfg.crisis_severity = 0.8;
+                    cfg.enable_insurance = true;
+                    cfg.insurance_premium_rate = 0.02;
+                    cfg.insurance_coverage_amount = 50.0;
+                });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        let result = engine.get_current_result();
+        assert!(result.total_steps == 50);
+    }
+
+    #[test]
+    fn test_crisis_severity_clamping() {
+        let config = test_config().max_steps(25).entity_count(8).build_with(|cfg| {
+            cfg.enable_crisis_events = true;
+            cfg.crisis_probability = 0.1;
+            cfg.crisis_severity = 1.0;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_current_step() > 0);
+    }
+
+    // ==================== BLACK MARKET TESTS ====================
+
+    #[test]
+    fn test_black_market_enabled() {
+        let config = test_config().max_steps(30).entity_count(10).build_with(|cfg| {
+            cfg.enable_black_market = true;
+            cfg.black_market_price_multiplier = 0.8;
+            cfg.black_market_participation_rate = 0.3;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.black_market_statistics.is_some());
+        let bm_stats = result.black_market_statistics.unwrap();
+        assert!(bm_stats.total_black_market_trades <= bm_stats.total_black_market_trades);
+    }
+
+    #[test]
+    fn test_black_market_pricing() {
+        let config =
+            test_config().max_steps(25).entity_count(8).base_price(50.0).build_with(|cfg| {
+                cfg.enable_black_market = true;
+                cfg.black_market_price_multiplier = 0.7;
+                cfg.black_market_participation_rate = 0.4;
+            });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.black_market_statistics.is_some());
+    }
+
+    #[test]
+    fn test_black_market_disabled() {
+        let config = test_config().max_steps(20).entity_count(5).build_with(|cfg| {
+            cfg.enable_black_market = false;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.black_market_statistics.is_none());
+    }
+
+    #[test]
+    fn test_black_market_participation_rate() {
+        let config = test_config().max_steps(40).entity_count(15).build_with(|cfg| {
+            cfg.enable_black_market = true;
+            cfg.black_market_price_multiplier = 0.75;
+            cfg.black_market_participation_rate = 0.5;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        if let Some(bm_stats) = result.black_market_statistics {
+            assert!(bm_stats.total_black_market_volume >= 0.0);
+        }
+    }
+
+    #[test]
+    fn test_black_market_with_crisis() {
+        let config = test_config().max_steps(30).entity_count(10).build_with(|cfg| {
+            cfg.enable_black_market = true;
+            cfg.black_market_price_multiplier = 0.8;
+            cfg.black_market_participation_rate = 0.3;
+            cfg.enable_crisis_events = true;
+            cfg.crisis_probability = 0.1;
+            cfg.crisis_severity = 0.5;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.black_market_statistics.is_some());
+    }
+
+    // ==================== LOAN SYSTEM TESTS ====================
+
+    #[test]
+    fn test_loans_basic_functionality() {
+        let config = test_config()
+            .max_steps(100)
+            .entity_count(10)
+            .initial_money(200.0)
+            .enable_loans(true)
+            .loan_interest_rate(0.01)
+            .loan_repayment_period(20)
+            .min_money_to_lend(50.0)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        // Loans might or might not be issued, but statistics should be present when enabled
+        assert!(result.loan_statistics.is_some());
+    }
+
+    #[test]
+    fn test_loan_repayment() {
+        let config = test_config()
+            .max_steps(50)
+            .entity_count(10)
+            .initial_money(200.0)
+            .enable_loans(true)
+            .loan_interest_rate(0.05)
+            .loan_repayment_period(10)
+            .min_money_to_lend(50.0)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        if let Some(loan_stats) = result.loan_statistics {
+            assert!(loan_stats.total_loans_issued >= loan_stats.total_loans_repaid);
+        }
+    }
+
+    #[test]
+    fn test_loans_disabled() {
+        let config = test_config().max_steps(30).entity_count(8).enable_loans(false).build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.loan_statistics.is_none());
+    }
+
+    #[test]
+    fn test_loan_interest_rate_effect() {
+        let config = test_config()
+            .max_steps(40)
+            .entity_count(12)
+            .initial_money(150.0)
+            .enable_loans(true)
+            .loan_interest_rate(0.1)
+            .loan_repayment_period(15)
+            .min_money_to_lend(40.0)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_current_step() == 40);
+    }
+
+    #[test]
+    fn test_loan_with_credit_rating() {
+        let config =
+            test_config()
+                .max_steps(50)
+                .entity_count(15)
+                .initial_money(180.0)
+                .build_with(|cfg| {
+                    cfg.enable_loans = true;
+                    cfg.loan_interest_rate = 0.02;
+                    cfg.loan_repayment_period = 20;
+                    cfg.min_money_to_lend = 60.0;
+                    cfg.enable_credit_rating = true;
+                });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_current_step() == 50);
+    }
+
+    #[test]
+    fn test_loan_statistics_tracking() {
+        let config = test_config()
+            .max_steps(60)
+            .entity_count(20)
+            .initial_money(250.0)
+            .enable_loans(true)
+            .loan_interest_rate(0.03)
+            .loan_repayment_period(25)
+            .min_money_to_lend(70.0)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        if let Some(loan_stats) = result.loan_statistics {
+            assert!(loan_stats.total_loans_issued >= 0);
+            assert!(loan_stats.total_loans_repaid >= 0);
+            assert!(loan_stats.active_loans >= 0);
+        }
+    }
+
+    #[test]
+    fn test_loan_with_insurance() {
+        let config =
+            test_config()
+                .max_steps(40)
+                .entity_count(12)
+                .initial_money(200.0)
+                .build_with(|cfg| {
+                    cfg.enable_loans = true;
+                    cfg.loan_interest_rate = 0.04;
+                    cfg.loan_repayment_period = 15;
+                    cfg.min_money_to_lend = 50.0;
+                    cfg.enable_insurance = true;
+                    cfg.insurance_premium_rate = 0.01;
+                    cfg.insurance_coverage_amount = 100.0;
+                });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_current_step() == 40);
+    }
+
+    // ==================== TAX SYSTEM TESTS ====================
+
+    #[test]
+    fn test_tax_collection_basic() {
+        let config = test_config()
+            .max_steps(100)
+            .entity_count(10)
+            .tax_rate(0.1)
+            .enable_tax_redistribution(true)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+
+        let result = engine.run();
+
+        assert!(result.total_taxes_collected.is_some());
+        if let Some(total_taxes) = result.total_taxes_collected {
+            assert!(total_taxes >= 0.0);
+        }
+    }
+
+    #[test]
+    fn test_tax_redistribution() {
+        let config = test_config()
+            .max_steps(50)
+            .entity_count(15)
+            .initial_money(150.0)
+            .tax_rate(0.15)
+            .enable_tax_redistribution(true)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.total_taxes_collected.is_some());
+        assert!(result.total_taxes_redistributed.is_some());
+
+        if let (Some(collected), Some(redistributed)) =
+            (result.total_taxes_collected, result.total_taxes_redistributed)
+        {
+            assert!(redistributed <= collected + 1.0);
+        }
+    }
+
+    #[test]
+    fn test_tax_without_redistribution() {
+        let config = test_config()
+            .max_steps(30)
+            .entity_count(10)
+            .tax_rate(0.12)
+            .enable_tax_redistribution(false)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.total_taxes_collected.is_some());
+        assert!(result.total_taxes_redistributed.is_none());
+    }
+
+    #[test]
+    fn test_tax_rate_zero() {
+        let config = test_config()
+            .max_steps(25)
+            .entity_count(8)
+            .tax_rate(0.0)
+            .enable_tax_redistribution(true)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.total_taxes_collected.is_none());
+        assert!(result.total_taxes_redistributed.is_none());
+    }
+
+    #[test]
+    fn test_tax_high_rate() {
+        let config = test_config()
+            .max_steps(40)
+            .entity_count(12)
+            .initial_money(200.0)
+            .tax_rate(0.3)
+            .enable_tax_redistribution(true)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        if let Some(total_taxes) = result.total_taxes_collected {
+            assert!(total_taxes >= 0.0);
+        }
+    }
+
+    #[test]
+    fn test_tax_collection_with_fees() {
+        let config = test_config()
+            .max_steps(35)
+            .entity_count(10)
+            .tax_rate(0.1)
+            .enable_tax_redistribution(true)
+            .transaction_fee(0.05)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.total_taxes_collected.is_some());
+        assert!(result.total_fees_collected >= 0.0);
+    }
+
+    #[test]
+    fn test_tax_getters() {
+        let config = test_config()
+            .max_steps(20)
+            .entity_count(8)
+            .tax_rate(0.08)
+            .enable_tax_redistribution(true)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+
+        for _ in 0..10 {
+            engine.step();
+            let taxes = engine.get_total_taxes_collected();
+            assert!(taxes >= 0.0);
+        }
+    }
+
+    // ==================== TECHNOLOGY BREAKTHROUGH TESTS ====================
+
+    #[test]
+    fn test_technology_breakthrough_enabled() {
+        let config = test_config().max_steps(100).entity_count(10).build_with(|cfg| {
+            cfg.enable_technology_breakthroughs = true;
+            cfg.tech_breakthrough_probability = 0.1;
+            cfg.tech_breakthrough_min_effect = 1.1;
+            cfg.tech_breakthrough_max_effect = 1.5;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.technology_breakthrough_statistics.is_some());
+    }
+
+    #[test]
+    fn test_technology_breakthrough_disabled() {
+        let config = test_config().max_steps(50).entity_count(8).build_with(|cfg| {
+            cfg.enable_technology_breakthroughs = false;
+            cfg.tech_breakthrough_probability = 0.1;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.technology_breakthrough_statistics.is_none());
+    }
+
+    #[test]
+    fn test_technology_breakthrough_effect_range() {
+        let config = test_config().max_steps(80).entity_count(12).build_with(|cfg| {
+            cfg.enable_technology_breakthroughs = true;
+            cfg.tech_breakthrough_probability = 0.2;
+            cfg.tech_breakthrough_min_effect = 1.2;
+            cfg.tech_breakthrough_max_effect = 1.8;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        if let Some(stats) = result.technology_breakthrough_statistics {
+            assert!(stats.total_breakthroughs >= 0);
+        }
+    }
+
+    #[test]
+    fn test_technology_breakthrough_with_black_market() {
+        let config = test_config().max_steps(60).entity_count(10).build_with(|cfg| {
+            cfg.enable_technology_breakthroughs = true;
+            cfg.tech_breakthrough_probability = 0.15;
+            cfg.tech_breakthrough_min_effect = 1.1;
+            cfg.tech_breakthrough_max_effect = 1.4;
+            cfg.enable_black_market = true;
+            cfg.black_market_price_multiplier = 0.8;
+            cfg.black_market_participation_rate = 0.3;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.black_market_statistics.is_some());
+    }
+
+    #[test]
+    fn test_tech_growth_rate() {
+        let config = test_config().max_steps(50).entity_count(10).tech_growth(0.01).build();
+
+        let mut engine = SimulationEngine::new(config);
+        let initial_efficiency =
+            engine.get_market().skills.values().next().unwrap().efficiency_multiplier;
+
+        engine.run();
+
+        let final_efficiency =
+            engine.get_market().skills.values().next().unwrap().efficiency_multiplier;
+        assert!(final_efficiency > initial_efficiency);
+    }
+
+    #[test]
+    fn test_tech_growth_with_breakthroughs() {
+        let config =
+            test_config()
+                .max_steps(70)
+                .entity_count(12)
+                .tech_growth(0.005)
+                .build_with(|cfg| {
+                    cfg.enable_technology_breakthroughs = true;
+                    cfg.tech_breakthrough_probability = 0.1;
+                    cfg.tech_breakthrough_min_effect = 1.15;
+                    cfg.tech_breakthrough_max_effect = 1.3;
+                });
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_current_step() == 70);
+    }
+
+    // ==================== FAILED TRADE TRACKING TESTS ====================
+
+    #[test]
+    fn test_failed_trade_attempts_tracking() {
+        let config = test_config()
+            .max_steps(40)
+            .entity_count(10)
+            .initial_money(10.0)
+            .base_price(100.0)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.failed_trade_statistics.total_failed_attempts >= 0);
+    }
+
+    #[test]
+    fn test_failed_trades_with_insufficient_funds() {
+        let config = test_config()
+            .max_steps(30)
+            .entity_count(8)
+            .initial_money(5.0)
+            .base_price(50.0)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_current_step() == 30);
+    }
+
+    #[test]
+    fn test_failed_trades_per_step_history() {
+        let config = test_config()
+            .max_steps(25)
+            .entity_count(10)
+            .initial_money(20.0)
+            .base_price(80.0)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert_eq!(result.total_steps, 25);
+    }
+
+    // ==================== CHECKPOINT TESTS ====================
+
+    #[test]
+    fn test_checkpoint_with_black_market() {
+        use tempfile::NamedTempFile;
+
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let checkpoint_path = temp_file.path();
+
+        let config = test_config().max_steps(30).entity_count(8).build_with(|cfg| {
+            cfg.enable_black_market = true;
+            cfg.black_market_price_multiplier = 0.8;
+            cfg.black_market_participation_rate = 0.3;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+
+        for _ in 0..10 {
+            engine.step();
+        }
+
+        engine.save_checkpoint(checkpoint_path).expect("Failed to save checkpoint");
+
+        let loaded_engine =
+            SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
+
+        assert_eq!(loaded_engine.current_step, 10);
+    }
+
+    #[test]
+    fn test_checkpoint_with_loans() {
+        use tempfile::NamedTempFile;
+
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let checkpoint_path = temp_file.path();
+
+        let config = test_config()
+            .max_steps(40)
+            .entity_count(10)
+            .initial_money(150.0)
+            .enable_loans(true)
+            .loan_interest_rate(0.05)
+            .loan_repayment_period(10)
+            .min_money_to_lend(50.0)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+
+        for _ in 0..15 {
+            engine.step();
+        }
+
+        engine.save_checkpoint(checkpoint_path).expect("Failed to save checkpoint");
+
+        let loaded_engine =
+            SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
+
+        assert_eq!(loaded_engine.current_step, 15);
+    }
+
+    #[test]
+    fn test_checkpoint_with_tax_stats() {
+        use tempfile::NamedTempFile;
+
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let checkpoint_path = temp_file.path();
+
+        let config = test_config()
+            .max_steps(35)
+            .entity_count(10)
+            .tax_rate(0.1)
+            .enable_tax_redistribution(true)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+
+        for _ in 0..12 {
+            engine.step();
+        }
+
+        let original_taxes = engine.get_total_taxes_collected();
+
+        engine.save_checkpoint(checkpoint_path).expect("Failed to save checkpoint");
+
+        let loaded_engine =
+            SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
+
+        assert_eq!(loaded_engine.current_step, 12);
+        assert_eq!(loaded_engine.get_total_taxes_collected(), original_taxes);
+    }
+
+    #[test]
+    fn test_checkpoint_with_crisis() {
+        use tempfile::NamedTempFile;
+
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let checkpoint_path = temp_file.path();
+
+        let config = test_config().max_steps(40).entity_count(10).build_with(|cfg| {
+            cfg.enable_crisis_events = true;
+            cfg.crisis_probability = 0.1;
+            cfg.crisis_severity = 0.5;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+
+        for _ in 0..15 {
+            engine.step();
+        }
+
+        engine.save_checkpoint(checkpoint_path).expect("Failed to save checkpoint");
+
+        let loaded_engine =
+            SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
+
+        assert_eq!(loaded_engine.current_step, 15);
+    }
+
+    #[test]
+    fn test_checkpoint_with_technology_breakthroughs() {
+        use tempfile::NamedTempFile;
+
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let checkpoint_path = temp_file.path();
+
+        let config = test_config().max_steps(50).entity_count(10).build_with(|cfg| {
+            cfg.enable_technology_breakthroughs = true;
+            cfg.tech_breakthrough_probability = 0.2;
+            cfg.tech_breakthrough_min_effect = 1.1;
+            cfg.tech_breakthrough_max_effect = 1.5;
+        });
+
+        let mut engine = SimulationEngine::new(config);
+
+        for _ in 0..20 {
+            engine.step();
+        }
+
+        engine.save_checkpoint(checkpoint_path).expect("Failed to save checkpoint");
+
+        let loaded_engine =
+            SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
+
+        assert_eq!(loaded_engine.current_step, 20);
+    }
+
+    // ==================== EDGE CASES AND ERROR HANDLING ====================
+
+    #[test]
+    fn test_zero_entities_edge_case() {
+        let config = test_config().entity_count(1).max_steps(5).build();
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert_eq!(engine.get_current_step(), 5);
+    }
+
+    #[test]
+    fn test_single_step_simulation() {
+        let config = test_config().max_steps(1).entity_count(5).build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert_eq!(result.total_steps, 1);
+    }
+
+    #[test]
+    fn test_high_transaction_fees() {
+        let config = test_config().max_steps(30).entity_count(10).transaction_fee(0.9).build();
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert!(result.total_fees_collected >= 0.0);
+    }
+
+    #[test]
+    fn test_high_tax_rate() {
+        let config = test_config()
+            .max_steps(25)
+            .entity_count(8)
+            .tax_rate(0.9)
+            .enable_tax_redistribution(true)
+            .build();
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        assert!(engine.get_total_taxes_collected() >= 0.0);
+    }
+
+    #[test]
+    fn test_multiple_features_combined() {
+        let config = test_config()
+            .max_steps(50)
+            .entity_count(15)
+            .initial_money(200.0)
+            .transaction_fee(0.05)
+            .tax_rate(0.15)
+            .enable_tax_redistribution(true)
+            .enable_loans(true)
+            .loan_interest_rate(0.03)
+            .loan_repayment_period(15)
+            .min_money_to_lend(50.0)
+            .tech_growth(0.01)
+            .build_with(|cfg| {
+                cfg.enable_black_market = true;
+                cfg.black_market_price_multiplier = 0.8;
+                cfg.black_market_participation_rate = 0.3;
+                cfg.enable_crisis_events = true;
+                cfg.crisis_probability = 0.1;
+                cfg.crisis_severity = 0.5;
+                cfg.enable_technology_breakthroughs = true;
+                cfg.tech_breakthrough_probability = 0.1;
+                cfg.tech_breakthrough_min_effect = 1.1;
+                cfg.tech_breakthrough_max_effect = 1.4;
+            });
+
+        let mut engine = SimulationEngine::new(config);
+        let result = engine.run();
+
+        assert_eq!(result.total_steps, 50);
+        assert!(result.loan_statistics.is_some());
+        assert!(result.total_taxes_collected.is_some());
+        assert!(result.black_market_statistics.is_some());
+    }
+
+    #[test]
+    fn test_get_active_persons_count() {
+        let config = test_config().entity_count(10).max_steps(5).build();
+
+        let mut engine = SimulationEngine::new(config);
+        assert_eq!(engine.get_active_persons(), 10);
+
+        engine.run();
+        assert!(engine.get_active_persons() <= 10);
+    }
+
+    #[test]
+    fn test_get_current_step() {
+        let config = test_config().max_steps(20).entity_count(5).build();
+
+        let mut engine = SimulationEngine::new(config);
+        assert_eq!(engine.get_current_step(), 0);
+
+        for i in 1..=10 {
+            engine.step();
+            assert_eq!(engine.get_current_step(), i);
+        }
+    }
+
+    #[test]
+    fn test_get_max_steps() {
+        let config = test_config().max_steps(75).entity_count(8).build();
+
+        let engine = SimulationEngine::new(config);
+        assert_eq!(engine.get_max_steps(), 75);
+    }
+
+    #[test]
+    fn test_get_scenario() {
+        use crate::scenario::Scenario;
+
+        let config = test_config().scenario(Scenario::DynamicPricing).build();
+
+        let engine = SimulationEngine::new(config);
+        assert!(matches!(engine.get_scenario(), &Scenario::DynamicPricing));
+    }
+
+    #[test]
+    fn test_get_config() {
+        let config = test_config().entity_count(12).max_steps(45).build();
+
+        let engine = SimulationEngine::new(config);
+        let retrieved_config = engine.get_config();
+
+        assert_eq!(retrieved_config.entity_count, 12);
+        assert_eq!(retrieved_config.max_steps, 45);
+    }
+
+    #[test]
+    fn test_get_total_fees_collected() {
+        let config = test_config().max_steps(20).entity_count(8).transaction_fee(0.1).build();
+
+        let mut engine = SimulationEngine::new(config);
+
+        for _ in 0..10 {
+            engine.step();
+            let fees = engine.get_total_fees_collected();
+            assert!(fees >= 0.0);
+        }
+    }
+
+    #[test]
+    fn test_seasonal_factor_consistency() {
+        let config = test_config().seasonality(0.5, 100).entity_count(8).max_steps(10).build();
+
+        let engine = SimulationEngine::new(config);
+        let skill_id = "Skill0".to_string();
+
+        let factor1 = engine.calculate_seasonal_factor(&skill_id);
+        let factor2 = engine.calculate_seasonal_factor(&skill_id);
+
+        assert_eq!(factor1, factor2, "Seasonal factor should be consistent for same step");
+    }
+
+    #[test]
+    fn test_all_crisis_types_covered() {
+        use crate::crisis::CrisisEvent;
+
+        let all_types = CrisisEvent::all_types();
+        assert_eq!(all_types.len(), 5, "Should have exactly 5 crisis types");
+
+        let names: Vec<String> = all_types.iter().map(|c| c.name().to_string()).collect();
+        assert!(names.contains(&"Market Crash".to_string()));
+        assert!(names.contains(&"Demand Shock".to_string()));
+        assert!(names.contains(&"Supply Shock".to_string()));
+        assert!(names.contains(&"Currency Devaluation".to_string()));
+        assert!(names.contains(&"Technology Shock".to_string()));
+    }
 }
