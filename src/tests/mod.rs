@@ -1,5 +1,6 @@
 mod comprehensive_scenario_tests;
 mod coverage_boost_tests;
+mod coverage_push_tests;
 mod proptest_tests;
 mod scenario_integration_tests;
 pub mod test_helpers;
