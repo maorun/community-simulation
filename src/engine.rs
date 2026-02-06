@@ -2771,7 +2771,13 @@ impl SimulationEngine {
         // Note: Entities never become inactive during simulation, so no cache invalidation needed
         let skill_providers = &self.skill_providers;
 
-        let mut trades_to_execute: Vec<(usize, usize, SkillId, f64)> = Vec::new();
+        // Performance optimization: Pre-allocate trades_to_execute with capacity based on entity count.
+        // Typical simulations have ~0.5-1.0 successful trades per entity per step.
+        // Since entities never become inactive (as noted in the skill_providers comment above),
+        // we use entities.len() directly without filtering, avoiding the O(n) filter operation.
+        // Starting with capacity = entity_count avoids most reallocations while not over-allocating.
+        let mut trades_to_execute: Vec<(usize, usize, SkillId, f64)> =
+            Vec::with_capacity(self.entities.len());
         let mut failed_attempts_this_step = 0usize;
 
         for buyer_idx in 0..self.entities.len() {
@@ -2781,10 +2787,11 @@ impl SimulationEngine {
 
             // Calculate priority scores for all needed skills
             let buyer_money = self.entities[buyer_idx].person_data.money;
-            // Performance optimization: Pre-allocate with capacity for typical number of needs (1-5)
-            // to avoid reallocation during push operations. Max needs is clamped to 5 when applying
-            // seasonal modulation (search for `.clamp(1, 5)` in the needs generation logic above).
-            let mut purchase_options: Vec<PurchaseOption> = Vec::with_capacity(5);
+            // Performance optimization: Pre-allocate with exact capacity based on needed_skills length
+            // to avoid reallocation. Max needs is clamped to 5 during generation, but actual count
+            // may be lower. Using exact capacity eliminates unnecessary allocations.
+            let needed_count = self.entities[buyer_idx].person_data.needed_skills.len();
+            let mut purchase_options: Vec<PurchaseOption> = Vec::with_capacity(needed_count);
 
             for (needed_item_index, needed_item) in
                 self.entities[buyer_idx].person_data.needed_skills.iter().enumerate()
