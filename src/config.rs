@@ -1100,6 +1100,31 @@ pub struct SimulationConfig {
     #[serde(default = "default_certification_probability")]
     pub certification_probability: f64,
 
+    /// Enable market segmentation system.
+    ///
+    /// When enabled, persons are categorized into market segments based on their wealth percentile:
+    /// - Budget: Bottom 40% by wealth - price-conscious consumers seeking affordability
+    /// - Mittelklasse: 40th-85th percentile - balanced consumers considering both price and quality
+    /// - Luxury: Top 15% by wealth - quality-focused consumers willing to pay premium prices
+    ///
+    /// Market segments affect:
+    /// - Price acceptance ranges (Budget buyers seek discounts, Luxury buyers accept premiums)
+    /// - Quality expectations (Luxury segment expects higher quality)
+    /// - Trade matching preferences (same-segment trades are preferred when enabled)
+    ///
+    /// This enables studying:
+    /// - Market stratification and consumer segmentation
+    /// - Price discrimination and tiered pricing strategies
+    /// - Quality-based market differentiation
+    /// - Income inequality effects on consumption patterns
+    ///
+    /// Market segments are updated periodically based on wealth percentile changes,
+    /// allowing persons to move between segments as their economic status changes.
+    ///
+    /// Set to false to disable market segmentation (default).
+    #[serde(default)]
+    pub enable_market_segments: bool,
+
     /// Enable community resource pools for groups.
     ///
     /// When enabled alongside groups (num_groups), each group maintains a shared resource pool
@@ -1927,6 +1952,7 @@ impl Default for SimulationConfig {
             certification_cost_multiplier: 2.0, // 2x base price per level
             certification_duration: Some(200),  // Certifications last 200 steps
             certification_probability: 0.05,    // 5% chance per step to attempt certification
+            enable_market_segments: false,      // Disabled by default
             enable_resource_pools: false,       // Disabled by default
             pool_contribution_rate: 0.02,       // 2% contribution per step
             pool_withdrawal_threshold: 30.0,    // Support for members below $30

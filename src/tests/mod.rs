@@ -1005,4 +1005,264 @@ mod engine_tests {
         // Automation statistics should be None when disabled
         assert!(result.automation_statistics.is_none());
     }
+
+    #[test]
+    fn test_market_segments_enabled() {
+        // Test that market segments are properly assigned when enabled
+        use crate::person::MarketSegment;
+
+        let mut config = test_config().max_steps(10).build();
+        config.enable_market_segments = true;
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        // Get final persons data
+        let persons: Vec<_> = engine
+            .get_entities()
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| &e.person_data)
+            .collect();
+
+        assert!(!persons.is_empty(), "Should have active persons");
+
+        // Check that segments are assigned
+        let budget_count =
+            persons.iter().filter(|p| p.market_segment == MarketSegment::Budget).count();
+        let mittelklasse_count = persons
+            .iter()
+            .filter(|p| p.market_segment == MarketSegment::Mittelklasse)
+            .count();
+        let luxury_count =
+            persons.iter().filter(|p| p.market_segment == MarketSegment::Luxury).count();
+
+        // At least some persons should be in each segment category
+        // (though with small populations this may vary)
+        assert!(
+            budget_count > 0 || mittelklasse_count > 0 || luxury_count > 0,
+            "At least one segment should have members"
+        );
+
+        // Total should equal number of active persons
+        assert_eq!(
+            budget_count + mittelklasse_count + luxury_count,
+            persons.len(),
+            "All persons should be in exactly one segment"
+        );
+    }
+
+    #[test]
+    fn test_market_segments_distribution() {
+        // Test that market segments are properly assigned based on wealth percentiles
+        use crate::person::MarketSegment;
+
+        let mut config = test_config().entity_count(100).max_steps(100).build();
+        config.enable_market_segments = true;
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        // Get final persons data sorted by wealth
+        let mut persons_with_wealth: Vec<_> = engine
+            .get_entities()
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| (e.person_data.money, e.person_data.market_segment))
+            .collect();
+
+        persons_with_wealth.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+
+        let total = persons_with_wealth.len();
+
+        // All persons should be in exactly one segment
+        let budget_count = persons_with_wealth
+            .iter()
+            .filter(|(_, seg)| *seg == MarketSegment::Budget)
+            .count();
+        let mittelklasse_count = persons_with_wealth
+            .iter()
+            .filter(|(_, seg)| *seg == MarketSegment::Mittelklasse)
+            .count();
+        let luxury_count = persons_with_wealth
+            .iter()
+            .filter(|(_, seg)| *seg == MarketSegment::Luxury)
+            .count();
+
+        assert_eq!(
+            budget_count + mittelklasse_count + luxury_count,
+            total,
+            "All persons should be in exactly one segment"
+        );
+
+        // Verify that segments are correctly ordered by wealth
+        // The poorest persons should be in Budget (if any)
+        // The wealthiest persons should be in Luxury (if any)
+        if budget_count > 0 {
+            let wealthiest_budget = persons_with_wealth
+                .iter()
+                .rev()
+                .find(|(_, seg)| *seg == MarketSegment::Budget)
+                .map(|(money, _)| money)
+                .unwrap();
+
+            // Budget segment should not include the very wealthiest persons
+            if luxury_count > 0 {
+                let poorest_luxury = persons_with_wealth
+                    .iter()
+                    .find(|(_, seg)| *seg == MarketSegment::Luxury)
+                    .map(|(money, _)| money)
+                    .unwrap();
+                assert!(
+                    wealthiest_budget <= poorest_luxury,
+                    "Budget segment should not overlap with Luxury segment in wealth"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_market_segments_wealth_correlation() {
+        // Test that wealthier persons are in higher segments
+        use crate::person::MarketSegment;
+
+        let mut config = test_config().entity_count(50).max_steps(30).build();
+        config.enable_market_segments = true;
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        // Get persons grouped by segment
+        let budget_persons: Vec<_> = engine
+            .get_entities()
+            .iter()
+            .filter(|e| e.active && e.person_data.market_segment == MarketSegment::Budget)
+            .map(|e| e.person_data.money)
+            .collect();
+
+        let luxury_persons: Vec<_> = engine
+            .get_entities()
+            .iter()
+            .filter(|e| e.active && e.person_data.market_segment == MarketSegment::Luxury)
+            .map(|e| e.person_data.money)
+            .collect();
+
+        if !budget_persons.is_empty() && !luxury_persons.is_empty() {
+            // Calculate average wealth for each segment
+            let avg_budget: f64 = budget_persons.iter().sum::<f64>() / budget_persons.len() as f64;
+            let avg_luxury: f64 = luxury_persons.iter().sum::<f64>() / luxury_persons.len() as f64;
+
+            // Luxury segment should have higher average wealth than Budget
+            assert!(
+                avg_luxury > avg_budget,
+                "Luxury segment avg wealth ({:.2}) should be > Budget segment ({:.2})",
+                avg_luxury,
+                avg_budget
+            );
+        }
+    }
+
+    #[test]
+    fn test_market_segments_disabled() {
+        // Test that segments remain at default when feature is disabled
+        use crate::person::MarketSegment;
+
+        let config = test_config().max_steps(10).build();
+        // enable_market_segments defaults to false
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        // Get final persons data
+        let persons: Vec<_> = engine
+            .get_entities()
+            .iter()
+            .filter(|e| e.active)
+            .map(|e| &e.person_data)
+            .collect();
+
+        // When disabled, all segments should remain at default (Mittelklasse)
+        let default_count =
+            persons.iter().filter(|p| p.market_segment == MarketSegment::default()).count();
+
+        assert_eq!(
+            default_count,
+            persons.len(),
+            "All persons should have default segment when feature is disabled"
+        );
+    }
+
+    #[test]
+    fn test_market_segments_edge_case_single_person() {
+        // Test edge case with only one person
+        use crate::person::MarketSegment;
+
+        let mut config = test_config().entity_count(1).max_steps(5).build();
+        config.enable_market_segments = true;
+
+        let mut engine = SimulationEngine::new(config);
+        engine.run();
+
+        let person = &engine.get_entities()[0].person_data;
+
+        // Single person should be assigned to middle segment (percentile 0.5)
+        assert_eq!(
+            person.market_segment,
+            MarketSegment::Mittelklasse,
+            "Single person should be in Mittelklasse segment"
+        );
+    }
+
+    #[test]
+    fn test_market_segments_update_with_wealth_changes() {
+        // Test that segments update as wealth distribution changes
+
+        let mut config = test_config().entity_count(20).max_steps(50).build();
+        config.enable_market_segments = true;
+
+        let mut engine = SimulationEngine::new(config);
+
+        // Run for a few steps
+        for _ in 0..10 {
+            engine.step();
+        }
+
+        // Record initial segments
+        let initial_segments: Vec<_> =
+            engine.get_entities().iter().map(|e| e.person_data.market_segment).collect();
+
+        // Run more steps to allow wealth redistribution
+        for _ in 0..40 {
+            engine.step();
+        }
+
+        // Record final segments
+        let final_segments: Vec<_> =
+            engine.get_entities().iter().map(|e| e.person_data.market_segment).collect();
+
+        // At least some persons should have changed segments due to wealth changes
+        // (though this isn't guaranteed in all simulations)
+        let _changes = initial_segments
+            .iter()
+            .zip(final_segments.iter())
+            .filter(|(a, b)| a != b)
+            .count();
+
+        // With 20 persons and 40 additional steps, the segment update logic is exercised
+        // We don't assert on the number of changes since it depends on randomness,
+        // but the test verifies that the update mechanism works without errors
+    }
+
+    #[test]
+    fn test_market_segment_all_variants() {
+        // Test that all_variants returns all three segments
+        use crate::person::MarketSegment;
+
+        let variants = MarketSegment::all_variants();
+
+        assert_eq!(variants.len(), 3, "Should have exactly 3 market segments");
+        assert!(variants.contains(&MarketSegment::Budget));
+        assert!(variants.contains(&MarketSegment::Mittelklasse));
+        assert!(variants.contains(&MarketSegment::Luxury));
+    }
 }

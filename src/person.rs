@@ -55,6 +55,105 @@ impl Location {
     }
 }
 
+/// Represents the market segment a person belongs to based on their purchasing power.
+///
+/// Market segments categorize consumers by their price-quality preferences:
+/// - **Budget**: Cost-conscious consumers, prioritize low prices (bottom 40% by wealth)
+/// - **Mittelklasse**: Middle-market consumers, balance price and quality (40th-85th percentile)
+/// - **Luxury**: Premium consumers, prioritize high quality (top 15% by wealth)
+///
+/// Market segmentation affects trade matching by creating preference for trading within
+/// the same segment and influencing price/quality expectations.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord, Hash, Default,
+)]
+pub enum MarketSegment {
+    /// Bottom 40% by wealth - prioritize affordability and low prices
+    Budget,
+    /// 40th-85th percentile - balance between price and quality
+    #[default]
+    Mittelklasse,
+    /// Top 15% by wealth - prioritize quality and willing to pay premium prices
+    Luxury,
+}
+
+impl MarketSegment {
+    /// Determines market segment based on wealth percentile.
+    ///
+    /// # Arguments
+    /// * `percentile` - Wealth percentile (0.0 to 1.0, where 1.0 = 100th percentile)
+    ///
+    /// # Returns
+    /// The corresponding market segment
+    ///
+    /// # Examples
+    /// ```
+    /// use simulation_framework::person::MarketSegment;
+    ///
+    /// assert_eq!(MarketSegment::from_percentile(0.20), MarketSegment::Budget);
+    /// assert_eq!(MarketSegment::from_percentile(0.60), MarketSegment::Mittelklasse);
+    /// assert_eq!(MarketSegment::from_percentile(0.90), MarketSegment::Luxury);
+    /// ```
+    pub fn from_percentile(percentile: f64) -> Self {
+        if percentile >= 0.85 {
+            MarketSegment::Luxury
+        } else if percentile >= 0.40 {
+            MarketSegment::Mittelklasse
+        } else {
+            MarketSegment::Budget
+        }
+    }
+
+    /// Returns the quality expectation for this market segment (0.0-5.0 scale).
+    ///
+    /// Luxury consumers expect higher quality, while Budget consumers are more flexible.
+    ///
+    /// # Returns
+    /// * `Budget`: 2.0 (accepts lower quality for better prices)
+    /// * `Mittelklasse`: 3.0 (balanced quality expectations)
+    /// * `Luxury`: 4.5 (demands premium quality)
+    pub fn quality_expectation(&self) -> f64 {
+        match self {
+            MarketSegment::Budget => 2.0,
+            MarketSegment::Mittelklasse => 3.0,
+            MarketSegment::Luxury => 4.5,
+        }
+    }
+
+    /// Returns the price acceptance range multiplier for this market segment.
+    ///
+    /// Determines how willing this segment is to pay above/below market price.
+    /// Returns (min_multiplier, max_multiplier) tuple.
+    ///
+    /// # Returns
+    /// * `Budget`: (0.5, 0.9) - seeks discounts, avoids full market price
+    /// * `Mittelklasse`: (0.8, 1.2) - flexible within 20% of market price
+    /// * `Luxury`: (1.0, 2.0) - willing to pay premium for quality
+    pub fn price_acceptance_range(&self) -> (f64, f64) {
+        match self {
+            MarketSegment::Budget => (0.5, 0.9),
+            MarketSegment::Mittelklasse => (0.8, 1.2),
+            MarketSegment::Luxury => (1.0, 2.0),
+        }
+    }
+
+    /// Returns all market segment variants.
+    pub fn all_variants() -> [MarketSegment; 3] {
+        [MarketSegment::Budget, MarketSegment::Mittelklasse, MarketSegment::Luxury]
+    }
+
+    /// Returns a descriptive string for this market segment.
+    pub fn description(&self) -> &str {
+        match self {
+            MarketSegment::Budget => "Budget segment (below 40th percentile, price-conscious)",
+            MarketSegment::Mittelklasse => "Middle-market segment (40th-85th percentile)",
+            MarketSegment::Luxury => {
+                "Luxury segment (at or above 85th percentile, quality-focused)"
+            },
+        }
+    }
+}
+
 /// Represents the social class of a person based on their wealth relative to others.
 ///
 /// Social classes are determined by wealth percentiles within the population:
@@ -482,6 +581,12 @@ pub struct Person {
     /// Total asset value is included in wealth calculations.
     /// Only populated when asset system is enabled.
     pub owned_assets: Vec<AssetId>,
+    /// Market segment based on wealth percentile and purchasing power.
+    /// Determines price-quality preferences and trade matching patterns.
+    /// Budget segment prioritizes low prices, Luxury segment prioritizes quality,
+    /// Mittelklasse balances both. Updated periodically based on wealth changes.
+    /// Only meaningful when market segmentation is enabled.
+    pub market_segment: MarketSegment,
 }
 
 impl Person {
@@ -528,6 +633,7 @@ impl Person {
             social_class: SocialClass::default(), // Start with middle class (will be updated based on wealth)
             class_history: Vec::new(),            // Start with no class history
             owned_assets: Vec::new(),             // Start with no assets
+            market_segment: MarketSegment::default(), // Start with Mittelklasse segment (will be updated based on wealth)
         }
     }
 
@@ -936,6 +1042,81 @@ mod tests {
 
         let change2 = ClassChange::new(100, SocialClass::Elite, SocialClass::Lower);
         assert!(change2.is_downward());
+    }
+
+    #[test]
+    fn test_market_segment_from_percentile_budget() {
+        // Test Budget segment (bottom 40%)
+        assert_eq!(MarketSegment::from_percentile(0.0), MarketSegment::Budget);
+        assert_eq!(MarketSegment::from_percentile(0.20), MarketSegment::Budget);
+        assert_eq!(MarketSegment::from_percentile(0.39), MarketSegment::Budget);
+    }
+
+    #[test]
+    fn test_market_segment_from_percentile_mittelklasse() {
+        // Test Mittelklasse segment (40th-85th percentile)
+        assert_eq!(MarketSegment::from_percentile(0.40), MarketSegment::Mittelklasse);
+        assert_eq!(MarketSegment::from_percentile(0.60), MarketSegment::Mittelklasse);
+        assert_eq!(MarketSegment::from_percentile(0.84), MarketSegment::Mittelklasse);
+    }
+
+    #[test]
+    fn test_market_segment_from_percentile_luxury() {
+        // Test Luxury segment (top 15%)
+        assert_eq!(MarketSegment::from_percentile(0.85), MarketSegment::Luxury);
+        assert_eq!(MarketSegment::from_percentile(0.90), MarketSegment::Luxury);
+        assert_eq!(MarketSegment::from_percentile(1.0), MarketSegment::Luxury);
+    }
+
+    #[test]
+    fn test_market_segment_quality_expectations() {
+        assert_eq!(MarketSegment::Budget.quality_expectation(), 2.0);
+        assert_eq!(MarketSegment::Mittelklasse.quality_expectation(), 3.0);
+        assert_eq!(MarketSegment::Luxury.quality_expectation(), 4.5);
+    }
+
+    #[test]
+    fn test_market_segment_price_acceptance_ranges() {
+        // Budget segment: tight range, discounts only
+        let (min, max) = MarketSegment::Budget.price_acceptance_range();
+        assert_eq!(min, 0.5);
+        assert_eq!(max, 0.9);
+
+        // Mittelklasse segment: moderate flexibility
+        let (min, max) = MarketSegment::Mittelklasse.price_acceptance_range();
+        assert_eq!(min, 0.8);
+        assert_eq!(max, 1.2);
+
+        // Luxury segment: willing to pay premiums
+        let (min, max) = MarketSegment::Luxury.price_acceptance_range();
+        assert_eq!(min, 1.0);
+        assert_eq!(max, 2.0);
+    }
+
+    #[test]
+    fn test_market_segment_ordering() {
+        // Verify that the derived Ord implementation produces the expected ordering
+        assert!(MarketSegment::Budget < MarketSegment::Mittelklasse);
+        assert!(MarketSegment::Mittelklasse < MarketSegment::Luxury);
+        assert!(MarketSegment::Budget < MarketSegment::Luxury);
+    }
+
+    #[test]
+    fn test_market_segment_descriptions() {
+        assert!(MarketSegment::Budget.description().contains("below 40th"));
+        assert!(MarketSegment::Mittelklasse.description().contains("40th-85th"));
+        assert!(MarketSegment::Luxury.description().contains("at or above 85th"));
+    }
+
+    #[test]
+    fn test_person_market_segment_initialization() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        assert_eq!(
+            person.market_segment,
+            MarketSegment::default(),
+            "Market segment should start as default (Mittelklasse)"
+        );
     }
 
     #[test]

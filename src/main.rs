@@ -476,6 +476,12 @@ struct RunArgs {
     #[arg(long)]
     certification_probability: Option<f64>,
 
+    /// Enable market segmentation system
+    /// Persons are categorized into Budget (bottom 40%), Mittelklasse (40-85%), or Luxury (top 15%)
+    /// based on wealth percentiles. Segments affect price acceptance ranges and quality expectations.
+    #[arg(long, default_value_t = false)]
+    enable_market_segments: bool,
+
     /// Enable community resource pools for groups (requires --num-groups)
     /// Groups maintain shared pools where members contribute money each step
     /// Pools provide collective support and mutual aid to members in need
@@ -1250,6 +1256,7 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             certification_probability: args
                 .certification_probability
                 .unwrap_or(SimulationConfig::default().certification_probability),
+            enable_market_segments: args.enable_market_segments,
             enable_resource_pools: args.enable_resource_pools,
             pool_contribution_rate: args
                 .pool_contribution_rate
