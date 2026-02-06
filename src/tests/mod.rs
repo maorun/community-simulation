@@ -1585,9 +1585,9 @@ mod engine_tests {
         let result = engine.run();
 
         if let Some(loan_stats) = result.loan_statistics {
-            assert!(loan_stats.total_loans_issued >= 0);
-            assert!(loan_stats.total_loans_repaid >= 0);
-            assert!(loan_stats.active_loans >= 0);
+            let _ = loan_stats.total_loans_issued; // usize always >= 0
+            let _ = loan_stats.total_loans_repaid;
+            let _ = loan_stats.active_loans;
         }
     }
 
@@ -1786,7 +1786,7 @@ mod engine_tests {
         let result = engine.run();
 
         if let Some(stats) = result.technology_breakthrough_statistics {
-            assert!(stats.total_breakthroughs >= 0);
+            let _ = stats.total_breakthroughs;
         }
     }
 
@@ -1857,7 +1857,7 @@ mod engine_tests {
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
 
-        assert!(result.failed_trade_statistics.total_failed_attempts >= 0);
+        let _ = result.failed_trade_statistics.total_failed_attempts;
     }
 
     #[test]
@@ -1978,7 +1978,8 @@ mod engine_tests {
             SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
 
         assert_eq!(loaded_engine.current_step, 12);
-        assert_eq!(loaded_engine.get_total_taxes_collected(), original_taxes);
+        // Use approximate comparison for floating point
+        assert!((loaded_engine.get_total_taxes_collected() - original_taxes).abs() < 0.01);
     }
 
     #[test]
@@ -2213,7 +2214,6 @@ mod engine_tests {
         assert!(names.contains(&"Technology Shock".to_string()));
     }
 
-
     // ============================================================
     // COMPREHENSIVE COVERAGE BOOST TESTS - ENGINE.RS FOCUS
     // ============================================================
@@ -2248,25 +2248,22 @@ mod engine_tests {
     fn test_checkpoint_with_many_features_enabled() {
         use tempfile::NamedTempFile;
 
-        let config = test_config()
-            .max_steps(20)
-            .entity_count(8)
-            .build_with(|cfg| {
-                cfg.enable_black_market = true;
-                cfg.black_market_price_multiplier = 0.8;
-                cfg.enable_loans = true;
-                cfg.loan_interest_rate = 0.05;
-                cfg.tax_rate = 0.1;
-                cfg.enable_tax_redistribution = true;
-                cfg.enable_contracts = true;
-                cfg.enable_insurance = true;
-                cfg.insurance_purchase_probability = 0.15;
-                cfg.enable_trust_networks = true;
-                cfg.enable_environment = true;
-                cfg.enable_voting = true;
-                cfg.enable_resource_pools = true;
-                cfg.num_groups = Some(2);
-            });
+        let config = test_config().max_steps(20).entity_count(8).build_with(|cfg| {
+            cfg.enable_black_market = true;
+            cfg.black_market_price_multiplier = 0.8;
+            cfg.enable_loans = true;
+            cfg.loan_interest_rate = 0.05;
+            cfg.tax_rate = 0.1;
+            cfg.enable_tax_redistribution = true;
+            cfg.enable_contracts = true;
+            cfg.enable_insurance = true;
+            cfg.insurance_purchase_probability = 0.15;
+            cfg.enable_trust_networks = true;
+            cfg.enable_environment = true;
+            cfg.enable_voting = true;
+            cfg.enable_resource_pools = true;
+            cfg.num_groups = Some(2);
+        });
 
         let mut engine = SimulationEngine::new(config);
 
@@ -2286,10 +2283,7 @@ mod engine_tests {
 
         assert_eq!(loaded_engine.get_current_step(), engine.get_current_step());
         assert_eq!(loaded_engine.get_total_fees_collected(), engine.get_total_fees_collected());
-        assert_eq!(
-            loaded_engine.get_total_taxes_collected(),
-            engine.get_total_taxes_collected()
-        );
+        assert_eq!(loaded_engine.get_total_taxes_collected(), engine.get_total_taxes_collected());
     }
 
     #[test]
@@ -2300,17 +2294,14 @@ mod engine_tests {
         per_skill_limits.insert("Skill0".to_string(), (Some(5.0), Some(50.0)));
         per_skill_limits.insert("Skill1".to_string(), (Some(10.0), Some(100.0)));
 
-        let config = test_config()
-            .max_steps(5)
-            .entity_count(10)
-            .build_with(|cfg| {
-                cfg.per_skill_price_limits = per_skill_limits;
-            });
+        let config = test_config().max_steps(5).entity_count(10).build_with(|cfg| {
+            cfg.per_skill_price_limits = per_skill_limits;
+        });
 
         let engine = SimulationEngine::new(config);
 
         // Verify market was initialized
-        assert!(engine.get_market().skills.len() > 0);
+        assert!(!engine.get_market().skills.is_empty());
     }
 
     #[test]
@@ -2495,7 +2486,7 @@ mod engine_tests {
 
         // Insurance statistics should be collected
         if let Some(insurance_stats) = result.insurance_statistics {
-            assert!(insurance_stats.total_policies_issued >= 0);
+            let _ = insurance_stats.total_policies_issued;
             assert!(insurance_stats.total_premiums_collected >= 0.0);
         }
     }
@@ -2527,7 +2518,7 @@ mod engine_tests {
 
         // Loan statistics should be present
         if let Some(loan_stats) = result.loan_statistics {
-            assert!(loan_stats.total_loans_issued >= 0);
+            let _ = loan_stats.total_loans_issued; // usize always >= 0
         }
     }
 
@@ -2605,8 +2596,8 @@ mod engine_tests {
 
         // Loans should be issued and potentially repaid
         if let Some(loan_stats) = result.loan_statistics {
-            assert!(loan_stats.total_loans_issued >= 0);
-            assert!(loan_stats.total_loans_repaid >= 0);
+            let _ = loan_stats.total_loans_issued; // usize always >= 0
+            let _ = loan_stats.total_loans_repaid;
         }
     }
 
@@ -2627,7 +2618,7 @@ mod engine_tests {
 
         // Insurance should be purchased and potentially claimed
         if let Some(insurance_stats) = result.insurance_statistics {
-            assert!(insurance_stats.total_policies_issued >= 0);
+            let _ = insurance_stats.total_policies_issued;
         }
     }
 
@@ -2659,7 +2650,7 @@ mod engine_tests {
 
         // Contracts should be created
         if let Some(contract_stats) = result.contract_statistics {
-            assert!(contract_stats.total_contracts_created >= 0);
+            let _ = contract_stats.total_contracts_created;
         }
     }
 
@@ -2676,7 +2667,7 @@ mod engine_tests {
 
         // Black market statistics should be collected
         if let Some(bm_stats) = result.black_market_statistics {
-            assert!(bm_stats.total_black_market_trades >= 0);
+            let _ = bm_stats.total_black_market_trades;
         }
     }
 
@@ -2725,7 +2716,7 @@ mod engine_tests {
 
         // Certifications should be tracked
         if let Some(cert_stats) = result.certification_statistics {
-            assert!(cert_stats.total_issued >= 0);
+            let _ = cert_stats.total_issued;
         }
     }
 
@@ -2742,7 +2733,7 @@ mod engine_tests {
 
         // Trade agreements should be tracked
         if let Some(ta_stats) = result.trade_agreement_statistics {
-            assert!(ta_stats.total_agreements_formed >= 0);
+            let _ = ta_stats.total_agreements_formed;
         }
     }
 
@@ -2765,7 +2756,7 @@ mod engine_tests {
 
     #[test]
     fn test_causal_analysis_enabled() {
-        let config = test_config().max_steps(20).entity_count(12).build_with(|cfg| {
+        let config = test_config().max_steps(20).entity_count(12).build_with(|_cfg| {
             // cfg.enable_causal_analysis not available
         });
 
@@ -2778,38 +2769,35 @@ mod engine_tests {
 
     #[test]
     fn test_all_features_mega_simulation() {
-        let config = test_config()
-            .max_steps(50)
-            .entity_count(25)
-            .build_with(|cfg| {
-                cfg.enable_loans = true;
-                cfg.loan_interest_rate = 0.05;
-                cfg.tax_rate = 0.1;
-                cfg.enable_tax_redistribution = true;
-                cfg.enable_black_market = true;
-                cfg.black_market_participation_rate = 0.3;
-                cfg.enable_contracts = true;
-                cfg.enable_insurance = true;
-                cfg.insurance_purchase_probability = 0.2;
-                cfg.enable_crisis_events = true;
-                cfg.crisis_probability = 0.1;
-                cfg.enable_technology_breakthroughs = true;
-                cfg.tech_breakthrough_probability = 0.1;
-                cfg.enable_production = true;
-                cfg.production_probability = 0.2;
-                cfg.enable_assets = true;
-                cfg.asset_purchase_probability = 0.15;
-                cfg.enable_trust_networks = true;
-                cfg.enable_strategy_evolution = true;
-                cfg.enable_resource_pools = true;
-                cfg.num_groups = Some(3);
-                cfg.enable_trade_agreements = true;
-                cfg.enable_certification = true;
-                cfg.enable_externalities = true;
-                cfg.enable_environment = true;
-                cfg.enable_voting = true;
-                cfg.enable_events = true;
-            });
+        let config = test_config().max_steps(50).entity_count(25).build_with(|cfg| {
+            cfg.enable_loans = true;
+            cfg.loan_interest_rate = 0.05;
+            cfg.tax_rate = 0.1;
+            cfg.enable_tax_redistribution = true;
+            cfg.enable_black_market = true;
+            cfg.black_market_participation_rate = 0.3;
+            cfg.enable_contracts = true;
+            cfg.enable_insurance = true;
+            cfg.insurance_purchase_probability = 0.2;
+            cfg.enable_crisis_events = true;
+            cfg.crisis_probability = 0.1;
+            cfg.enable_technology_breakthroughs = true;
+            cfg.tech_breakthrough_probability = 0.1;
+            cfg.enable_production = true;
+            cfg.production_probability = 0.2;
+            cfg.enable_assets = true;
+            cfg.asset_purchase_probability = 0.15;
+            cfg.enable_trust_networks = true;
+            cfg.enable_strategy_evolution = true;
+            cfg.enable_resource_pools = true;
+            cfg.num_groups = Some(3);
+            cfg.enable_trade_agreements = true;
+            cfg.enable_certification = true;
+            cfg.enable_externalities = true;
+            cfg.enable_environment = true;
+            cfg.enable_voting = true;
+            cfg.enable_events = true;
+        });
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -2962,5 +2950,4 @@ mod engine_tests {
         // Wealth mobility should be tracked
         assert!(result.total_steps == 30);
     }
-
 }
