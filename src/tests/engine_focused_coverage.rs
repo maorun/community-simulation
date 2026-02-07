@@ -189,7 +189,8 @@ fn test_trade_volume_stats_edge_case() {
     engine.run();
 
     let result = engine.get_current_result();
-    assert!(result.trade_volume_statistics.total_trades >= 0);
+    // Trade volume statistics are tracked (usize is always non-negative)
+    assert!(result.trade_volume_statistics.total_volume >= 0.0);
 }
 
 // Test loan statistics (lines 1433-1441)

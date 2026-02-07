@@ -773,8 +773,8 @@ fn test_trade_history_collection() {
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
 
-    // Check trade volume stats exist
-    assert!(result.trade_volume_statistics.total_trades >= 0);
+    // Check trade volume stats exist (usize is always non-negative)
+    assert!(result.trade_volume_statistics.total_volume >= 0.0);
 }
 
 // Test skill price history

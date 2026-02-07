@@ -236,7 +236,8 @@ fn test_simulation_with_low_initial_money() {
     let mut engine = SimulationEngine::new(config);
 
     let result = engine.run();
-    assert!(result.failed_trade_statistics.total_failed_attempts >= 0);
+    // Failed trade statistics are tracked (usize is always non-negative)
+    assert!(result.failed_trade_statistics.failure_rate >= 0.0);
 }
 
 #[test]
@@ -245,7 +246,8 @@ fn test_simulation_with_high_base_price() {
     let mut engine = SimulationEngine::new(config);
 
     let result = engine.run();
-    assert!(result.failed_trade_statistics.total_failed_attempts >= 0);
+    // Failed trade statistics are tracked (usize is always non-negative)
+    assert!(result.failed_trade_statistics.failure_rate >= 0.0);
 }
 
 // ============================================================================

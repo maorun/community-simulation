@@ -357,7 +357,7 @@ fn test_result_trade_volume_statistics_fields() {
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
 
-    assert!(result.trade_volume_statistics.total_trades >= 0);
+    // Verify trade volume statistics are tracked
     assert!(result.trade_volume_statistics.total_volume >= 0.0);
     assert!(result.trade_volume_statistics.avg_trades_per_step >= 0.0);
     assert!(result.trade_volume_statistics.avg_volume_per_step >= 0.0);
@@ -373,7 +373,7 @@ fn test_result_failed_trade_statistics_fields() {
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
 
-    assert!(result.failed_trade_statistics.total_failed_attempts >= 0);
+    // Verify failed trade statistics are tracked
     assert!(result.failed_trade_statistics.failure_rate >= 0.0);
     assert!(result.failed_trade_statistics.avg_failed_per_step >= 0.0);
 }
@@ -442,10 +442,8 @@ fn test_result_with_wealth_stats_history() {
     // Verify wealth_stats_history is populated or empty depending on simulation
     // Each entry in the history represents a snapshot at some step
     for snapshot in &result.wealth_stats_history {
-        // Wealth snapshots should have valid step numbers
-        assert!(snapshot.step >= 0);
-        // And valid average values
-        assert!(snapshot.average >= -1e10); // Can be negative
+        // Wealth snapshots should have valid average values (can be negative)
+        assert!(snapshot.average >= -1e10);
     }
 }
 
@@ -455,17 +453,15 @@ fn test_result_trades_per_step_tracking() {
     let mut config = SimulationConfig::default();
     config.max_steps = 5;
     config.entity_count = 10;
+    let expected_steps = config.max_steps;
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
 
     // Should have one entry per step
     assert!(!result.trades_per_step.is_empty());
-
-    // All values should be non-negative
-    for trades_count in &result.trades_per_step {
-        assert!(*trades_count >= 0);
-    }
+    // Verify trades per step is tracked (usize values are always non-negative)
+    assert!(result.trades_per_step.len() == expected_steps);
 }
 
 #[test]
@@ -684,7 +680,6 @@ fn test_full_simulation_comprehensive() {
     assert!(result.money_statistics.average >= -1e10); // Can be negative due to loans
     assert!(result.reputation_statistics.average >= 0.0);
     assert!(result.savings_statistics.total_savings >= 0.0);
-    assert!(result.trade_volume_statistics.total_trades >= 0);
 }
 
 #[test]

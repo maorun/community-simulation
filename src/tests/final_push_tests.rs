@@ -132,7 +132,7 @@ fn test_engine_trade_matching_with_high_demand() {
         engine.step();
     }
 
-    let result = engine.get_current_result();
+    let _result = engine.get_current_result();
     // Trade count checked - can be 0 if no trading opportunities
     // avg_transaction_value can be 0 if no trades
 }
@@ -168,7 +168,7 @@ fn test_simulation_result_display_formatting() {
     let mut engine = SimulationEngine::new(config);
     engine.run();
 
-    let result = engine.get_current_result();
+    let _result = engine.get_current_result();
 
     // Test Display trait
 }
@@ -452,7 +452,7 @@ fn test_simulation_result_with_extreme_values() {
     let mut engine = SimulationEngine::new(config);
     engine.run();
 
-    let result = engine.get_current_result();
+    let _result = engine.get_current_result();
     // Average checked
     // Trade count checked - can be 0 if no trading opportunities
 }
@@ -483,7 +483,7 @@ fn test_simulation_result_skill_price_history() {
     let result = engine.get_current_result();
 
     // Skill price history should be tracked
-    assert!(result.skill_price_history.len() >= 0);
+    assert!(!result.skill_price_history.is_empty());
 }
 
 #[test]
@@ -570,7 +570,8 @@ fn test_engine_getters_after_trades() {
     assert!(engine.get_market().skills.len() > 0);
 
     let result = engine.get_current_result();
-    assert!(result.trade_volume_statistics.total_trades >= 0);
+    // Trade volume statistics exist (usize is always non-negative)
+    assert!(result.trade_volume_statistics.total_volume >= 0.0);
 }
 
 #[test]

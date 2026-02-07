@@ -2,10 +2,9 @@
 // Target: 360+ more lines covered across all modules
 
 use crate::crisis::CrisisEvent;
-use crate::engine::{SimulationCheckpoint, SimulationEngine, TechnologyBreakthrough};
-use crate::error::{Result as SimResult, SimulationError};
-use crate::parameter_sweep::{ParameterRange, ParameterSweepResult};
-use crate::person::PersonId;
+use crate::engine::{SimulationEngine, TechnologyBreakthrough};
+use crate::error::SimulationError;
+use crate::parameter_sweep::ParameterRange;
 use crate::plugin::{Plugin, PluginContext};
 use crate::result::{calculate_statistics, MonteCarloStats, SimulationMetadata, SimulationResult};
 use crate::scenario::{PriceUpdater, Scenario};
@@ -285,8 +284,8 @@ fn test_failed_trade_tracking() {
 
     let result = engine.get_current_result();
 
-    // Should have failed trade statistics
-    assert!(result.failed_trade_statistics.total_failed_attempts >= 0);
+    // Should have failed trade statistics tracked
+    assert!(result.failed_trade_statistics.failure_rate >= 0.0);
 }
 
 #[test]
