@@ -127,7 +127,7 @@ fn test_loans() {
     
     let result = engine.run();
     if let Some(_loan_stats) = result.loan_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -142,7 +142,7 @@ fn test_contracts() {
     
     let result = engine.run();
     if let Some(_contract_stats) = result.contract_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -157,7 +157,7 @@ fn test_mentorship() {
     
     let result = engine.run();
     if let Some(_mentorship_stats) = result.mentorship_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -188,7 +188,7 @@ fn test_trade_agreements() {
     
     let result = engine.run();
     if let Some(_agreement_stats) = result.trade_agreement_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -203,7 +203,7 @@ fn test_insurance() {
     
     let result = engine.run();
     if let Some(_insurance_stats) = result.insurance_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -218,7 +218,7 @@ fn test_environment() {
     
     let result = engine.run();
     if let Some(_env_stats) = result.environment_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -233,7 +233,7 @@ fn test_assets() {
     
     let result = engine.run();
     if let Some(_asset_stats) = result.asset_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -248,7 +248,7 @@ fn test_black_market() {
     
     let result = engine.run();
     if let Some(_black_market_stats) = result.black_market_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -307,7 +307,7 @@ fn test_education() {
     
     let result = engine.run();
     if let Some(_influence_stats) = result.influence_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -348,7 +348,7 @@ fn test_automation() {
     
     let result = engine.run();
     if let Some(_automation_stats) = result.automation_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -363,7 +363,7 @@ fn test_friendships() {
     
     let result = engine.run();
     if let Some(_friendship_stats) = result.friendship_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -390,7 +390,7 @@ fn test_externalities() {
     
     let result = engine.run();
     if let Some(_ext_stats) = result.externality_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -405,7 +405,7 @@ fn test_investments() {
     
     let result = engine.run();
     if let Some(_investment_stats) = result.investment_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
@@ -432,7 +432,7 @@ fn test_technology_breakthroughs() {
     
     let result = engine.run();
     if let Some(_tech_stats) = result.technology_breakthrough_statistics {
-        assert!(true);
+        // Feature enabled successfully
     }
 }
 
