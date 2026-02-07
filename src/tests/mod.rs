@@ -4,6 +4,7 @@ mod coverage_push_tests;
 mod coverage_sprint_80;
 mod final_80_percent_push;
 mod final_push_tests;
+mod laser_focus_80;
 mod proptest_tests;
 mod scenario_integration_tests;
 pub mod test_helpers;
