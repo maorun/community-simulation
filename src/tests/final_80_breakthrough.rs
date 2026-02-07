@@ -458,7 +458,7 @@ fn test_result_trades_per_step_tracking() {
     let result = engine.run();
     
     // Should have one entry per step
-    assert!(result.trades_per_step.len() > 0);
+    assert!(!result.trades_per_step.is_empty());
     
     // All values should be non-negative
     for trades_count in &result.trades_per_step {
@@ -477,7 +477,7 @@ fn test_result_volume_per_step_tracking() {
     let result = engine.run();
     
     // Should have one entry per step
-    assert!(result.volume_per_step.len() > 0);
+    assert!(!result.volume_per_step.is_empty());
     
     // All values should be non-negative
     for volume in &result.volume_per_step {
@@ -865,8 +865,9 @@ fn test_result_step_times_consistency() {
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
     
-    // Verify step_times is populated after simulation
+    // Verify step_times is populated after simulation and has correct length
     assert!(!result.step_times.is_empty());
+    assert_eq!(result.step_times.len(), 5); // Should match max_steps
 }
 
 #[test]
@@ -892,7 +893,13 @@ fn test_result_skill_price_info() {
 #[test]
 fn test_comprehensive_scenario_coverage() {
     // Target: Run all scenarios and verify they complete
-    let all_scenarios = Scenario::all();
+    let all_scenarios = vec![
+        Scenario::Original,
+        Scenario::DynamicPricing,
+        Scenario::AdaptivePricing,
+        Scenario::AuctionPricing,
+        Scenario::ClimateChange,
+    ];
     
     for scenario in all_scenarios {
         let mut config = SimulationConfig::default();
