@@ -23,9 +23,7 @@ fn test_engine_basic_creation_and_run() {
 #[test]
 fn test_engine_all_getter_methods() {
     // Target: ALL public getter methods in SimulationEngine
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let _ = engine.run();
@@ -54,9 +52,7 @@ fn test_engine_all_getter_methods() {
 #[test]
 fn test_engine_statistics_methods() {
     // Target: Statistics aggregation methods
-    let mut config = SimulationConfig::default();
-    config.max_steps = 10;
-    config.entity_count = 20;
+    let config = SimulationConfig { max_steps: 10, entity_count: 20, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let _ = engine.run();
@@ -84,9 +80,7 @@ fn test_engine_statistics_methods() {
 #[test]
 fn test_engine_empty_state_handling() {
     // Target: Handling edge cases with minimal setup
-    let mut config = SimulationConfig::default();
-    config.max_steps = 1;
-    config.entity_count = 1;
+    let config = SimulationConfig { max_steps: 1, entity_count: 1, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -107,10 +101,8 @@ fn test_engine_all_scenario_types() {
     ];
 
     for scenario in scenarios {
-        let mut config = SimulationConfig::default();
-        config.max_steps = 3;
-        config.entity_count = 5;
-        config.scenario = scenario;
+        let config =
+            SimulationConfig { max_steps: 3, entity_count: 5, scenario, ..Default::default() };
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -123,9 +115,7 @@ fn test_engine_all_scenario_types() {
 #[test]
 fn test_engine_step_by_step_execution() {
     // Target: Step-by-step execution control
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 3;
+    let config = SimulationConfig { max_steps: 5, entity_count: 3, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -139,9 +129,7 @@ fn test_engine_step_by_step_execution() {
 #[test]
 fn test_engine_get_current_result_comprehensive() {
     // Target: get_current_result method with various states
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -159,10 +147,12 @@ fn test_engine_get_current_result_comprehensive() {
 #[test]
 fn test_engine_maximum_values() {
     // Target: Handling larger values
-    let mut config = SimulationConfig::default();
-    config.max_steps = 20;
-    config.entity_count = 50;
-    config.initial_money_per_person = 1000.0;
+    let config = SimulationConfig {
+        max_steps: 20,
+        entity_count: 50,
+        initial_money_per_person: 1000.0,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -174,17 +164,13 @@ fn test_engine_maximum_values() {
 #[test]
 fn test_engine_min_max_iterations() {
     // Target: Boundary conditions on step iterations
-    let mut config1 = SimulationConfig::default();
-    config1.max_steps = 1;
-    config1.entity_count = 1;
+    let config1 = SimulationConfig { max_steps: 1, entity_count: 1, ..Default::default() };
 
     let mut engine1 = SimulationEngine::new(config1);
     let result1 = engine1.run();
     assert!(result1.total_steps >= 1);
 
-    let mut config2 = SimulationConfig::default();
-    config2.max_steps = 100;
-    config2.entity_count = 10;
+    let config2 = SimulationConfig { max_steps: 100, entity_count: 10, ..Default::default() };
 
     let mut engine2 = SimulationEngine::new(config2);
     let result2 = engine2.run();
@@ -194,9 +180,7 @@ fn test_engine_min_max_iterations() {
 #[test]
 fn test_engine_progressive_execution() {
     // Target: Verify progressive state changes
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
+    let config = SimulationConfig { max_steps: 3, entity_count: 5, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     assert_eq!(engine.get_current_step(), 0);
@@ -211,10 +195,12 @@ fn test_engine_progressive_execution() {
 #[test]
 fn test_engine_config_preservation() {
     // Target: Config is properly stored and retrievable
-    let mut config = SimulationConfig::default();
-    config.max_steps = 7;
-    config.entity_count = 11;
-    config.initial_money_per_person = 250.0;
+    let config = SimulationConfig {
+        max_steps: 7,
+        entity_count: 11,
+        initial_money_per_person: 250.0,
+        ..Default::default()
+    };
 
     let engine = SimulationEngine::new(config);
     let retrieved = engine.get_config();
@@ -227,9 +213,7 @@ fn test_engine_config_preservation() {
 #[test]
 fn test_engine_active_entity_count_consistency() {
     // Target: Active entity tracking
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 15;
+    let config = SimulationConfig { max_steps: 5, entity_count: 15, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let _ = engine.run();
@@ -248,9 +232,7 @@ fn test_engine_active_entity_count_consistency() {
 #[test]
 fn test_result_print_summary() {
     // Target: print_summary method - core result functionality
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -267,9 +249,7 @@ fn test_result_print_summary() {
 #[test]
 fn test_result_basic_fields_after_simulation() {
     // Target: Verify all basic result fields are populated correctly
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
+    let config = SimulationConfig { max_steps: 3, entity_count: 5, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -294,9 +274,7 @@ fn test_result_basic_fields_after_simulation() {
 #[test]
 fn test_result_money_statistics_fields() {
     // Target: Correct access to money_statistics fields
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -314,9 +292,7 @@ fn test_result_money_statistics_fields() {
 #[test]
 fn test_result_reputation_statistics_fields() {
     // Target: Correct access to reputation_statistics fields
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -333,9 +309,7 @@ fn test_result_reputation_statistics_fields() {
 #[test]
 fn test_result_savings_statistics_fields() {
     // Target: Correct access to savings_statistics fields
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -350,9 +324,7 @@ fn test_result_savings_statistics_fields() {
 #[test]
 fn test_result_trade_volume_statistics_fields() {
     // Target: Correct access to trade_volume_statistics fields
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -366,9 +338,7 @@ fn test_result_trade_volume_statistics_fields() {
 #[test]
 fn test_result_failed_trade_statistics_fields() {
     // Target: Correct access to failed_trade_statistics fields
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -381,9 +351,7 @@ fn test_result_failed_trade_statistics_fields() {
 #[test]
 fn test_result_save_to_file() {
     // Target: save_to_file method
-    let mut config = SimulationConfig::default();
-    config.max_steps = 2;
-    config.entity_count = 5;
+    let config = SimulationConfig { max_steps: 2, entity_count: 5, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -402,9 +370,7 @@ fn test_result_save_to_file() {
 #[test]
 fn test_result_serialization() {
     // Target: Serialization of SimulationResult
-    let mut config = SimulationConfig::default();
-    config.max_steps = 2;
-    config.entity_count = 5;
+    let config = SimulationConfig { max_steps: 2, entity_count: 5, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -416,15 +382,13 @@ fn test_result_serialization() {
 #[test]
 fn test_result_with_skill_price_history() {
     // Target: Skill price history tracking
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
 
     // Price history may or may not be populated depending on simulation
-    for (_, prices) in &result.skill_price_history {
+    for prices in result.skill_price_history.values() {
         assert!(!prices.is_empty());
     }
 }
@@ -432,9 +396,7 @@ fn test_result_with_skill_price_history() {
 #[test]
 fn test_result_with_wealth_stats_history() {
     // Target: Wealth statistics history
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -450,9 +412,7 @@ fn test_result_with_wealth_stats_history() {
 #[test]
 fn test_result_trades_per_step_tracking() {
     // Target: Trades per step tracking
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
     let expected_steps = config.max_steps;
 
     let mut engine = SimulationEngine::new(config);
@@ -467,9 +427,7 @@ fn test_result_trades_per_step_tracking() {
 #[test]
 fn test_result_volume_per_step_tracking() {
     // Target: Volume per step tracking
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -486,9 +444,7 @@ fn test_result_volume_per_step_tracking() {
 #[test]
 fn test_result_optional_statistics() {
     // Target: Optional statistics fields
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
+    let config = SimulationConfig { max_steps: 3, entity_count: 5, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -509,10 +465,12 @@ fn test_result_optional_statistics() {
 #[test]
 fn test_scenario_original_execution() {
     // Target: Original scenario type
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
-    config.scenario = Scenario::Original;
+    let config = SimulationConfig {
+        max_steps: 3,
+        entity_count: 5,
+        scenario: Scenario::Original,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -524,10 +482,12 @@ fn test_scenario_original_execution() {
 #[test]
 fn test_scenario_dynamic_pricing_execution() {
     // Target: DynamicPricing scenario type
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
-    config.scenario = Scenario::DynamicPricing;
+    let config = SimulationConfig {
+        max_steps: 3,
+        entity_count: 5,
+        scenario: Scenario::DynamicPricing,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -539,10 +499,12 @@ fn test_scenario_dynamic_pricing_execution() {
 #[test]
 fn test_scenario_adaptive_pricing_execution() {
     // Target: AdaptivePricing scenario type
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
-    config.scenario = Scenario::AdaptivePricing;
+    let config = SimulationConfig {
+        max_steps: 3,
+        entity_count: 5,
+        scenario: Scenario::AdaptivePricing,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -554,10 +516,12 @@ fn test_scenario_adaptive_pricing_execution() {
 #[test]
 fn test_scenario_auction_pricing_execution() {
     // Target: AuctionPricing scenario type
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
-    config.scenario = Scenario::AuctionPricing;
+    let config = SimulationConfig {
+        max_steps: 3,
+        entity_count: 5,
+        scenario: Scenario::AuctionPricing,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -569,10 +533,12 @@ fn test_scenario_auction_pricing_execution() {
 #[test]
 fn test_scenario_climate_change_execution() {
     // Target: ClimateChange scenario type
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
-    config.scenario = Scenario::ClimateChange;
+    let config = SimulationConfig {
+        max_steps: 3,
+        entity_count: 5,
+        scenario: Scenario::ClimateChange,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -658,10 +624,8 @@ fn test_scenario_serialization() {
 #[test]
 fn test_full_simulation_comprehensive() {
     // Target: Full simulation run with all components
-    let mut config = SimulationConfig::default();
-    config.max_steps = 10;
-    config.entity_count = 20;
-    config.seed = 12345;
+    let config =
+        SimulationConfig { max_steps: 10, entity_count: 20, seed: 12345, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -688,9 +652,7 @@ fn test_simulation_with_multiple_entity_counts() {
     let entity_counts = vec![1, 5, 10, 20];
 
     for entity_count in entity_counts {
-        let mut config = SimulationConfig::default();
-        config.max_steps = 3;
-        config.entity_count = entity_count;
+        let config = SimulationConfig { max_steps: 3, entity_count, ..Default::default() };
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -706,9 +668,7 @@ fn test_simulation_with_multiple_step_counts() {
     let step_counts = vec![1, 3, 5, 10];
 
     for steps in step_counts {
-        let mut config = SimulationConfig::default();
-        config.max_steps = steps;
-        config.entity_count = 5;
+        let config = SimulationConfig { max_steps: steps, entity_count: 5, ..Default::default() };
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -722,15 +682,9 @@ fn test_simulation_reproducibility_same_seed() {
     // Target: Same seed produces deterministic results
     let seed = 42u64;
 
-    let mut config1 = SimulationConfig::default();
-    config1.seed = seed;
-    config1.max_steps = 5;
-    config1.entity_count = 10;
+    let config1 = SimulationConfig { seed, max_steps: 5, entity_count: 10, ..Default::default() };
 
-    let mut config2 = SimulationConfig::default();
-    config2.seed = seed;
-    config2.max_steps = 5;
-    config2.entity_count = 10;
+    let config2 = SimulationConfig { seed, max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine1 = SimulationEngine::new(config1);
     let result1 = engine1.run();
@@ -746,15 +700,11 @@ fn test_simulation_reproducibility_same_seed() {
 #[test]
 fn test_simulation_different_seeds_different_results() {
     // Target: Different seeds can produce different results
-    let mut config1 = SimulationConfig::default();
-    config1.seed = 1;
-    config1.max_steps = 5;
-    config1.entity_count = 10;
+    let config1 =
+        SimulationConfig { seed: 1, max_steps: 5, entity_count: 10, ..Default::default() };
 
-    let mut config2 = SimulationConfig::default();
-    config2.seed = 999;
-    config2.max_steps = 5;
-    config2.entity_count = 10;
+    let config2 =
+        SimulationConfig { seed: 999, max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine1 = SimulationEngine::new(config1);
     let result1 = engine1.run();
@@ -771,9 +721,7 @@ fn test_simulation_different_seeds_different_results() {
 #[test]
 fn test_edge_case_single_entity() {
     // Target: Simulation with single entity
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 1;
+    let config = SimulationConfig { max_steps: 3, entity_count: 1, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -786,9 +734,7 @@ fn test_edge_case_single_entity() {
 #[test]
 fn test_edge_case_two_entities() {
     // Target: Simulation with exactly two entities
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 2;
+    let config = SimulationConfig { max_steps: 3, entity_count: 2, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -800,9 +746,7 @@ fn test_edge_case_two_entities() {
 #[test]
 fn test_edge_case_minimum_steps() {
     // Target: Simulation with minimum steps
-    let mut config = SimulationConfig::default();
-    config.max_steps = 1;
-    config.entity_count = 3;
+    let config = SimulationConfig { max_steps: 1, entity_count: 3, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -814,9 +758,7 @@ fn test_edge_case_minimum_steps() {
 #[test]
 fn test_market_operations() {
     // Target: Market getter methods
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 3, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let _ = engine.run();
@@ -826,7 +768,7 @@ fn test_market_operations() {
 
     // Verify market has skill data from the simulation
     // Market should contain prices for skills that were involved in trades
-    for (_, price) in &all_prices {
+    for price in all_prices.values() {
         assert!(*price > 0.0, "Skill prices should be positive");
     }
 }
@@ -834,10 +776,8 @@ fn test_market_operations() {
 #[test]
 fn test_result_metadata_fields() {
     // Target: Verify metadata is properly populated
-    let mut config = SimulationConfig::default();
-    config.max_steps = 3;
-    config.entity_count = 5;
-    config.seed = 54321;
+    let config =
+        SimulationConfig { max_steps: 3, entity_count: 5, seed: 54321, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -851,9 +791,7 @@ fn test_result_metadata_fields() {
 #[test]
 fn test_result_step_times_consistency() {
     // Target: Step times should be recorded for each step
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 5;
+    let config = SimulationConfig { max_steps: 5, entity_count: 5, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -866,9 +804,7 @@ fn test_result_step_times_consistency() {
 #[test]
 fn test_result_skill_price_info() {
     // Target: Skill price information
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 10;
+    let config = SimulationConfig { max_steps: 5, entity_count: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -895,10 +831,8 @@ fn test_comprehensive_scenario_coverage() {
     ];
 
     for scenario in all_scenarios {
-        let mut config = SimulationConfig::default();
-        config.max_steps = 2;
-        config.entity_count = 3;
-        config.scenario = scenario;
+        let config =
+            SimulationConfig { max_steps: 2, entity_count: 3, scenario, ..Default::default() };
 
         let mut engine = SimulationEngine::new(config);
         let result = engine.run();
@@ -910,9 +844,7 @@ fn test_comprehensive_scenario_coverage() {
 #[test]
 fn test_engine_state_progression() {
     // Target: Verify engine progresses through states correctly
-    let mut config = SimulationConfig::default();
-    config.max_steps = 5;
-    config.entity_count = 5;
+    let config = SimulationConfig { max_steps: 5, entity_count: 5, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 

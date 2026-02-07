@@ -174,7 +174,7 @@ fn test_calculate_seasonal_factor_full_cycle() {
     let factor_0 = engine.calculate_seasonal_factor(&skill_id);
 
     // Test multiple points - should be within valid range
-    assert!(factor_0 >= 0.5 && factor_0 <= 1.5);
+    assert!((0.5..=1.5).contains(&factor_0));
 }
 
 #[test]
@@ -213,7 +213,7 @@ fn test_plugin_registry_methods() {
 
     // Test plugin registry access
     let registry = engine.plugin_registry();
-    assert!(registry.len() >= 1);
+    assert!(!registry.is_empty());
 
     // Test mutable access
     engine.plugin_registry_mut();
@@ -890,8 +890,8 @@ fn test_checkpoint_with_complex_state() {
     // Load and verify
     let loaded = SimulationEngine::load_checkpoint(temp_file.path()).unwrap();
     assert_eq!(loaded.get_current_step(), 25);
-    assert_eq!(loaded.get_config().enable_loans, true);
-    assert_eq!(loaded.get_config().enable_crisis_events, true);
+    assert!(loaded.get_config().enable_loans);
+    assert!(loaded.get_config().enable_crisis_events);
 }
 
 #[test]

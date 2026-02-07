@@ -18,12 +18,14 @@ use crate::skill::Skill;
 
 #[test]
 fn test_engine_getter_methods_comprehensive() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.max_steps = 100;
-    config.enable_production = true;
-    config.transaction_fee = 0.05;
-    config.tax_rate = 0.1;
+    let config = SimulationConfig {
+        entity_count: 10,
+        max_steps: 100,
+        enable_production: true,
+        transaction_fee: 0.05,
+        tax_rate: 0.1,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config.clone());
 
@@ -34,7 +36,7 @@ fn test_engine_getter_methods_comprehensive() {
     assert_eq!(engine.get_active_persons(), 10);
     assert_eq!(engine.get_scenario(), &Scenario::Original);
     assert_eq!(engine.get_entities().len(), 10);
-    assert!(engine.get_market().skills.len() > 0);
+    assert!(!engine.get_market().skills.is_empty());
     assert_eq!(engine.get_config().entity_count, 10);
     assert_eq!(engine.get_total_fees_collected(), 0.0);
     assert_eq!(engine.get_total_taxes_collected(), 0.0);
@@ -51,11 +53,13 @@ fn test_engine_getter_methods_comprehensive() {
 
 #[test]
 fn test_engine_getter_current_result_with_fees_and_taxes() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 5;
-    config.transaction_fee = 0.1;
-    config.tax_rate = 0.15;
-    config.max_steps = 10;
+    let config = SimulationConfig {
+        entity_count: 5,
+        transaction_fee: 0.1,
+        tax_rate: 0.15,
+        max_steps: 10,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -76,11 +80,13 @@ fn test_engine_getter_current_result_with_fees_and_taxes() {
 
 #[test]
 fn test_engine_production_statistics() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 20;
-    config.enable_production = true;
-    config.production_probability = 1.0; // Always try production
-    config.max_steps = 50;
+    let config = SimulationConfig {
+        entity_count: 20,
+        enable_production: true,
+        production_probability: 1.0, // Always try production
+        max_steps: 50,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -96,9 +102,7 @@ fn test_engine_production_statistics() {
 
 #[test]
 fn test_engine_wealth_distribution_tracking() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 15;
-    config.max_steps = 30;
+    let config = SimulationConfig { entity_count: 15, max_steps: 30, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -108,7 +112,7 @@ fn test_engine_wealth_distribution_tracking() {
     }
 
     let result = engine.get_current_result();
-    assert!(result.final_money_distribution.len() > 0);
+    assert!(!result.final_money_distribution.is_empty());
     assert!(result.money_statistics.gini_coefficient >= 0.0);
     // Gini coefficient can be > 1.0 in edge cases with limited data
 }
@@ -119,11 +123,13 @@ fn test_engine_wealth_distribution_tracking() {
 
 #[test]
 fn test_engine_trade_matching_with_high_demand() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 50;
-    config.initial_money_per_person = 500.0;
-    config.base_skill_price = 20.0;
-    config.max_steps = 100;
+    let config = SimulationConfig {
+        entity_count: 50,
+        initial_money_per_person: 500.0,
+        base_skill_price: 20.0,
+        max_steps: 100,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -139,11 +145,13 @@ fn test_engine_trade_matching_with_high_demand() {
 
 #[test]
 fn test_engine_trade_matching_with_low_liquidity() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.initial_money_per_person = 10.0; // Very low money
-    config.base_skill_price = 50.0; // High prices
-    config.max_steps = 50;
+    let config = SimulationConfig {
+        entity_count: 10,
+        initial_money_per_person: 10.0, // Very low money
+        base_skill_price: 50.0,         // High prices
+        max_steps: 50,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -161,9 +169,7 @@ fn test_engine_trade_matching_with_low_liquidity() {
 
 #[test]
 fn test_simulation_result_display_formatting() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.max_steps = 20;
+    let config = SimulationConfig { entity_count: 10, max_steps: 20, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -175,9 +181,7 @@ fn test_simulation_result_display_formatting() {
 
 #[test]
 fn test_simulation_result_debug_formatting() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 5;
-    config.max_steps = 10;
+    let config = SimulationConfig { entity_count: 5, max_steps: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -191,9 +195,7 @@ fn test_simulation_result_debug_formatting() {
 
 #[test]
 fn test_simulation_result_print_summary() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 8;
-    config.max_steps = 15;
+    let config = SimulationConfig { entity_count: 8, max_steps: 15, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -206,11 +208,13 @@ fn test_simulation_result_print_summary() {
 
 #[test]
 fn test_simulation_result_print_summary_with_features() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.max_steps = 20;
-    config.transaction_fee = 0.05;
-    config.tax_rate = 0.1;
+    let config = SimulationConfig {
+        entity_count: 10,
+        max_steps: 20,
+        transaction_fee: 0.05,
+        tax_rate: 0.1,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -225,9 +229,7 @@ fn test_simulation_result_print_summary_with_features() {
 
 #[test]
 fn test_simulation_result_csv_export() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.max_steps = 20;
+    let config = SimulationConfig { entity_count: 10, max_steps: 20, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -242,13 +244,15 @@ fn test_simulation_result_csv_export() {
 
 #[test]
 fn test_simulation_result_csv_export_with_all_features() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 15;
-    config.max_steps = 30;
-    config.transaction_fee = 0.05;
-    config.tax_rate = 0.1;
-    config.enable_production = true;
-    config.enable_loans = true;
+    let config = SimulationConfig {
+        entity_count: 15,
+        max_steps: 30,
+        transaction_fee: 0.05,
+        tax_rate: 0.1,
+        enable_production: true,
+        enable_loans: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -263,9 +267,7 @@ fn test_simulation_result_csv_export_with_all_features() {
 
 #[test]
 fn test_simulation_result_csv_export_invalid_path() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 5;
-    config.max_steps = 10;
+    let config = SimulationConfig { entity_count: 5, max_steps: 10, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -349,10 +351,12 @@ fn test_calculate_money_stats_with_large_variance() {
 
 #[test]
 fn test_scenario_original_price_updater() {
-    let mut config = SimulationConfig::default();
-    config.scenario = Scenario::Original;
-    config.entity_count = 15;
-    config.max_steps = 30;
+    let config = SimulationConfig {
+        scenario: Scenario::Original,
+        entity_count: 15,
+        max_steps: 30,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -362,15 +366,17 @@ fn test_scenario_original_price_updater() {
 
     // Verify prices changed over time
     let market = engine.get_market();
-    assert!(market.skills.len() > 0);
+    assert!(!market.skills.is_empty());
 }
 
 #[test]
 fn test_scenario_dynamic_pricing_updater() {
-    let mut config = SimulationConfig::default();
-    config.scenario = Scenario::DynamicPricing;
-    config.entity_count = 15;
-    config.max_steps = 30;
+    let config = SimulationConfig {
+        scenario: Scenario::DynamicPricing,
+        entity_count: 15,
+        max_steps: 30,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -379,7 +385,7 @@ fn test_scenario_dynamic_pricing_updater() {
     }
 
     let market = engine.get_market();
-    assert!(market.skills.len() > 0);
+    assert!(!market.skills.is_empty());
 }
 
 // ============================================================================
@@ -388,15 +394,17 @@ fn test_scenario_dynamic_pricing_updater() {
 
 #[test]
 fn test_engine_with_all_features_enabled() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 30;
-    config.max_steps = 50;
-    config.enable_production = true;
-    config.transaction_fee = 0.05;
-    config.tax_rate = 0.1;
-    config.enable_loans = true;
-    config.enable_insurance = true;
-    config.enable_tax_redistribution = true;
+    let config = SimulationConfig {
+        entity_count: 30,
+        max_steps: 50,
+        enable_production: true,
+        transaction_fee: 0.05,
+        tax_rate: 0.1,
+        enable_loans: true,
+        enable_insurance: true,
+        enable_tax_redistribution: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -411,9 +419,7 @@ fn test_engine_with_all_features_enabled() {
 
 #[test]
 fn test_engine_stress_test_many_persons() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 100;
-    config.max_steps = 100;
+    let config = SimulationConfig { entity_count: 100, max_steps: 100, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -428,9 +434,7 @@ fn test_engine_stress_test_many_persons() {
 
 #[test]
 fn test_engine_stress_test_long_simulation() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 20;
-    config.max_steps = 500;
+    let config = SimulationConfig { entity_count: 20, max_steps: 500, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -443,11 +447,13 @@ fn test_engine_stress_test_long_simulation() {
 
 #[test]
 fn test_simulation_result_with_extreme_values() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.initial_money_per_person = 10000.0; // Very high
-    config.base_skill_price = 1.0; // Very low
-    config.max_steps = 30;
+    let config = SimulationConfig {
+        entity_count: 10,
+        initial_money_per_person: 10000.0, // Very high
+        base_skill_price: 1.0,             // Very low
+        max_steps: 30,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -473,9 +479,7 @@ fn test_simulation_result_metadata_capture() {
 
 #[test]
 fn test_simulation_result_skill_price_history() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.max_steps = 30;
+    let config = SimulationConfig { entity_count: 10, max_steps: 30, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -509,10 +513,12 @@ fn test_person_transaction_history_comprehensive() {
 
 #[test]
 fn test_market_price_bounds_enforcement() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.max_steps = 50;
-    config.min_skill_price = 1.0;
+    let config = SimulationConfig {
+        entity_count: 10,
+        max_steps: 50,
+        min_skill_price: 1.0,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -529,10 +535,8 @@ fn test_market_price_bounds_enforcement() {
 
 #[test]
 fn test_engine_parallel_execution_consistency() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 25;
-    config.max_steps = 40;
-    config.seed = 999;
+    let config =
+        SimulationConfig { entity_count: 25, max_steps: 40, seed: 999, ..Default::default() };
 
     let mut engine1 = SimulationEngine::new(config.clone());
     let mut engine2 = SimulationEngine::new(config);
@@ -552,10 +556,12 @@ fn test_engine_parallel_execution_consistency() {
 
 #[test]
 fn test_engine_getters_after_trades() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 20;
-    config.max_steps = 50;
-    config.transaction_fee = 0.05;
+    let config = SimulationConfig {
+        entity_count: 20,
+        max_steps: 50,
+        transaction_fee: 0.05,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -566,8 +572,8 @@ fn test_engine_getters_after_trades() {
     // All getters should work properly after extensive trading
     assert_eq!(engine.get_current_step(), 50);
     assert!(engine.get_active_entity_count() > 0);
-    assert!(engine.get_entities().len() > 0);
-    assert!(engine.get_market().skills.len() > 0);
+    assert!(!engine.get_entities().is_empty());
+    assert!(!engine.get_market().skills.is_empty());
 
     let result = engine.get_current_result();
     // Trade volume statistics exist (usize is always non-negative)
@@ -576,9 +582,7 @@ fn test_engine_getters_after_trades() {
 
 #[test]
 fn test_result_save_and_formatting() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 10;
-    config.max_steps = 20;
+    let config = SimulationConfig { entity_count: 10, max_steps: 20, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     engine.run();
@@ -596,11 +600,13 @@ fn test_result_save_and_formatting() {
 
 #[test]
 fn test_engine_with_loans() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 15;
-    config.max_steps = 40;
-    config.enable_loans = true;
-    config.loan_interest_rate = 0.05;
+    let config = SimulationConfig {
+        entity_count: 15,
+        max_steps: 40,
+        enable_loans: true,
+        loan_interest_rate: 0.05,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -613,10 +619,12 @@ fn test_engine_with_loans() {
 
 #[test]
 fn test_engine_with_insurance() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 12;
-    config.max_steps = 30;
-    config.enable_insurance = true;
+    let config = SimulationConfig {
+        entity_count: 12,
+        max_steps: 30,
+        enable_insurance: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -629,10 +637,12 @@ fn test_engine_with_insurance() {
 
 #[test]
 fn test_engine_with_contracts() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 18;
-    config.max_steps = 35;
-    config.enable_contracts = true;
+    let config = SimulationConfig {
+        entity_count: 18,
+        max_steps: 35,
+        enable_contracts: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -645,10 +655,12 @@ fn test_engine_with_contracts() {
 
 #[test]
 fn test_engine_with_voting() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 20;
-    config.max_steps = 25;
-    config.enable_voting = true;
+    let config = SimulationConfig {
+        entity_count: 20,
+        max_steps: 25,
+        enable_voting: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -661,10 +673,12 @@ fn test_engine_with_voting() {
 
 #[test]
 fn test_engine_with_investments() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 15;
-    config.max_steps = 30;
-    config.enable_investments = true;
+    let config = SimulationConfig {
+        entity_count: 15,
+        max_steps: 30,
+        enable_investments: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -677,11 +691,13 @@ fn test_engine_with_investments() {
 
 #[test]
 fn test_engine_with_credit_rating() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 12;
-    config.max_steps = 28;
-    config.enable_credit_rating = true;
-    config.enable_loans = true;
+    let config = SimulationConfig {
+        entity_count: 12,
+        max_steps: 28,
+        enable_credit_rating: true,
+        enable_loans: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -694,10 +710,12 @@ fn test_engine_with_credit_rating() {
 
 #[test]
 fn test_engine_with_externalities() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 14;
-    config.max_steps = 32;
-    config.enable_externalities = true;
+    let config = SimulationConfig {
+        entity_count: 14,
+        max_steps: 32,
+        enable_externalities: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -710,10 +728,12 @@ fn test_engine_with_externalities() {
 
 #[test]
 fn test_engine_with_trust_networks() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 16;
-    config.max_steps = 30;
-    config.enable_trust_networks = true;
+    let config = SimulationConfig {
+        entity_count: 16,
+        max_steps: 30,
+        enable_trust_networks: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -726,10 +746,12 @@ fn test_engine_with_trust_networks() {
 
 #[test]
 fn test_engine_with_education() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 13;
-    config.max_steps = 27;
-    config.enable_education = true;
+    let config = SimulationConfig {
+        entity_count: 13,
+        max_steps: 27,
+        enable_education: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -742,10 +764,12 @@ fn test_engine_with_education() {
 
 #[test]
 fn test_engine_with_quality() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 11;
-    config.max_steps = 24;
-    config.enable_quality = true;
+    let config = SimulationConfig {
+        entity_count: 11,
+        max_steps: 24,
+        enable_quality: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -758,10 +782,12 @@ fn test_engine_with_quality() {
 
 #[test]
 fn test_engine_with_crisis_events() {
-    let mut config = SimulationConfig::default();
-    config.entity_count = 17;
-    config.max_steps = 33;
-    config.enable_crisis_events = true;
+    let config = SimulationConfig {
+        entity_count: 17,
+        max_steps: 33,
+        enable_crisis_events: true,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 

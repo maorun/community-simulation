@@ -85,10 +85,10 @@ fn test_all_error_variants_display() {
         SimulationError::TomlParse("toml".to_string()),
         SimulationError::UnsupportedConfigFormat(".xml".to_string()),
         SimulationError::ValidationError("validation".to_string()),
-        SimulationError::IoError(io::Error::new(io::ErrorKind::Other, "io")),
+        SimulationError::IoError(io::Error::other("io")),
         SimulationError::JsonSerialize("json".to_string()),
-        SimulationError::ActionLogWrite(io::Error::new(io::ErrorKind::Other, "write")),
-        SimulationError::ActionLogRead(io::Error::new(io::ErrorKind::Other, "read")),
+        SimulationError::ActionLogWrite(io::Error::other("write")),
+        SimulationError::ActionLogRead(io::Error::other("read")),
     ];
 
     for error in errors {
@@ -488,10 +488,12 @@ fn test_result_save_and_load_json() {
 
 #[test]
 fn test_config_extreme_but_valid_values() {
-    let mut config = SimulationConfig::default();
-    config.max_steps = 1_000_000;
-    config.entity_count = 10_000;
-    config.initial_money_per_person = 1_000_000.0;
+    let config = SimulationConfig {
+        max_steps: 1_000_000,
+        entity_count: 10_000,
+        initial_money_per_person: 1_000_000.0,
+        ..Default::default()
+    };
 
     assert!(config.validate().is_ok());
 }
@@ -505,28 +507,28 @@ fn test_config_min_price_equals_base() {
 
 #[test]
 fn test_config_all_features_enabled_validation() {
-    let mut config = SimulationConfig::default();
-
-    // Enable features that don't have dependencies
-    config.enable_loans = true;
-    config.enable_credit_rating = true; // Requires loans
-    config.enable_contracts = true;
-    config.enable_tax_redistribution = true;
-    config.enable_crisis_events = true;
-    config.enable_technology_breakthroughs = true;
-    config.enable_adaptive_strategies = true;
-    config.enable_education = true;
-    config.enable_mentorship = true; // Requires education
-    config.enable_insurance = true;
-    config.enable_friendships = true;
-    config.enable_trust_networks = true;
-    config.enable_certification = true; // Requires education
-    config.enable_externalities = true;
-    config.enable_trade_agreements = true;
-    config.enable_black_market = true;
-    config.enable_resource_pools = true;
-    config.enable_voting = true;
-    config.enable_assets = true;
+    let config = SimulationConfig {
+        enable_loans: true,
+        enable_credit_rating: true, // Requires loans
+        enable_contracts: true,
+        enable_tax_redistribution: true,
+        enable_crisis_events: true,
+        enable_technology_breakthroughs: true,
+        enable_adaptive_strategies: true,
+        enable_education: true,
+        enable_mentorship: true, // Requires education
+        enable_insurance: true,
+        enable_friendships: true,
+        enable_trust_networks: true,
+        enable_certification: true, // Requires education
+        enable_externalities: true,
+        enable_trade_agreements: true,
+        enable_black_market: true,
+        enable_resource_pools: true,
+        enable_voting: true,
+        enable_assets: true,
+        ..Default::default()
+    };
 
     let validation_result = config.validate();
     if validation_result.is_err() {
@@ -560,7 +562,7 @@ fn test_all_scenario_price_updaters() {
         market.update_prices(&mut rng);
 
         // Verify price update didn't panic
-        assert!(market.skills.len() > 0);
+        assert!(!market.skills.is_empty());
     }
 }
 
@@ -760,8 +762,8 @@ fn test_engine_state_getters() {
     let engine = SimulationEngine::new(config);
 
     assert_eq!(engine.get_current_step(), 0);
-    assert!(engine.get_entities().len() > 0);
-    assert!(engine.get_market().skills.len() > 0);
+    assert!(!engine.get_entities().is_empty());
+    assert!(!engine.get_market().skills.is_empty());
 }
 
 // Test trade history
@@ -898,7 +900,7 @@ fn test_result_compressed_json() {
 #[test]
 fn test_crisis_descriptions_comprehensive() {
     let crises = CrisisEvent::all_types();
-    assert!(crises.len() > 0);
+    assert!(!crises.is_empty());
 
     for crisis in crises {
         let desc = crisis.description();

@@ -109,9 +109,7 @@ fn test_scenario_is_default_only_original() {
 #[test]
 fn test_engine_run_all_scenarios() {
     for scenario in Scenario::all() {
-        let mut config = SimulationConfig::default();
-        config.scenario = scenario;
-        config.max_steps = 15;
+        let config = SimulationConfig { scenario, max_steps: 15, ..Default::default() };
 
         let mut engine = SimulationEngine::new(config);
 
@@ -149,7 +147,7 @@ fn test_engine_with_many_features_enabled() {
     }
 
     assert_eq!(engine.get_current_step(), 25);
-    assert!(engine.get_entities().len() > 0);
+    assert!(!engine.get_entities().is_empty());
 }
 
 #[test]

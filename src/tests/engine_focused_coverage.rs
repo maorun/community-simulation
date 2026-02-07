@@ -115,7 +115,7 @@ fn test_specialization_strategy_varied() {
 
     let engine = SimulationEngine::new(config_with_spec);
     let entities = engine.get_entities();
-    assert!(entities.len() > 0);
+    assert!(!entities.is_empty());
 }
 
 // Test initial sick persons (lines 739-749)
