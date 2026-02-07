@@ -7,10 +7,7 @@ use crate::error::{Result as SimResult, SimulationError};
 use crate::parameter_sweep::{ParameterRange, ParameterSweepResult};
 use crate::person::PersonId;
 use crate::plugin::{Plugin, PluginContext};
-use crate::result::{
-    calculate_statistics, MonteCarloStats,
-    SimulationMetadata, SimulationResult,
-};
+use crate::result::{calculate_statistics, MonteCarloStats, SimulationMetadata, SimulationResult};
 use crate::scenario::{PriceUpdater, Scenario};
 use crate::trust_network::{TrustLevel, TrustNetwork};
 use crate::voting::{ProposalType, VotingMethod, VotingSystem};
@@ -25,12 +22,8 @@ use tempfile::Builder;
 
 #[test]
 fn test_checkpoint_save_and_load_full_cycle() {
-    let config = SimulationConfig {
-        max_steps: 50,
-        entity_count: 10,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 50, entity_count: 10, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config.clone());
 
@@ -78,12 +71,8 @@ fn test_checkpoint_with_crisis_enabled() {
 
 #[test]
 fn test_checkpoint_with_business_cycles() {
-    let config = SimulationConfig {
-        max_steps: 40,
-        entity_count: 10,
-        seed: 456,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 40, entity_count: 10, seed: 456, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     for _ in 0..20 {
@@ -148,12 +137,8 @@ fn test_all_getter_methods() {
 
 #[test]
 fn test_get_current_result_during_simulation() {
-    let config = SimulationConfig {
-        max_steps: 50,
-        entity_count: 15,
-        seed: 99,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 50, entity_count: 15, seed: 99, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -219,12 +204,8 @@ fn test_plugin_registry_methods() {
         }
     }
 
-    let config = SimulationConfig {
-        max_steps: 10,
-        entity_count: 5,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 10, entity_count: 5, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -241,12 +222,8 @@ fn test_plugin_registry_methods() {
 
 #[test]
 fn test_action_recording_full_cycle() {
-    let config = SimulationConfig {
-        max_steps: 20,
-        entity_count: 8,
-        seed: 123,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 20, entity_count: 8, seed: 123, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     engine.enable_action_recording();
@@ -267,12 +244,8 @@ fn test_action_recording_full_cycle() {
 
 #[test]
 fn test_welfare_analysis_calculations() {
-    let config = SimulationConfig {
-        max_steps: 30,
-        entity_count: 15,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 30, entity_count: 15, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -298,7 +271,7 @@ fn test_failed_trade_tracking() {
         max_steps: 50,
         entity_count: 10,
         initial_money_per_person: 10.0, // Very low money to cause failures
-        base_skill_price: 50.0, // Very high prices
+        base_skill_price: 50.0,         // Very high prices
         seed: 999,
         ..Default::default()
     };
@@ -364,12 +337,8 @@ fn test_crisis_impact_tracking() {
 
 #[test]
 fn test_business_cycle_full_period() {
-    let config = SimulationConfig {
-        max_steps: 60,
-        entity_count: 15,
-        seed: 888,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 60, entity_count: 15, seed: 888, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -458,13 +427,7 @@ fn test_simulation_metadata_capture() {
 
 #[test]
 fn test_monte_carlo_stats_debug() {
-    let stats = MonteCarloStats {
-        mean: 100.0,
-        median: 95.0,
-        std_dev: 10.5,
-        min: 80.0,
-        max: 120.0,
-    };
+    let stats = MonteCarloStats { mean: 100.0, median: 95.0, std_dev: 10.5, min: 80.0, max: 120.0 };
 
     let debug_str = format!("{:?}", stats);
     assert!(debug_str.contains("mean"));
@@ -510,12 +473,8 @@ fn test_calculate_statistics_edge_cases() {
 
 #[test]
 fn test_result_json_serialization() {
-    let config = SimulationConfig {
-        max_steps: 10,
-        entity_count: 5,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 10, entity_count: 5, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -847,12 +806,8 @@ fn test_simulation_with_all_features_enabled() {
 
 #[test]
 fn test_run_with_progress_disabled() {
-    let config = SimulationConfig {
-        max_steps: 10,
-        entity_count: 5,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 10, entity_count: 5, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run_with_progress(false);
@@ -862,12 +817,8 @@ fn test_run_with_progress_disabled() {
 
 #[test]
 fn test_run_with_progress_enabled() {
-    let config = SimulationConfig {
-        max_steps: 10,
-        entity_count: 5,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 10, entity_count: 5, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run_with_progress(true);
@@ -894,15 +845,11 @@ fn test_technology_breakthrough_structure() {
 
 #[test]
 fn test_checkpoint_structure() {
-    let config = SimulationConfig {
-        max_steps: 10,
-        entity_count: 5,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 10, entity_count: 5, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config.clone());
-    
+
     // Run a few steps to build up state
     for _ in 0..3 {
         engine.step();
@@ -989,12 +936,8 @@ fn test_engine_with_extreme_parameters() {
 
 #[test]
 fn test_result_print_summary() {
-    let config = SimulationConfig {
-        max_steps: 10,
-        entity_count: 5,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 10, entity_count: 5, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
@@ -1005,12 +948,8 @@ fn test_result_print_summary() {
 
 #[test]
 fn test_result_save_to_file() {
-    let config = SimulationConfig {
-        max_steps: 10,
-        entity_count: 5,
-        seed: 42,
-        ..Default::default()
-    };
+    let config =
+        SimulationConfig { max_steps: 10, entity_count: 5, seed: 42, ..Default::default() };
 
     let mut engine = SimulationEngine::new(config);
     let result = engine.run();
