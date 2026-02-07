@@ -9,17 +9,17 @@ fn test_engine_getters() {
     config.entity_count = 5;
     config.max_steps = 2;
     let mut engine = SimulationEngine::new(config.clone());
-    
+
     assert_eq!(engine.get_active_entity_count(), 5);
     assert_eq!(engine.get_current_step(), 0);
     assert_eq!(engine.get_max_steps(), 2);
     assert_eq!(engine.get_active_persons(), 5);
     assert!(engine.get_entities().len() == 5);
     assert!(engine.get_market().skills.len() > 0);
-    
+
     engine.step();
     assert_eq!(engine.get_current_step(), 1);
-    
+
     let result = engine.get_current_result();
     assert_eq!(result.total_steps, 1);
 }
@@ -32,7 +32,7 @@ fn test_zero_money() {
     config.max_steps = 5;
     config.initial_money_per_person = 0.0;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     assert_eq!(result.total_steps, 5);
     assert_eq!(result.trade_volume_statistics.total_trades, 0);
@@ -45,7 +45,7 @@ fn test_single_person() {
     config.entity_count = 1;
     config.max_steps = 10;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     assert_eq!(result.active_persons, 1);
     assert_eq!(result.trade_volume_statistics.total_trades, 0);
@@ -58,20 +58,20 @@ fn test_checkpoint() {
     config.entity_count = 5;
     config.max_steps = 10;
     let mut engine = SimulationEngine::new(config);
-    
+
     engine.step();
     engine.step();
     engine.step();
-    
+
     let step_before = engine.get_current_step();
     assert_eq!(step_before, 3);
-    
+
     let temp_path = std::env::temp_dir().join("test_checkpoint.json");
     engine.save_checkpoint(&temp_path).expect("Save failed");
-    
+
     let loaded = SimulationEngine::load_checkpoint(&temp_path).expect("Load failed");
     assert_eq!(loaded.get_current_step(), step_before);
-    
+
     let _ = fs::remove_file(&temp_path);
 }
 
@@ -80,7 +80,7 @@ fn test_checkpoint() {
 fn test_plugins() {
     let config = SimulationConfig::default();
     let mut engine = SimulationEngine::new(config);
-    
+
     let _registry = engine.plugin_registry();
     let _registry_mut = engine.plugin_registry_mut();
 }
@@ -92,13 +92,13 @@ fn test_action_recording() {
     config.entity_count = 3;
     config.max_steps = 5;
     let mut engine = SimulationEngine::new(config);
-    
+
     engine.enable_action_recording();
     engine.run();
-    
+
     let temp_path = std::env::temp_dir().join("test_action_log.json");
     engine.save_action_log(&temp_path).expect("Save failed");
-    
+
     assert!(temp_path.exists());
     let _ = fs::remove_file(&temp_path);
 }
@@ -110,7 +110,7 @@ fn test_run_with_progress() {
     config.entity_count = 5;
     config.max_steps = 10;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run_with_progress(false);
     assert_eq!(result.total_steps, 10);
 }
@@ -124,7 +124,7 @@ fn test_loans() {
     config.initial_money_per_person = 50.0;
     config.enable_loans = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_loan_stats) = result.loan_statistics {
         // Feature enabled successfully
@@ -139,7 +139,7 @@ fn test_contracts() {
     config.max_steps = 30;
     config.enable_contracts = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_contract_stats) = result.contract_statistics {
         // Feature enabled successfully
@@ -154,7 +154,7 @@ fn test_mentorship() {
     config.max_steps = 25;
     config.enable_mentorship = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_mentorship_stats) = result.mentorship_statistics {
         // Feature enabled successfully
@@ -170,7 +170,7 @@ fn test_groups() {
     config.num_groups = Some(4);
     config.enable_resource_pools = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(group_stats) = result.group_statistics {
         assert_eq!(group_stats.groups.len(), 4);
@@ -185,7 +185,7 @@ fn test_trade_agreements() {
     config.max_steps = 30;
     config.enable_trade_agreements = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_agreement_stats) = result.trade_agreement_statistics {
         // Feature enabled successfully
@@ -200,7 +200,7 @@ fn test_insurance() {
     config.max_steps = 30;
     config.enable_insurance = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_insurance_stats) = result.insurance_statistics {
         // Feature enabled successfully
@@ -215,7 +215,7 @@ fn test_environment() {
     config.max_steps = 20;
     config.enable_environment = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_env_stats) = result.environment_statistics {
         // Feature enabled successfully
@@ -230,7 +230,7 @@ fn test_assets() {
     config.max_steps = 25;
     config.enable_assets = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_asset_stats) = result.asset_statistics {
         // Feature enabled successfully
@@ -245,7 +245,7 @@ fn test_black_market() {
     config.max_steps = 25;
     config.enable_black_market = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_black_market_stats) = result.black_market_statistics {
         // Feature enabled successfully
@@ -259,9 +259,9 @@ fn test_statistics() {
     config.entity_count = 2;
     config.max_steps = 2;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
-    
+
     assert!(result.money_statistics.average.is_finite());
     assert!(result.money_statistics.median.is_finite());
     assert!(result.money_statistics.std_dev.is_finite());
@@ -278,7 +278,7 @@ fn test_no_trades() {
     config.initial_money_per_person = 1.0;
     config.base_skill_price = 1000.0;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     assert_eq!(result.total_steps, 5);
 }
@@ -290,7 +290,7 @@ fn test_long_simulation() {
     config.entity_count = 5;
     config.max_steps = 100;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     assert_eq!(result.total_steps, 100);
     assert!(result.money_statistics.average.is_finite());
@@ -304,7 +304,7 @@ fn test_education() {
     config.max_steps = 20;
     config.enable_education = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_influence_stats) = result.influence_statistics {
         // Feature enabled successfully
@@ -319,7 +319,7 @@ fn test_high_volatility() {
     config.max_steps = 15;
     config.volatility_percentage = 0.8;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     assert_eq!(result.total_steps, 15);
 }
@@ -332,7 +332,7 @@ fn test_dynamic_pricing() {
     config.max_steps = 10;
     config.scenario = Scenario::DynamicPricing;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     assert_eq!(result.total_steps, 10);
 }
@@ -345,7 +345,7 @@ fn test_automation() {
     config.max_steps = 20;
     config.enable_automation = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_automation_stats) = result.automation_statistics {
         // Feature enabled successfully
@@ -360,7 +360,7 @@ fn test_friendships() {
     config.max_steps = 20;
     config.enable_friendships = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_friendship_stats) = result.friendship_statistics {
         // Feature enabled successfully
@@ -375,7 +375,7 @@ fn test_production() {
     config.max_steps = 20;
     config.enable_production = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let _result = engine.run();
 }
 
@@ -387,7 +387,7 @@ fn test_externalities() {
     config.max_steps = 20;
     config.enable_externalities = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_ext_stats) = result.externality_statistics {
         // Feature enabled successfully
@@ -402,7 +402,7 @@ fn test_investments() {
     config.max_steps = 20;
     config.enable_investments = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_investment_stats) = result.investment_statistics {
         // Feature enabled successfully
@@ -417,7 +417,7 @@ fn test_crisis_events() {
     config.max_steps = 50;
     config.enable_crisis_events = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let _result = engine.run();
 }
 
@@ -429,7 +429,7 @@ fn test_technology_breakthroughs() {
     config.max_steps = 40;
     config.enable_technology_breakthroughs = true;
     let mut engine = SimulationEngine::new(config);
-    
+
     let result = engine.run();
     if let Some(_tech_stats) = result.technology_breakthrough_statistics {
         // Feature enabled successfully
@@ -444,7 +444,7 @@ fn test_various_entity_counts() {
         config.entity_count = *count;
         config.max_steps = 5;
         let mut engine = SimulationEngine::new(config);
-        
+
         let result = engine.run();
         assert_eq!(result.active_persons, *count);
     }
@@ -458,7 +458,7 @@ fn test_various_step_counts() {
         config.entity_count = 5;
         config.max_steps = *steps;
         let mut engine = SimulationEngine::new(config);
-        
+
         let result = engine.run();
         assert_eq!(result.total_steps, *steps);
     }
@@ -473,7 +473,7 @@ fn test_different_seeds() {
         config.max_steps = 10;
         config.seed = *seed;
         let mut engine = SimulationEngine::new(config);
-        
+
         let result = engine.run();
         assert_eq!(result.total_steps, 10);
     }
