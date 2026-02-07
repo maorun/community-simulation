@@ -302,4 +302,11 @@ mod tests {
             _ => panic!("Expected IoError variant"),
         }
     }
+
+    #[test]
+    fn test_error_debug_trait() {
+        let err = SimulationError::ValidationError("test".to_string());
+        let debug_str = format!("{:?}", err);
+        assert!(debug_str.contains("ValidationError"));
+    }
 }
