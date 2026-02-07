@@ -2,6 +2,7 @@ mod comprehensive_scenario_tests;
 mod coverage_boost_tests;
 mod coverage_push_tests;
 mod coverage_sprint_80;
+mod engine_focused_coverage;
 mod final_80_breakthrough;
 mod final_80_percent_push;
 mod final_push_tests;
