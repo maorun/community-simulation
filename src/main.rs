@@ -1,5 +1,4 @@
-use clap::{CommandFactory, Parser, Subcommand};
-use clap_complete::{generate, Shell};
+use clap::{Parser, Subcommand};
 use colored::Colorize;
 use community_simulation::{PresetName, SimulationConfig, SimulationEngine};
 use log::{debug, info, warn};
@@ -11,6 +10,10 @@ use std::str::FromStr;
 use std::time::Instant;
 
 use community_simulation::scenario::Scenario;
+use community_simulation::completion;
+use community_simulation::list_commands;
+use community_simulation::scenario::Scenario;
+use community_simulation::utils::certification_duration_from_arg;
 
 #[derive(Parser)]
 #[command(name = "community-simulation")]
@@ -535,17 +538,6 @@ struct RunArgs {
     strict_invariant_mode: bool,
 }
 
-/// Converts a certification duration argument to an Option.
-/// Duration of 0 means certifications never expire (None).
-/// Any other value is returned as Some(duration).
-fn certification_duration_from_arg(duration: usize) -> Option<usize> {
-    if duration == 0 {
-        None
-    } else {
-        Some(duration)
-    }
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
@@ -560,79 +552,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Run the list subcommand
 fn run_list(list_type: ListType) -> Result<(), Box<dyn std::error::Error>> {
     match list_type {
-        ListType::Presets => list_presets(),
-        ListType::Scenarios => list_scenarios(),
+        ListType::Presets => list_commands::list_presets(),
+        ListType::Scenarios => list_commands::list_scenarios(),
     }
-}
-
-/// List available preset configurations
-fn list_presets() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Available preset configurations:\n");
-    for preset in PresetName::all() {
-        let config = SimulationConfig::from_preset(preset.clone());
-        println!("  {}", preset.as_str());
-        println!("    Description: {}", preset.description());
-        println!(
-            "    Parameters: {} persons, {} steps, ${:.0} initial money, ${:.0} base price, scenario: {:?}",
-            config.entity_count,
-            config.max_steps,
-            config.initial_money_per_person,
-            config.base_skill_price,
-            config.scenario
-        );
-        println!();
-    }
-    Ok(())
-}
-
-/// List available pricing scenarios
-fn list_scenarios() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Available pricing scenarios:\n");
-
-    for scenario in Scenario::all() {
-        let default_marker = if scenario.is_default() {
-            " (default)"
-        } else {
-            ""
-        };
-        println!("  {}{}", scenario, default_marker);
-        println!("    Description: {}", scenario.description());
-        println!("    Mechanism: {}", scenario.mechanism());
-        println!("    Best for: {}\n", scenario.use_case());
-    }
-
-    println!("Usage: community-simulation run --scenario <SCENARIO>");
-    println!("Example: community-simulation run --scenario AdaptivePricing -s 500 -p 100");
-
-    Ok(())
 }
 
 /// Generate shell completion script
 fn run_completion(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let shell = match shell_name.to_lowercase().as_str() {
-        "bash" => Shell::Bash,
-        "zsh" => Shell::Zsh,
-        "fish" => Shell::Fish,
-        "powershell" | "pwsh" => Shell::PowerShell,
-        _ => {
+    let shell = match completion::parse_shell_name(shell_name) {
+        Some(s) => s,
+        None => {
             eprintln!("Error: Unsupported shell '{}'", shell_name);
-            eprintln!("Supported shells: bash, zsh, fish, powershell");
+            eprintln!("Supported shells: {}", completion::get_supported_shells().join(", "));
             std::process::exit(1);
         },
     };
 
-    let mut cmd = Cli::command();
-    let bin_name = std::env::args()
-        .next()
-        .and_then(|path| {
-            std::path::Path::new(&path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .map(|s| s.to_string())
-        })
-        .unwrap_or_else(|| "community-simulation".to_string());
+    let bin_name = simulation_framework::utils::get_binary_name("simulation-framework");
 
-    generate(shell, &mut cmd, bin_name, &mut io::stdout());
+    completion::generate_completion::<Cli>(shell, &bin_name, &mut io::stdout());
     Ok(())
 }
 
@@ -647,14 +585,8 @@ fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
 
     // Save config if requested
     if let Some(path) = &output_path {
-        let content = if path.extension().and_then(|s| s.to_str()) == Some("toml") {
-            toml::to_string_pretty(&config)
-                .map_err(|e| format!("Failed to serialize config to TOML: {}", e))?
-        } else {
-            // Default to YAML
-            serde_yaml::to_string(&config)
-                .map_err(|e| format!("Failed to serialize config to YAML: {}", e))?
-        };
+        let content =
+            simulation_framework::wizard_helpers::serialize_config_by_extension(&config, path)?;
 
         std::fs::write(path, content).map_err(|e| format!("Failed to write config file: {}", e))?;
         println!("\n✅ Configuration saved to: {}", path.display());

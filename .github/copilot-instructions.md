@@ -414,6 +414,60 @@ When implementing a feature from the `features.md` file as part of autonomous fe
 8. **JSON output structure is part of the API** - Changes to `SimulationResult` affect downstream consumers
 9. **The simulation is deterministic with fixed seed** - Use `--seed` parameter for reproducible results
 10. **Doctests are part of the test suite** - Always run both `cargo test` and `cargo test --doc`
+11. **Code coverage is important** - When adding new functions or modules, ensure comprehensive test coverage:
+    - Every public function should have unit tests
+    - Test edge cases, error conditions, and different input combinations
+    - Aim for high code coverage (ideally 80%+ for new code)
+    - Use meaningful test names that describe what is being tested
+    - Include both positive tests (happy path) and negative tests (error cases)
+    - For I/O functions that are hard to test directly, create testable helper functions
+
+## Test Coverage Guidelines
+
+When writing tests for new code:
+
+1. **Unit Tests:** Every public function should have at least one unit test
+2. **Edge Cases:** Test boundary conditions (empty inputs, zero values, maximum values)
+3. **Error Handling:** Test error paths and ensure proper error messages
+4. **Integration Tests:** For complex interactions between modules
+5. **Doctests:** Include examples in documentation that also serve as tests
+6. **Test Organization:** 
+   - Keep tests in `#[cfg(test)] mod tests { ... }` blocks
+   - Use descriptive test names: `test_function_name_scenario_expected_result`
+   - Group related tests together
+
+**Example of good test coverage:**
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_value_valid_input() {
+        assert_eq!(parse_value("42"), Ok(42));
+    }
+
+    #[test]
+    fn test_parse_value_zero() {
+        assert_eq!(parse_value("0"), Ok(0));
+    }
+
+    #[test]
+    fn test_parse_value_negative() {
+        assert!(parse_value("-1").is_err());
+    }
+
+    #[test]
+    fn test_parse_value_invalid_input() {
+        assert!(parse_value("not a number").is_err());
+    }
+
+    #[test]
+    fn test_parse_value_empty_string() {
+        assert!(parse_value("").is_err());
+    }
+}
+```
 
 ## Trust These Instructions
 

@@ -5,7 +5,7 @@
 /// and dependency checking.
 use crate::config::{PresetName, SimulationConfig};
 use crate::error::{Result, SimulationError};
-use crate::scenario::Scenario;
+use crate::wizard_helpers;
 use inquire::{Confirm, CustomType, Select, Text};
 use std::path::PathBuf;
 
@@ -53,7 +53,7 @@ pub fn run_wizard() -> Result<(SimulationConfig, Option<PathBuf>)> {
         })?;
 
         // Extract preset name from selection
-        let preset_name = selected.split(':').next().unwrap();
+        let preset_name = wizard_helpers::extract_preset_name(&selected);
         let preset = preset_name
             .parse::<PresetName>()
             .map_err(|e| SimulationError::ValidationError(format!("Invalid preset: {}", e)))?;
@@ -95,8 +95,7 @@ pub fn run_wizard() -> Result<(SimulationConfig, Option<PathBuf>)> {
                     SimulationError::ValidationError(format!("Failed to select format: {}", e))
                 })?;
 
-            let default_name =
-                format!("simulation_config.{}", if format == "YAML" { "yaml" } else { "toml" });
+            let default_name = wizard_helpers::get_default_config_filename(format);
 
             let path = Text::new("Enter file path:").with_default(&default_name).prompt().map_err(
                 |e| SimulationError::ValidationError(format!("Failed to get file path: {}", e)),
@@ -163,25 +162,14 @@ fn customize_config(config: &mut SimulationConfig) -> Result<()> {
         })?;
 
     if change_scenario {
-        let scenarios = vec![
-            "Original (supply/demand-based)",
-            "DynamicPricing (sales-based)",
-            "AdaptivePricing (gradual adaptation)",
-            "AuctionPricing (competitive bidding)",
-        ];
+        let scenarios = wizard_helpers::get_scenario_choices();
 
         let selected =
             Select::new("Select pricing scenario:", scenarios).prompt().map_err(|e| {
                 SimulationError::ValidationError(format!("Failed to select scenario: {}", e))
             })?;
 
-        config.scenario = match selected {
-            "Original (supply/demand-based)" => Scenario::Original,
-            "DynamicPricing (sales-based)" => Scenario::DynamicPricing,
-            "AdaptivePricing (gradual adaptation)" => Scenario::AdaptivePricing,
-            "AuctionPricing (competitive bidding)" => Scenario::AuctionPricing,
-            _ => Scenario::Original,
-        };
+        config.scenario = wizard_helpers::parse_scenario_selection(selected);
     }
 
     // Advanced features
@@ -237,12 +225,7 @@ fn create_custom_config() -> Result<SimulationConfig> {
         })?;
 
     // Scenario selection
-    let scenarios = vec![
-        "Original (supply/demand-based)",
-        "DynamicPricing (sales-based)",
-        "AdaptivePricing (gradual adaptation)",
-        "AuctionPricing (competitive bidding)",
-    ];
+    let scenarios = wizard_helpers::get_scenario_choices();
 
     let selected = Select::new("Select pricing scenario:", scenarios)
         .with_help_message("Different price update mechanisms create different market dynamics")
@@ -251,13 +234,7 @@ fn create_custom_config() -> Result<SimulationConfig> {
             SimulationError::ValidationError(format!("Failed to select scenario: {}", e))
         })?;
 
-    config.scenario = match selected {
-        "Original (supply/demand-based)" => Scenario::Original,
-        "DynamicPricing (sales-based)" => Scenario::DynamicPricing,
-        "AdaptivePricing (gradual adaptation)" => Scenario::AdaptivePricing,
-        "AuctionPricing (competitive bidding)" => Scenario::AuctionPricing,
-        _ => Scenario::Original,
-    };
+    config.scenario = wizard_helpers::parse_scenario_selection(selected);
 
     // Ask about advanced features
     let configure_advanced = Confirm::new("Would you like to configure advanced features?")
