@@ -90,7 +90,7 @@ mod tests {
         let name = get_binary_name("default-name");
         assert!(!name.is_empty());
         // The name should be either the actual binary name or the default
-        assert!(name.len() > 0);
+        assert!(!name.is_empty());
     }
 
     #[test]
