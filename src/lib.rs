@@ -121,8 +121,10 @@ pub mod scenario_comparison;
 pub mod skill;
 pub mod trade_agreement;
 pub mod trust_network;
+pub mod utils;
 pub mod voting;
 pub mod wizard;
+pub mod wizard_helpers;
 
 pub use asset::{Asset, AssetId, AssetType};
 pub use causal_analysis::{CausalAnalysisConfig, CausalAnalysisResult, StatisticalTest};

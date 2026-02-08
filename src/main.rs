@@ -11,6 +11,7 @@ use std::str::FromStr;
 use std::time::Instant;
 
 use simulation_framework::scenario::Scenario;
+use simulation_framework::utils::certification_duration_from_arg;
 
 #[derive(Parser)]
 #[command(name = "simulation-framework")]
@@ -533,17 +534,6 @@ struct RunArgs {
     /// Only used when --enable-invariant-checking is set
     #[arg(long, default_value_t = false)]
     strict_invariant_mode: bool,
-}
-
-/// Converts a certification duration argument to an Option.
-/// Duration of 0 means certifications never expire (None).
-/// Any other value is returned as Some(duration).
-fn certification_duration_from_arg(duration: usize) -> Option<usize> {
-    if duration == 0 {
-        None
-    } else {
-        Some(duration)
-    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
