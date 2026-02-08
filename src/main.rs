@@ -9,7 +9,6 @@ use std::io;
 use std::str::FromStr;
 use std::time::Instant;
 
-use community_simulation::scenario::Scenario;
 use community_simulation::completion;
 use community_simulation::list_commands;
 use community_simulation::scenario::Scenario;
@@ -568,7 +567,7 @@ fn run_completion(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
-    let bin_name = simulation_framework::utils::get_binary_name("simulation-framework");
+    let bin_name = community_simulation::utils::get_binary_name("community-simulation");
 
     completion::generate_completion::<Cli>(shell, &bin_name, &mut io::stdout());
     Ok(())
@@ -586,7 +585,7 @@ fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
     // Save config if requested
     if let Some(path) = &output_path {
         let content =
-            simulation_framework::wizard_helpers::serialize_config_by_extension(&config, path)?;
+            community_simulation::wizard_helpers::serialize_config_by_extension(&config, path)?;
 
         std::fs::write(path, content).map_err(|e| format!("Failed to write config file: {}", e))?;
         println!("\n✅ Configuration saved to: {}", path.display());

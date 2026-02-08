@@ -19,7 +19,7 @@
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::utils::certification_duration_from_arg;
+/// use community_simulation::utils::certification_duration_from_arg;
 ///
 /// assert_eq!(certification_duration_from_arg(0), None);
 /// assert_eq!(certification_duration_from_arg(100), Some(100));
@@ -49,7 +49,7 @@ pub fn certification_duration_from_arg(duration: usize) -> Option<usize> {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::utils::get_binary_name;
+/// use community_simulation::utils::get_binary_name;
 ///
 /// let name = get_binary_name("my-default-app");
 /// // Will return the actual binary name or "my-default-app"
