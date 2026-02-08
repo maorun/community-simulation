@@ -272,6 +272,18 @@ impl TestConfigBuilder {
         self
     }
 
+    /// Enable or disable satisficing decision-making
+    pub fn enable_satisficing(mut self, enable: bool) -> Self {
+        self.config.enable_satisficing = enable;
+        self
+    }
+
+    /// Set the satisficing threshold for "good enough" decisions
+    pub fn satisficing_threshold(mut self, threshold: f64) -> Self {
+        self.config.satisficing_threshold = threshold;
+        self
+    }
+
     /// Build and return the final SimulationConfig
     pub fn build(self) -> SimulationConfig {
         self.config
