@@ -1,5 +1,4 @@
-use clap::{CommandFactory, Parser, Subcommand};
-use clap_complete::{generate, Shell};
+use clap::{Parser, Subcommand};
 use colored::Colorize;
 use log::{debug, info, warn};
 use rustyline::error::ReadlineError;
@@ -12,6 +11,8 @@ use std::time::Instant;
 
 use simulation_framework::scenario::Scenario;
 use simulation_framework::utils::certification_duration_from_arg;
+use simulation_framework::list_commands;
+use simulation_framework::completion;
 
 #[derive(Parser)]
 #[command(name = "simulation-framework")]
@@ -550,68 +551,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Run the list subcommand
 fn run_list(list_type: ListType) -> Result<(), Box<dyn std::error::Error>> {
     match list_type {
-        ListType::Presets => list_presets(),
-        ListType::Scenarios => list_scenarios(),
+        ListType::Presets => list_commands::list_presets(),
+        ListType::Scenarios => list_commands::list_scenarios(),
     }
-}
-
-/// List available preset configurations
-fn list_presets() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Available preset configurations:\n");
-    for preset in PresetName::all() {
-        let config = SimulationConfig::from_preset(preset.clone());
-        println!("  {}", preset.as_str());
-        println!("    Description: {}", preset.description());
-        println!(
-            "    Parameters: {} persons, {} steps, ${:.0} initial money, ${:.0} base price, scenario: {:?}",
-            config.entity_count,
-            config.max_steps,
-            config.initial_money_per_person,
-            config.base_skill_price,
-            config.scenario
-        );
-        println!();
-    }
-    Ok(())
-}
-
-/// List available pricing scenarios
-fn list_scenarios() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Available pricing scenarios:\n");
-
-    for scenario in Scenario::all() {
-        let default_marker = if scenario.is_default() {
-            " (default)"
-        } else {
-            ""
-        };
-        println!("  {}{}", scenario, default_marker);
-        println!("    Description: {}", scenario.description());
-        println!("    Mechanism: {}", scenario.mechanism());
-        println!("    Best for: {}\n", scenario.use_case());
-    }
-
-    println!("Usage: simulation-framework run --scenario <SCENARIO>");
-    println!("Example: simulation-framework run --scenario AdaptivePricing -s 500 -p 100");
-
-    Ok(())
 }
 
 /// Generate shell completion script
 fn run_completion(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let shell = match shell_name.to_lowercase().as_str() {
-        "bash" => Shell::Bash,
-        "zsh" => Shell::Zsh,
-        "fish" => Shell::Fish,
-        "powershell" | "pwsh" => Shell::PowerShell,
-        _ => {
+    let shell = match completion::parse_shell_name(shell_name) {
+        Some(s) => s,
+        None => {
             eprintln!("Error: Unsupported shell '{}'", shell_name);
-            eprintln!("Supported shells: bash, zsh, fish, powershell");
+            eprintln!("Supported shells: {}", completion::get_supported_shells().join(", "));
             std::process::exit(1);
-        },
+        }
     };
 
-    let mut cmd = Cli::command();
     let bin_name = std::env::args()
         .next()
         .and_then(|path| {
@@ -622,7 +577,7 @@ fn run_completion(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         })
         .unwrap_or_else(|| "simulation-framework".to_string());
 
-    generate(shell, &mut cmd, bin_name, &mut io::stdout());
+    completion::generate_completion::<Cli>(shell, &bin_name, &mut io::stdout());
     Ok(())
 }
 

@@ -92,6 +92,7 @@
 pub mod asset;
 pub mod causal_analysis;
 pub mod centrality;
+pub mod completion;
 pub mod config;
 pub mod contract;
 pub mod credit_rating;
@@ -106,6 +107,7 @@ pub mod externality;
 pub mod insurance;
 pub mod invariant;
 pub mod investment;
+pub mod list_commands;
 pub mod loan;
 pub mod market;
 pub mod parameter_sweep;
