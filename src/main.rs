@@ -419,6 +419,21 @@ struct RunArgs {
     #[arg(long)]
     production_probability: Option<f64>,
 
+    /// Enable satisficing decision-making (bounded rationality)
+    /// When enabled, buyers accept the first "good enough" purchase option that meets the satisficing threshold
+    /// instead of always seeking the optimal purchase. Models real-world cognitive limitations and heuristics.
+    /// This can lead to different market dynamics and emergent "good enough" equilibria.
+    #[arg(long, default_value_t = false)]
+    enable_satisficing: bool,
+
+    /// Threshold for satisficing decisions (0.0-1.0, default: 0.5)
+    /// Buyers accept the first purchase option with priority score >= this threshold
+    /// Higher values = more selective (near-optimal), lower values = less selective (faster decisions)
+    /// Only used when --enable-satisficing is set
+    /// Examples: 0.3=lenient, 0.5=balanced, 0.7=selective
+    #[arg(long)]
+    satisficing_threshold: Option<f64>,
+
     /// Run simulation in interactive mode (REPL)
     /// Allows step-by-step execution with commands for debugging and exploration
     /// Available commands: step, run N, stats, save <path>, help, exit
@@ -1157,6 +1172,10 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             production_probability: args
                 .production_probability
                 .unwrap_or(SimulationConfig::default().production_probability),
+            enable_satisficing: args.enable_satisficing,
+            satisficing_threshold: args
+                .satisficing_threshold
+                .unwrap_or(SimulationConfig::default().satisficing_threshold),
             enable_environment: SimulationConfig::default().enable_environment,
             resource_cost_per_transaction: SimulationConfig::default()
                 .resource_cost_per_transaction,

@@ -435,6 +435,48 @@ pub struct SimulationConfig {
     #[serde(default = "default_priority_reputation_weight")]
     pub priority_reputation_weight: f64,
 
+    /// Enable satisficing decision-making (bounded rationality).
+    ///
+    /// When enabled, buyers use a "good enough" heuristic instead of always seeking
+    /// the optimal purchase. They accept the first purchase option that meets the
+    /// satisficing_threshold rather than sorting all options and choosing the best.
+    ///
+    /// This models bounded rationality - real-world agents often use simple heuristics
+    /// (satisficing) rather than perfect optimization due to cognitive limitations,
+    /// time constraints, or information costs.
+    ///
+    /// Satisficing behavior can lead to:
+    /// - Faster decision-making (less computation per agent)
+    /// - More diverse trading patterns (not always choosing optimal partners)
+    /// - Different market dynamics (good sellers may not dominate as much)
+    /// - Emergent "good enough" equilibria rather than optimal equilibria
+    ///
+    /// Set to false to use optimal priority-based purchasing (default).
+    #[serde(default)]
+    pub enable_satisficing: bool,
+
+    /// Threshold for satisficing decisions (0.0-1.0).
+    ///
+    /// When satisficing is enabled, buyers accept the first purchase option with
+    /// a priority score >= this threshold. Higher thresholds are more selective.
+    ///
+    /// Priority scores combine urgency, affordability, efficiency, and reputation
+    /// (weighted by their respective weight parameters). Each component is normalized
+    /// to 0.0-1.0, so the final priority score typically ranges from 0.0-1.0.
+    ///
+    /// Threshold recommendations:
+    /// - 0.0: Accept any affordable option (very lenient, minimal optimization)
+    /// - 0.3: Accept "decent" options (low selectivity, fast decisions)
+    /// - 0.5: Accept "good" options (medium selectivity, balanced)
+    /// - 0.7: Accept "very good" options (high selectivity, near-optimal)
+    /// - 0.9: Accept only "excellent" options (very selective, almost optimal)
+    ///
+    /// Only used when enable_satisficing is true.
+    /// Default: 0.5 (accept "good enough" options, balanced satisficing)
+    /// Valid range: 0.0-1.0
+    #[serde(default = "default_satisficing_threshold")]
+    pub satisficing_threshold: f64,
+
     /// Enable a parallel black market with different pricing rules.
     ///
     /// When enabled, a percentage of trades are routed to an alternative market
@@ -1704,6 +1746,10 @@ fn default_priority_reputation_weight() -> f64 {
     0.1 // Minor consideration of reputation
 }
 
+fn default_satisficing_threshold() -> f64 {
+    0.5 // Accept "good enough" options with priority score >= 0.5
+}
+
 fn default_black_market_price_multiplier() -> f64 {
     0.8 // Black market is 20% cheaper
 }
@@ -1936,6 +1982,8 @@ impl Default for SimulationConfig {
             enable_events: false,                       // Disabled by default
             enable_production: false,                   // Disabled by default
             production_probability: 0.05,               // 5% chance per step
+            enable_satisficing: false,                  // Disabled by default
+            satisficing_threshold: 0.5,                 // Accept "good enough" options (0.0-1.0)
             enable_environment: false,                  // Disabled by default
             resource_cost_per_transaction: 1.0, // Resource consumption matches transaction value
             custom_resource_reserves: None,     // Use default reserves
@@ -2327,6 +2375,14 @@ impl SimulationConfig {
             return Err(SimulationError::ValidationError(format!(
                 "priority_reputation_weight must be between 0.0 and 1.0, got: {}",
                 self.priority_reputation_weight
+            )));
+        }
+
+        // Validate satisficing_threshold range unconditionally
+        if !(0.0..=1.0).contains(&self.satisficing_threshold) {
+            return Err(SimulationError::ValidationError(format!(
+                "satisficing_threshold must be between 0.0 and 1.0, got: {}",
+                self.satisficing_threshold
             )));
         }
 
