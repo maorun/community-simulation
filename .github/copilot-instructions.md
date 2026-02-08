@@ -8,7 +8,7 @@ This is an **economic simulation framework** written in Rust that models a small
 - **Language:** Rust (edition 2021)
 - **Size:** ~1,200 lines of Rust code (excluding dependencies)
 - **Project Type:** Binary application with library crate
-- **Package Name:** `simulation-framework` (despite the repo name `community-simulation`)
+- **Package Name:** `community-simulation` (despite the repo name `community-simulation`)
 - **Rust Version:** Tested with 1.92.0 (but should work with stable Rust toolchain)
 
 **Key Dependencies:**
@@ -33,7 +33,7 @@ This is an **economic simulation framework** written in Rust that models a small
 cargo build --verbose
 ```
 - Build time: ~18 seconds for clean build, ~2-5 seconds for incremental
-- Output: `target/debug/simulation-framework` (binary name matches package name, not repo name)
+- Output: `target/debug/community-simulation` (binary name matches package name, not repo name)
 - Use for development and testing
 
 **Release Build (optimized, for production):**
@@ -41,7 +41,7 @@ cargo build --verbose
 cargo build --release
 ```
 - Build time: ~29 seconds for clean build
-- Output: `target/release/simulation-framework`
+- Output: `target/release/community-simulation`
 - Use for performance-critical testing and benchmarking
 - Profile settings include: `opt-level = 3`, `lto = true`, `codegen-units = 1`, `panic = "abort"`
 
@@ -107,17 +107,17 @@ cargo clippy --all-targets --all-features -- -D warnings -A deprecated
 ### Running the Application
 
 **Binary location:**
-- Debug: `./target/debug/simulation-framework`
-- Release: `./target/release/simulation-framework`
+- Debug: `./target/debug/community-simulation`
+- Release: `./target/release/community-simulation`
 
 **Basic execution:**
 ```bash
-./target/release/simulation-framework -o results.json
+./target/release/community-simulation -o results.json
 ```
 
 **With custom parameters:**
 ```bash
-./target/release/simulation-framework --steps 1000 --persons 50 --initial-money 200 --base-price 15 --output results.json --seed 123
+./target/release/community-simulation --steps 1000 --persons 50 --initial-money 200 --base-price 15 --output results.json --seed 123
 ```
 
 **CLI Arguments:**
@@ -235,9 +235,9 @@ cargo build --verbose && cargo test --verbose && cargo test --doc --verbose
 - `DynamicPricingUpdater::default()` with `DynamicPricingUpdater`
 
 ### Issue 4: Package Name vs Repository Name Mismatch
-**Symptoms:** Binary is named `simulation-framework`, not `community-simulation`  
+**Symptoms:** Binary is named `community-simulation`, not `community-simulation`  
 **Impact:** Confusion when referencing the binary  
-**Workaround:** ALWAYS use `simulation-framework` when referring to the binary name
+**Workaround:** ALWAYS use `community-simulation` when referring to the binary name
 
 ### Issue 5: Long Release Build Times
 **Symptoms:** Release builds take ~29 seconds even for small changes  
@@ -248,13 +248,13 @@ cargo build --verbose && cargo test --verbose && cargo test --doc --verbose
 
 **Performance check:**
 ```bash
-./target/release/simulation-framework -s 500 -p 100 -o /tmp/perf-test.json
+./target/release/community-simulation -s 500 -p 100 -o /tmp/perf-test.json
 # Should complete in < 1 second and output "Performance: X steps/second"
 ```
 
 **JSON output validation:**
 ```bash
-./target/release/simulation-framework -s 10 -p 5 -o /tmp/output.json
+./target/release/community-simulation -s 10 -p 5 -o /tmp/output.json
 cat /tmp/output.json | jq '.total_steps'  # Should output: 10
 cat /tmp/output.json | jq '.active_persons'  # Should output: 5
 ```
@@ -406,7 +406,7 @@ When implementing a feature from the `features.md` file as part of autonomous fe
 
 1. **ALWAYS run `cargo fmt` before committing** - The codebase uses standard Rust formatting
 2. **After code review adjustments, ALWAYS re-run all validation steps** - Format, lint, build, test (including doctests) must all pass
-3. **The binary name is `simulation-framework`, not `community-simulation`** - Don't get confused by the repo name
+3. **The binary name is `community-simulation`, not `community-simulation`** - Don't get confused by the repo name
 4. **Tests must pass** - Run `cargo test` and `cargo test --doc` to verify changes don't break existing functionality
 5. **Deprecation warnings are acceptable** - The rand 0.9 warnings don't need to be fixed unless specifically requested
 6. **Release builds are slow** - Use debug builds for development unless performance testing

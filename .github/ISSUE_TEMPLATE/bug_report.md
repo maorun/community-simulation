@@ -30,7 +30,7 @@ A clear and concise description of what actually happened.
 - **OS:** [e.g., Ubuntu 22.04, macOS 14, Windows 11]
 - **Rust Version:** [e.g., 1.92.0] (run `rustc --version`)
 - **Build Type:** [Debug / Release]
-- **Command Used:** [e.g., `./target/debug/simulation-framework -s 1000 -p 100`]
+- **Command Used:** [e.g., `./target/debug/community-simulation -s 1000 -p 100`]
 
 ## Error Output
 

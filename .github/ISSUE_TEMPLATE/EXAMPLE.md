@@ -212,7 +212,7 @@ This feature is considered successfully implemented when:
 - [ ] JSON output shows savings and investment data
 - [ ] Documentation is updated
 - [ ] No regressions in existing trading functionality
-- [ ] Can run: `./target/release/simulation-framework -s 100 -p 50 --savings-interest-rate 0.03 -o /tmp/test.json`
+- [ ] Can run: `./target/release/community-simulation -s 100 -p 50 --savings-interest-rate 0.03 -o /tmp/test.json`
 
 ## Additional Notes
 

@@ -84,7 +84,7 @@ cargo clippy --all-targets --all-features -- -D warnings -A deprecated
 cargo tarpaulin --verbose --all-features --workspace --timeout 300
 
 # Run simulation with feature
-./target/debug/simulation-framework -s 100 -p 10 -o /tmp/test.json
+./target/debug/community-simulation -s 100 -p 10 -o /tmp/test.json
 ```
 
 ### Code Coverage Requirements

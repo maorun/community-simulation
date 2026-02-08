@@ -28,7 +28,7 @@ This document provides comprehensive information for developers working on the E
 cargo build --verbose
 ```
 - Build time: ~18 seconds for clean build, ~2-5 seconds for incremental
-- Output: `target/debug/simulation-framework` (binary name matches package name, not repo name)
+- Output: `target/debug/community-simulation` (binary name matches package name, not repo name)
 - Use for development and testing
 
 ### Release Build (optimized, for production)
@@ -37,7 +37,7 @@ cargo build --verbose
 cargo build --release
 ```
 - Build time: ~29 seconds for clean build
-- Output: `target/release/simulation-framework`
+- Output: `target/release/community-simulation`
 - Use for performance-critical testing and benchmarking
 - Profile settings include: `opt-level = 3`, `lto = true`, `codegen-units = 1`, `panic = "abort"`
 

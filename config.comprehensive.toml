@@ -4,7 +4,7 @@
 # Many features are disabled by default for simplicity.
 # Enable only the features you need for your simulation.
 #
-# Usage: ./target/release/simulation-framework --config config.comprehensive.toml
+# Usage: ./target/release/community-simulation --config config.comprehensive.toml
 #
 # Note: CLI arguments will override values specified in this file.
 

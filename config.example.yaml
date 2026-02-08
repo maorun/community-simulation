@@ -3,10 +3,10 @@
 # This file demonstrates commonly-used configuration parameters.
 # For a complete list of ALL 108 parameters, see config.comprehensive.yaml
 #
-# Usage: ./target/release/simulation-framework --config config.yaml
+# Usage: ./target/release/community-simulation --config config.yaml
 #
 # Note: CLI arguments will override values specified in this file.
-# Example: ./target/release/simulation-framework --config config.yaml --steps 2000
+# Example: ./target/release/community-simulation --config config.yaml --steps 2000
 
 # =============================================================================
 # CORE SIMULATION PARAMETERS
