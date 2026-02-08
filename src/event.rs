@@ -23,7 +23,7 @@
 //! # Usage
 //!
 //! ```ignore
-//! use simulation_framework::{SimulationConfig, SimulationEngine};
+//! use community_simulation::{SimulationConfig, SimulationEngine};
 //!
 //! // Create configuration with event tracking enabled
 //! let config = SimulationConfig {

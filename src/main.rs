@@ -1,21 +1,21 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
+use community_simulation::{PresetName, SimulationConfig, SimulationEngine};
 use log::{debug, info, warn};
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
-use simulation_framework::{PresetName, SimulationConfig, SimulationEngine};
 use std::collections::HashMap;
 use std::io;
 use std::str::FromStr;
 use std::time::Instant;
 
-use simulation_framework::completion;
-use simulation_framework::list_commands;
-use simulation_framework::scenario::Scenario;
-use simulation_framework::utils::certification_duration_from_arg;
+use community_simulation::completion;
+use community_simulation::list_commands;
+use community_simulation::scenario::Scenario;
+use community_simulation::utils::certification_duration_from_arg;
 
 #[derive(Parser)]
-#[command(name = "simulation-framework")]
+#[command(name = "community-simulation")]
 #[command(about = "Economic simulation framework with configurable agent-based modeling")]
 #[command(version)]
 struct Cli {
@@ -127,7 +127,7 @@ struct RunArgs {
     /// - Concentrated: Most have low demand, few have high (inequality)
     /// - Cyclical: Demand varies over time (business cycles)
     #[arg(long)]
-    demand_strategy: Option<simulation_framework::scenario::DemandStrategy>,
+    demand_strategy: Option<community_simulation::scenario::DemandStrategy>,
 
     /// Technology growth rate per step (e.g., 0.001 = 0.1% per step)
     /// Simulates productivity improvements over time
@@ -567,7 +567,7 @@ fn run_completion(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
-    let bin_name = simulation_framework::utils::get_binary_name("simulation-framework");
+    let bin_name = community_simulation::utils::get_binary_name("community-simulation");
 
     completion::generate_completion::<Cli>(shell, &bin_name, &mut io::stdout());
     Ok(())
@@ -580,12 +580,12 @@ fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
         colored::control::set_override(false);
     }
 
-    let (config, output_path) = simulation_framework::wizard::run_wizard()?;
+    let (config, output_path) = community_simulation::wizard::run_wizard()?;
 
     // Save config if requested
     if let Some(path) = &output_path {
         let content =
-            simulation_framework::wizard_helpers::serialize_config_by_extension(&config, path)?;
+            community_simulation::wizard_helpers::serialize_config_by_extension(&config, path)?;
 
         std::fs::write(path, content).map_err(|e| format!("Failed to write config file: {}", e))?;
         println!("\n✅ Configuration saved to: {}", path.display());
@@ -601,9 +601,9 @@ fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
     if !run_now {
         println!("\n👋 Configuration complete! You can run the simulation later using:");
         if let Some(path) = output_path {
-            println!("   simulation-framework run --config {}", path.display());
+            println!("   community-simulation run --config {}", path.display());
         } else {
-            println!("   simulation-framework run [with your chosen parameters]");
+            println!("   community-simulation run [with your chosen parameters]");
         }
         return Ok(());
     }
@@ -1364,7 +1364,7 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
         }
 
         if let Some(sqlite_path) = args.sqlite_output {
-            simulation_framework::database::export_to_sqlite(&result, &sqlite_path)?;
+            community_simulation::database::export_to_sqlite(&result, &sqlite_path)?;
             info!("{}", format!("SQLite database saved to: {}", sqlite_path).bright_blue());
         }
 
@@ -1706,8 +1706,8 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                                 println!("\n  {} (last 5):", "Recent Transactions".bright_yellow());
                                 for tx in recent_transactions.iter().rev() {
                                     let tx_type = match tx.transaction_type {
-                                        simulation_framework::person::TransactionType::Buy => "Buy",
-                                        simulation_framework::person::TransactionType::Sell => {
+                                        community_simulation::person::TransactionType::Buy => "Buy",
+                                        community_simulation::person::TransactionType::Sell => {
                                             "Sell"
                                         },
                                     };
@@ -1982,8 +1982,8 @@ fn run_monte_carlo(
     csv_output: Option<String>,
     compress: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    use community_simulation::MonteCarloResult;
     use rayon::prelude::*;
-    use simulation_framework::MonteCarloResult;
 
     let start_time = Instant::now();
     let base_seed = base_config.seed;
@@ -2055,8 +2055,8 @@ fn run_parameter_sweep(
     runs_per_point: usize,
     output: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use simulation_framework::ParameterRange;
-    use simulation_framework::ParameterSweepResult;
+    use community_simulation::ParameterRange;
+    use community_simulation::ParameterSweepResult;
 
     // Parse sweep specification: "parameter:min:max:steps"
     let parts: Vec<&str> = sweep_spec.split(':').collect();
@@ -2144,7 +2144,7 @@ fn run_scenario_comparison(
     runs_per_scenario: usize,
     output: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use simulation_framework::{Scenario, ScenarioComparisonResult};
+    use community_simulation::{Scenario, ScenarioComparisonResult};
     use std::str::FromStr;
 
     // Parse scenario specification: comma-separated list of scenario names

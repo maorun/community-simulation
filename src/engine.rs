@@ -535,7 +535,7 @@ impl SimulationEngine {
     /// # Example
     ///
     /// ```rust
-    /// use simulation_framework::{SimulationEngine, SimulationConfig, Plugin, PluginContext};
+    /// use community_simulation::{SimulationEngine, SimulationConfig, Plugin, PluginContext};
     /// use std::any::Any;
     ///
     /// struct MyPlugin;
@@ -575,7 +575,7 @@ impl SimulationEngine {
     /// # Example
     ///
     /// ```rust
-    /// use simulation_framework::{SimulationEngine, SimulationConfig};
+    /// use community_simulation::{SimulationEngine, SimulationConfig};
     ///
     /// let config = SimulationConfig::default();
     /// let mut engine = SimulationEngine::new(config);
@@ -6055,7 +6055,7 @@ impl SimulationEngine {
     /// # Example
     ///
     /// ```no_run
-    /// use simulation_framework::{SimulationConfig, SimulationEngine};
+    /// use community_simulation::{SimulationConfig, SimulationEngine};
     ///
     /// let config = SimulationConfig::default();
     /// let mut engine = SimulationEngine::new(config);
@@ -6153,7 +6153,7 @@ impl SimulationEngine {
     /// # Example
     ///
     /// ```no_run
-    /// use simulation_framework::SimulationEngine;
+    /// use community_simulation::SimulationEngine;
     ///
     /// // Load from checkpoint
     /// let mut engine = SimulationEngine::load_checkpoint("checkpoint.json")

@@ -15,7 +15,7 @@
 //! ## Example
 //!
 //! ```no_run
-//! use simulation_framework::voting::{VotingSystem, VotingMethod, ProposalType};
+//! use community_simulation::voting::{VotingSystem, VotingMethod, ProposalType};
 //!
 //! // Create voting system with quadratic voting
 //! let mut voting_system = VotingSystem::new(VotingMethod::QuadraticVoting);

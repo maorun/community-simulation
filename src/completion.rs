@@ -24,7 +24,7 @@ use std::io;
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::completion::parse_shell_name;
+/// use community_simulation::completion::parse_shell_name;
 /// use clap_complete::Shell;
 ///
 /// assert_eq!(parse_shell_name("bash"), Some(Shell::Bash));
@@ -57,7 +57,7 @@ pub fn parse_shell_name(shell_name: &str) -> Option<Shell> {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::completion::get_supported_shells;
+/// use community_simulation::completion::get_supported_shells;
 ///
 /// let shells = get_supported_shells();
 /// assert!(shells.contains(&"bash"));
@@ -89,7 +89,7 @@ pub fn get_supported_shells() -> Vec<&'static str> {
 /// ```no_run
 /// use clap::Parser;
 /// use clap_complete::Shell;
-/// use simulation_framework::completion::generate_completion;
+/// use community_simulation::completion::generate_completion;
 ///
 /// #[derive(Parser)]
 /// struct Cli {

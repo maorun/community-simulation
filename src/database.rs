@@ -7,9 +7,9 @@
 //! # Examples
 //!
 //! ```ignore
-//! use simulation_framework::result::SimulationResult;
-//! use simulation_framework::database::export_to_sqlite;
-//! use simulation_framework::{SimulationConfig, SimulationEngine};
+//! use community_simulation::result::SimulationResult;
+//! use community_simulation::database::export_to_sqlite;
+//! use community_simulation::{SimulationConfig, SimulationEngine};
 //!
 //! // Create and run a simulation
 //! let config = SimulationConfig::default();
@@ -43,8 +43,8 @@ use rusqlite::{Connection, Result};
 /// # Examples
 ///
 /// ```ignore
-/// use simulation_framework::database::export_to_sqlite;
-/// use simulation_framework::{SimulationConfig, SimulationEngine};
+/// use community_simulation::database::export_to_sqlite;
+/// use community_simulation::{SimulationConfig, SimulationEngine};
 ///
 /// let config = SimulationConfig::default();
 /// let mut engine = SimulationEngine::new(config);

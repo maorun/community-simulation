@@ -14,7 +14,7 @@ use crate::scenario::Scenario;
 /// # Examples
 ///
 /// ```no_run
-/// use simulation_framework::list_commands::list_presets;
+/// use community_simulation::list_commands::list_presets;
 ///
 /// list_presets().expect("Failed to list presets");
 /// ```
@@ -45,7 +45,7 @@ pub fn list_presets() -> Result<(), Box<dyn std::error::Error>> {
 /// # Examples
 ///
 /// ```no_run
-/// use simulation_framework::list_commands::list_scenarios;
+/// use community_simulation::list_commands::list_scenarios;
 ///
 /// list_scenarios().expect("Failed to list scenarios");
 /// ```
@@ -64,8 +64,8 @@ pub fn list_scenarios() -> Result<(), Box<dyn std::error::Error>> {
         println!("    Best for: {}\n", scenario.use_case());
     }
 
-    println!("Usage: simulation-framework run --scenario <SCENARIO>");
-    println!("Example: simulation-framework run --scenario AdaptivePricing -s 500 -p 100");
+    println!("Usage: community_simulation run --scenario <SCENARIO>");
+    println!("Example: community_simulation run --scenario AdaptivePricing -s 500 -p 100");
 
     Ok(())
 }
@@ -86,8 +86,8 @@ pub fn list_scenarios() -> Result<(), Box<dyn std::error::Error>> {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::list_commands::format_preset_info;
-/// use simulation_framework::config::PresetName;
+/// use community_simulation::list_commands::format_preset_info;
+/// use community_simulation::config::PresetName;
 ///
 /// let info = format_preset_info(&PresetName::SmallEconomy);
 /// assert!(info.contains("small_economy"));
@@ -123,8 +123,8 @@ pub fn format_preset_info(preset: &PresetName) -> String {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::list_commands::format_scenario_info;
-/// use simulation_framework::scenario::Scenario;
+/// use community_simulation::list_commands::format_scenario_info;
+/// use community_simulation::scenario::Scenario;
 ///
 /// let info = format_scenario_info(&Scenario::Original);
 /// assert!(info.contains("Original"));

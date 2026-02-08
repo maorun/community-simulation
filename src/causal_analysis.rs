@@ -8,8 +8,8 @@
 /// # Example
 ///
 /// ```no_run
-/// use simulation_framework::causal_analysis::*;
-/// use simulation_framework::{SimulationConfig, SimulationEngine};
+/// use community_simulation::causal_analysis::*;
+/// use community_simulation::{SimulationConfig, SimulationEngine};
 ///
 /// // Run treatment group simulations
 /// let mut treatment_config = SimulationConfig::default();

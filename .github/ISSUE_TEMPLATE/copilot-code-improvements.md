@@ -97,7 +97,7 @@ cargo tarpaulin --verbose --all-features --workspace --timeout 300
 cargo bench
 
 # Run with example parameters
-./target/debug/simulation-framework -s 100 -p 10 -o /tmp/test.json
+./target/debug/community-simulation -s 100 -p 10 -o /tmp/test.json
 ```
 
 ### Code Coverage Requirements
@@ -290,13 +290,13 @@ For performance-related improvements, use these benchmarks:
 cargo bench
 
 # Manual performance test (small)
-time ./target/release/simulation-framework -s 100 -p 10 -o /tmp/small.json
+time ./target/release/community-simulation -s 100 -p 10 -o /tmp/small.json
 
 # Manual performance test (medium)
-time ./target/release/simulation-framework -s 500 -p 100 -o /tmp/medium.json
+time ./target/release/community-simulation -s 500 -p 100 -o /tmp/medium.json
 
 # Manual performance test (large)
-time ./target/release/simulation-framework -s 1000 -p 500 -o /tmp/large.json
+time ./target/release/community-simulation -s 1000 -p 500 -o /tmp/large.json
 ```
 
 Document results in this format:

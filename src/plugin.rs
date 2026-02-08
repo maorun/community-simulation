@@ -7,7 +7,7 @@
 //! # Example
 //!
 //! ```rust
-//! use simulation_framework::plugin::{Plugin, PluginContext};
+//! use community_simulation::plugin::{Plugin, PluginContext};
 //! use std::any::Any;
 //!
 //! struct MyPlugin;
@@ -112,7 +112,7 @@ impl PluginRegistry {
     /// # Example
     ///
     /// ```rust
-    /// use simulation_framework::plugin::{Plugin, PluginRegistry, PluginContext};
+    /// use community_simulation::plugin::{Plugin, PluginRegistry, PluginContext};
     ///
     /// struct MyPlugin;
     /// impl Plugin for MyPlugin {

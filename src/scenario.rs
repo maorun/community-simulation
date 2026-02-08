@@ -1030,7 +1030,7 @@ mod tests {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::scenario::{PriceUpdater, Scenario};
+/// use community_simulation::scenario::{PriceUpdater, Scenario};
 ///
 /// let updater = PriceUpdater::from(Scenario::Original);
 /// ```

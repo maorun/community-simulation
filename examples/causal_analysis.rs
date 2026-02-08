@@ -8,7 +8,7 @@
 // then performs statistical analysis to determine if the savings rate has
 // a significant causal effect on economic outcomes.
 
-use simulation_framework::{
+use community_simulation::{
     CausalAnalysisConfig, CausalAnalysisResult, SimulationConfig, SimulationEngine,
 };
 

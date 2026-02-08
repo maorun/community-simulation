@@ -41,8 +41,8 @@ struct MarketStatsCache {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::{Market, Skill};
-/// use simulation_framework::scenario::{PriceUpdater, Scenario};
+/// use community_simulation::{Market, Skill};
+/// use community_simulation::scenario::{PriceUpdater, Scenario};
 ///
 /// let price_updater = PriceUpdater::from(Scenario::Original);
 /// let mut market = Market::new(10.0, 1.0, 0.1, 0.02, price_updater);
@@ -156,8 +156,8 @@ impl Market {
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::Market;
-    /// use simulation_framework::scenario::{PriceUpdater, Scenario};
+    /// use community_simulation::Market;
+    /// use community_simulation::scenario::{PriceUpdater, Scenario};
     ///
     /// let updater = PriceUpdater::from(Scenario::Original);
     /// let market = Market::new(10.0, 1.0, 0.1, 0.02, updater);
@@ -471,8 +471,8 @@ impl Market {
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::{Market, Skill};
-    /// use simulation_framework::scenario::{PriceUpdater, Scenario};
+    /// use community_simulation::{Market, Skill};
+    /// use community_simulation::scenario::{PriceUpdater, Scenario};
     ///
     /// let updater = PriceUpdater::from(Scenario::Original);
     /// let mut market = Market::new(10.0, 1.0, 0.1, 0.02, updater);

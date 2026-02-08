@@ -19,7 +19,7 @@ pub type SkillId = String;
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::skill::Certification;
+/// use community_simulation::skill::Certification;
 ///
 /// let cert = Certification::new("CentralAuthority".to_string(), 2, Some(100));
 /// assert_eq!(cert.issuer, "CentralAuthority");
@@ -98,7 +98,7 @@ impl Certification {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::Skill;
+/// use community_simulation::Skill;
 ///
 /// let skill = Skill::new("Programming".to_string(), 50.0);
 /// assert_eq!(skill.id, "Programming");
@@ -157,7 +157,7 @@ impl Skill {
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::Skill;
+    /// use community_simulation::Skill;
     ///
     /// let programming = Skill::new("Programming".to_string(), 50.0);
     /// let accounting = Skill::new("Accounting".to_string(), 45.0);
@@ -213,7 +213,7 @@ impl Skill {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::skill::generate_unique_skills;
+/// use community_simulation::skill::generate_unique_skills;
 ///
 /// // Generate 5 skills with base price of 10.0
 /// let skills = generate_unique_skills(5, 10.0);

@@ -1,5 +1,5 @@
 [package]
-name = "simulation-framework-fuzz"
+name = "community-simulation-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
@@ -12,7 +12,7 @@ libfuzzer-sys = "0.4"
 serde_yaml = "0.9"
 toml = "0.9"
 
-[dependencies.simulation-framework]
+[dependencies.community-simulation]
 path = ".."
 
 [[bin]]

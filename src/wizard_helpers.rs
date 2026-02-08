@@ -22,8 +22,8 @@ use crate::scenario::Scenario;
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::wizard_helpers::parse_scenario_selection;
-/// use simulation_framework::scenario::Scenario;
+/// use community_simulation::wizard_helpers::parse_scenario_selection;
+/// use community_simulation::scenario::Scenario;
 ///
 /// assert_eq!(
 ///     parse_scenario_selection("Original (supply/demand-based)"),
@@ -68,7 +68,7 @@ pub fn parse_scenario_selection(selected: &str) -> Scenario {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::wizard_helpers::get_scenario_choices;
+/// use community_simulation::wizard_helpers::get_scenario_choices;
 ///
 /// let choices = get_scenario_choices();
 /// assert_eq!(choices.len(), 4);
@@ -99,7 +99,7 @@ pub fn get_scenario_choices() -> Vec<&'static str> {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::wizard_helpers::extract_preset_name;
+/// use community_simulation::wizard_helpers::extract_preset_name;
 ///
 /// assert_eq!(
 ///     extract_preset_name("small_economy: A small economic system"),
@@ -131,7 +131,7 @@ pub fn extract_preset_name(selection: &str) -> &str {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::wizard_helpers::get_default_config_filename;
+/// use community_simulation::wizard_helpers::get_default_config_filename;
 ///
 /// assert_eq!(
 ///     get_default_config_filename("YAML"),
@@ -172,8 +172,8 @@ pub fn get_default_config_filename(format: &str) -> String {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::wizard_helpers::serialize_config_by_extension;
-/// use simulation_framework::config::SimulationConfig;
+/// use community_simulation::wizard_helpers::serialize_config_by_extension;
+/// use community_simulation::config::SimulationConfig;
 /// use std::path::Path;
 ///
 /// let config = SimulationConfig::default();

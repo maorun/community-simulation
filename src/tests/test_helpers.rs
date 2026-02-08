@@ -19,7 +19,7 @@ use crate::SimulationConfig;
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::tests::test_helpers::test_config;
+/// use community_simulation::tests::test_helpers::test_config;
 ///
 /// // Minimal config for simple test
 /// let config = test_config().build();
@@ -28,7 +28,7 @@ use crate::SimulationConfig;
 /// let config = test_config()
 ///     .entity_count(20)
 ///     .max_steps(200)
-///     .scenario(simulation_framework::scenario::Scenario::DynamicPricing)
+///     .scenario(community_simulation::scenario::Scenario::DynamicPricing)
 ///     .build();
 /// ```
 pub fn test_config() -> TestConfigBuilder {
@@ -43,8 +43,8 @@ pub fn test_config() -> TestConfigBuilder {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::tests::test_helpers::test_config;
-/// use simulation_framework::scenario::Scenario;
+/// use community_simulation::tests::test_helpers::test_config;
+/// use community_simulation::scenario::Scenario;
 ///
 /// let config = test_config()
 ///     .entity_count(50)
@@ -297,7 +297,7 @@ impl TestConfigBuilder {
 /// # Example
 ///
 /// ```
-/// use simulation_framework::tests::test_helpers::quick_test_config;
+/// use community_simulation::tests::test_helpers::quick_test_config;
 ///
 /// let config = quick_test_config();
 /// ```
@@ -317,7 +317,7 @@ pub fn quick_test_config() -> SimulationConfig {
 /// # Example
 ///
 /// ```
-/// use simulation_framework::tests::test_helpers::loan_test_config;
+/// use community_simulation::tests::test_helpers::loan_test_config;
 ///
 /// let config = loan_test_config();
 /// ```
@@ -340,7 +340,7 @@ pub fn loan_test_config() -> SimulationConfig {
 /// # Example
 ///
 /// ```
-/// use simulation_framework::tests::test_helpers::tax_test_config;
+/// use community_simulation::tests::test_helpers::tax_test_config;
 ///
 /// let config = tax_test_config();
 /// ```
@@ -358,7 +358,7 @@ pub fn tax_test_config() -> SimulationConfig {
 /// # Example
 ///
 /// ```
-/// use simulation_framework::tests::test_helpers::seasonal_test_config;
+/// use community_simulation::tests::test_helpers::seasonal_test_config;
 ///
 /// let config = seasonal_test_config();
 /// ```

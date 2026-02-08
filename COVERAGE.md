@@ -216,7 +216,7 @@ For large test suites, run coverage on a subset:
 
 ```bash
 cargo tarpaulin --lib  # Only library code
-cargo tarpaulin --bin simulation-framework  # Only binary
+cargo tarpaulin --bin community-simulation  # Only binary
 ```
 
 ### Inaccurate Results

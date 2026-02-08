@@ -77,31 +77,31 @@ This framework enables you to simulate and analyze:
 
 2. **Run a basic simulation:**
    ```bash
-   ./target/release/simulation-framework run -o results.json
+   ./target/release/community-simulation run -o results.json
    ```
 
 3. **Try preset scenarios:**
    ```bash
    # Gig Economy (platform with ratings, fees, surge pricing)
-   ./target/release/simulation-framework run --preset gig_economy -o results.json
+   ./target/release/community-simulation run --preset gig_economy -o results.json
    
    # Economic crisis scenario
-   ./target/release/simulation-framework run --preset crisis_scenario -o results.json
+   ./target/release/community-simulation run --preset crisis_scenario -o results.json
    
    # List all available presets
-   ./target/release/simulation-framework list presets
+   ./target/release/community-simulation list presets
    ```
 
 4. **Interactive configuration wizard:**
    ```bash
-   ./target/release/simulation-framework wizard
+   ./target/release/community-simulation wizard
    ```
 
 ### Example: Custom Simulation
 
 ```bash
 # Simulation with social networks, automation, and crisis events
-./target/release/simulation-framework run \
+./target/release/community-simulation run \
   --steps 1000 \
   --persons 100 \
   --initial-money 150 \
@@ -114,7 +114,7 @@ This framework enables you to simulate and analyze:
   -o custom_results.json
 
 # Market segmentation simulation
-./target/release/simulation-framework run \
+./target/release/community-simulation run \
   --steps 500 \
   --persons 100 \
   --enable-market-segments \
@@ -129,7 +129,7 @@ For complex scenarios, use YAML or TOML configuration files:
 
 ```bash
 # Run with configuration file
-./target/release/simulation-framework run --config config.gig_economy.yaml -o results.json
+./target/release/community-simulation run --config config.gig_economy.yaml -o results.json
 
 # Available preset configs:
 # - config.example.yaml/toml - Basic configuration example
@@ -150,10 +150,10 @@ The simulation outputs detailed JSON results including:
 Export to CSV for further analysis:
 ```bash
 # Export specific data to CSV
-./target/release/simulation-framework export results.json --format csv --output results.csv
+./target/release/community-simulation export results.json --format csv --output results.csv
 
 # Time-series export for plotting
-./target/release/simulation-framework export results.json --format timeseries --output timeseries.csv
+./target/release/community-simulation export results.json --format timeseries --output timeseries.csv
 ```
 
 ## Documentation
@@ -179,7 +179,7 @@ Export to CSV for further analysis:
 ## CLI Command Structure
 
 ```bash
-simulation-framework <COMMAND> [OPTIONS]
+community-simulation <COMMAND> [OPTIONS]
 
 Commands:
   run        Run a simulation
@@ -188,7 +188,7 @@ Commands:
   list       List available presets and scenarios
   help       Print help information
 
-Run 'simulation-framework help <COMMAND>' for command-specific help.
+Run 'community-simulation help <COMMAND>' for command-specific help.
 ```
 
 ### Common CLI Parameters
@@ -210,7 +210,7 @@ Essential parameters for customizing simulations:
 
 For the complete parameter list, see [FEATURES.md](FEATURES.md) or run:
 ```bash
-./target/release/simulation-framework run --help
+./target/release/community-simulation run --help
 ```
 
 ## Performance

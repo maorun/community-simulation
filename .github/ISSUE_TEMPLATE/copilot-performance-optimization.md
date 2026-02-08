@@ -112,13 +112,13 @@ cargo bench -- --save-baseline before
 cargo bench -- --baseline before
 
 # Manual performance test (small)
-time ./target/release/simulation-framework -s 100 -p 10 -o /tmp/small.json
+time ./target/release/community-simulation -s 100 -p 10 -o /tmp/small.json
 
 # Manual performance test (medium)
-time ./target/release/simulation-framework -s 500 -p 100 -o /tmp/medium.json
+time ./target/release/community-simulation -s 500 -p 100 -o /tmp/medium.json
 
 # Manual performance test (large)
-time ./target/release/simulation-framework -s 1000 -p 500 -o /tmp/large.json
+time ./target/release/community-simulation -s 1000 -p 500 -o /tmp/large.json
 ```
 
 ### Code Coverage Requirements
