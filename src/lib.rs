@@ -92,6 +92,7 @@
 pub mod asset;
 pub mod causal_analysis;
 pub mod centrality;
+pub mod completion;
 pub mod config;
 pub mod contract;
 pub mod credit_rating;
@@ -106,6 +107,7 @@ pub mod externality;
 pub mod insurance;
 pub mod invariant;
 pub mod investment;
+pub mod list_commands;
 pub mod loan;
 pub mod market;
 pub mod parameter_sweep;
@@ -121,8 +123,10 @@ pub mod scenario_comparison;
 pub mod skill;
 pub mod trade_agreement;
 pub mod trust_network;
+pub mod utils;
 pub mod voting;
 pub mod wizard;
+pub mod wizard_helpers;
 
 pub use asset::{Asset, AssetId, AssetType};
 pub use causal_analysis::{CausalAnalysisConfig, CausalAnalysisResult, StatisticalTest};
