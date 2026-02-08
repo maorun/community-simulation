@@ -1,4 +1,5 @@
 mod comprehensive_scenario_tests;
+mod coverage_80_breakthrough;
 mod coverage_boost_tests;
 mod coverage_push_tests;
 mod coverage_sprint_80;
