@@ -267,6 +267,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "community-simulation"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "clap_complete",
+ "colored",
+ "criterion",
+ "env_logger",
+ "flate2",
+ "indicatif",
+ "inquire",
+ "log",
+ "petgraph",
+ "proptest",
+ "rand",
+ "rayon",
+ "rusqlite",
+ "rustyline",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "strum",
+ "strum_macros",
+ "tempfile",
+ "toml",
+]
+
+[[package]]
 name = "console"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1344,35 +1373,6 @@ name = "simd-adler32"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e320a6c5ad31d271ad523dcf3ad13e2767ad8b1cb8f047f75a8aeaf8da139da2"
-
-[[package]]
-name = "simulation-framework"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "clap",
- "clap_complete",
- "colored",
- "criterion",
- "env_logger",
- "flate2",
- "indicatif",
- "inquire",
- "log",
- "petgraph",
- "proptest",
- "rand",
- "rayon",
- "rusqlite",
- "rustyline",
- "serde",
- "serde_json",
- "serde_yaml",
- "strum",
- "strum_macros",
- "tempfile",
- "toml",
-]
 
 [[package]]
 name = "smallvec"
