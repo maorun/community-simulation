@@ -1,7 +1,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use simulation_framework::config::SimulationConfig;
+use community_simulation::config::SimulationConfig;
 
 fuzz_target!(|data: &[u8]| {
     // Try to parse the fuzzer input as TOML config

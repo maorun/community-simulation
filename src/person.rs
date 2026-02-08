@@ -88,7 +88,7 @@ impl MarketSegment {
     ///
     /// # Examples
     /// ```
-    /// use simulation_framework::person::MarketSegment;
+    /// use community_simulation::person::MarketSegment;
     ///
     /// assert_eq!(MarketSegment::from_percentile(0.20), MarketSegment::Budget);
     /// assert_eq!(MarketSegment::from_percentile(0.60), MarketSegment::Mittelklasse);
@@ -190,7 +190,7 @@ impl SocialClass {
     ///
     /// # Examples
     /// ```
-    /// use simulation_framework::person::SocialClass;
+    /// use community_simulation::person::SocialClass;
     ///
     /// assert_eq!(SocialClass::from_percentile(0.10), SocialClass::Lower);
     /// assert_eq!(SocialClass::from_percentile(0.50), SocialClass::Middle);
@@ -825,8 +825,8 @@ impl Person {
     ///
     /// # Examples
     /// ```
-    /// use simulation_framework::person::{Person, Strategy, Location, SocialClass};
-    /// use simulation_framework::skill::Skill;
+    /// use community_simulation::person::{Person, Strategy, Location, SocialClass};
+    /// use community_simulation::skill::Skill;
     ///
     /// let mut person = Person::new(1, 100.0, vec![Skill::new("Test".to_string(), 10.0)], Strategy::Balanced, Location::new(0.0, 0.0));
     /// person.update_social_class(0.5, 100); // Middle class at 50th percentile

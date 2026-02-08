@@ -7,7 +7,7 @@
 //! # Examples
 //!
 //! ```
-//! use simulation_framework::{SimulationConfig, SimulationError};
+//! use community_simulation::{SimulationConfig, SimulationError};
 //!
 //! // Attempting to load a non-existent config file returns a descriptive error
 //! let result = SimulationConfig::from_file("nonexistent.yaml");

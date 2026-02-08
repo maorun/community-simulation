@@ -22,7 +22,7 @@ pub type EntityId = usize;
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::{Entity, Skill, Strategy, Location};
+/// use community_simulation::{Entity, Skill, Strategy, Location};
 ///
 /// let skill = Skill::new("Programming".to_string(), 50.0);
 /// let location = Location::new(25.0, 75.0);
@@ -60,7 +60,7 @@ impl Entity {
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::{Entity, Skill, Strategy, Location};
+    /// use community_simulation::{Entity, Skill, Strategy, Location};
     ///
     /// let skill = Skill::new("Accounting".to_string(), 45.0);
     /// let location = Location::new(50.0, 50.0);
@@ -90,7 +90,7 @@ impl Entity {
     /// # Examples
     ///
     /// ```
-    /// use simulation_framework::{Entity, Skill, Strategy, Location};
+    /// use community_simulation::{Entity, Skill, Strategy, Location};
     ///
     /// let skill = Skill::new("Writing".to_string(), 30.0);
     /// let location = Location::new(10.0, 20.0);

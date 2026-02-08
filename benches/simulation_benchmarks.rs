@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use simulation_framework::scenario::Scenario;
-use simulation_framework::{SimulationConfig, SimulationEngine};
+use community_simulation::scenario::Scenario;
+use community_simulation::{SimulationConfig, SimulationEngine};
 use std::hint::black_box;
 
 /// Benchmark the simulation engine initialization
@@ -154,7 +154,7 @@ fn bench_statistics(c: &mut Criterion) {
 
         group.bench_function(name, |b| {
             b.iter(|| {
-                black_box(simulation_framework::result::calculate_gini_coefficient(&sorted, sum))
+                black_box(community_simulation::result::calculate_gini_coefficient(&sorted, sum))
             });
         });
     }
@@ -169,7 +169,7 @@ fn bench_statistics(c: &mut Criterion) {
 
         group.bench_function(name, |b| {
             b.iter(|| {
-                black_box(simulation_framework::result::calculate_lorenz_curve(&sorted, sum))
+                black_box(community_simulation::result::calculate_lorenz_curve(&sorted, sum))
             });
         });
     }
@@ -181,7 +181,7 @@ fn bench_statistics(c: &mut Criterion) {
         ("herfindahl_10000", &large_data),
     ] {
         group.bench_function(name, |b| {
-            b.iter(|| black_box(simulation_framework::result::calculate_herfindahl_index(data)));
+            b.iter(|| black_box(community_simulation::result::calculate_herfindahl_index(data)));
         });
     }
 
@@ -198,7 +198,7 @@ fn bench_statistics(c: &mut Criterion) {
 
         group.bench_function(name, |b| {
             b.iter(|| {
-                black_box(simulation_framework::result::calculate_wealth_concentration(
+                black_box(community_simulation::result::calculate_wealth_concentration(
                     &sorted, sum,
                 ))
             });
@@ -210,8 +210,8 @@ fn bench_statistics(c: &mut Criterion) {
 
 /// Benchmark market operations (price updates, supply/demand tracking)
 fn bench_market_operations(c: &mut Criterion) {
-    use simulation_framework::scenario::PriceUpdater;
-    use simulation_framework::{Market, Skill};
+    use community_simulation::scenario::PriceUpdater;
+    use community_simulation::{Market, Skill};
 
     let mut group = c.benchmark_group("market_operations");
 
@@ -297,7 +297,7 @@ fn bench_serialization(c: &mut Criterion) {
 
 /// Benchmark incremental statistics calculator
 fn bench_incremental_stats(c: &mut Criterion) {
-    use simulation_framework::result::IncrementalStats;
+    use community_simulation::result::IncrementalStats;
 
     let mut group = c.benchmark_group("incremental_stats");
 

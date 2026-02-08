@@ -35,7 +35,7 @@ impl Recipe {
     ///
     /// # Examples
     /// ```
-    /// use simulation_framework::production::Recipe;
+    /// use community_simulation::production::Recipe;
     ///
     /// let recipe = Recipe::new(
     ///     "Programming".to_string(),
@@ -99,7 +99,7 @@ impl Recipe {
 ///
 /// # Examples
 /// ```
-/// use simulation_framework::production::generate_default_recipes;
+/// use community_simulation::production::generate_default_recipes;
 ///
 /// let recipes = generate_default_recipes();
 /// assert!(!recipes.is_empty());

@@ -18,7 +18,7 @@ use std::process::Command;
 /// # Example
 ///
 /// ```
-/// use simulation_framework::result::SimulationMetadata;
+/// use community_simulation::result::SimulationMetadata;
 ///
 /// let metadata = SimulationMetadata::capture(42, 100, 500);
 ///
@@ -157,7 +157,7 @@ impl SimulationMetadata {
 /// # Example
 ///
 /// ```
-/// use simulation_framework::result::IncrementalStats;
+/// use community_simulation::result::IncrementalStats;
 ///
 /// let mut stats = IncrementalStats::new();
 /// stats.update(10.0);
@@ -561,7 +561,7 @@ pub struct TradeVolumeStats {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::result::{BusinessCycle, CyclePhase};
+/// use community_simulation::result::{BusinessCycle, CyclePhase};
 ///
 /// // An expansion phase from step 10 to step 50
 /// let expansion = BusinessCycle {
@@ -628,7 +628,7 @@ pub enum CyclePhase {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::result::BusinessCycleStats;
+/// use community_simulation::result::BusinessCycleStats;
 ///
 /// let stats = BusinessCycleStats {
 ///     total_cycles: 3,
@@ -693,7 +693,7 @@ pub struct FailedTradeStats {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::result::WelfareMetrics;
+/// use community_simulation::result::WelfareMetrics;
 ///
 /// let welfare = WelfareMetrics {
 ///     consumer_surplus: 1000.0,
@@ -1393,7 +1393,7 @@ pub struct SkillEquilibrium {
 /// # Example
 ///
 /// ```
-/// # use simulation_framework::result::EquilibriumStats;
+/// # use community_simulation::result::EquilibriumStats;
 /// // Example interpretation:
 /// // - avg_distance_to_equilibrium near 0.0 means markets clear well
 /// // - convergence_rate near 1.0 means markets stabilize over time
@@ -1661,8 +1661,8 @@ impl SimulationResult {
     ///
     /// # Examples
     /// ```no_run
-    /// # use simulation_framework::result::SimulationResult;
-    /// # use simulation_framework::result::SimulationMetadata;
+    /// # use community_simulation::result::SimulationResult;
+    /// # use community_simulation::result::SimulationMetadata;
     /// # let result = SimulationResult {
     /// #     metadata: SimulationMetadata::capture(42, 10, 100),
     /// #     total_steps: 0,
@@ -1671,19 +1671,19 @@ impl SimulationResult {
     /// #     active_persons: 0,
     /// #     failed_steps: 0,
     /// #     final_money_distribution: vec![],
-    /// #     money_statistics: simulation_framework::result::MoneyStats {
+    /// #     money_statistics: community_simulation::result::MoneyStats {
     /// #         average: 0.0, median: 0.0, std_dev: 0.0,
     /// #         min_money: 0.0, max_money: 0.0, gini_coefficient: 0.0, herfindahl_index: 0.0,
     /// #         top_10_percent_share: 0.0, top_1_percent_share: 0.0, bottom_50_percent_share: 0.0,
     /// #         lorenz_curve: vec![(0.0, 0.0), (1.0, 1.0)],
     /// #     },
     /// #     final_reputation_distribution: vec![],
-    /// #     reputation_statistics: simulation_framework::result::ReputationStats {
+    /// #     reputation_statistics: community_simulation::result::ReputationStats {
     /// #         average: 0.0, median: 0.0, std_dev: 0.0,
     /// #         min_reputation: 0.0, max_reputation: 0.0,
     /// #     },
     /// #     final_savings_distribution: vec![],
-    /// #     savings_statistics: simulation_framework::result::SavingsStats {
+    /// #     savings_statistics: community_simulation::result::SavingsStats {
     /// #         total_savings: 0.0, average_savings: 0.0, median_savings: 0.0,
     /// #         min_savings: 0.0, max_savings: 0.0,
     /// #     },
@@ -1693,7 +1693,7 @@ impl SimulationResult {
     /// #     least_valuable_skill: None,
     /// #     skill_price_history: std::collections::HashMap::new(),
     /// #     wealth_stats_history: vec![],
-    /// #     trade_volume_statistics: simulation_framework::result::TradeVolumeStats {
+    /// #     trade_volume_statistics: community_simulation::result::TradeVolumeStats {
     /// #         total_trades: 0, total_volume: 0.0,
     /// #         avg_trades_per_step: 0.0, avg_volume_per_step: 0.0,
     /// #         avg_transaction_value: 0.0,
@@ -1706,7 +1706,7 @@ impl SimulationResult {
     /// #     per_skill_trade_stats: vec![],
     /// #     skill_market_concentration: None,
     /// #     business_cycle_statistics: None,
-    /// #     failed_trade_statistics: simulation_framework::result::FailedTradeStats {
+    /// #     failed_trade_statistics: community_simulation::result::FailedTradeStats {
     /// #         total_failed_attempts: 0, failure_rate: 0.0,
     /// #         avg_failed_per_step: 0.0,
     /// #         min_failed_per_step: 0, max_failed_per_step: 0,
@@ -1731,9 +1731,9 @@ impl SimulationResult {
     /// #     asset_statistics: None,
     /// #     technology_breakthrough_statistics: None,
     /// #     group_statistics: None,
-    /// #     trading_partner_statistics: simulation_framework::result::TradingPartnerStats {
+    /// #     trading_partner_statistics: community_simulation::result::TradingPartnerStats {
     /// #         per_person: vec![],
-    /// #         network_metrics: simulation_framework::result::NetworkMetrics {
+    /// #         network_metrics: community_simulation::result::NetworkMetrics {
     /// #             avg_unique_partners: 0.0,
     /// #             network_density: 0.0,
     /// #             most_active_pair: None,
@@ -1741,7 +1741,7 @@ impl SimulationResult {
     /// #     },
     /// #     centrality_analysis: None,
     /// #     mobility_statistics: None,
-    /// #     social_class_statistics: simulation_framework::result::SocialClassStats::default(),
+    /// #     social_class_statistics: community_simulation::result::SocialClassStats::default(),
     /// #     quality_statistics: None,
     /// #     strategy_evolution_statistics: None,
     /// #     externality_statistics: None,
@@ -2399,7 +2399,7 @@ impl SimulationResult {
     ///
     /// # Example
     /// ```no_run
-    /// # use simulation_framework::{SimulationEngine, SimulationConfig};
+    /// # use community_simulation::{SimulationEngine, SimulationConfig};
     /// # let config = SimulationConfig::default();
     /// # let mut engine = SimulationEngine::new(config);
     /// let result = engine.run();
@@ -2486,7 +2486,7 @@ impl SimulationResult {
     ///
     /// # Example
     /// ```no_run
-    /// # use simulation_framework::{SimulationEngine, SimulationConfig};
+    /// # use community_simulation::{SimulationEngine, SimulationConfig};
     /// # let config = SimulationConfig::default();
     /// # let mut engine = SimulationEngine::new(config);
     /// let result = engine.run();
@@ -2523,7 +2523,7 @@ impl SimulationResult {
     ///
     /// # Example
     /// ```no_run
-    /// # use simulation_framework::{SimulationEngine, SimulationConfig};
+    /// # use community_simulation::{SimulationEngine, SimulationConfig};
     /// # let config = SimulationConfig::default();
     /// # let mut engine = SimulationEngine::new(config);
     /// let result = engine.run();
@@ -2597,7 +2597,7 @@ impl SimulationResult {
     /// # Example
     ///
     /// ```no_run
-    /// # use simulation_framework::{SimulationConfig, SimulationEngine};
+    /// # use community_simulation::{SimulationConfig, SimulationEngine};
     /// # let config = SimulationConfig::default();
     /// # let mut engine = SimulationEngine::new(config);
     /// let result = engine.run();
@@ -2726,7 +2726,7 @@ pub fn calculate_gini_coefficient(sorted_values: &[f64], sum: f64) -> f64 {
 ///
 /// # Examples
 /// ```
-/// use simulation_framework::result::calculate_lorenz_curve;
+/// use community_simulation::result::calculate_lorenz_curve;
 ///
 /// // Perfect equality: everyone has 100
 /// let equal = vec![100.0, 100.0, 100.0, 100.0];
@@ -2787,7 +2787,7 @@ pub fn calculate_lorenz_curve(sorted_values: &[f64], sum: f64) -> Vec<(f64, f64)
 ///
 /// # Examples
 /// ```
-/// use simulation_framework::result::calculate_herfindahl_index;
+/// use community_simulation::result::calculate_herfindahl_index;
 ///
 /// // Perfect equality (4 participants with 25% each): HHI = 2,500
 /// let equal_shares = vec![25.0, 25.0, 25.0, 25.0];
@@ -2848,7 +2848,7 @@ pub fn calculate_herfindahl_index(values: &[f64]) -> f64 {
 /// # Examples
 /// ```
 /// use std::collections::HashMap;
-/// use simulation_framework::result::calculate_skill_market_concentration;
+/// use community_simulation::result::calculate_skill_market_concentration;
 ///
 /// let mut volumes = HashMap::new();
 /// volumes.insert(0, 100.0);
@@ -2933,7 +2933,7 @@ pub fn calculate_skill_market_concentration(
 ///
 /// # Examples
 /// ```
-/// use simulation_framework::result::calculate_wealth_concentration;
+/// use community_simulation::result::calculate_wealth_concentration;
 ///
 /// // Perfect equality: each group holds wealth proportional to size
 /// let equal = vec![100.0; 100];
@@ -3077,7 +3077,7 @@ const PARALLEL_SIMD_CHUNK_SIZE: usize = 256;
 ///
 /// # Examples
 /// ```
-/// use simulation_framework::result::calculate_statistics;
+/// use community_simulation::result::calculate_statistics;
 ///
 /// let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
 /// let stats = calculate_statistics(&values);
@@ -3209,7 +3209,7 @@ fn calculate_money_stats_internal(sorted_money_values: &[f64]) -> MoneyStats {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::result::calculate_money_stats;
+/// use community_simulation::result::calculate_money_stats;
 ///
 /// let money_values = vec![50.0, 100.0, 150.0, 200.0, 250.0];
 /// let stats = calculate_money_stats(&money_values);
@@ -3275,7 +3275,7 @@ pub fn calculate_money_stats(money_values: &[f64]) -> MoneyStats {
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::result::calculate_money_stats_presorted;
+/// use community_simulation::result::calculate_money_stats_presorted;
 ///
 /// // Data MUST be sorted in ascending order
 /// let mut money_values = vec![250.0, 50.0, 150.0, 100.0, 200.0];
@@ -3728,7 +3728,7 @@ pub fn calculate_mobility_statistics(
 /// # Examples
 ///
 /// ```
-/// use simulation_framework::result::detect_business_cycles;
+/// use community_simulation::result::detect_business_cycles;
 ///
 /// // Simulate a simple cycle: low -> high -> low
 /// let volumes = vec![100.0, 120.0, 150.0, 180.0, 170.0, 140.0, 110.0, 90.0, 100.0, 120.0];

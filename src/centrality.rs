@@ -81,8 +81,8 @@ pub struct NetworkCentralityMetrics {
 /// # Example
 ///
 /// ```
-/// use simulation_framework::centrality::calculate_centrality;
-/// use simulation_framework::result::{NetworkNode, NetworkEdge};
+/// use community_simulation::centrality::calculate_centrality;
+/// use community_simulation::result::{NetworkNode, NetworkEdge};
 ///
 /// let nodes = vec![
 ///     NetworkNode { id: "Person1".to_string(), money: 100.0, reputation: 1.0, trade_count: 5, unique_partners: 2 },

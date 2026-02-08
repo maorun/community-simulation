@@ -8,7 +8,7 @@
 //
 // The example runs multiple scenarios to show insurance effectiveness.
 
-use simulation_framework::{SimulationConfig, SimulationEngine};
+use community_simulation::{SimulationConfig, SimulationEngine};
 
 fn main() {
     println!("===========================================");

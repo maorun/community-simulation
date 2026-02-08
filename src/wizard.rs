@@ -22,11 +22,11 @@ use std::path::PathBuf;
 /// # Examples
 ///
 /// ```no_run
-/// use simulation_framework::wizard::run_wizard;
+/// use community_simulation::wizard::run_wizard;
 ///
 /// let (config, output_path) = run_wizard()?;
 /// println!("Configuration created with {} persons", config.entity_count);
-/// # Ok::<(), simulation_framework::error::SimulationError>(())
+/// # Ok::<(), community_simulation::error::SimulationError>(())
 /// ```
 pub fn run_wizard() -> Result<(SimulationConfig, Option<PathBuf>)> {
     println!("\n🎯 Interactive Simulation Configuration Wizard");

@@ -1,7 +1,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use simulation_framework::{config::SimulationConfig, engine::SimulationEngine, scenario::Scenario};
+use community_simulation::{config::SimulationConfig, engine::SimulationEngine, scenario::Scenario};
 
 fuzz_target!(|data: &[u8]| {
     // Fuzzes SimulationEngine initialization with arbitrary numeric inputs

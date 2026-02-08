@@ -7,13 +7,13 @@
 /// # Example
 ///
 /// ```rust
-/// use simulation_framework::invariant::{Invariant, InvariantViolation};
-/// use simulation_framework::{SimulationEngine, SimulationConfig};
+/// use community_simulation::invariant::{Invariant, InvariantViolation};
+/// use community_simulation::{SimulationEngine, SimulationConfig};
 ///
 /// // Check an invariant manually
 /// let config = SimulationConfig::default();
 /// let engine = SimulationEngine::new(config);
-/// let money_conservation = simulation_framework::invariant::MoneyConservationInvariant::new(
+/// let money_conservation = community_simulation::invariant::MoneyConservationInvariant::new(
 ///     engine.get_entities().iter().map(|e| e.get_money()).sum()
 /// );
 ///
@@ -90,8 +90,8 @@ pub trait Invariant: Send + Sync {
 /// # Example
 ///
 /// ```rust
-/// use simulation_framework::invariant::{Invariant, MoneyConservationInvariant};
-/// use simulation_framework::{SimulationEngine, SimulationConfig};
+/// use community_simulation::invariant::{Invariant, MoneyConservationInvariant};
+/// use community_simulation::{SimulationEngine, SimulationConfig};
 ///
 /// let config = SimulationConfig::default();
 /// let engine = SimulationEngine::new(config);
@@ -188,8 +188,8 @@ impl Invariant for MoneyConservationInvariant {
 /// # Example
 ///
 /// ```rust
-/// use simulation_framework::invariant::{Invariant, NonNegativeWealthInvariant};
-/// use simulation_framework::{SimulationEngine, SimulationConfig};
+/// use community_simulation::invariant::{Invariant, NonNegativeWealthInvariant};
+/// use community_simulation::{SimulationEngine, SimulationConfig};
 ///
 /// let config = SimulationConfig::default();
 /// let engine = SimulationEngine::new(config);

@@ -15,7 +15,7 @@
 //! ## Quick Start
 //!
 //! ```no_run
-//! use simulation_framework::{SimulationConfig, SimulationEngine};
+//! use community_simulation::{SimulationConfig, SimulationEngine};
 //!
 //! // Create a simulation configuration
 //! let config = SimulationConfig {

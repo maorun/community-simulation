@@ -2007,7 +2007,7 @@ impl SimulationConfig {
     ///
     /// # Examples
     /// ```
-    /// use simulation_framework::SimulationConfig;
+    /// use community_simulation::SimulationConfig;
     ///
     /// let mut config = SimulationConfig::default();
     /// assert!(config.validate().is_ok());
@@ -2800,7 +2800,7 @@ impl SimulationConfig {
     ///
     /// # Examples
     /// ```
-    /// use simulation_framework::{SimulationConfig, PresetName};
+    /// use community_simulation::{SimulationConfig, PresetName};
     ///
     /// let config = SimulationConfig::from_preset(PresetName::SmallEconomy);
     /// assert_eq!(config.entity_count, 20);
@@ -2966,7 +2966,7 @@ impl SimulationConfig {
     ///
     /// # Examples
     /// ```no_run
-    /// use simulation_framework::SimulationConfig;
+    /// use community_simulation::SimulationConfig;
     ///
     /// let config = SimulationConfig::from_file("config.yaml").unwrap();
     /// ```
