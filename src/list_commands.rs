@@ -211,4 +211,96 @@ mod tests {
         let result = list_scenarios();
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn test_format_preset_info_includes_all_parameters() {
+        let info = format_preset_info(&PresetName::Default);
+        // Verify all key information is present
+        assert!(info.contains("default"));
+        assert!(info.contains("Description:"));
+        assert!(info.contains("Parameters:"));
+        assert!(info.contains("persons"));
+        assert!(info.contains("steps"));
+        assert!(info.contains("initial money"));
+        assert!(info.contains("base price"));
+        assert!(info.contains("scenario:"));
+    }
+
+    #[test]
+    fn test_format_preset_info_different_presets() {
+        // Test a few different presets to ensure formatting works for all
+        let presets = vec![PresetName::Default, PresetName::SmallEconomy, PresetName::LargeEconomy];
+
+        for preset in presets {
+            let info = format_preset_info(&preset);
+            assert!(!info.is_empty());
+            assert!(info.contains(preset.as_str()));
+            assert!(info.contains("Description:"));
+            // Each preset should have numeric values
+            assert!(info.chars().any(|c| c.is_numeric()));
+        }
+    }
+
+    #[test]
+    fn test_format_scenario_info_includes_all_fields() {
+        let info = format_scenario_info(&Scenario::AdaptivePricing);
+        // Verify all key information is present
+        assert!(info.contains("AdaptivePricing"));
+        assert!(info.contains("Description:"));
+        assert!(info.contains("Mechanism:"));
+        assert!(info.contains("Best for:"));
+    }
+
+    #[test]
+    fn test_format_scenario_info_different_scenarios() {
+        // Test all available scenarios
+        let scenarios = Scenario::all();
+        assert!(!scenarios.is_empty(), "Should have at least one scenario");
+
+        for scenario in scenarios {
+            let info = format_scenario_info(&scenario);
+            assert!(!info.is_empty());
+            assert!(info.contains("Description:"));
+            assert!(info.contains("Mechanism:"));
+            assert!(info.contains("Best for:"));
+        }
+    }
+
+    #[test]
+    fn test_format_preset_info_output_structure() {
+        let info = format_preset_info(&PresetName::SmallEconomy);
+        // Verify the output has the expected structure with proper indentation
+        let lines: Vec<&str> = info.lines().collect();
+        assert!(lines.len() >= 2, "Should have at least 2 lines");
+        // First line should start with spaces (indentation)
+        assert!(lines[0].starts_with("  "));
+    }
+
+    #[test]
+    fn test_format_scenario_info_output_structure() {
+        let info = format_scenario_info(&Scenario::Original);
+        // Verify the output has the expected structure
+        let lines: Vec<&str> = info.lines().collect();
+        assert!(lines.len() >= 4, "Should have at least 4 lines");
+        // Lines should contain proper field labels
+        assert!(info.contains("Description:"));
+        assert!(info.contains("Mechanism:"));
+        assert!(info.contains("Best for:"));
+    }
+
+    #[test]
+    fn test_only_default_scenario_has_default_marker() {
+        let scenarios = Scenario::all();
+        let mut default_count = 0;
+
+        for scenario in scenarios {
+            let info = format_scenario_info(&scenario);
+            if info.contains("(default)") {
+                default_count += 1;
+                assert!(scenario.is_default(), "Only default scenario should have default marker");
+            }
+        }
+
+        assert_eq!(default_count, 1, "Exactly one scenario should be marked as default");
+    }
 }
