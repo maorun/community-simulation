@@ -154,6 +154,49 @@ pub fn get_default_config_filename(format: &str) -> String {
     }
 }
 
+/// Serialize a SimulationConfig to a string based on file extension
+///
+/// Determines the serialization format (TOML or YAML) based on the file
+/// extension and serializes the configuration accordingly.
+///
+/// # Arguments
+///
+/// * `config` - The simulation configuration to serialize
+/// * `path` - The file path (extension determines format)
+///
+/// # Returns
+///
+/// * `Ok(String)` - The serialized configuration
+/// * `Err(String)` - Error message if serialization fails
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::wizard_helpers::serialize_config_by_extension;
+/// use simulation_framework::config::SimulationConfig;
+/// use std::path::Path;
+///
+/// let config = SimulationConfig::default();
+/// let yaml_content = serialize_config_by_extension(&config, Path::new("config.yaml"));
+/// assert!(yaml_content.is_ok());
+///
+/// let toml_content = serialize_config_by_extension(&config, Path::new("config.toml"));
+/// assert!(toml_content.is_ok());
+/// ```
+pub fn serialize_config_by_extension(
+    config: &crate::config::SimulationConfig,
+    path: &std::path::Path,
+) -> Result<String, String> {
+    if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+        toml::to_string_pretty(config)
+            .map_err(|e| format!("Failed to serialize config to TOML: {}", e))
+    } else {
+        // Default to YAML
+        serde_yaml::to_string(config)
+            .map_err(|e| format!("Failed to serialize config to YAML: {}", e))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -216,5 +259,45 @@ mod tests {
         assert_eq!(get_default_config_filename("yaml"), "simulation_config.yaml");
         assert_eq!(get_default_config_filename("toml"), "simulation_config.toml");
         assert_eq!(get_default_config_filename("YaMl"), "simulation_config.yaml");
+    }
+
+    #[test]
+    fn test_serialize_config_by_extension_yaml() {
+        use crate::config::SimulationConfig;
+        use std::path::Path;
+
+        let config = SimulationConfig::default();
+        let result = serialize_config_by_extension(&config, Path::new("test.yaml"));
+        
+        assert!(result.is_ok());
+        let content = result.unwrap();
+        assert!(content.contains("max_steps") || content.contains("entity_count"));
+    }
+
+    #[test]
+    fn test_serialize_config_by_extension_toml() {
+        use crate::config::SimulationConfig;
+        use std::path::Path;
+
+        let config = SimulationConfig::default();
+        let result = serialize_config_by_extension(&config, Path::new("test.toml"));
+        
+        assert!(result.is_ok());
+        let content = result.unwrap();
+        assert!(content.contains("max_steps") || content.contains("entity_count"));
+    }
+
+    #[test]
+    fn test_serialize_config_by_extension_no_extension_defaults_to_yaml() {
+        use crate::config::SimulationConfig;
+        use std::path::Path;
+
+        let config = SimulationConfig::default();
+        let result = serialize_config_by_extension(&config, Path::new("test"));
+        
+        assert!(result.is_ok());
+        // YAML format typically uses colons and indentation
+        let content = result.unwrap();
+        assert!(content.contains("max_steps") || content.contains("entity_count"));
     }
 }

@@ -567,15 +567,7 @@ fn run_completion(shell_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let bin_name = std::env::args()
-        .next()
-        .and_then(|path| {
-            std::path::Path::new(&path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .map(|s| s.to_string())
-        })
-        .unwrap_or_else(|| "simulation-framework".to_string());
+    let bin_name = simulation_framework::utils::get_binary_name("simulation-framework");
 
     completion::generate_completion::<Cli>(shell, &bin_name, &mut io::stdout());
     Ok(())
@@ -592,14 +584,7 @@ fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
 
     // Save config if requested
     if let Some(path) = &output_path {
-        let content = if path.extension().and_then(|s| s.to_str()) == Some("toml") {
-            toml::to_string_pretty(&config)
-                .map_err(|e| format!("Failed to serialize config to TOML: {}", e))?
-        } else {
-            // Default to YAML
-            serde_yaml::to_string(&config)
-                .map_err(|e| format!("Failed to serialize config to YAML: {}", e))?
-        };
+        let content = simulation_framework::wizard_helpers::serialize_config_by_extension(&config, path)?;
 
         std::fs::write(path, content).map_err(|e| format!("Failed to write config file: {}", e))?;
         println!("\n✅ Configuration saved to: {}", path.display());

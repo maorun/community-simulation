@@ -151,4 +151,44 @@ mod tests {
         assert!(shells.contains(&"fish"));
         assert!(shells.contains(&"powershell"));
     }
+
+    #[test]
+    fn test_generate_completion_produces_output() {
+        use clap::Parser;
+
+        #[derive(Parser)]
+        #[command(name = "test-app")]
+        struct TestCli {
+            #[arg(short, long)]
+            option: Option<String>,
+        }
+
+        let mut output = Vec::new();
+        generate_completion::<TestCli>(Shell::Bash, "test-app", &mut output);
+
+        // Verify that completion script was generated
+        assert!(!output.is_empty());
+        let script = String::from_utf8(output).unwrap();
+        
+        // Check for common bash completion patterns
+        assert!(script.contains("test-app") || script.contains("_test"));
+    }
+
+    #[test]
+    fn test_generate_completion_different_shells() {
+        use clap::Parser;
+
+        #[derive(Parser)]
+        #[command(name = "test-app")]
+        struct TestCli {}
+
+        // Test that all supported shells can generate completions without panicking
+        for shell_str in get_supported_shells() {
+            if let Some(shell) = parse_shell_name(shell_str) {
+                let mut output = Vec::new();
+                generate_completion::<TestCli>(shell, "test-app", &mut output);
+                assert!(!output.is_empty(), "Shell {} should generate output", shell_str);
+            }
+        }
+    }
 }

@@ -33,6 +33,40 @@ pub fn certification_duration_from_arg(duration: usize) -> Option<usize> {
     }
 }
 
+/// Get the binary name from command line arguments
+///
+/// Extracts the binary name from the first command line argument (argv[0]).
+/// Falls back to a default name if the binary name cannot be determined.
+///
+/// # Arguments
+///
+/// * `default_name` - The default name to use if the binary name cannot be determined
+///
+/// # Returns
+///
+/// The binary name as a String
+///
+/// # Examples
+///
+/// ```
+/// use simulation_framework::utils::get_binary_name;
+///
+/// let name = get_binary_name("my-default-app");
+/// // Will return the actual binary name or "my-default-app"
+/// assert!(!name.is_empty());
+/// ```
+pub fn get_binary_name(default_name: &str) -> String {
+    std::env::args()
+        .next()
+        .and_then(|path| {
+            std::path::Path::new(&path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| default_name.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -49,5 +83,22 @@ mod tests {
         assert_eq!(certification_duration_from_arg(100), Some(100));
         assert_eq!(certification_duration_from_arg(200), Some(200));
         assert_eq!(certification_duration_from_arg(usize::MAX), Some(usize::MAX));
+    }
+
+    #[test]
+    fn test_get_binary_name_returns_non_empty() {
+        let name = get_binary_name("default-name");
+        assert!(!name.is_empty());
+        // The name should be either the actual binary name or the default
+        assert!(name.len() > 0);
+    }
+
+    #[test]
+    fn test_get_binary_name_with_different_defaults() {
+        let name1 = get_binary_name("app1");
+        let name2 = get_binary_name("app2");
+        // Both should return valid names
+        assert!(!name1.is_empty());
+        assert!(!name2.is_empty());
     }
 }
