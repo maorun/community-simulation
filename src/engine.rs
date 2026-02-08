@@ -2892,7 +2892,8 @@ impl SimulationEngine {
 
                 if let Some(idx) = satisficing_option_idx {
                     // Found a "good enough" option - keep only this one
-                    let selected_option = purchase_options[idx].clone();
+                    // Performance optimization: Use swap_remove to avoid cloning
+                    let selected_option = purchase_options.swap_remove(idx);
                     let selected_score = selected_option.priority_score;
 
                     purchase_options.clear();

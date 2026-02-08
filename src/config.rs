@@ -438,8 +438,10 @@ pub struct SimulationConfig {
     /// Enable satisficing decision-making (bounded rationality).
     ///
     /// When enabled, buyers use a "good enough" heuristic instead of always seeking
-    /// the optimal purchase. They accept the first purchase option that meets the
-    /// satisficing_threshold rather than sorting all options and choosing the best.
+    /// the optimal purchase. During each purchase decision, they evaluate options
+    /// in the order they were generated (based on their needed_skills list), and
+    /// accept the first option that meets the satisficing_threshold rather than
+    /// sorting all options and choosing the best.
     ///
     /// This models bounded rationality - real-world agents often use simple heuristics
     /// (satisficing) rather than perfect optimization due to cognitive limitations,
