@@ -1,10 +1,10 @@
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 use colored::Colorize;
+use community_simulation::{PresetName, SimulationConfig, SimulationEngine};
 use log::{debug, info, warn};
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
-use community_simulation::{PresetName, SimulationConfig, SimulationEngine};
 use std::collections::HashMap;
 use std::io;
 use std::str::FromStr;
@@ -2051,8 +2051,8 @@ fn run_monte_carlo(
     csv_output: Option<String>,
     compress: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use rayon::prelude::*;
     use community_simulation::MonteCarloResult;
+    use rayon::prelude::*;
 
     let start_time = Instant::now();
     let base_seed = base_config.seed;

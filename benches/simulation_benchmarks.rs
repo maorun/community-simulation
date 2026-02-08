@@ -1,6 +1,6 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use community_simulation::scenario::Scenario;
 use community_simulation::{SimulationConfig, SimulationEngine};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::hint::black_box;
 
 /// Benchmark the simulation engine initialization
