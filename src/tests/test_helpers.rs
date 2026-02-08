@@ -276,6 +276,15 @@ impl TestConfigBuilder {
     pub fn build(self) -> SimulationConfig {
         self.config
     }
+
+    /// Build with a custom configuration function for advanced scenarios
+    pub fn build_with<F>(mut self, f: F) -> SimulationConfig
+    where
+        F: FnOnce(&mut SimulationConfig),
+    {
+        f(&mut self.config);
+        self.config
+    }
 }
 
 /// Creates a configuration for a quick test (very small, fast execution).

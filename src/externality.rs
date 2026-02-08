@@ -253,4 +253,33 @@ mod tests {
         // Per-skill stats
         assert_eq!(stats.per_skill_externalities.len(), 3);
     }
+
+    #[test]
+    fn test_externality_summary() {
+        let mut stats = ExternalityStats::new();
+
+        let ext1 = Externality::new("Education".to_string(), 1, 100.0, 0.2);
+        stats.record(&ext1);
+
+        let ext2 = Externality::new("Manufacturing".to_string(), 2, 50.0, -0.3);
+        stats.record(&ext2);
+
+        stats.finalize();
+
+        let summary = stats.summary();
+        assert!(summary.contains("2 total"));
+        assert!(summary.contains("1 positive"));
+        assert!(summary.contains("1 negative"));
+        assert!(summary.contains("Private value: 150.00"));
+    }
+
+    #[test]
+    fn test_zero_externality() {
+        let ext = Externality::new("Neutral".to_string(), 1, 100.0, 0.0);
+        assert_eq!(ext.external_value, 0.0);
+        assert_eq!(ext.social_value, 100.0);
+        assert!(!ext.is_positive());
+        assert!(!ext.is_negative());
+        assert_eq!(ext.optimal_pigovian_correction(), 0.0);
+    }
 }

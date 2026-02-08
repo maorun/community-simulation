@@ -237,4 +237,19 @@ mod tests {
         assert_eq!(agreement.trade_count, 2);
         assert_eq!(agreement.total_trade_value, 80.0);
     }
+
+    #[test]
+    fn test_trade_agreement_statistics_new() {
+        let stats = TradeAgreementStatistics::new();
+        assert_eq!(stats.total_agreements_formed, 0);
+        assert_eq!(stats.active_agreements, 0);
+        assert_eq!(stats.bilateral_agreements, 0);
+    }
+
+    #[test]
+    fn test_trade_agreement_statistics_default() {
+        let stats = TradeAgreementStatistics::default();
+        assert_eq!(stats.total_agreements_formed, 0);
+        assert_eq!(stats.average_discount_rate, 0.0);
+    }
 }
