@@ -60,7 +60,7 @@ jobs:
         fi
       
     - name: Generate coverage
-      run: cargo tarpaulin --verbose --all-features --workspace --timeout 300 --out xml --output-dir ./coverage
+      run: cargo tarpaulin --all-features --workspace --timeout 300 --out xml --output-dir ./coverage
       
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
@@ -88,6 +88,6 @@ jobs:
         echo "**Current Minimum:** 56%" >> $GITHUB_STEP_SUMMARY
         echo "**Next Milestone:** 70%" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        cargo tarpaulin --verbose --all-features --workspace --timeout 300 2>&1 | grep -E "^[0-9]+\.[0-9]+% coverage" >> $GITHUB_STEP_SUMMARY || true
+        cargo tarpaulin --all-features --workspace --timeout 300 2>&1 | grep -E "^[0-9]+\.[0-9]+% coverage" >> $GITHUB_STEP_SUMMARY || true
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "💡 **Tip:** Check the [Coverage Documentation](COVERAGE.md) for improving test coverage." >> $GITHUB_STEP_SUMMARY
