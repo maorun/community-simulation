@@ -25,5 +25,5 @@ ignore:
   - "examples/**/*"
   - "tests/**/*"
   - "fuzz/**/*"
-  - "main.rs"
-  - "wizard.rs"
+  - "src/main.rs"
+  - "src/wizard.rs"
