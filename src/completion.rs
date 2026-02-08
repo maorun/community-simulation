@@ -99,7 +99,11 @@ pub fn get_supported_shells() -> Vec<&'static str> {
 /// let mut output = Vec::new();
 /// generate_completion::<Cli>(Shell::Bash, "my-app", &mut output);
 /// ```
-pub fn generate_completion<T: CommandFactory>(shell: Shell, bin_name: &str, writer: &mut dyn io::Write) {
+pub fn generate_completion<T: CommandFactory>(
+    shell: Shell,
+    bin_name: &str,
+    writer: &mut dyn io::Write,
+) {
     let mut cmd = T::command();
     generate(shell, &mut cmd, bin_name, writer);
 }
@@ -169,7 +173,7 @@ mod tests {
         // Verify that completion script was generated
         assert!(!output.is_empty());
         let script = String::from_utf8(output).unwrap();
-        
+
         // Check for common bash completion patterns
         assert!(script.contains("test-app") || script.contains("_test"));
     }

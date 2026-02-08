@@ -203,10 +203,7 @@ mod tests {
 
     #[test]
     fn test_parse_scenario_selection_all_variants() {
-        assert_eq!(
-            parse_scenario_selection("Original (supply/demand-based)"),
-            Scenario::Original
-        );
+        assert_eq!(parse_scenario_selection("Original (supply/demand-based)"), Scenario::Original);
         assert_eq!(
             parse_scenario_selection("DynamicPricing (sales-based)"),
             Scenario::DynamicPricing
@@ -240,14 +237,8 @@ mod tests {
 
     #[test]
     fn test_extract_preset_name() {
-        assert_eq!(
-            extract_preset_name("small_economy: A small economic system"),
-            "small_economy"
-        );
-        assert_eq!(
-            extract_preset_name("quick_test: Fast test configuration"),
-            "quick_test"
-        );
+        assert_eq!(extract_preset_name("small_economy: A small economic system"), "small_economy");
+        assert_eq!(extract_preset_name("quick_test: Fast test configuration"), "quick_test");
         assert_eq!(extract_preset_name("no_colon"), "no_colon");
         assert_eq!(extract_preset_name("multiple:colons:here"), "multiple");
     }
@@ -268,7 +259,7 @@ mod tests {
 
         let config = SimulationConfig::default();
         let result = serialize_config_by_extension(&config, Path::new("test.yaml"));
-        
+
         assert!(result.is_ok());
         let content = result.unwrap();
         assert!(content.contains("max_steps") || content.contains("entity_count"));
@@ -281,7 +272,7 @@ mod tests {
 
         let config = SimulationConfig::default();
         let result = serialize_config_by_extension(&config, Path::new("test.toml"));
-        
+
         assert!(result.is_ok());
         let content = result.unwrap();
         assert!(content.contains("max_steps") || content.contains("entity_count"));
@@ -294,7 +285,7 @@ mod tests {
 
         let config = SimulationConfig::default();
         let result = serialize_config_by_extension(&config, Path::new("test"));
-        
+
         assert!(result.is_ok());
         // YAML format typically uses colons and indentation
         let content = result.unwrap();

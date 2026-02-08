@@ -197,4 +197,18 @@ mod tests {
             assert!(info.contains("Description:"));
         }
     }
+
+    #[test]
+    fn test_list_presets_executes_without_error() {
+        // list_presets prints to stdout, so we just verify it doesn't panic or return error
+        let result = list_presets();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_list_scenarios_executes_without_error() {
+        // list_scenarios prints to stdout, so we just verify it doesn't panic or return error
+        let result = list_scenarios();
+        assert!(result.is_ok());
+    }
 }
