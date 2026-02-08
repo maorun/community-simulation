@@ -118,7 +118,7 @@ jobs:
     - name: Quick coverage check
       run: |
         echo "🎯 Checking code coverage (minimum: 56%, goal: 100%)"
-        cargo tarpaulin --verbose --all-features --workspace --timeout 300 --fail-under 56
+        cargo tarpaulin --all-features --workspace --timeout 300 --fail-under 56
 
   build-release:
     name: Build (Release)

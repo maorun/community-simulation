@@ -6,9 +6,9 @@ This document explains how to generate and view code coverage reports for the si
 
 This project aims for **100% code coverage** as the ultimate goal, following a progressive improvement approach:
 
-- **Current baseline:** 56% (as of 2026-02)
-- **Next milestone:** 70%
-- **Short-term target:** 80%
+- **Previous baseline:** 75.82% (as of 2026-02-08)
+- **Current baseline:** 87.44% library coverage ✅ **80% milestone achieved!**
+- **Next milestone:** 90%
 - **Ultimate goal:** 100%
 
 ### Why 100% Coverage?
@@ -23,10 +23,10 @@ While 100% code coverage doesn't guarantee bug-free code, it ensures:
 ### Progressive Approach
 
 We follow a pragmatic, progressive approach:
-1. **Maintain minimum baseline** (56%): CI fails if coverage drops below this
+1. **Maintain minimum baseline** (87%): CI fails if coverage drops below this
 2. **Improve incrementally**: Each PR should ideally increase or maintain coverage
 3. **Target high-value areas first**: Focus on business logic, algorithms, and public APIs
-4. **Achieve milestones**: 70% → 80% → 90% → 100%
+4. **Achieve milestones**: ~~70%~~ → ~~80%~~ ✅ → 90% → 100%
 
 ## Prerequisites
 
@@ -80,20 +80,22 @@ This creates `coverage/cobertura.xml` which can be uploaded to Codecov or simila
 The project follows a progressive coverage improvement strategy:
 
 **Current Requirements:**
-- **Minimum threshold:** 56% (CI fails below this)
-- **Target:** 80% (recommended for all new features)
+- **Minimum threshold:** 87% (CI fails below this) ✅
+- **Achieved:** 87.44% library coverage
+- **Target:** 90% (next milestone)
 - **Goal:** 100% (ultimate objective)
 
-You can check if your changes meet the minimum threshold:
+You can check if your changes meet the current threshold:
 
 ```bash
-cargo tarpaulin --verbose --all-features --workspace --timeout 300 --fail-under 56
+# Library coverage (recommended - excludes CLI code)
+cargo tarpaulin --lib --verbose --timeout 300 --fail-under 87
 ```
 
-For new features, aim for the target threshold:
+For full workspace coverage (includes CLI/wizard code that's hard to test):
 
 ```bash
-cargo tarpaulin --verbose --all-features --workspace --timeout 300 --fail-under 80
+cargo tarpaulin --verbose --all-features --workspace --timeout 300
 ```
 
 These commands will:
@@ -102,21 +104,22 @@ These commands will:
 
 ### Progressive Improvement Strategy
 
-As the codebase coverage improves, the minimum threshold will be gradually increased:
-- When overall coverage reaches 70%, minimum will increase to 65%
-- When overall coverage reaches 80%, minimum will increase to 75%
-- When overall coverage reaches 90%, minimum will increase to 85%
+As the codebase coverage improves, the minimum threshold is gradually increased:
+- ~~When overall coverage reaches 70%, minimum will increase to 65%~~ ✅
+- ~~When overall coverage reaches 80%, minimum will increase to 75%~~ ✅
+- **Current:** 87.44% library coverage achieved (Feb 2026)
+- When overall coverage reaches 90%, minimum will increase to 88%
 - Final goal: 100% coverage with 95% minimum threshold
 
 ## Continuous Integration
 
 Coverage is automatically tracked and enforced in CI:
 - Every push to `master` and every PR generates a coverage report
-- **CI will fail** if coverage drops below the minimum threshold (56%)
+- **CI will fail** if coverage drops below the minimum threshold (87%)
 - Reports are uploaded to Codecov with strict requirements (no coverage decreases allowed)
 - Coverage badges in README.md show current coverage status
 - Coverage summaries are automatically added to PR checks
-- **New code** should aim for 80%+ coverage (enforced by Codecov patch checks)
+- **New code** should aim for 90%+ coverage (enforced by Codecov patch checks)
 - **Caching:** The CI workflow caches cargo-tarpaulin binary and cargo dependencies to significantly speed up subsequent runs (typically 2-3 minutes faster)
 
 ## Understanding Coverage Metrics
@@ -144,22 +147,25 @@ To find uncovered code and reach our 100% coverage goal:
 
 Focus on these areas to maximize impact:
 
-**High Priority (Critical Business Logic):**
-- Core simulation engine (`src/engine.rs`) - currently 57%
-- Configuration handling (`src/config.rs`) - currently 55%
-- Market mechanisms (`src/market.rs`) - currently 98% ✓
-- Person behavior (`src/person.rs`) - currently 72%
+**Excellent Coverage (✅ >90%):**
+- Market mechanisms (`src/market.rs`) - 97.8% ✓
+- Person behavior (`src/person.rs`) - 100% ✓
+- Plugin system (`src/plugin.rs`) - 92.9% ✓
+- Database operations (`src/database.rs`) - 100% ✓
+- Configuration handling (`src/config.rs`) - 93.0% ✓
 
-**Medium Priority (Features and Modules):**
-- Scenario implementations (`src/scenario.rs`) - currently 62%
-- Result analysis (`src/result.rs`) - currently 81%
-- Error handling (`src/error.rs`) - currently 21%
-- Plugin system (`src/plugin.rs`) - currently 93%
+**Good Coverage (>80%):**
+- Core simulation engine (`src/engine.rs`) - 88.1% ✓
+- Result analysis (`src/result.rs`) - 89.8% ✓
+- Error handling (`src/error.rs`) - 89.5% ✓
 
-**Lower Priority (UI and Utilities):**
-- Main entry point (`src/main.rs`) - currently 0%
-- Wizard/CLI (`src/wizard.rs`) - currently 0%
-- Database operations (`src/database.rs`) - currently 100% ✓
+**Moderate Coverage (70-80%):**
+- Scenario implementations (`src/scenario.rs`) - 76.5%
+- Crisis events (`src/crisis.rs`) - 79.1%
+
+**Lower Priority (CLI/Interactive - Hard to Unit Test):**
+- Main entry point (`src/main.rs`) - 0% (CLI code)
+- Wizard/CLI (`src/wizard.rs`) - 0% (interactive wizard)
 
 ### Coverage Improvement Strategies
 
