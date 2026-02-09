@@ -2794,8 +2794,8 @@ impl SimulationResult {
             }
         }
 
-        // Write rows to Parquet file using RecordWriter
-        // We need to write in row groups for efficient storage
+        // Write rows to Parquet file using SerializedFileWriter with columnar data
+        // Data is organized in row groups for efficient storage and querying
         let mut row_group_writer = writer
             .next_row_group()
             .map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
