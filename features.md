@@ -133,20 +133,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 - Batch-Inserts für Performance
 - Async-Runtime für Non-Blocking I/O
 
-#### 4.2 Parquet-Export für Big-Data-Analytics
-**Beschreibung:** Export von Simulationsdaten im Apache-Parquet-Format für effiziente Analyse mit Pandas, DuckDB, oder Spark.
-
-**Nutzen:**
-- Kompakte, spaltenorientierte Speicherung
-- Direkte Analyse mit Data-Science-Toolchain
-- Effiziente Kompression für große Datasets
-
-**Implementierung:**
-- `parquet` crate Integration
-- Schema-Definition für Simulationsdaten
-- Chunked-Writing für große Datasets
-- Optional via CLI-Flag `--export-parquet`
-
 ## 🛠️ Entwickler-Tools
 
 ### 1. Debugging-Tools

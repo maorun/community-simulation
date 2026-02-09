@@ -62,6 +62,9 @@ pub enum SimulationError {
 
     /// Error occurred while deserializing action log
     ActionLogDeserialize(serde_json::Error),
+
+    /// Error occurred while exporting to Parquet format
+    ParquetExport(String),
 }
 
 impl fmt::Display for SimulationError {
@@ -103,6 +106,9 @@ impl fmt::Display for SimulationError {
             },
             SimulationError::ActionLogDeserialize(e) => {
                 write!(f, "Failed to deserialize action log: {}", e)
+            },
+            SimulationError::ParquetExport(msg) => {
+                write!(f, "Failed to export Parquet file: {}", msg)
             },
         }
     }
@@ -291,6 +297,9 @@ mod tests {
 
         let err = SimulationError::JsonSerialize("error".to_string());
         assert!(err.source().is_none());
+
+        let err = SimulationError::ParquetExport("error".to_string());
+        assert!(err.source().is_none());
     }
 
     #[test]
@@ -301,6 +310,14 @@ mod tests {
             SimulationError::IoError(_) => {},
             _ => panic!("Expected IoError variant"),
         }
+    }
+
+    #[test]
+    fn test_parquet_export_error_display() {
+        let err = SimulationError::ParquetExport("failed to write parquet".to_string());
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to export Parquet file"));
+        assert!(display.contains("failed to write parquet"));
     }
 
     #[test]
