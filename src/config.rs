@@ -291,6 +291,33 @@ pub struct SimulationConfig {
     #[serde(default = "default_min_money_to_lend")]
     pub min_money_to_lend: f64,
 
+    /// Enable peer-to-peer lending marketplace for decentralized credit.
+    ///
+    /// When enabled, creates a marketplace where persons can directly lend to each other
+    /// without a central institution. Lenders create offers with their desired terms,
+    /// and borrowers are matched based on credit ratings and risk preferences.
+    ///
+    /// Features:
+    /// - Decentralized lending: Direct person-to-person loans
+    /// - Risk-based pricing: Interest rates adjusted based on credit scores
+    /// - Automatic matching: Algorithm matches borrowers with suitable lenders
+    /// - Platform fees: Optional transaction fees for marketplace operation
+    ///
+    /// Only has effect when enable_loans is also true.
+    /// Set to false to disable P2P lending marketplace (default).
+    #[serde(default)]
+    pub enable_p2p_lending: bool,
+
+    /// Platform fee rate for P2P lending marketplace (e.g., 0.01 = 1%).
+    ///
+    /// This is the fee charged on the principal amount when a loan is successfully matched.
+    /// The fee is paid by the borrower and collected by the marketplace.
+    ///
+    /// Only used when enable_p2p_lending is true.
+    /// Valid range: 0.0 to 0.1 (0% to 10%)
+    #[serde(default = "default_p2p_platform_fee")]
+    pub p2p_platform_fee_rate: f64,
+
     /// Enable investment system where persons can invest money for returns.
     ///
     /// When enabled, persons can make investments in education (other persons' learning)
@@ -1712,6 +1739,10 @@ fn default_min_money_to_lend() -> f64 {
     50.0 // Must have at least 50 money to lend
 }
 
+fn default_p2p_platform_fee() -> f64 {
+    0.01 // 1% platform fee
+}
+
 fn default_investment_return_rate() -> f64 {
     0.02 // 2% return per step
 }
@@ -1927,6 +1958,8 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
+            enable_p2p_lending: false,            // Disabled by default
+            p2p_platform_fee_rate: 0.01,          // 1% platform fee
             enable_investments: false,            // Disabled by default
             investment_return_rate: 0.02,         // 2% return per step
             investment_duration: 20,              // 20 steps duration
@@ -2262,6 +2295,16 @@ impl SimulationConfig {
             )));
         }
 
+        if !(0.0..=0.1).contains(&self.p2p_platform_fee_rate) {
+            return Err(SimulationError::ValidationError(format!(
+                "Configuration Error: p2p_platform_fee_rate must be between 0.0 and 0.1 (0% to 10%). \
+                 This sets the fee charged by the P2P lending platform. \
+                 Recommended range: 0.005-0.02 (0.5-2%) for realistic platforms. \
+                 Current value: {}",
+                self.p2p_platform_fee_rate
+            )));
+        }
+
         // Feature dependency validations
         // Credit rating system validation
         if self.enable_credit_rating && !self.enable_loans {
@@ -2269,6 +2312,16 @@ impl SimulationConfig {
                 "Feature Dependency Error: enable_credit_rating requires enable_loans to be true. \
                  Credit ratings are used to assess loan risk, so the loan system must be enabled. \
                  Solution: Set enable_loans=true or disable credit ratings."
+                    .to_string(),
+            ));
+        }
+
+        // P2P lending system validation
+        if self.enable_p2p_lending && !self.enable_loans {
+            return Err(SimulationError::ValidationError(
+                "Feature Dependency Error: enable_p2p_lending requires enable_loans to be true. \
+                 The P2P lending marketplace builds on the loan system. \
+                 Solution: Set enable_loans=true or disable P2P lending."
                     .to_string(),
             ));
         }

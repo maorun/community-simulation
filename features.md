@@ -6,22 +6,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Erweiterte Marktmechanismen
 
-#### 1.1 Peer-to-Peer Lending-Marketplace
-**Beschreibung:** Dezentraler Kredit-Marketplace wo Personen direkt Kredite aneinander vergeben können, ohne zentrale Instanz. Mit Reputation-basiertem Risk-Pricing.
-
-**Nutzen:**
-- Modellierung moderner FinTech-Plattformen
-- Dezentralisierung des Kreditsystems
-- Untersuchung von Informationsasymmetrien und Adverse Selection
-
-**Implementierung:**
-- Erweiterung des bestehenden Loan-Systems
-- `LendingOffer` Struct mit angebotenen Konditionen
-- `LendingMarketplace` zur Vermittlung und Matching
-- Automatisches Matching basierend auf Kreditrating und Risikopräferenz
-- Plattform-Gebühren und Ausfallrisiko-Management
-
-#### 1.2 Auktionen und alternative Preisfindungsmechanismen  
+#### 1.1 Auktionen und alternative Preisfindungsmechanismen  
 **Beschreibung:** Alternative Handelsmechanismen wie Vickrey-Auktionen, Niederländische Auktionen oder kontinuierliche Double-Auctions für bestimmte Güter.
 
 **Nutzen:**
