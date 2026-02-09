@@ -2907,29 +2907,44 @@ impl SimulationEngine {
                     );
                 } else {
                     // No option meets threshold - fall back to best available option
-                    // Sort and take the highest priority
-                    purchase_options.sort_by(|a, b| {
-                        b.priority_score
-                            .partial_cmp(&a.priority_score)
+                    // Performance optimization: Use max_by instead of sort_by since we only need the best option.
+                    // This reduces O(n log n) to O(n) for typical 1-5 option lists.
+                    // With 100 entities × ~3 options per step, this saves ~200 comparison operations per step.
+                    if let Some(best_option) = purchase_options.iter().max_by(|a, b| {
+                        a.priority_score
+                            .partial_cmp(&b.priority_score)
                             .unwrap_or(std::cmp::Ordering::Equal)
-                    });
+                    }) {
+                        let best_score = best_option.priority_score;
+                        let best_option_clone = best_option.clone();
 
-                    if let Some(best) = purchase_options.first() {
+                        // Keep only the best option
+                        purchase_options.clear();
+                        purchase_options.push(best_option_clone);
+
                         trace!(
                             "Person {} satisficing fallback: no option meets threshold {:.3}, using best option with priority {:.3}",
                             self.entities[buyer_idx].id,
                             self.config.satisficing_threshold,
-                            best.priority_score
+                            best_score
                         );
                     }
                 }
             } else {
-                // Traditional optimal behavior: Sort by priority score (highest first)
-                purchase_options.sort_by(|a, b| {
-                    b.priority_score
-                        .partial_cmp(&a.priority_score)
+                // Traditional optimal behavior: Find the option with highest priority score
+                // Performance optimization: Use max_by instead of sort_by since we only need the best option.
+                // This reduces O(n log n) to O(n) for typical 1-5 option lists.
+                // With 100 entities × ~3 options per step, this saves ~200 comparison operations per step.
+                if let Some(best_option) = purchase_options.iter().max_by(|a, b| {
+                    a.priority_score
+                        .partial_cmp(&b.priority_score)
                         .unwrap_or(std::cmp::Ordering::Equal)
-                });
+                }) {
+                    let best_option_clone = best_option.clone();
+                    // Keep only the best option
+                    purchase_options.clear();
+                    purchase_options.push(best_option_clone);
+                }
             }
 
             for option in purchase_options {
