@@ -684,7 +684,9 @@ impl SimulationEngine {
         let mut available_skills_for_market = Vec::new();
         for i in 0..config.entity_count {
             let skill_name = format!("Skill{}", i);
-            let skill = Skill::new(skill_name.clone(), config.base_skill_price);
+            // Performance optimization: Avoid unnecessary clone of skill_name.
+            // Skill::new takes ownership, so we pass the string directly.
+            let skill = Skill::new(skill_name, config.base_skill_price);
             available_skills_for_market.push(skill.clone());
             market.add_skill(skill);
         }
@@ -3184,7 +3186,7 @@ impl SimulationEngine {
                         self.entities[buyer_idx]
                             .person_data
                             .satisfied_needs_current_step
-                            .insert(needed_skill_id.clone());
+                            .push(needed_skill_id.clone());
                     }
                 } else {
                     // Trade failed due to insufficient funds - track this
