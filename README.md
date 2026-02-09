@@ -45,6 +45,7 @@ This framework enables you to simulate and analyze:
 - **Insurance**: Crisis, income, and credit insurance with risk-based pricing
 - **Credit Rating**: FICO-like scoring (300-850) affecting loan rates
 - **Loans**: Borrowing/lending with configurable interest and repayment
+- **P2P Lending Marketplace**: Decentralized peer-to-peer lending with automatic matching based on credit scores and risk preferences
 - **Crisis Events**: Random economic shocks to test system resilience
 
 ### Technology & Progress

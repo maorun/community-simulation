@@ -1958,8 +1958,8 @@ impl Default for SimulationConfig {
             loan_interest_rate: 0.01,
             loan_repayment_period: 20,
             min_money_to_lend: 50.0,
-            enable_p2p_lending: false,              // Disabled by default
-            p2p_platform_fee_rate: 0.01,            // 1% platform fee
+            enable_p2p_lending: false,            // Disabled by default
+            p2p_platform_fee_rate: 0.01,          // 1% platform fee
             enable_investments: false,            // Disabled by default
             investment_return_rate: 0.02,         // 2% return per step
             investment_duration: 20,              // 20 steps duration

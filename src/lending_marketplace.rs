@@ -57,14 +57,7 @@ impl LendingOffer {
         min_credit_score: Option<u16>,
         created_at_step: usize,
     ) -> Self {
-        LendingOffer {
-            id,
-            lender_id,
-            max_amount,
-            interest_rate,
-            min_credit_score,
-            created_at_step,
-        }
+        LendingOffer { id, lender_id, max_amount, interest_rate, min_credit_score, created_at_step }
     }
 
     /// Checks if a borrower meets the credit requirements for this offer.
