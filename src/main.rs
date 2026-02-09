@@ -105,6 +105,11 @@ struct RunArgs {
     #[arg(long)]
     timeseries_output: Option<String>,
 
+    /// Path to Parquet output file for big-data analytics
+    /// Exports in Apache Parquet format for efficient analysis with pandas, DuckDB, Spark
+    #[arg(long)]
+    parquet_output: Option<String>,
+
     /// Compress JSON output using gzip (.gz extension will be added automatically)
     #[arg(long, default_value_t = false)]
     compress: bool,
@@ -1390,6 +1395,11 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(timeseries_path) = args.timeseries_output {
             result.save_timeseries_csv(&timeseries_path)?;
             info!("{}", format!("Time-series data saved to: {}", timeseries_path).bright_blue());
+        }
+
+        if let Some(parquet_path) = args.parquet_output {
+            result.export_to_parquet(&parquet_path)?;
+            info!("{}", format!("Parquet data saved to: {}", parquet_path).bright_blue());
         }
 
         result.print_summary(!args.no_histogram);

@@ -62,6 +62,9 @@ pub enum SimulationError {
 
     /// Error occurred while deserializing action log
     ActionLogDeserialize(serde_json::Error),
+
+    /// Error occurred while exporting to Parquet format
+    ParquetExport(String),
 }
 
 impl fmt::Display for SimulationError {
@@ -103,6 +106,9 @@ impl fmt::Display for SimulationError {
             },
             SimulationError::ActionLogDeserialize(e) => {
                 write!(f, "Failed to deserialize action log: {}", e)
+            },
+            SimulationError::ParquetExport(msg) => {
+                write!(f, "Failed to export Parquet file: {}", msg)
             },
         }
     }

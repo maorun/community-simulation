@@ -3,12 +3,17 @@ use crate::{Entity, SkillId}; // Entity now wraps Person
 use colored::Colorize;
 use flate2::write::GzEncoder;
 use flate2::Compression;
+use parquet::basic::{Compression as ParquetCompression, ZstdLevel};
+use parquet::file::properties::WriterProperties;
+use parquet::file::writer::SerializedFileWriter;
+use parquet::schema::parser::parse_message_type;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::process::Command;
+use std::sync::Arc;
 
 /// Metadata about a simulation run for reproducibility and audit trail.
 ///
@@ -2658,6 +2663,189 @@ impl SimulationResult {
                 writeln!(file, "{},price_skill_{},{:.4}", step, skill_id, price)?;
             }
         }
+
+        Ok(())
+    }
+
+    /// Export simulation results to Apache Parquet format for big-data analytics.
+    ///
+    /// Exports time-series data (step-by-step metrics) in columnar Parquet format,
+    /// which is highly efficient for analysis with pandas, DuckDB, Spark, and other
+    /// big-data tools. The Parquet format provides:
+    /// - **Compression**: ~10x smaller than JSON/CSV
+    /// - **Column-oriented**: Fast aggregations and filtering
+    /// - **Type-safe**: Schema enforcement and strong typing
+    /// - **Interoperability**: Works with Python, R, SQL, Spark
+    ///
+    /// # Exported Metrics
+    ///
+    /// Each row represents one step-metric combination with columns:
+    /// - `step` (INT64): Simulation step number
+    /// - `metric` (UTF8): Name of the metric (e.g., "trade_count", "avg_money")
+    /// - `value` (DOUBLE): Numeric value of the metric
+    ///
+    /// Metrics include:
+    /// - Trade volume: `trade_count`, `trade_volume`
+    /// - Failed trades: `failed_attempts`
+    /// - Wealth stats: `avg_money`, `median_money`, `gini_coefficient`, etc.
+    /// - Skill prices: `price_skill_<ID>` for each skill
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Output file path for the Parquet file
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success, or an error if file I/O or schema parsing fails.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use community_simulation::{SimulationConfig, SimulationEngine};
+    /// # let config = SimulationConfig::default();
+    /// # let mut engine = SimulationEngine::new(config);
+    /// let result = engine.run();
+    /// result.export_to_parquet("results.parquet").unwrap();
+    /// ```
+    ///
+    /// # Analysis Examples
+    ///
+    /// Python (pandas):
+    /// ```python
+    /// import pandas as pd
+    /// df = pd.read_parquet('results.parquet')
+    /// trade_counts = df[df['metric'] == 'trade_count']
+    /// print(trade_counts.groupby('step')['value'].sum())
+    /// ```
+    ///
+    /// DuckDB:
+    /// ```sql
+    /// SELECT step, value FROM 'results.parquet'
+    /// WHERE metric = 'avg_money'
+    /// ORDER BY step;
+    /// ```
+    pub fn export_to_parquet(&self, path: &str) -> Result<()> {
+        // Define Parquet schema: step (INT64), metric (UTF8), value (DOUBLE)
+        let schema_str = "
+            message schema {
+                REQUIRED INT64 step;
+                REQUIRED BYTE_ARRAY metric (UTF8);
+                REQUIRED DOUBLE value;
+            }
+        ";
+        let schema = Arc::new(parse_message_type(schema_str).map_err(|e| {
+            SimulationError::IoError(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Failed to parse Parquet schema: {}", e),
+            ))
+        })?);
+
+        // Create file and writer properties with compression
+        let file = File::create(path)?;
+        let props = Arc::new(
+            WriterProperties::builder()
+                .set_compression(ParquetCompression::ZSTD(ZstdLevel::default()))
+                .set_writer_version(parquet::file::properties::WriterVersion::PARQUET_2_0)
+                .build(),
+        );
+
+        let mut writer = SerializedFileWriter::new(file, schema.clone(), props)
+            .map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+
+        // Collect all rows into a vector (step, metric, value)
+        let mut rows: Vec<(i64, String, f64)> = Vec::new();
+
+        // Export trade volume metrics
+        for (step, &count) in self.trades_per_step.iter().enumerate() {
+            rows.push((step as i64, "trade_count".to_string(), count as f64));
+        }
+        for (step, &volume) in self.volume_per_step.iter().enumerate() {
+            rows.push((step as i64, "trade_volume".to_string(), volume));
+        }
+
+        // Export failed attempts
+        for (step, &failed) in self.failed_attempts_per_step.iter().enumerate() {
+            rows.push((step as i64, "failed_attempts".to_string(), failed as f64));
+        }
+
+        // Export wealth statistics history
+        for snapshot in &self.wealth_stats_history {
+            let step = snapshot.step as i64;
+            rows.push((step, "avg_money".to_string(), snapshot.average));
+            rows.push((step, "median_money".to_string(), snapshot.median));
+            rows.push((step, "gini_coefficient".to_string(), snapshot.gini_coefficient));
+            rows.push((step, "top_10_percent_share".to_string(), snapshot.top_10_percent_share));
+            rows.push((step, "top_1_percent_share".to_string(), snapshot.top_1_percent_share));
+            rows.push((
+                step,
+                "bottom_50_percent_share".to_string(),
+                snapshot.bottom_50_percent_share,
+            ));
+        }
+
+        // Export skill price history
+        let mut skill_ids: Vec<_> = self.skill_price_history.keys().collect();
+        skill_ids.sort();
+
+        for skill_id in skill_ids {
+            let prices = self.skill_price_history.get(skill_id).unwrap();
+            for (step, &price) in prices.iter().enumerate() {
+                rows.push((step as i64, format!("price_skill_{}", skill_id), price));
+            }
+        }
+
+        // Write rows to Parquet file using RecordWriter
+        // We need to write in row groups for efficient storage
+        let mut row_group_writer = writer
+            .next_row_group()
+            .map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+
+        // Write step column
+        if let Some(mut col_writer) = row_group_writer
+            .next_column()
+            .map_err(|e| SimulationError::ParquetExport(e.to_string()))?
+        {
+            let steps: Vec<i64> = rows.iter().map(|(step, _, _)| *step).collect();
+            col_writer
+                .typed::<parquet::data_type::Int64Type>()
+                .write_batch(&steps, None, None)
+                .map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+            col_writer.close().map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+        }
+
+        // Write metric column
+        if let Some(mut col_writer) = row_group_writer
+            .next_column()
+            .map_err(|e| SimulationError::ParquetExport(e.to_string()))?
+        {
+            let metrics: Vec<parquet::data_type::ByteArray> = rows
+                .iter()
+                .map(|(_, metric, _)| parquet::data_type::ByteArray::from(metric.as_str()))
+                .collect();
+            col_writer
+                .typed::<parquet::data_type::ByteArrayType>()
+                .write_batch(&metrics, None, None)
+                .map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+            col_writer.close().map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+        }
+
+        // Write value column
+        if let Some(mut col_writer) = row_group_writer
+            .next_column()
+            .map_err(|e| SimulationError::ParquetExport(e.to_string()))?
+        {
+            let values: Vec<f64> = rows.iter().map(|(_, _, value)| *value).collect();
+            col_writer
+                .typed::<parquet::data_type::DoubleType>()
+                .write_batch(&values, None, None)
+                .map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+            col_writer.close().map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+        }
+
+        row_group_writer
+            .close()
+            .map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
+        writer.close().map_err(|e| SimulationError::ParquetExport(e.to_string()))?;
 
         Ok(())
     }
@@ -6098,5 +6286,82 @@ mod tests {
         let contents = std::fs::read_to_string(path).unwrap();
         assert!(contents.contains("0.000000"));
         assert!(contents.contains("2.000000"));
+    }
+
+    #[test]
+    fn test_export_to_parquet() {
+        let mut result = get_test_result();
+
+        // Add some sample data for testing
+        result.trades_per_step = vec![10, 15, 20];
+        result.volume_per_step = vec![100.0, 150.0, 200.0];
+        result.failed_attempts_per_step = vec![2, 1, 3];
+
+        // Add wealth stats history
+        result.wealth_stats_history = vec![
+            WealthStatsSnapshot {
+                step: 0,
+                average: 100.0,
+                median: 95.0,
+                std_dev: 10.0,
+                min_money: 50.0,
+                max_money: 150.0,
+                gini_coefficient: 0.35,
+                herfindahl_index: 1200.0,
+                top_10_percent_share: 0.25,
+                top_1_percent_share: 0.05,
+                bottom_50_percent_share: 0.30,
+            },
+            WealthStatsSnapshot {
+                step: 1,
+                average: 102.0,
+                median: 97.0,
+                std_dev: 11.0,
+                min_money: 52.0,
+                max_money: 155.0,
+                gini_coefficient: 0.36,
+                herfindahl_index: 1250.0,
+                top_10_percent_share: 0.26,
+                top_1_percent_share: 0.06,
+                bottom_50_percent_share: 0.29,
+            },
+        ];
+
+        // Add skill price history
+        result.skill_price_history.insert("skill_0".to_string(), vec![10.0, 11.0, 12.0]);
+        result.skill_price_history.insert("skill_1".to_string(), vec![15.0, 14.0, 13.0]);
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("test.parquet");
+
+        // Export to Parquet
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(
+            export_result.is_ok(),
+            "Parquet export should succeed: {:?}",
+            export_result.err()
+        );
+
+        // Verify file was created
+        assert!(path.exists(), "Parquet file should exist");
+
+        // Verify file has non-zero size
+        let metadata = std::fs::metadata(&path).unwrap();
+        assert!(metadata.len() > 0, "Parquet file should not be empty");
+    }
+
+    #[test]
+    fn test_export_to_parquet_with_empty_data() {
+        let result = get_test_result();
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("empty.parquet");
+
+        // Should handle minimal data gracefully
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(export_result.is_ok(), "Parquet export should succeed even with minimal data");
+
+        // Verify file was created
+        assert!(path.exists(), "Parquet file should exist");
     }
 }
