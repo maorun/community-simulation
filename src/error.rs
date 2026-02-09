@@ -297,6 +297,9 @@ mod tests {
 
         let err = SimulationError::JsonSerialize("error".to_string());
         assert!(err.source().is_none());
+
+        let err = SimulationError::ParquetExport("error".to_string());
+        assert!(err.source().is_none());
     }
 
     #[test]
@@ -307,6 +310,14 @@ mod tests {
             SimulationError::IoError(_) => {},
             _ => panic!("Expected IoError variant"),
         }
+    }
+
+    #[test]
+    fn test_parquet_export_error_display() {
+        let err = SimulationError::ParquetExport("failed to write parquet".to_string());
+        let display = format!("{}", err);
+        assert!(display.contains("Failed to export Parquet file"));
+        assert!(display.contains("failed to write parquet"));
     }
 
     #[test]

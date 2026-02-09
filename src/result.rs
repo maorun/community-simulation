@@ -6364,4 +6364,267 @@ mod tests {
         // Verify file was created
         assert!(path.exists(), "Parquet file should exist");
     }
+
+    #[test]
+    fn test_export_to_parquet_with_large_dataset() {
+        let mut result = get_test_result();
+
+        // Create a larger dataset with 100 steps
+        result.trades_per_step = (0..100).map(|i| i * 2).collect();
+        result.volume_per_step = (0..100).map(|i| (i as f64) * 10.5).collect();
+        result.failed_attempts_per_step = (0..100).map(|i| i % 10).collect();
+
+        // Add multiple skill price histories
+        for skill_id in 0..10 {
+            result.skill_price_history.insert(
+                format!("skill_{}", skill_id),
+                (0..100).map(|step| (step as f64) + (skill_id as f64) * 10.0).collect(),
+            );
+        }
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("large.parquet");
+
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(export_result.is_ok(), "Large dataset export should succeed");
+
+        // Verify file was created and has substantial size
+        let metadata = std::fs::metadata(&path).unwrap();
+        assert!(
+            metadata.len() > 1000,
+            "Large dataset should produce file > 1KB, got {} bytes",
+            metadata.len()
+        );
+    }
+
+    #[test]
+    fn test_export_to_parquet_with_only_wealth_stats() {
+        let mut result = get_test_result();
+
+        // Clear other data, only keep wealth stats
+        result.trades_per_step.clear();
+        result.volume_per_step.clear();
+        result.failed_attempts_per_step.clear();
+        result.skill_price_history.clear();
+
+        // Add wealth stats history
+        result.wealth_stats_history = vec![WealthStatsSnapshot {
+            step: 0,
+            average: 100.0,
+            median: 95.0,
+            std_dev: 10.0,
+            min_money: 50.0,
+            max_money: 150.0,
+            gini_coefficient: 0.35,
+            herfindahl_index: 1200.0,
+            top_10_percent_share: 0.25,
+            top_1_percent_share: 0.05,
+            bottom_50_percent_share: 0.30,
+        }];
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("wealth_only.parquet");
+
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(export_result.is_ok(), "Export with only wealth stats should succeed");
+
+        assert!(path.exists());
+        let metadata = std::fs::metadata(&path).unwrap();
+        assert!(metadata.len() > 0, "File should not be empty");
+    }
+
+    #[test]
+    fn test_export_to_parquet_with_only_skill_prices() {
+        let mut result = get_test_result();
+
+        // Clear other data, only keep skill prices
+        result.trades_per_step.clear();
+        result.volume_per_step.clear();
+        result.failed_attempts_per_step.clear();
+        result.wealth_stats_history.clear();
+
+        // Add skill price history
+        result
+            .skill_price_history
+            .insert("test_skill".to_string(), vec![10.0, 20.0, 30.0]);
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("skills_only.parquet");
+
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(export_result.is_ok(), "Export with only skill prices should succeed");
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_export_to_parquet_invalid_path() {
+        let result = get_test_result();
+
+        // Try to write to an invalid/non-existent directory
+        let invalid_path = "/nonexistent/directory/test.parquet";
+
+        let export_result = result.export_to_parquet(invalid_path);
+        assert!(export_result.is_err(), "Export to invalid path should fail");
+
+        // Verify it returns an IoError
+        match export_result {
+            Err(SimulationError::IoError(_)) => {
+                // Expected error type
+            },
+            _ => panic!("Expected IoError for invalid path"),
+        }
+    }
+
+    #[test]
+    fn test_export_to_parquet_file_with_special_characters_in_metrics() {
+        let mut result = get_test_result();
+
+        // Test that metric names with special characters are handled
+        result.trades_per_step = vec![10];
+        result.volume_per_step = vec![100.0];
+        result
+            .skill_price_history
+            .insert("skill_with_underscore".to_string(), vec![10.0]);
+        result.skill_price_history.insert("skill-with-dash".to_string(), vec![20.0]);
+        result.skill_price_history.insert("skill.with.dots".to_string(), vec![30.0]);
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("special_chars.parquet");
+
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(
+            export_result.is_ok(),
+            "Export with special characters in skill names should succeed"
+        );
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_export_to_parquet_data_integrity() {
+        let mut result = get_test_result();
+
+        // Set up known data
+        result.trades_per_step = vec![5, 10, 15];
+        result.volume_per_step = vec![50.0, 100.0, 150.0];
+        result.failed_attempts_per_step = vec![1, 2, 3];
+
+        result.wealth_stats_history = vec![WealthStatsSnapshot {
+            step: 0,
+            average: 100.0,
+            median: 95.0,
+            std_dev: 10.0,
+            min_money: 50.0,
+            max_money: 150.0,
+            gini_coefficient: 0.35,
+            herfindahl_index: 1200.0,
+            top_10_percent_share: 0.25,
+            top_1_percent_share: 0.05,
+            bottom_50_percent_share: 0.30,
+        }];
+
+        result
+            .skill_price_history
+            .insert("test_skill".to_string(), vec![10.0, 11.0, 12.0]);
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("integrity_test.parquet");
+
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(export_result.is_ok(), "Export should succeed");
+
+        // Verify the file exists and has reasonable size
+        assert!(path.exists());
+        let metadata = std::fs::metadata(&path).unwrap();
+
+        // A file with this data should be at least a few hundred bytes
+        assert!(
+            metadata.len() > 100,
+            "File should have reasonable size, got {} bytes",
+            metadata.len()
+        );
+    }
+
+    #[test]
+    fn test_export_to_parquet_with_zero_values() {
+        let mut result = get_test_result();
+
+        // Test with all zeros
+        result.trades_per_step = vec![0, 0, 0];
+        result.volume_per_step = vec![0.0, 0.0, 0.0];
+        result.failed_attempts_per_step = vec![0, 0, 0];
+
+        result.wealth_stats_history = vec![WealthStatsSnapshot {
+            step: 0,
+            average: 0.0,
+            median: 0.0,
+            std_dev: 0.0,
+            min_money: 0.0,
+            max_money: 0.0,
+            gini_coefficient: 0.0,
+            herfindahl_index: 0.0,
+            top_10_percent_share: 0.0,
+            top_1_percent_share: 0.0,
+            bottom_50_percent_share: 0.0,
+        }];
+
+        result.skill_price_history.insert("skill_0".to_string(), vec![0.0, 0.0, 0.0]);
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("zeros.parquet");
+
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(export_result.is_ok(), "Export with zero values should succeed");
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_export_to_parquet_with_negative_values() {
+        let mut result = get_test_result();
+
+        // Test with negative values (valid for wealth stats)
+        result.wealth_stats_history = vec![WealthStatsSnapshot {
+            step: 0,
+            average: -10.0,
+            median: -5.0,
+            std_dev: 10.0,
+            min_money: -50.0,
+            max_money: 10.0,
+            gini_coefficient: 0.35,
+            herfindahl_index: 1200.0,
+            top_10_percent_share: 0.25,
+            top_1_percent_share: 0.05,
+            bottom_50_percent_share: 0.30,
+        }];
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("negative.parquet");
+
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(export_result.is_ok(), "Export with negative values should succeed");
+
+        assert!(path.exists());
+    }
+
+    #[test]
+    fn test_export_to_parquet_with_very_large_values() {
+        let mut result = get_test_result();
+
+        // Test with very large values
+        result.trades_per_step = vec![1_000_000];
+        result.volume_per_step = vec![1_000_000_000.0];
+        result
+            .skill_price_history
+            .insert("expensive_skill".to_string(), vec![999_999.99]);
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("large_values.parquet");
+
+        let export_result = result.export_to_parquet(path.to_str().unwrap());
+        assert!(export_result.is_ok(), "Export with large values should succeed");
+
+        assert!(path.exists());
+    }
 }
