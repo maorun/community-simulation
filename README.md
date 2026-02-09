@@ -157,14 +157,40 @@ The simulation outputs detailed JSON results including:
 - Economic metrics (wealth distribution, Gini coefficient, trade volumes)
 - System statistics (taxes, loans, insurance, automation effects)
 
-Export to CSV for further analysis:
+Export to multiple formats for analysis:
 ```bash
-# Export specific data to CSV
+# Export to CSV for spreadsheet analysis
 ./target/release/community-simulation export results.json --format csv --output results.csv
 
 # Time-series export for plotting
 ./target/release/community-simulation export results.json --format timeseries --output timeseries.csv
+
+# NEW: Export directly to Parquet for big-data analytics
+./target/release/community-simulation run -s 500 -p 100 --parquet-output results.parquet
 ```
+
+**Parquet Export Benefits:**
+- **10x smaller** file size compared to JSON/CSV (with compression)
+- **Columnar format** - Fast aggregations and filtering
+- **Type-safe** - Schema enforcement and strong typing
+- **Interoperability** - Works with pandas, DuckDB, Spark, Apache Arrow
+
+Analyze Parquet data:
+```python
+# Python with pandas
+import pandas as pd
+df = pd.read_parquet('results.parquet')
+trade_volume = df[df['metric'] == 'trade_count']
+print(trade_volume.groupby('step')['value'].sum())
+```
+
+```sql
+-- DuckDB
+SELECT step, value FROM 'results.parquet'
+WHERE metric = 'avg_money'
+ORDER BY step;
+```
+
 
 ## Documentation
 
@@ -214,6 +240,9 @@ Essential parameters for customizing simulations:
                                 Options: Original, DynamicPricing, AdaptivePricing,
                                          AuctionPricing, ClimateChange
 -o, --output <FILE>             Output JSON file path
+--csv-output <PREFIX>           Export CSV files with prefix
+--parquet-output <FILE>         Export Parquet file for big-data analytics
+--timeseries-output <FILE>      Export time-series CSV for analysis
 --config <FILE>                 Load configuration from YAML/TOML file
 --seed <SEED>                   RNG seed for reproducibility (default: 42)
 ```
