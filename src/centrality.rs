@@ -1,12 +1,20 @@
 //! Network centrality analysis for trading networks.
 //!
 //! This module provides comprehensive network analysis capabilities including:
-//! - Degree centrality (number of connections)
-//! - Betweenness centrality (brokerage/bridge positions)
-//! - Eigenvector centrality (influence based on connections)
-//! - PageRank (importance based on weighted connections)
+//! - **Degree centrality**: Number of direct trading connections a person has
+//! - **Betweenness centrality**: How often a person lies on shortest paths between others (broker/bridge positions)
+//! - **Eigenvector centrality**: Influence based on connections to other well-connected traders
+//! - **PageRank**: Importance based on weighted trading relationships
 //!
 //! These metrics help identify key traders, market structure, and trading patterns.
+//!
+//! ## Algorithm References
+//!
+//! - Betweenness centrality uses Brandes' algorithm (2001), an efficient O(nm) algorithm for computing
+//!   betweenness centrality in unweighted graphs, where n is the number of nodes and m is the number of edges.
+//! - PageRank uses the power iteration method, which converges to the stationary distribution of the
+//!   random walk on the graph.
+//! - Eigenvector centrality is computed using power iteration until convergence or max iterations.
 
 use crate::result::{NetworkEdge, NetworkNode};
 use petgraph::algo::connected_components;
