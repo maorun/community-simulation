@@ -105,6 +105,8 @@ pub struct SimulationCheckpoint {
     pub total_loans_issued: usize,
     /// Total loans repaid counter
     pub total_loans_repaid: usize,
+    /// P2P Lending marketplace (if enabled)
+    pub lending_marketplace: Option<crate::lending_marketplace::LendingMarketplace>,
     /// Total taxes collected during the simulation
     pub total_taxes_collected: f64,
     /// Total amount redistributed through tax system
@@ -189,6 +191,8 @@ pub struct SimulationEngine {
     loans: HashMap<LoanId, Loan>,
     total_loans_issued: usize,
     total_loans_repaid: usize,
+    // P2P Lending marketplace (if enabled)
+    lending_marketplace: Option<crate::lending_marketplace::LendingMarketplace>,
     // Tax system tracking
     total_taxes_collected: f64,
     total_taxes_redistributed: f64,
@@ -452,6 +456,10 @@ impl SimulationEngine {
             }
         }
 
+        // Capture P2P lending config values before moving config
+        let enable_p2p = config.enable_p2p_lending;
+        let p2p_fee = config.p2p_platform_fee_rate;
+
         Self {
             config,
             entities,
@@ -472,6 +480,11 @@ impl SimulationEngine {
             loans: HashMap::new(),
             total_loans_issued: 0,
             total_loans_repaid: 0,
+            lending_marketplace: if enable_p2p {
+                Some(crate::lending_marketplace::LendingMarketplace::new(p2p_fee))
+            } else {
+                None
+            },
             total_taxes_collected: 0.0,
             total_taxes_redistributed: 0.0,
             per_skill_trades: HashMap::new(),
@@ -6135,6 +6148,7 @@ impl SimulationEngine {
             loans: self.loans.clone(),
             total_loans_issued: self.total_loans_issued,
             total_loans_repaid: self.total_loans_repaid,
+            lending_marketplace: self.lending_marketplace.clone(),
             total_taxes_collected: self.total_taxes_collected,
             total_taxes_redistributed: self.total_taxes_redistributed,
             per_skill_trades: self.per_skill_trades.clone(),
@@ -6291,6 +6305,7 @@ impl SimulationEngine {
             loans: checkpoint.loans,
             total_loans_issued: checkpoint.total_loans_issued,
             total_loans_repaid: checkpoint.total_loans_repaid,
+            lending_marketplace: checkpoint.lending_marketplace,
             total_taxes_collected: checkpoint.total_taxes_collected,
             total_taxes_redistributed: checkpoint.total_taxes_redistributed,
             per_skill_trades: checkpoint.per_skill_trades,

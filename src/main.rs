@@ -1080,6 +1080,8 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             min_money_to_lend: args
                 .min_money_to_lend
                 .unwrap_or(SimulationConfig::default().min_money_to_lend),
+            enable_p2p_lending: SimulationConfig::default().enable_p2p_lending,
+            p2p_platform_fee_rate: SimulationConfig::default().p2p_platform_fee_rate,
             enable_investments: SimulationConfig::default().enable_investments,
             investment_return_rate: SimulationConfig::default().investment_return_rate,
             investment_duration: SimulationConfig::default().investment_duration,

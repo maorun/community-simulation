@@ -107,6 +107,7 @@ pub mod externality;
 pub mod insurance;
 pub mod invariant;
 pub mod investment;
+pub mod lending_marketplace;
 pub mod list_commands;
 pub mod loan;
 pub mod market;
@@ -147,6 +148,7 @@ pub use invariant::{
     NonNegativeWealthInvariant,
 };
 pub use investment::{Investment, InvestmentId, InvestmentType};
+pub use lending_marketplace::{LendingMarketplace, LendingOffer, LendingOfferId};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
 pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
