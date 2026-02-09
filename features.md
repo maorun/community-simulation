@@ -55,22 +55,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Verschiedene Agentenstrategien
 
-#### 4.1 Bounded Rationality und Heuristiken
-**Beschreibung:** Agenten mit begrenzter Rationalität die einfache Heuristiken verwenden statt perfekter Optimierung (z.B. Satisficing, Recognition Heuristic).
-
-**Nutzen:**
-- Realistischere Entscheidungs-Modellierung
-- Untersuchung von Heuristik-Effektivität in verschiedenen Umgebungen
-- Modellierung von kognitiven Biases (Anchoring, Availability)
-
-**Implementierung:**
-- `DecisionStrategy` Trait mit verschiedenen Implementierungen
-- `SatisficingStrategy` (erstes "gutes" Angebot akzeptieren)
-- `RecognitionHeuristic` (bekannte Partner bevorzugen)
-- `AnchoringBias` (erste Preise beeinflussen spätere Einschätzungen)
-- Konfigurierbare Strategie-Verteilung in Population
-
-#### 4.2 Reinforcement Learning Agenten
+#### 4.1 Reinforcement Learning Agenten
 **Beschreibung:** Agenten die aus Erfahrung lernen und ihre Strategien dynamisch anpassen. Implementierung einfacher RL-Algorithmen wie Q-Learning oder Multi-Armed Bandits.
 
 **Nutzen:**

@@ -26,6 +26,7 @@ This framework enables you to simulate and analyze:
 - Geographic locations with distance-based trade costs
 - Multiple skills per person for realistic labor dynamics
 - Transaction history and behavioral patterns
+- **Satisficing Behavior**: Agents can use "good enough" heuristics instead of optimal decision-making (bounded rationality)
 
 ### Economic Mechanisms
 - **Pricing Scenarios**: Supply/demand, dynamic, adaptive, auction, climate change
@@ -121,6 +122,15 @@ This framework enables you to simulate and analyze:
   --enable-quality \
   --enable-reputation \
   -o market_segments.json
+
+# Satisficing (bounded rationality) simulation
+# Agents accept "good enough" options rather than always seeking optimal
+./target/release/community-simulation run \
+  --steps 500 \
+  --persons 100 \
+  --enable-satisficing \
+  --satisficing-threshold 0.6 \
+  -o satisficing.json
 ```
 
 ### Using Configuration Files

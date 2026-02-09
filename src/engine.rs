@@ -2879,12 +2879,58 @@ impl SimulationEngine {
                 }
             }
 
-            // Sort by priority score (highest first)
-            purchase_options.sort_by(|a, b| {
-                b.priority_score
-                    .partial_cmp(&a.priority_score)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            });
+            // Satisficing decision strategy: If enabled, use "good enough" heuristic
+            // instead of always seeking optimal choice
+            if self.config.enable_satisficing {
+                // Satisficing: Accept first option with priority score >= threshold
+                // This models bounded rationality - agents use simple heuristics rather than perfect optimization
+
+                // Find index of first satisficing option
+                let satisficing_option_idx = purchase_options
+                    .iter()
+                    .position(|opt| opt.priority_score >= self.config.satisficing_threshold);
+
+                if let Some(idx) = satisficing_option_idx {
+                    // Found a "good enough" option - keep only this one
+                    // Performance optimization: Use swap_remove to avoid cloning
+                    let selected_option = purchase_options.swap_remove(idx);
+                    let selected_score = selected_option.priority_score;
+
+                    purchase_options.clear();
+                    purchase_options.push(selected_option);
+
+                    trace!(
+                        "Person {} using satisficing: accepted first option with priority score {:.3} >= threshold {:.3}",
+                        self.entities[buyer_idx].id,
+                        selected_score,
+                        self.config.satisficing_threshold
+                    );
+                } else {
+                    // No option meets threshold - fall back to best available option
+                    // Sort and take the highest priority
+                    purchase_options.sort_by(|a, b| {
+                        b.priority_score
+                            .partial_cmp(&a.priority_score)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    });
+
+                    if let Some(best) = purchase_options.first() {
+                        trace!(
+                            "Person {} satisficing fallback: no option meets threshold {:.3}, using best option with priority {:.3}",
+                            self.entities[buyer_idx].id,
+                            self.config.satisficing_threshold,
+                            best.priority_score
+                        );
+                    }
+                }
+            } else {
+                // Traditional optimal behavior: Sort by priority score (highest first)
+                purchase_options.sort_by(|a, b| {
+                    b.priority_score
+                        .partial_cmp(&a.priority_score)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+            }
 
             for option in purchase_options {
                 // Clone needed data to avoid borrow checker issues when mutating entities later
