@@ -3184,7 +3184,7 @@ impl SimulationEngine {
                         self.entities[buyer_idx]
                             .person_data
                             .satisfied_needs_current_step
-                            .push(needed_skill_id.clone());
+                            .insert(needed_skill_id.clone());
                     }
                 } else {
                     // Trade failed due to insufficient funds - track this

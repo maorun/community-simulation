@@ -504,8 +504,11 @@ pub struct Person {
     // Now stores tuples of (SkillId, UrgencyLevel)
     pub needed_skills: Vec<NeededSkillItem>,
     pub transaction_history: Vec<Transaction>,
-    // Stores SkillIds that have been satisfied in the current step
-    pub satisfied_needs_current_step: Vec<SkillId>,
+    /// Stores SkillIds that have been satisfied in the current step.
+    /// Uses HashSet for O(1) contains() checks instead of O(n) Vec::contains().
+    /// Performance optimization: With ~100 entities × ~3 needs checked per step,
+    /// this saves ~300 linear scans per step (changed from Vec to HashSet).
+    pub satisfied_needs_current_step: HashSet<SkillId>,
     /// Reputation score affecting trading conditions.
     /// Starts at 1.0 (neutral), increases with successful transactions,
     /// and can decay over time. Higher reputation may result in better prices.
@@ -611,7 +614,7 @@ impl Person {
             own_skills,
             needed_skills: Vec::new(),
             transaction_history: Vec::new(),
-            satisfied_needs_current_step: Vec::new(),
+            satisfied_needs_current_step: HashSet::new(),
             reputation: 1.0, // Start with neutral reputation
             savings: 0.0,    // Start with no savings
             borrowed_loans: Vec::new(),
