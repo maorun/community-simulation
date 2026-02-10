@@ -394,7 +394,6 @@ fn test_price_range_variations() {
 
 /// Test config TOML parsing path
 #[test]
-#[ignore] // TOML config parsing may need specific fields
 fn test_config_toml_parsing() {
     use std::fs;
     use std::io::Write;
@@ -422,7 +421,6 @@ initial_money_per_person = 100.0
 
 /// Test config YAML parsing with various keys
 #[test]
-#[ignore] // YAML config parsing may need specific fields
 fn test_config_yaml_comprehensive() {
     use std::fs;
     use std::io::Write;

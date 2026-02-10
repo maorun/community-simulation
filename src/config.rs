@@ -96,12 +96,17 @@ impl FromStr for PresetName {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationConfig {
     // General simulation parameters
+    #[serde(default = "default_max_steps")]
     pub max_steps: usize,
+    #[serde(default = "default_entity_count")]
     pub entity_count: usize, // This will be our number of persons
+    #[serde(default = "default_seed")]
     pub seed: u64,
 
     // Economic simulation specific parameters
+    #[serde(default = "default_initial_money_per_person")]
     pub initial_money_per_person: f64,
+    #[serde(default = "default_base_skill_price")]
     pub base_skill_price: f64,
     // num_unique_skills will be equal to entity_count as each person has one unique skill
     /// Minimum price floor for skills.
@@ -139,7 +144,9 @@ pub struct SimulationConfig {
 
     // time_step might not be directly relevant for a turn-based economic sim,
     // but we can keep it or remove it later. For now, let's keep it.
+    #[serde(default = "default_time_step")]
     pub time_step: f64,
+    #[serde(default = "default_scenario")]
     pub scenario: Scenario,
 
     /// Demand generation strategy.
@@ -1653,6 +1660,34 @@ fn default_disease_transmission_rate() -> f64 {
 
 fn default_disease_recovery_duration() -> usize {
     10 // Recover after 10 steps
+}
+
+fn default_max_steps() -> usize {
+    500 // Default to 500 steps
+}
+
+fn default_entity_count() -> usize {
+    100 // Default to 100 persons
+}
+
+fn default_seed() -> u64 {
+    42 // Default seed for reproducibility
+}
+
+fn default_initial_money_per_person() -> f64 {
+    100.0 // 100 units of initial money
+}
+
+fn default_base_skill_price() -> f64 {
+    10.0 // 10 units base price
+}
+
+fn default_time_step() -> f64 {
+    1.0 // One discrete step
+}
+
+fn default_scenario() -> Scenario {
+    Scenario::Original
 }
 
 fn default_true() -> bool {
