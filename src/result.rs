@@ -5447,7 +5447,7 @@ mod tests {
         // This is crucial for correctness
 
         use rand::rngs::StdRng;
-        use rand::Rng;
+        use rand::RngExt;
         use rand::SeedableRng;
 
         let mut rng = StdRng::seed_from_u64(42);
