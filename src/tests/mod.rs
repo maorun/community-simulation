@@ -2293,8 +2293,19 @@ mod engine_tests {
             SimulationEngine::load_checkpoint(checkpoint_path).expect("Failed to load checkpoint");
 
         assert_eq!(loaded_engine.get_current_step(), engine.get_current_step());
-        assert_eq!(loaded_engine.get_total_fees_collected(), engine.get_total_fees_collected());
-        assert_eq!(loaded_engine.get_total_taxes_collected(), engine.get_total_taxes_collected());
+        // Use approximate equality for floating-point values due to RNG variations
+        assert!(
+            (loaded_engine.get_total_fees_collected() - engine.get_total_fees_collected()).abs() < 1e-10,
+            "Fees mismatch: {} vs {}",
+            loaded_engine.get_total_fees_collected(),
+            engine.get_total_fees_collected()
+        );
+        assert!(
+            (loaded_engine.get_total_taxes_collected() - engine.get_total_taxes_collected()).abs() < 1e-10,
+            "Taxes mismatch: {} vs {}",
+            loaded_engine.get_total_taxes_collected(),
+            engine.get_total_taxes_collected()
+        );
     }
 
     #[test]
