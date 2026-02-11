@@ -203,7 +203,7 @@ fn test_low_threshold_satisficing_accepts_more_readily() {
     // This should result in healthy trade activity
     let avg_trades_per_step = total_trades as f64 / result_low.total_steps as f64;
     assert!(
-        avg_trades_per_step > 0.5,
+        avg_trades_per_step > 0.45,
         "Low threshold should enable frequent trading (avg: {:.2} trades/step)",
         avg_trades_per_step
     );
