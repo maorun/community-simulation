@@ -10,7 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 serde_yaml = "0.9"
-toml = "0.9"
+toml = "1.0"
 
 [dependencies.community-simulation]
 path = ".."
