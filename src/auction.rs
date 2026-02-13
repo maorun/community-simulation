@@ -42,7 +42,7 @@ pub enum AuctionType {
 /// use community_simulation::auction::{Auction, AuctionType};
 ///
 /// let mut auction = Auction::new("Cooking".to_string(), AuctionType::English);
-/// 
+///
 /// // Add bids from different persons
 /// auction.add_bid(10, 20.0);
 /// auction.add_bid(11, 25.0);
@@ -56,10 +56,10 @@ pub enum AuctionType {
 pub struct Auction {
     /// The skill being auctioned
     pub skill_id: String,
-    
+
     /// Type of auction mechanism
     pub auction_type: AuctionType,
-    
+
     /// Bids submitted: PersonId -> bid amount
     pub bids: HashMap<usize, f64>,
 }
@@ -80,11 +80,7 @@ impl Auction {
     /// let auction = Auction::new("Gardening".to_string(), AuctionType::English);
     /// ```
     pub fn new(skill_id: String, auction_type: AuctionType) -> Self {
-        Self {
-            skill_id,
-            auction_type,
-            bids: HashMap::new(),
-        }
+        Self { skill_id, auction_type, bids: HashMap::new() }
     }
 
     /// Adds a bid to the auction.
@@ -140,7 +136,7 @@ impl Auction {
                     .iter()
                     .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
                     .map(|(person_id, amount)| (*person_id, *amount))
-            }
+            },
         }
     }
 
@@ -228,7 +224,7 @@ mod tests {
         auction.add_bid(1, 50.0);
         auction.add_bid(2, 75.0);
         auction.add_bid(3, 60.0);
-        
+
         let winner = auction.resolve();
         assert_eq!(winner, Some((2, 75.0)));
     }
@@ -244,7 +240,7 @@ mod tests {
     fn test_resolve_english_auction_single_bid() {
         let mut auction = Auction::new("TestSkill".to_string(), AuctionType::English);
         auction.add_bid(5, 100.0);
-        
+
         let winner = auction.resolve();
         assert_eq!(winner, Some((5, 100.0)));
     }
@@ -254,7 +250,7 @@ mod tests {
         let mut auction = Auction::new("TestSkill".to_string(), AuctionType::English);
         auction.add_bid(1, 50.0);
         auction.add_bid(2, 50.0);
-        
+
         // One of them should win (either is acceptable)
         let winner = auction.resolve();
         assert!(winner.is_some());
@@ -267,7 +263,7 @@ mod tests {
         auction.add_bid(1, 50.0);
         auction.add_bid(2, 60.0);
         assert_eq!(auction.bid_count(), 2);
-        
+
         auction.clear_bids();
         assert_eq!(auction.bid_count(), 0);
         assert_eq!(auction.resolve(), None);
@@ -278,7 +274,7 @@ mod tests {
         let mut auction = Auction::new("TestSkill".to_string(), AuctionType::English);
         auction.add_bid(1, 0.0);
         auction.add_bid(2, 10.0);
-        
+
         let winner = auction.resolve();
         assert_eq!(winner, Some((2, 10.0)));
     }
@@ -288,7 +284,7 @@ mod tests {
         let mut auction = Auction::new("TestSkill".to_string(), AuctionType::English);
         auction.add_bid(1, -5.0);
         auction.add_bid(2, 10.0);
-        
+
         // Highest bid should still win (even if one is negative)
         let winner = auction.resolve();
         assert_eq!(winner, Some((2, 10.0)));
