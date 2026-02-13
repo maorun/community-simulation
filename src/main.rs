@@ -1108,6 +1108,8 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
                 .black_market_price_multiplier,
             black_market_participation_rate: SimulationConfig::default()
                 .black_market_participation_rate,
+            enable_auctions: SimulationConfig::default().enable_auctions,
+            auction_participation_rate: SimulationConfig::default().auction_participation_rate,
             enable_contracts: args.enable_contracts,
             max_contract_duration: args
                 .max_contract_duration

@@ -61,6 +61,7 @@
 //! ## Modules
 //!
 //! - [`asset`] - Asset system for long-term wealth building (property, equipment, stocks)
+//! - [`auction`] - Auction mechanisms for alternative price discovery
 //! - [`causal_analysis`] - Causal inference framework for policy evaluation
 //! - [`centrality`] - Network centrality analysis for trading networks
 //! - [`config`] - Simulation configuration parameters
@@ -90,6 +91,7 @@
 //! - [`wizard`] - Interactive configuration wizard for guided setup
 
 pub mod asset;
+pub mod auction;
 pub mod causal_analysis;
 pub mod centrality;
 pub mod completion;
@@ -130,6 +132,7 @@ pub mod wizard;
 pub mod wizard_helpers;
 
 pub use asset::{Asset, AssetId, AssetType};
+pub use auction::{Auction, AuctionType};
 pub use causal_analysis::{CausalAnalysisConfig, CausalAnalysisResult, StatisticalTest};
 pub use centrality::{calculate_centrality, CentralityAnalysis, NodeCentrality};
 pub use config::{PresetName, SimulationConfig};
