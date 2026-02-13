@@ -1,6 +1,6 @@
 use crate::market::Market;
 use log::debug;
-use rand::Rng;
+use rand::{Rng, RngExt};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 use strum_macros::EnumString;

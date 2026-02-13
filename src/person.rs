@@ -4,6 +4,7 @@ use crate::insurance::InsuranceId;
 use crate::investment::InvestmentId;
 use crate::loan::LoanId;
 use crate::skill::{Skill, SkillId};
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
