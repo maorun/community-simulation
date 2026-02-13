@@ -6,20 +6,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Erweiterte Marktmechanismen
 
-#### 1.1 Auktionen und alternative Preisfindungsmechanismen  
-**Beschreibung:** Alternative Handelsmechanismen wie Vickrey-Auktionen, Niederländische Auktionen oder kontinuierliche Double-Auctions für bestimmte Güter.
-
-**Nutzen:**
-- Effizientere Preisfindung bei Knappheit
-- Modellierung verschiedener Marktstrukturen
-- Forschung zu Mechanismus-Design und strategischem Bieten
-
-**Implementierung:**
-- `AuctionType` Enum (English, Dutch, Vickrey, DoubleAuction)
-- `Auction` Struct mit Geboten und Zeitfenster
-- `AuctionMarket` als alternative zu normalem bilateralem Handel
-- Per-Skill Konfiguration: Auktion vs. normaler Handel
-
 ### 2. Soziale Netzwerke und Beziehungen
 
 ### 3. Erweiterte Szenarien

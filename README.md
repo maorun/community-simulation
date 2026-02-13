@@ -33,6 +33,7 @@ This framework enables you to simulate and analyze:
 - **Demand Strategies**: Uniform, concentrated (Pareto), cyclical (business cycles)
 - **Market Systems**: Dynamic price adjustments, seasonal effects, transaction fees
 - **Market Segmentation**: Budget/Mittelklasse/Luxury segments based on wealth with differentiated price-quality preferences
+- **Auction Infrastructure**: English auction mechanism with bid collection and winner selection (configurable via `--enable-auctions`)
 - **Wealth Building**: Savings, loans with interest, assets (property/equipment/stocks)
 
 ### Social & Network Systems
