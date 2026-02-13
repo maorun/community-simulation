@@ -86,11 +86,16 @@ impl Auction {
     /// Adds a bid to the auction.
     ///
     /// If the person has already bid, this updates their bid to the new amount.
+    /// Only accepts finite bid amounts (rejects NaN and infinity).
     ///
     /// # Arguments
     ///
     /// * `person_id` - The ID of the person submitting the bid
-    /// * `amount` - The bid amount
+    /// * `amount` - The bid amount (must be finite, non-NaN, non-infinite)
+    ///
+    /// # Panics
+    ///
+    /// Panics if the bid amount is NaN or infinite.
     ///
     /// # Examples
     ///
@@ -102,6 +107,11 @@ impl Auction {
     /// auction.add_bid(5, 35.0); // Update bid
     /// ```
     pub fn add_bid(&mut self, person_id: usize, amount: f64) {
+        assert!(
+            amount.is_finite(),
+            "Bid amount must be finite (not NaN or infinite), got: {}",
+            amount
+        );
         self.bids.insert(person_id, amount);
     }
 
@@ -110,10 +120,13 @@ impl Auction {
     /// For English auctions, returns the person with the highest bid and their bid amount.
     /// Returns `None` if there are no bids.
     ///
+    /// Only considers finite bid amounts. Non-finite bids (if any bypass validation)
+    /// are automatically excluded from consideration.
+    ///
     /// # Returns
     ///
     /// * `Some((winner_id, winning_bid))` - The winning person ID and their bid
-    /// * `None` - If no bids were submitted
+    /// * `None` - If no bids were submitted or all bids are non-finite
     ///
     /// # Examples
     ///
@@ -131,10 +144,15 @@ impl Auction {
     pub fn resolve(&self) -> Option<(usize, f64)> {
         match self.auction_type {
             AuctionType::English => {
-                // Find the highest bidder
+                // Find the highest bidder among finite bids
+                // Filter ensures we only compare valid (finite) bids
                 self.bids
                     .iter()
-                    .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+                    .filter(|(_id, amount)| amount.is_finite())
+                    .max_by(|a, b| {
+                        // Safety: all values are finite due to filter, so partial_cmp always returns Some
+                        a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal)
+                    })
                     .map(|(person_id, amount)| (*person_id, *amount))
             },
         }
@@ -288,5 +306,26 @@ mod tests {
         // Highest bid should still win (even if one is negative)
         let winner = auction.resolve();
         assert_eq!(winner, Some((2, 10.0)));
+    }
+
+    #[test]
+    #[should_panic(expected = "Bid amount must be finite")]
+    fn test_bid_with_nan_panics() {
+        let mut auction = Auction::new("TestSkill".to_string(), AuctionType::English);
+        auction.add_bid(1, f64::NAN); // Should panic
+    }
+
+    #[test]
+    #[should_panic(expected = "Bid amount must be finite")]
+    fn test_bid_with_infinity_panics() {
+        let mut auction = Auction::new("TestSkill".to_string(), AuctionType::English);
+        auction.add_bid(1, f64::INFINITY); // Should panic
+    }
+
+    #[test]
+    #[should_panic(expected = "Bid amount must be finite")]
+    fn test_bid_with_neg_infinity_panics() {
+        let mut auction = Auction::new("TestSkill".to_string(), AuctionType::English);
+        auction.add_bid(1, f64::NEG_INFINITY); // Should panic
     }
 }
