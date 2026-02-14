@@ -6869,13 +6869,16 @@ mod tests {
     #[test]
     fn test_print_price_chart_single_price() {
         // Test with skills having only a single price point
+        // This tests the edge case where max_steps == 1 (line 2223: else { 0 })
         let mut result = get_test_result();
 
         let mut skill_price_history = HashMap::new();
         skill_price_history.insert("Skill1".to_string(), vec![100.0]);
+        skill_price_history.insert("Skill2".to_string(), vec![150.0]);
         result.skill_price_history = skill_price_history;
 
         // Should handle single price point without panic
+        // This will trigger the max_steps == 1 branch, setting x = 0
         result.print_price_chart();
     }
 
@@ -6899,15 +6902,19 @@ mod tests {
 
     #[test]
     fn test_print_price_chart_same_prices() {
-        // Test with all skills having the same price (edge case for min/max calculation)
+        // Test with all skills having exactly the same price at all steps
+        // This tests the edge case where global_max == global_min (line 2233: else { chart_height / 2 })
         let mut result = get_test_result();
 
         let mut skill_price_history = HashMap::new();
+        // All skills, all steps have the exact same price
         skill_price_history.insert("Skill1".to_string(), vec![50.0, 50.0, 50.0]);
         skill_price_history.insert("Skill2".to_string(), vec![50.0, 50.0, 50.0]);
+        skill_price_history.insert("Skill3".to_string(), vec![50.0, 50.0, 50.0]);
         result.skill_price_history = skill_price_history;
 
         // Should handle same prices gracefully
+        // When all prices are identical, global_max == global_min, triggering the else branch
         result.print_price_chart();
     }
 
@@ -6945,5 +6952,16 @@ mod tests {
 
         // Should not show price chart by default
         result.print_summary(true);
+    }
+
+    #[test]
+    fn test_print_summary_with_options_chart_but_empty_history() {
+        // Test with show_price_chart=true but empty skill_price_history
+        // This ensures the condition check line is covered
+        let mut result = get_test_result();
+        result.skill_price_history = HashMap::new(); // Empty history
+
+        // Should not panic even though chart is requested but history is empty
+        result.print_summary_with_options(true, true);
     }
 }
