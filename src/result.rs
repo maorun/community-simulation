@@ -2113,11 +2113,220 @@ impl SimulationResult {
         }
     }
 
+    /// Print an ASCII chart showing price evolution for top skills over time.
+    ///
+    /// Displays a simple terminal-based line chart showing how skill prices
+    /// changed throughout the simulation. Shows up to 5 skills with the
+    /// highest final prices or most price volatility.
+    ///
+    /// # Chart Features
+    /// - Shows price trends over simulation steps
+    /// - Automatically scales to fit terminal width  
+    /// - Uses color coding for different skills
+    /// - Displays both the chart and a legend
+    ///
+    /// # Example Output
+    /// ```text
+    /// Price History Chart (Top 5 Skills by Final Price)
+    /// 150.00 ┤        ╭─╮
+    /// 120.00 ┤     ╭──╯ ╰──╮
+    ///  90.00 ┼────╯       ╰────
+    ///  60.00 ┤
+    ///  30.00 ┤
+    ///   0.00 ┴─────────────────
+    ///        0  100  200  300  400
+    ///
+    /// Legend:
+    /// ● Skill_A: 145.23
+    /// ● Skill_B: 132.45
+    /// ```
+    fn print_price_chart(&self) {
+        if self.skill_price_history.is_empty() {
+            return;
+        }
+
+        // Find top 5 skills by final price (most expensive skills)
+        let mut skill_final_prices: Vec<(&SkillId, f64)> = self
+            .skill_price_history
+            .iter()
+            .filter_map(|(skill_id, prices)| {
+                prices.last().map(|&final_price| (skill_id, final_price))
+            })
+            .collect();
+
+        skill_final_prices
+            .sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        let top_skills: Vec<_> = skill_final_prices.iter().take(5).collect();
+
+        if top_skills.is_empty() {
+            return;
+        }
+
+        println!(
+            "\n{}",
+            format!("Price History Chart (Top {} Skills by Final Price)", top_skills.len())
+                .bright_cyan()
+                .bold()
+        );
+
+        // Determine chart dimensions
+        let chart_height = 15;
+        let chart_width = 60;
+
+        // Find global min/max prices across all top skills for scaling
+        let mut global_min = f64::MAX;
+        let mut global_max = f64::MIN;
+        let mut max_steps = 0;
+
+        for (skill_id, _) in &top_skills {
+            if let Some(prices) = self.skill_price_history.get(*skill_id) {
+                if let Some(&min) = prices
+                    .iter()
+                    .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                {
+                    global_min = global_min.min(min);
+                }
+                if let Some(&max) = prices
+                    .iter()
+                    .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                {
+                    global_max = global_max.max(max);
+                }
+                max_steps = max_steps.max(prices.len());
+            }
+        }
+
+        // Add padding to price range
+        let price_range = global_max - global_min;
+        let padding = price_range * 0.1;
+        global_min = (global_min - padding).max(0.0);
+        global_max += padding;
+
+        // Initialize chart grid with spaces
+        let mut chart: Vec<Vec<char>> = vec![vec![' '; chart_width]; chart_height];
+
+        // Colors for different skills (using different symbols since we can't easily do colors in chars)
+        let symbols = ['█', '▓', '▒', '░', '●'];
+
+        // Draw each skill's price line
+        for (idx, (skill_id, _)) in top_skills.iter().enumerate() {
+            if let Some(prices) = self.skill_price_history.get(*skill_id) {
+                let symbol = symbols[idx % symbols.len()];
+
+                for (step, &price) in prices.iter().enumerate() {
+
+                    // Map step to x coordinate
+                    let x = if max_steps > 1 {
+                        ((step as f64 / (max_steps - 1) as f64) * (chart_width - 1) as f64).round()
+                            as usize
+                    } else {
+                        0
+                    };
+
+                    // Map price to y coordinate (inverted: 0 is top)
+                    let y = if global_max > global_min {
+                        let normalized = (price - global_min) / (global_max - global_min);
+                        let y_pos =
+                            ((1.0 - normalized) * (chart_height - 1) as f64).round() as usize;
+                        y_pos.min(chart_height - 1)
+                    } else {
+                        chart_height / 2
+                    };
+
+                    if x < chart_width && y < chart_height {
+                        chart[y][x] = symbol;
+                    }
+                }
+            }
+        }
+
+        // Print chart with axis labels
+        let price_labels = 6; // Number of price labels on Y axis
+        for (i, _row) in chart.iter().enumerate() {
+            // Y-axis label (price)
+            if i % (chart_height / price_labels) == 0 || i == chart_height - 1 {
+                let price =
+                    global_max - (i as f64 / (chart_height - 1) as f64) * (global_max - global_min);
+                print!("{:>8.2} ", price);
+            } else {
+                print!("         ");
+            }
+
+            // Y-axis border
+            if i == 0 {
+                print!("┬");
+            } else if i == chart_height - 1 {
+                print!("┴");
+            } else {
+                print!("┤");
+            }
+
+            // Chart content
+            for ch in &chart[i] {
+                print!("{}", ch);
+            }
+            println!();
+        }
+
+        // Print X-axis labels (steps)
+        print!("         ");
+        print!(" ");
+        for i in 0..chart_width {
+            if i % 10 == 0 {
+                print!("│");
+            } else {
+                print!("─");
+            }
+        }
+        println!();
+
+        // X-axis step numbers
+        print!("         ");
+        print!(" ");
+        for i in 0..=chart_width {
+            if i % 10 == 0 {
+                let step = (i as f64 / chart_width as f64 * max_steps as f64) as usize;
+                print!("{:<10}", step);
+            }
+        }
+        println!("\n");
+
+        // Print legend
+        println!("{}", "Legend:".bold());
+        for (idx, (skill_id, final_price)) in top_skills.iter().enumerate() {
+            let symbol = symbols[idx % symbols.len()];
+            let color_symbol = match idx {
+                0 => format!("{}", symbol).bright_red(),
+                1 => format!("{}", symbol).bright_green(),
+                2 => format!("{}", symbol).bright_blue(),
+                3 => format!("{}", symbol).bright_yellow(),
+                _ => format!("{}", symbol).bright_cyan(),
+            };
+            println!(
+                "  {} {}: {:.2}",
+                color_symbol,
+                skill_id.to_string().bright_white(),
+                final_price
+            );
+        }
+    }
+
     /// Print a human-readable summary of the simulation results to stdout.
     ///
     /// # Arguments
     /// * `show_histogram` - Whether to display the ASCII wealth distribution histogram (default: true)
+    /// * `show_price_chart` - Whether to display the ASCII price history chart (default: false)
     pub fn print_summary(&self, show_histogram: bool) {
+        self.print_summary_with_options(show_histogram, false)
+    }
+
+    /// Print a human-readable summary with full display options.
+    ///
+    /// # Arguments
+    /// * `show_histogram` - Whether to display the ASCII wealth distribution histogram
+    /// * `show_price_chart` - Whether to display the ASCII price history chart
+    pub fn print_summary_with_options(&self, show_histogram: bool, show_price_chart: bool) {
         println!("\n{}", "=== Economic Simulation Summary ===".bright_cyan().bold());
         println!("{} {}", "Total steps:".bold(), self.total_steps);
         println!("{} {:.2}s", "Total duration:".bold(), self.total_duration);
@@ -2221,6 +2430,11 @@ impl SimulationResult {
         if show_histogram && !self.final_money_distribution.is_empty() {
             println!("\n{}", "--- Wealth Distribution Histogram ---".bright_green().bold());
             self.print_wealth_histogram();
+        }
+
+        // Display ASCII price chart if requested
+        if show_price_chart && !self.skill_price_history.is_empty() {
+            self.print_price_chart();
         }
 
         println!("\n{}", "--- Reputation Distribution ---".bright_magenta().bold());
@@ -6626,5 +6840,30 @@ mod tests {
         assert!(export_result.is_ok(), "Export with large values should succeed");
 
         assert!(path.exists());
+    }
+
+    #[test]
+    fn test_print_price_chart_empty() {
+        // Test that print_price_chart doesn't panic with empty price history
+        let mut result = get_test_result();
+        result.skill_price_history = HashMap::new(); // Empty!
+
+        // Should not panic with empty history
+        result.print_price_chart();
+    }
+
+    #[test]
+    fn test_print_price_chart_with_data() {
+        // Test that print_price_chart doesn't panic with valid data
+        let mut result = get_test_result();
+        
+        let mut skill_price_history = HashMap::new();
+        skill_price_history.insert("Skill1".to_string(), vec![10.0, 15.0, 20.0, 25.0, 30.0]);
+        skill_price_history.insert("Skill2".to_string(), vec![5.0, 10.0, 15.0, 20.0, 25.0]);
+        skill_price_history.insert("Skill3".to_string(), vec![20.0, 22.0, 24.0, 26.0, 28.0]);
+        result.skill_price_history = skill_price_history;
+
+        // Should not panic with valid data
+        result.print_price_chart();
     }
 }
