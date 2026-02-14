@@ -1163,6 +1163,8 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             crisis_severity: args
                 .crisis_severity
                 .unwrap_or(SimulationConfig::default().crisis_severity),
+            currency_system: SimulationConfig::default().currency_system,
+            enable_multi_currency: SimulationConfig::default().enable_multi_currency,
             enable_insurance: args.enable_insurance,
             insurance_premium_rate: args
                 .insurance_premium_rate
