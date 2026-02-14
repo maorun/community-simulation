@@ -27,6 +27,7 @@ This framework enables you to simulate and analyze:
 - Multiple skills per person for realistic labor dynamics
 - Transaction history and behavioral patterns
 - **Satisficing Behavior**: Agents can use "good enough" heuristics instead of optimal decision-making (bounded rationality)
+- **Reinforcement Learning**: Agents adapt spending strategies through Q-learning, using epsilon-greedy exploration to balance exploitation vs exploration
 
 ### Economic Mechanisms
 - **Pricing Scenarios**: Supply/demand, dynamic, adaptive, auction, climate change
@@ -133,6 +134,18 @@ This framework enables you to simulate and analyze:
   --enable-satisficing \
   --satisficing-threshold 0.6 \
   -o satisficing.json
+```
+
+**Note:** Reinforcement Learning is currently configurable via YAML/TOML config files only. Example configuration:
+
+```yaml
+enable_reinforcement_learning: true
+rl_learning_rate: 0.1              # Learning speed (alpha)
+rl_discount_factor: 0.9            # Future reward importance (gamma)  
+rl_epsilon: 0.1                    # Initial exploration rate (10%)
+rl_epsilon_decay: 0.995            # Exploration decay per step
+rl_reward_success_multiplier: 1.0  # Reward scaling for successful trades
+rl_reward_failure_multiplier: 0.5  # Penalty scaling (reserved for future use)
 ```
 
 ### Using Configuration Files
