@@ -2215,7 +2215,6 @@ impl SimulationResult {
                 let symbol = symbols[idx % symbols.len()];
 
                 for (step, &price) in prices.iter().enumerate() {
-
                     // Map step to x coordinate
                     let x = if max_steps > 1 {
                         ((step as f64 / (max_steps - 1) as f64) * (chart_width - 1) as f64).round()
@@ -2284,7 +2283,7 @@ impl SimulationResult {
         // X-axis step numbers
         print!("         ");
         print!(" ");
-        for i in 0..=chart_width {
+        for i in 0..chart_width {
             if i % 10 == 0 {
                 let step = (i as f64 / chart_width as f64 * max_steps as f64) as usize;
                 print!("{:<10}", step);
