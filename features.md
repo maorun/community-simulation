@@ -10,20 +10,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 3. Erweiterte Szenarien
 
-#### 3.1 Globalisierung und Handel zwischen Gemeinschaften
-**Beschreibung:** Multi-Community Simulation mit Handel zwischen verschiedenen Wirtschaftsräumen. Modellierung von Außenhandel, Wechselkursen und Handels-Policies.
-
-**Nutzen:**
-- Vergleichende Vorteils-Theorie testen
-- Modellierung von Handelskriegen und Zöllen
-- Globale vs. lokale Produktionsketten
-
-**Implementierung:**
-- Multiple `SimulationEngine` Instances mit Austausch
-- `Currency` System mit Wechselkursen
-- Tarife und Handelsbeschränkungen
-- Arbeitsmigration zwischen Communities
-
 ### 4. Verschiedene Agentenstrategien
 
 ## 🔧 Code-Verbesserungen
