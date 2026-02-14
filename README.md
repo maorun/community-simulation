@@ -36,6 +36,7 @@ This framework enables you to simulate and analyze:
 - **Market Segmentation**: Budget/Mittelklasse/Luxury segments based on wealth with differentiated price-quality preferences
 - **Auction Infrastructure**: English auction mechanism with bid collection and winner selection (configurable via `--enable-auctions`)
 - **Wealth Building**: Savings, loans with interest, assets (property/equipment/stocks)
+- **Multi-Currency System**: Support for multiple currencies with exchange rates for international trade modeling
 
 ### Social & Network Systems
 - **Reputation**: Scores that affect prices and trade opportunities

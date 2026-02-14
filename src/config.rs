@@ -744,6 +744,46 @@ pub struct SimulationConfig {
     #[serde(default = "default_crisis_severity")]
     pub crisis_severity: f64,
 
+    /// Currency system configuration for multi-currency simulations.
+    ///
+    /// Contains the set of currencies available in the simulation and their exchange rates.
+    /// By default, uses a single "BASE" currency with exchange rate 1.0 (no conversion).
+    ///
+    /// Example in YAML:
+    /// ```yaml
+    /// currency_system:
+    ///   base_currency_id: "USD"
+    ///   currencies:
+    ///     USD:
+    ///       id: "USD"
+    ///       exchange_rate: 1.0
+    ///     EUR:
+    ///       id: "EUR"
+    ///       exchange_rate: 1.2    # 1 EUR = 1.2 USD
+    ///     JPY:
+    ///       id: "JPY"
+    ///       exchange_rate: 0.01   # 1 JPY = 0.01 USD
+    /// ```
+    ///
+    /// This enables modeling:
+    /// - International trade with currency conversion
+    /// - Exchange rate effects on trade patterns
+    /// - Multi-region simulations with different currencies
+    ///
+    /// Default: Single "BASE" currency with rate 1.0
+    #[serde(default)]
+    pub currency_system: crate::currency::CurrencySystem,
+
+    /// Enable multi-currency features where persons can hold and trade in different currencies.
+    ///
+    /// When enabled, each person has a currency_id that determines their denomination.
+    /// Cross-currency trades automatically apply exchange rate conversions.
+    /// When disabled (default), all persons use the base currency with no conversion.
+    ///
+    /// Set to false to disable multi-currency (default).
+    #[serde(default)]
+    pub enable_multi_currency: bool,
+
     /// Enable insurance system where persons can purchase coverage against economic risks.
     ///
     /// When enabled, persons can buy insurance policies that protect against various risks:
@@ -2157,69 +2197,71 @@ impl Default for SimulationConfig {
             enable_crisis_events: false,                // Disabled by default
             crisis_probability: 0.02,                   // 2% chance per step
             crisis_severity: 0.5,                       // Moderate severity
-            enable_insurance: false,                    // Disabled by default
-            insurance_premium_rate: 0.05,               // 5% of coverage amount
-            insurance_duration: 100,                    // Policies last 100 steps
-            insurance_purchase_probability: 0.05,       // 5% chance per step
-            insurance_coverage_amount: 50.0,            // Default coverage of 50
-            enable_reinforcement_learning: false,       // Disabled by default
-            rl_learning_rate: default_rl_learning_rate(), // 0.1
-            rl_discount_factor: default_rl_discount_factor(), // 0.9
-            rl_epsilon: default_rl_epsilon(),           // 0.1
-            rl_epsilon_decay: default_rl_epsilon_decay(), // 0.995
+            currency_system: crate::currency::CurrencySystem::default(), // Single BASE currency by default
+            enable_multi_currency: false,                                // Disabled by default
+            enable_insurance: false,                                     // Disabled by default
+            insurance_premium_rate: 0.05,                                // 5% of coverage amount
+            insurance_duration: 100,                                     // Policies last 100 steps
+            insurance_purchase_probability: 0.05,                        // 5% chance per step
+            insurance_coverage_amount: 50.0,                             // Default coverage of 50
+            enable_reinforcement_learning: false,                        // Disabled by default
+            rl_learning_rate: default_rl_learning_rate(),                // 0.1
+            rl_discount_factor: default_rl_discount_factor(),            // 0.9
+            rl_epsilon: default_rl_epsilon(),                            // 0.1
+            rl_epsilon_decay: default_rl_epsilon_decay(),                // 0.995
             rl_reward_success_multiplier: default_rl_reward_success_multiplier(), // 1.0
             rl_reward_failure_multiplier: default_rl_reward_failure_multiplier(), // 0.5
-            enable_friendships: false,                  // Disabled by default
-            friendship_probability: 0.1,                // 10% chance per trade
-            friendship_discount: 0.1,                   // 10% discount for friends
-            enable_trade_agreements: false,             // Disabled by default
-            trade_agreement_probability: 0.05,          // 5% chance per step
-            trade_agreement_discount: 0.15,             // 15% discount for agreement partners
-            trade_agreement_duration: 100,              // Agreements last 100 steps
-            enable_trust_networks: false,               // Disabled by default
-            enable_influence: false,                    // Disabled by default
-            num_groups: None,                           // No groups by default
-            distance_cost_factor: 0.0,                  // Disabled by default
-            price_elasticity_factor: 0.1,               // 10% price adjustment per unit imbalance
-            volatility_percentage: 0.02,                // ±2% random price variation
-            enable_events: false,                       // Disabled by default
-            enable_production: false,                   // Disabled by default
-            production_probability: 0.05,               // 5% chance per step
-            enable_satisficing: false,                  // Disabled by default
-            satisficing_threshold: 0.5,                 // Accept "good enough" options (0.0-1.0)
-            enable_environment: false,                  // Disabled by default
+            enable_friendships: false,                                   // Disabled by default
+            friendship_probability: 0.1,                                 // 10% chance per trade
+            friendship_discount: 0.1,                                    // 10% discount for friends
+            enable_trade_agreements: false,                              // Disabled by default
+            trade_agreement_probability: 0.05,                           // 5% chance per step
+            trade_agreement_discount: 0.15, // 15% discount for agreement partners
+            trade_agreement_duration: 100,  // Agreements last 100 steps
+            enable_trust_networks: false,   // Disabled by default
+            enable_influence: false,        // Disabled by default
+            num_groups: None,               // No groups by default
+            distance_cost_factor: 0.0,      // Disabled by default
+            price_elasticity_factor: 0.1,   // 10% price adjustment per unit imbalance
+            volatility_percentage: 0.02,    // ±2% random price variation
+            enable_events: false,           // Disabled by default
+            enable_production: false,       // Disabled by default
+            production_probability: 0.05,   // 5% chance per step
+            enable_satisficing: false,      // Disabled by default
+            satisficing_threshold: 0.5,     // Accept "good enough" options (0.0-1.0)
+            enable_environment: false,      // Disabled by default
             resource_cost_per_transaction: 1.0, // Resource consumption matches transaction value
-            custom_resource_reserves: None,     // Use default reserves
-            enable_voting: false,               // Disabled by default
+            custom_resource_reserves: None, // Use default reserves
+            enable_voting: false,           // Disabled by default
             voting_method: crate::voting::VotingMethod::SimpleMajority, // One person, one vote
-            proposal_duration: 20,              // 20 steps voting period
-            proposal_probability: 0.05,         // 5% chance per step to create proposal
-            voting_participation_rate: 0.3,     // 30% chance per person per step to vote
-            enable_quality: false,              // Disabled by default
-            quality_improvement_rate: 0.1,      // Quality increases by 0.1 per trade
-            quality_decay_rate: 0.05,           // Quality decreases by 0.05 per step
-            initial_quality: 3.0,               // Average quality (0.0-5.0 scale)
-            enable_certification: false,        // Disabled by default
+            proposal_duration: 20,          // 20 steps voting period
+            proposal_probability: 0.05,     // 5% chance per step to create proposal
+            voting_participation_rate: 0.3, // 30% chance per person per step to vote
+            enable_quality: false,          // Disabled by default
+            quality_improvement_rate: 0.1,  // Quality increases by 0.1 per trade
+            quality_decay_rate: 0.05,       // Quality decreases by 0.05 per step
+            initial_quality: 3.0,           // Average quality (0.0-5.0 scale)
+            enable_certification: false,    // Disabled by default
             certification_cost_multiplier: 2.0, // 2x base price per level
-            certification_duration: Some(200),  // Certifications last 200 steps
-            certification_probability: 0.05,    // 5% chance per step to attempt certification
-            enable_market_segments: false,      // Disabled by default
-            enable_resource_pools: false,       // Disabled by default
-            pool_contribution_rate: 0.02,       // 2% contribution per step
-            pool_withdrawal_threshold: 30.0,    // Support for members below $30
-            enable_adaptive_strategies: false,  // Disabled by default
-            adaptation_rate: 0.1,               // 10% adaptation rate
-            exploration_rate: 0.05,             // 5% exploration (ε-greedy)
-            enable_strategy_evolution: false,   // Disabled by default
-            evolution_update_frequency: 50,     // Evolution every 50 steps
-            imitation_probability: 0.3,         // 30% imitation chance
-            mutation_rate: 0.05,                // 5% mutation rate
-            enable_specialization: false,       // Disabled by default
-            enable_parallel_trades: false,      // Disabled by default
-            enable_externalities: false,        // Disabled by default
-            externality_rate: 0.0,              // No externalities by default
+            certification_duration: Some(200), // Certifications last 200 steps
+            certification_probability: 0.05, // 5% chance per step to attempt certification
+            enable_market_segments: false,  // Disabled by default
+            enable_resource_pools: false,   // Disabled by default
+            pool_contribution_rate: 0.02,   // 2% contribution per step
+            pool_withdrawal_threshold: 30.0, // Support for members below $30
+            enable_adaptive_strategies: false, // Disabled by default
+            adaptation_rate: 0.1,           // 10% adaptation rate
+            exploration_rate: 0.05,         // 5% exploration (ε-greedy)
+            enable_strategy_evolution: false, // Disabled by default
+            evolution_update_frequency: 50, // Evolution every 50 steps
+            imitation_probability: 0.3,     // 30% imitation chance
+            mutation_rate: 0.05,            // 5% mutation rate
+            enable_specialization: false,   // Disabled by default
+            enable_parallel_trades: false,  // Disabled by default
+            enable_externalities: false,    // Disabled by default
+            externality_rate: 0.0,          // No externalities by default
             externality_rates_per_skill: HashMap::new(), // No per-skill rates by default
-            enable_health: false,               // Disabled by default
+            enable_health: false,           // Disabled by default
             disease_transmission_rate: default_disease_transmission_rate(),
             disease_recovery_duration: default_disease_recovery_duration(),
             initial_sick_persons: 0,             // No initial infections

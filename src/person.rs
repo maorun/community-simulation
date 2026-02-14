@@ -11,6 +11,11 @@ use std::collections::{HashMap, HashSet};
 pub type PersonId = usize;
 pub type UrgencyLevel = u8; // Define UrgencyLevel (e.g., 1-3, higher is more urgent)
 
+/// Default currency ID for single-currency simulations
+fn default_currency_id() -> String {
+    "BASE".to_string()
+}
+
 /// Represents the health status of a person in the simulation.
 ///
 /// Health status affects a person's ability to trade and participate in the economy.
@@ -712,6 +717,12 @@ pub struct Person {
     /// Mittelklasse balances both. Updated periodically based on wealth changes.
     /// Only meaningful when market segmentation is enabled.
     pub market_segment: MarketSegment,
+    /// Currency ID for this person's money.
+    /// When multi-currency is enabled, each person's money is denominated in this currency.
+    /// Defaults to "BASE" for single-currency simulations.
+    /// Used for currency conversion during inter-currency trades.
+    #[serde(default = "default_currency_id")]
+    pub currency_id: String,
 }
 
 impl Person {
@@ -759,6 +770,7 @@ impl Person {
             class_history: Vec::new(),            // Start with no class history
             owned_assets: Vec::new(),             // Start with no assets
             market_segment: MarketSegment::default(), // Start with Mittelklasse segment (will be updated based on wealth)
+            currency_id: default_currency_id(),       // Start with base currency
         }
     }
 

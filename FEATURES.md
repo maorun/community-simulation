@@ -103,6 +103,39 @@ Configurable seasonal fluctuations in skill demand using cyclical patterns. Diff
 
 Configurable marketplace transaction fees that are deducted from seller proceeds on each trade. Simulates realistic trading costs (e.g., platform fees, payment processing) and allows studying the impact of fees on market liquidity, wealth distribution, and economic activity. Total fees collected are tracked and reported. Controlled via `--transaction-fee` parameter (0.0-1.0 range representing 0-100% fee rate).
 
+### Multi-Currency System
+
+Support for multiple currencies with configurable exchange rates, enabling international trade modeling and cross-border economic analysis. The system includes:
+  - **Currency Configuration**: Define multiple currencies (e.g., USD, EUR, JPY) with exchange rates relative to a base currency
+  - **Automatic Conversion**: Currency conversions are automatically applied based on exchange rates when enabled
+  - **Per-Person Currency**: Each person can hold money in a specific currency (default: "BASE" for single-currency simulations)
+  - **Backward Compatible**: Single-currency simulations work unchanged with no performance overhead
+
+Configuration is via YAML/TOML files:
+```yaml
+currency_system:
+  base_currency_id: "USD"
+  currencies:
+    USD:
+      id: "USD"
+      exchange_rate: 1.0
+    EUR:
+      id: "EUR"
+      exchange_rate: 1.2    # 1 EUR = 1.2 USD
+    JPY:
+      id: "JPY"
+      exchange_rate: 0.01   # 1 JPY = 0.01 USD
+enable_multi_currency: false  # Set to true to enable currency conversion features
+```
+
+By default, multi-currency features are disabled and all persons use a single "BASE" currency. When enabled, the system provides a foundation for modeling:
+  - International trade with exchange rate effects
+  - Multi-region simulations with different economic zones
+  - Currency devaluation scenarios (via crisis events)
+  - Exchange rate impacts on trade patterns and wealth distribution
+
+Note: This is a foundational feature. Full currency conversion during trades will be implemented in future versions. Currently, the system provides the data structures and configuration for multi-currency modeling.
+
 ### Price Volatility
 
 Skill prices include a configurable random volatility component.
