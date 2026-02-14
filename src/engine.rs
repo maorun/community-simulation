@@ -4496,11 +4496,15 @@ impl SimulationEngine {
     /// 2. Apply TD-learning update to adjustment_factor
     /// 3. Decay exploration rate (epsilon) over time
     ///
+    /// Note: Failed trade tracking is not currently implemented, so we focus rewards
+    /// on successful trades and wealth growth. This could be enhanced in the future
+    /// by explicitly tracking trade attempt failures during the step.
+    ///
     /// This creates learning behavior where agents adapt their spending strategies
     /// based on performance feedback.
     fn apply_rl_updates(&mut self) {
         // Count trades this step for each person (for reward calculation)
-        let mut trades_this_step: HashMap<usize, (usize, usize)> = HashMap::new(); // (successful, failed)
+        let mut successful_trades_count: HashMap<usize, usize> = HashMap::new();
 
         for entity in self.entities.iter() {
             if !entity.active {
@@ -4515,20 +4519,7 @@ impl SimulationEngine {
                 .filter(|tx| tx.step == self.current_step)
                 .count();
 
-            // For simplicity, assume failed trades = needs - successful_buys
-            let needs_count = entity.person_data.needed_skills.len();
-            let successful_buys = entity
-                .person_data
-                .transaction_history
-                .iter()
-                .filter(|tx| {
-                    tx.step == self.current_step
-                        && matches!(tx.transaction_type, crate::person::TransactionType::Buy)
-                })
-                .count();
-            let failed_trades = needs_count.saturating_sub(successful_buys);
-
-            trades_this_step.insert(entity.id, (successful_trades, failed_trades));
+            successful_trades_count.insert(entity.id, successful_trades);
         }
 
         // Apply RL updates to each active person
@@ -4537,14 +4528,16 @@ impl SimulationEngine {
                 continue;
             }
 
-            let (successful, failed) = trades_this_step.get(&entity.id).copied().unwrap_or((0, 0));
+            let successful = *successful_trades_count.get(&entity.id).unwrap_or(&0);
 
             // Calculate reward signal
+            // Note: We don't track failed trades explicitly, so we use 0 for failed count.
+            // The reward is primarily based on wealth growth and successful trades.
             let reward = entity.person_data.strategy_params.calculate_reward(
                 entity.person_data.money,
                 entity.person_data.reputation,
                 successful,
-                failed,
+                0, // Failed trades not explicitly tracked
                 self.config.rl_reward_success_multiplier,
                 self.config.rl_reward_failure_multiplier,
             );

@@ -464,15 +464,19 @@ impl StrategyParameters {
 
     /// Applies a Q-learning style update to the adjustment factor.
     ///
-    /// Uses a simplified TD-learning approach:
-    /// adjustment_factor += learning_rate * (reward - previous_reward)
+    /// Uses a simplified TD-learning approach where we update based on the reward change:
+    /// `adjustment_factor += learning_rate * (reward - previous_reward)`
+    ///
+    /// Note: This is a simplified implementation that doesn't use the discount factor.
+    /// The discount factor parameter is reserved for future enhancements when we
+    /// implement multi-step lookahead or value function estimation.
     ///
     /// The adjustment factor is clamped to stay within reasonable bounds (0.1-2.0).
     ///
     /// # Arguments
     /// * `reward` - Current reward signal (typically based on wealth growth)
     /// * `learning_rate` - Step size for learning (alpha in Q-learning)
-    /// * `_discount_factor` - Discount for future rewards (gamma in Q-learning) - currently unused but kept for future enhancements
+    /// * `_discount_factor` - Reserved for future use (not used in current simplified implementation)
     pub fn apply_rl_update(&mut self, reward: f64, learning_rate: f64, _discount_factor: f64) {
         // Calculate TD error: reward + gamma * next_reward - previous_reward
         // For simplicity, we use reward difference as the update signal
