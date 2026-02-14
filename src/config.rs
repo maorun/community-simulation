@@ -812,6 +812,7 @@ pub struct SimulationConfig {
     /// Controls how quickly agents update their strategies based on new experiences.
     /// - Higher values (e.g., 0.5): Fast learning, quick adaptation to recent experiences
     /// - Lower values (e.g., 0.05): Slow learning, more stable behavior over time
+    ///
     /// Only used when enable_reinforcement_learning is true.
     /// Default: 0.1 (moderate learning speed)
     #[serde(default = "default_rl_learning_rate")]
@@ -822,6 +823,7 @@ pub struct SimulationConfig {
     /// Determines how much agents value future rewards compared to immediate rewards.
     /// - Values close to 1.0: Far-sighted agents who optimize for long-term wealth
     /// - Values close to 0.0: Myopic agents who focus on immediate gains
+    ///
     /// Only used when enable_reinforcement_learning is true.
     /// Default: 0.9 (moderately forward-looking)
     #[serde(default = "default_rl_discount_factor")]
@@ -833,6 +835,7 @@ pub struct SimulationConfig {
     /// (taking the best known action). Balances exploration vs exploitation.
     /// - Higher values: More exploration, more randomness in decisions
     /// - Lower values: More exploitation, more greedy behavior
+    ///
     /// Only used when enable_reinforcement_learning is true.
     /// Default: 0.1 (10% exploration, 90% exploitation)
     #[serde(default = "default_rl_epsilon")]
@@ -844,6 +847,7 @@ pub struct SimulationConfig {
     /// This implements "epsilon decay" - agents explore more early on and exploit more later.
     /// - Values close to 1.0: Slow decay, persistent exploration
     /// - Values close to 0.9: Fast decay, quick convergence to exploitation
+    ///
     /// Only used when enable_reinforcement_learning is true.
     /// Default: 0.995 (very slow decay, ~60% of initial epsilon after 100 steps)
     #[serde(default = "default_rl_epsilon_decay")]
@@ -853,6 +857,7 @@ pub struct SimulationConfig {
     ///
     /// Scales the reward signal when an agent successfully completes a trade.
     /// Higher values make successful trades more rewarding, encouraging trading behavior.
+    ///
     /// Only used when enable_reinforcement_learning is true.
     /// Default: 1.0 (no scaling)
     #[serde(default = "default_rl_reward_success_multiplier")]
@@ -862,6 +867,7 @@ pub struct SimulationConfig {
     ///
     /// Scales the penalty signal when an agent fails to complete a trade.
     /// Higher values make failed trades more punishing, encouraging caution.
+    ///
     /// Only used when enable_reinforcement_learning is true.
     /// Default: 0.5 (moderate penalty)
     #[serde(default = "default_rl_reward_failure_multiplier")]

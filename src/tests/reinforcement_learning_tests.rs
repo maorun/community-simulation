@@ -164,13 +164,15 @@ fn test_should_explore() {
 
 #[test]
 fn test_rl_enabled_simulation() {
-    let mut config = SimulationConfig::default();
-    config.max_steps = 10;
-    config.entity_count = 5;
-    config.enable_reinforcement_learning = true;
-    config.rl_learning_rate = 0.1;
-    config.rl_epsilon = 0.2;
-    config.rl_epsilon_decay = 0.95;
+    let config = SimulationConfig {
+        max_steps: 10,
+        entity_count: 5,
+        enable_reinforcement_learning: true,
+        rl_learning_rate: 0.1,
+        rl_epsilon: 0.2,
+        rl_epsilon_decay: 0.95,
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 
@@ -185,10 +187,12 @@ fn test_rl_enabled_simulation() {
 
 #[test]
 fn test_rl_disabled_simulation() {
-    let mut config = SimulationConfig::default();
-    config.max_steps = 10;
-    config.entity_count = 5;
-    config.enable_reinforcement_learning = false; // RL disabled
+    let config = SimulationConfig {
+        max_steps: 10,
+        entity_count: 5,
+        enable_reinforcement_learning: false, // RL disabled
+        ..Default::default()
+    };
 
     let mut engine = SimulationEngine::new(config);
 

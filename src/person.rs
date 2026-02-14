@@ -483,7 +483,7 @@ impl StrategyParameters {
         self.adjustment_factor += update;
 
         // Clamp adjustment_factor to reasonable bounds (0.1-2.0)
-        self.adjustment_factor = self.adjustment_factor.max(0.1).min(2.0);
+        self.adjustment_factor = self.adjustment_factor.clamp(0.1, 2.0);
 
         // Update state for next iteration
         self.previous_reward = reward;
