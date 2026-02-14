@@ -1262,6 +1262,14 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             enable_automation: SimulationConfig::default().enable_automation,
             automation_rate: SimulationConfig::default().automation_rate,
             automation_risks_per_skill: HashMap::new(), // Not configurable via CLI
+            enable_reinforcement_learning: SimulationConfig::default()
+                .enable_reinforcement_learning,
+            rl_learning_rate: SimulationConfig::default().rl_learning_rate,
+            rl_discount_factor: SimulationConfig::default().rl_discount_factor,
+            rl_epsilon: SimulationConfig::default().rl_epsilon,
+            rl_epsilon_decay: SimulationConfig::default().rl_epsilon_decay,
+            rl_reward_success_multiplier: SimulationConfig::default().rl_reward_success_multiplier,
+            rl_reward_failure_multiplier: SimulationConfig::default().rl_reward_failure_multiplier,
             enable_invariant_checking: args.enable_invariant_checking,
             strict_invariant_mode: args.strict_invariant_mode,
             check_money_conservation: SimulationConfig::default().check_money_conservation,
