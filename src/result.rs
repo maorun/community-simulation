@@ -6855,7 +6855,7 @@ mod tests {
     fn test_print_price_chart_with_data() {
         // Test that print_price_chart doesn't panic with valid data
         let mut result = get_test_result();
-        
+
         let mut skill_price_history = HashMap::new();
         skill_price_history.insert("Skill1".to_string(), vec![10.0, 15.0, 20.0, 25.0, 30.0]);
         skill_price_history.insert("Skill2".to_string(), vec![5.0, 10.0, 15.0, 20.0, 25.0]);
@@ -6864,5 +6864,86 @@ mod tests {
 
         // Should not panic with valid data
         result.print_price_chart();
+    }
+
+    #[test]
+    fn test_print_price_chart_single_price() {
+        // Test with skills having only a single price point
+        let mut result = get_test_result();
+
+        let mut skill_price_history = HashMap::new();
+        skill_price_history.insert("Skill1".to_string(), vec![100.0]);
+        result.skill_price_history = skill_price_history;
+
+        // Should handle single price point without panic
+        result.print_price_chart();
+    }
+
+    #[test]
+    fn test_print_price_chart_many_skills() {
+        // Test with more than 5 skills (should show only top 5)
+        let mut result = get_test_result();
+
+        let mut skill_price_history = HashMap::new();
+        for i in 0..10 {
+            skill_price_history.insert(
+                format!("Skill{}", i),
+                vec![10.0 + i as f64, 20.0 + i as f64, 30.0 + i as f64],
+            );
+        }
+        result.skill_price_history = skill_price_history;
+
+        // Should only display top 5 skills
+        result.print_price_chart();
+    }
+
+    #[test]
+    fn test_print_price_chart_same_prices() {
+        // Test with all skills having the same price (edge case for min/max calculation)
+        let mut result = get_test_result();
+
+        let mut skill_price_history = HashMap::new();
+        skill_price_history.insert("Skill1".to_string(), vec![50.0, 50.0, 50.0]);
+        skill_price_history.insert("Skill2".to_string(), vec![50.0, 50.0, 50.0]);
+        result.skill_price_history = skill_price_history;
+
+        // Should handle same prices gracefully
+        result.print_price_chart();
+    }
+
+    #[test]
+    fn test_print_summary_with_options_both_flags() {
+        // Test print_summary_with_options with both flags enabled
+        let mut result = get_test_result();
+        result
+            .skill_price_history
+            .insert("TestSkill".to_string(), vec![10.0, 20.0, 30.0]);
+
+        // Should not panic with both histogram and price chart enabled
+        result.print_summary_with_options(true, true);
+    }
+
+    #[test]
+    fn test_print_summary_with_options_only_chart() {
+        // Test print_summary_with_options with only chart enabled
+        let mut result = get_test_result();
+        result
+            .skill_price_history
+            .insert("TestSkill".to_string(), vec![10.0, 20.0, 30.0]);
+
+        // Should not panic with only price chart enabled
+        result.print_summary_with_options(false, true);
+    }
+
+    #[test]
+    fn test_print_summary_backward_compatibility() {
+        // Test that print_summary still works without showing price chart
+        let mut result = get_test_result();
+        result
+            .skill_price_history
+            .insert("TestSkill".to_string(), vec![10.0, 20.0, 30.0]);
+
+        // Should not show price chart by default
+        result.print_summary(true);
     }
 }
