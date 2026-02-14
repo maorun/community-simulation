@@ -88,9 +88,7 @@ fn test_currency_serialization_in_config() {
     let mut currency_system = CurrencySystem::default();
     currency_system.add_currency(Currency::new("EUR".to_string(), 1.2));
 
-    let config = test_config()
-        .currency_system(currency_system)
-        .build();
+    let config = test_config().currency_system(currency_system).build();
 
     // Serialize to JSON
     let json = serde_json::to_string(&config).unwrap();
@@ -118,9 +116,9 @@ fn test_person_currency_field() {
 fn test_multiple_currencies_different_rates() {
     // Test currency system with diverse exchange rates
     let mut system = CurrencySystem::new(Currency::new("USD".to_string(), 1.0));
-    system.add_currency(Currency::new("EUR".to_string(), 1.2));    // Strong currency
-    system.add_currency(Currency::new("MXN".to_string(), 0.05));   // Weak currency
-    system.add_currency(Currency::new("CHF".to_string(), 1.1));    // Medium currency
+    system.add_currency(Currency::new("EUR".to_string(), 1.2)); // Strong currency
+    system.add_currency(Currency::new("MXN".to_string(), 0.05)); // Weak currency
+    system.add_currency(Currency::new("CHF".to_string(), 1.1)); // Medium currency
 
     // Test various conversions
     assert_eq!(system.currencies.len(), 4);
