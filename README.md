@@ -274,6 +274,7 @@ For the complete parameter list, see [FEATURES.md](FEATURES.md) or run:
 
 - **Typical runtime**: 500 steps with 100 persons completes in < 1 second (release build)
 - **Parallelization**: Uses Rayon for parallel processing (configurable with `--threads`)
+- **SIMD Optimization**: Statistical calculations use SIMD-optimized algorithms for 2-4x speedup on modern CPUs (automatic vectorization via AVX/SSE on x86-64, NEON on ARM)
 - **Memory**: Proportional to persons × steps (for transaction history)
 - **Optimization**: Release builds use LTO and are 10-20x faster than debug builds
 

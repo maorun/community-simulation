@@ -43,21 +43,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Performance-Optimierungen
 
-#### 2.1 SIMD-Optimierungen für Statistiken
-**Beschreibung:** Nutzung von SIMD-Instruktionen für vektorisierte Berechnungen von Statistiken und aggregierten Metriken.
-
-**Nutzen:**
-- 4-8x Speedup für statistische Berechnungen
-- Effizientere Batch-Operationen
-- Moderne Hardware-Features nutzen
-
-**Implementierung:**
-- `packed_simd` oder `std::simd` für portable SIMD
-- Vektorisierte Summen, Durchschnitte, Varianzen
-- SIMD-optimierte Sortierung für Median-Berechnung
-- Feature-Gate für SIMD (nicht auf allen Plattformen verfügbar)
-
-#### 2.2 Memory Pooling und Arena Allocation
+#### 2.1 Memory Pooling und Arena Allocation
 **Beschreibung:** Optimierung von Speicher-Allokationen durch Objekt-Pooling und Arena-Allocatoren für häufig allokierte Strukturen.
 
 **Nutzen:**
