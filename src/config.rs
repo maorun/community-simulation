@@ -796,6 +796,83 @@ pub struct SimulationConfig {
     #[serde(default = "default_insurance_coverage_amount")]
     pub insurance_coverage_amount: f64,
 
+    /// Enable reinforcement learning for agent strategy adaptation.
+    ///
+    /// When enabled, agents use Q-learning style reinforcement learning to adapt their
+    /// spending strategies based on trading success. Agents track their performance and
+    /// adjust their strategy parameters (adjustment_factor) over time to maximize rewards.
+    /// This creates emergent learning behavior where successful strategies are reinforced
+    /// and unsuccessful strategies are modified.
+    /// Set to false to disable RL (default, uses simpler heuristic adaptation).
+    #[serde(default)]
+    pub enable_reinforcement_learning: bool,
+
+    /// Learning rate (alpha) for Q-learning updates (0.0-1.0).
+    ///
+    /// Controls how quickly agents update their strategies based on new experiences.
+    /// - Higher values (e.g., 0.5): Fast learning, quick adaptation to recent experiences
+    /// - Lower values (e.g., 0.05): Slow learning, more stable behavior over time
+    ///
+    /// Only used when enable_reinforcement_learning is true.
+    /// Default: 0.1 (moderate learning speed)
+    #[serde(default = "default_rl_learning_rate")]
+    pub rl_learning_rate: f64,
+
+    /// Discount factor (gamma) for future rewards (0.0-1.0).
+    ///
+    /// Determines how much agents value future rewards compared to immediate rewards.
+    /// - Values close to 1.0: Far-sighted agents who optimize for long-term wealth
+    /// - Values close to 0.0: Myopic agents who focus on immediate gains
+    ///
+    /// Only used when enable_reinforcement_learning is true.
+    /// Default: 0.9 (moderately forward-looking)
+    #[serde(default = "default_rl_discount_factor")]
+    pub rl_discount_factor: f64,
+
+    /// Exploration rate (epsilon) for epsilon-greedy action selection (0.0-1.0).
+    ///
+    /// Probability that an agent will explore (take random action) instead of exploiting
+    /// (taking the best known action). Balances exploration vs exploitation.
+    /// - Higher values: More exploration, more randomness in decisions
+    /// - Lower values: More exploitation, more greedy behavior
+    ///
+    /// Only used when enable_reinforcement_learning is true.
+    /// Default: 0.1 (10% exploration, 90% exploitation)
+    #[serde(default = "default_rl_epsilon")]
+    pub rl_epsilon: f64,
+
+    /// Decay rate for epsilon (exploration) over time (0.0-1.0).
+    ///
+    /// Multiplied with epsilon each step to gradually reduce exploration over time.
+    /// This implements "epsilon decay" - agents explore more early on and exploit more later.
+    /// - Values close to 1.0: Slow decay, persistent exploration
+    /// - Values close to 0.9: Fast decay, quick convergence to exploitation
+    ///
+    /// Only used when enable_reinforcement_learning is true.
+    /// Default: 0.995 (very slow decay, ~60% of initial epsilon after 100 steps)
+    #[serde(default = "default_rl_epsilon_decay")]
+    pub rl_epsilon_decay: f64,
+
+    /// Reward multiplier for successful trades.
+    ///
+    /// Scales the reward signal when an agent successfully completes a trade.
+    /// Higher values make successful trades more rewarding, encouraging trading behavior.
+    ///
+    /// Only used when enable_reinforcement_learning is true.
+    /// Default: 1.0 (no scaling)
+    #[serde(default = "default_rl_reward_success_multiplier")]
+    pub rl_reward_success_multiplier: f64,
+
+    /// Penalty multiplier for unsuccessful trade attempts.
+    ///
+    /// Scales the penalty signal when an agent fails to complete a trade.
+    /// Higher values make failed trades more punishing, encouraging caution.
+    ///
+    /// Only used when enable_reinforcement_learning is true.
+    /// Default: 0.5 (moderate penalty)
+    #[serde(default = "default_rl_reward_failure_multiplier")]
+    pub rl_reward_failure_multiplier: f64,
+
     /// Enable friendship system where persons can form social bonds.
     ///
     /// When enabled, persons who successfully trade together have a chance to become friends.
@@ -1917,6 +1994,30 @@ fn default_insurance_coverage_amount() -> f64 {
     50.0 // Default coverage of 50 (half of typical starting money)
 }
 
+fn default_rl_learning_rate() -> f64 {
+    0.1 // Moderate learning speed
+}
+
+fn default_rl_discount_factor() -> f64 {
+    0.9 // Moderately forward-looking
+}
+
+fn default_rl_epsilon() -> f64 {
+    0.1 // 10% exploration
+}
+
+fn default_rl_epsilon_decay() -> f64 {
+    0.995 // Very slow decay
+}
+
+fn default_rl_reward_success_multiplier() -> f64 {
+    1.0 // No scaling
+}
+
+fn default_rl_reward_failure_multiplier() -> f64 {
+    0.5 // Moderate penalty
+}
+
 fn default_friendship_probability() -> f64 {
     0.1 // 10% chance per successful trade
 }
@@ -2061,6 +2162,13 @@ impl Default for SimulationConfig {
             insurance_duration: 100,                    // Policies last 100 steps
             insurance_purchase_probability: 0.05,       // 5% chance per step
             insurance_coverage_amount: 50.0,            // Default coverage of 50
+            enable_reinforcement_learning: false,       // Disabled by default
+            rl_learning_rate: default_rl_learning_rate(), // 0.1
+            rl_discount_factor: default_rl_discount_factor(), // 0.9
+            rl_epsilon: default_rl_epsilon(),           // 0.1
+            rl_epsilon_decay: default_rl_epsilon_decay(), // 0.995
+            rl_reward_success_multiplier: default_rl_reward_success_multiplier(), // 1.0
+            rl_reward_failure_multiplier: default_rl_reward_failure_multiplier(), // 0.5
             enable_friendships: false,                  // Disabled by default
             friendship_probability: 0.1,                // 10% chance per trade
             friendship_discount: 0.1,                   // 10% discount for friends

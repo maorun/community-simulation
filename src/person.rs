@@ -378,6 +378,9 @@ impl Strategy {
 /// and adjusting their behavioral strategies accordingly. This creates adaptive
 /// behavior where successful strategies are reinforced and unsuccessful ones
 /// are modified.
+///
+/// When reinforcement learning is enabled, additional Q-learning state is tracked
+/// to enable agents to learn optimal strategies through trial and error.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyParameters {
     /// Money the person started with (for calculating growth rate).
@@ -394,6 +397,15 @@ pub struct StrategyParameters {
     pub adjustment_factor: f64,
     /// Number of times strategy has been adapted.
     pub adaptation_count: usize,
+    /// Current exploration rate for epsilon-greedy action selection (RL only).
+    /// Decays over time from the initial epsilon value.
+    pub current_epsilon: f64,
+    /// Previous reward signal from last action (RL only).
+    /// Used to calculate TD error for Q-learning updates.
+    pub previous_reward: f64,
+    /// Total accumulated reward over the simulation (RL only).
+    /// Sum of all rewards received, useful for tracking overall performance.
+    pub total_reward: f64,
 }
 
 impl StrategyParameters {
@@ -406,6 +418,9 @@ impl StrategyParameters {
             successful_sells: 0,
             adjustment_factor: 1.0, // Start with neutral adjustment
             adaptation_count: 0,
+            current_epsilon: 0.1, // Default epsilon, will be overridden by config
+            previous_reward: 0.0,
+            total_reward: 0.0,
         }
     }
 
@@ -445,6 +460,115 @@ impl StrategyParameters {
     /// Total successful trades (both buying and selling).
     pub fn total_successful_trades(&self) -> usize {
         self.successful_buys + self.successful_sells
+    }
+
+    /// Applies a Q-learning style update to the adjustment factor.
+    ///
+    /// Uses a simplified TD-learning approach where we update based on the reward change:
+    /// `adjustment_factor += learning_rate * (reward - previous_reward)`
+    ///
+    /// Note: This is a simplified implementation that doesn't use the discount factor.
+    /// The discount factor parameter is reserved for future enhancements when we
+    /// implement multi-step lookahead or value function estimation.
+    ///
+    /// The adjustment factor is clamped to stay within reasonable bounds (0.1-2.0).
+    ///
+    /// # Arguments
+    /// * `reward` - Current reward signal (typically based on wealth growth)
+    /// * `learning_rate` - Step size for learning (alpha in Q-learning)
+    /// * `_discount_factor` - Reserved for future use (not used in current simplified implementation)
+    pub fn apply_rl_update(&mut self, reward: f64, learning_rate: f64, _discount_factor: f64) {
+        // Calculate TD error: reward + gamma * next_reward - previous_reward
+        // For simplicity, we use reward difference as the update signal
+        let td_error = reward - self.previous_reward;
+
+        // Q-learning update: adjust the adjustment_factor based on TD error
+        let update = learning_rate * td_error;
+        self.adjustment_factor += update;
+
+        // Clamp adjustment_factor to reasonable bounds (0.1-2.0)
+        self.adjustment_factor = self.adjustment_factor.clamp(0.1, 2.0);
+
+        // Update state for next iteration
+        self.previous_reward = reward;
+        self.total_reward += reward;
+        self.adaptation_count += 1;
+    }
+
+    /// Calculates the reward signal for reinforcement learning.
+    ///
+    /// Reward is based on:
+    /// - Short-term wealth growth (primary signal)
+    /// - Successful trade bonus (encourages activity)
+    /// - Reputation bonus (encourages good behavior)
+    ///
+    /// # Arguments
+    /// * `current_money` - Current money amount
+    /// * `reputation` - Current reputation score
+    /// * `success_multiplier` - Multiplier for successful trades
+    /// * `failure_multiplier` - Penalty multiplier for failed trades
+    ///
+    /// # Returns
+    /// A reward value (typically in range -1.0 to 1.0)
+    pub fn calculate_reward(
+        &self,
+        current_money: f64,
+        reputation: f64,
+        successful_trades_this_step: usize,
+        failed_trades_this_step: usize,
+        success_multiplier: f64,
+        failure_multiplier: f64,
+    ) -> f64 {
+        // Primary reward: short-term wealth growth rate
+        let growth_reward = self.calculate_short_term_growth_rate(current_money);
+
+        // Bonus for successful trades (normalized)
+        let success_bonus = if successful_trades_this_step > 0 {
+            (successful_trades_this_step as f64).ln() * 0.1 * success_multiplier
+        } else {
+            0.0
+        };
+
+        // Penalty for failed trades
+        let failure_penalty = if failed_trades_this_step > 0 {
+            -(failed_trades_this_step as f64).ln() * 0.05 * failure_multiplier
+        } else {
+            0.0
+        };
+
+        // Small reputation bonus (scaled to be less dominant)
+        let reputation_bonus = (reputation - 1.0) * 0.01;
+
+        // Combined reward
+        growth_reward + success_bonus + failure_penalty + reputation_bonus
+    }
+
+    /// Decides whether to explore (random action) or exploit (greedy action).
+    ///
+    /// Implements epsilon-greedy policy:
+    /// - With probability epsilon: explore (returns true)
+    /// - With probability 1-epsilon: exploit (returns false)
+    ///
+    /// # Arguments
+    /// * `rng` - Random number generator
+    ///
+    /// # Returns
+    /// true if should explore, false if should exploit
+    pub fn should_explore(&self, rng: &mut impl rand::Rng) -> bool {
+        rng.random::<f64>() < self.current_epsilon
+    }
+
+    /// Decays the exploration rate (epsilon) over time.
+    ///
+    /// Multiplies current epsilon by decay rate to gradually reduce exploration.
+    /// This implements the common RL pattern of "explore early, exploit later".
+    ///
+    /// # Arguments
+    /// * `decay_rate` - Multiplier applied to epsilon (typically 0.99-0.999)
+    pub fn decay_epsilon(&mut self, decay_rate: f64) {
+        self.current_epsilon *= decay_rate;
+        // Ensure epsilon doesn't go below a minimum threshold
+        self.current_epsilon = self.current_epsilon.max(0.01);
     }
 }
 

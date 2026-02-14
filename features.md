@@ -26,21 +26,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Verschiedene Agentenstrategien
 
-#### 4.1 Reinforcement Learning Agenten
-**Beschreibung:** Agenten die aus Erfahrung lernen und ihre Strategien dynamisch anpassen. Implementierung einfacher RL-Algorithmen wie Q-Learning oder Multi-Armed Bandits.
-
-**Nutzen:**
-- Emergenz von komplexem, adaptivem Verhalten
-- Untersuchung von Lerngeschwindigkeit und Konvergenz
-- Co-Evolution von Strategien
-
-**Implementierung:**
-- Erweiterung des bestehenden Adaptive-Strategies-Systems
-- `LearningAgent` mit State-Action-Value-Table
-- Q-Learning Update-Rules
-- Epsilon-Greedy Exploration vs. Exploitation
-- Experience-Replay optional
-
 ## 🔧 Code-Verbesserungen
 
 ### 1. Architektur und Design

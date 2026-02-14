@@ -459,8 +459,11 @@ impl SimulationEngine {
         // Capture P2P lending config values before moving config
         let enable_p2p = config.enable_p2p_lending;
         let p2p_fee = config.p2p_platform_fee_rate;
+        // Capture RL config before moving config
+        let enable_rl = config.enable_reinforcement_learning;
+        let rl_epsilon = config.rl_epsilon;
 
-        Self {
+        let mut engine = Self {
             config,
             entities,
             market,
@@ -537,7 +540,17 @@ impl SimulationEngine {
             asset_counter: 0,
             total_assets_purchased: 0,
             total_assets_sold: 0,
+        };
+
+        // Initialize RL epsilon for all entities if RL is enabled
+        if enable_rl {
+            for entity in engine.entities.iter_mut() {
+                entity.person_data.strategy_params.current_epsilon = rl_epsilon;
+            }
+            debug!("Reinforcement learning enabled with initial epsilon: {}", rl_epsilon);
         }
+
+        engine
     }
 
     /// Register a plugin with the simulation engine.
@@ -4022,6 +4035,11 @@ impl SimulationEngine {
         // Update incremental money statistics
         self.update_money_statistics();
 
+        // Apply reinforcement learning updates (if RL enabled)
+        if self.config.enable_reinforcement_learning {
+            self.apply_rl_updates();
+        }
+
         self.current_step += 1;
     }
 
@@ -4469,6 +4487,91 @@ impl SimulationEngine {
                 }
             }
         }
+    }
+
+    /// Applies reinforcement learning updates to agent strategies.
+    ///
+    /// This method updates strategy parameters using Q-learning style updates:
+    /// 1. Calculate reward signal based on wealth growth and trading success
+    /// 2. Apply TD-learning update to adjustment_factor
+    /// 3. Decay exploration rate (epsilon) over time
+    ///
+    /// Note: Failed trade tracking is not currently implemented, so we focus rewards
+    /// on successful trades and wealth growth. This could be enhanced in the future
+    /// by explicitly tracking trade attempt failures during the step.
+    ///
+    /// This creates learning behavior where agents adapt their spending strategies
+    /// based on performance feedback.
+    fn apply_rl_updates(&mut self) {
+        // Count trades this step for each person (for reward calculation)
+        let mut successful_trades_count: HashMap<usize, usize> = HashMap::new();
+
+        for entity in self.entities.iter() {
+            if !entity.active {
+                continue;
+            }
+
+            // Count successful trades this step
+            let successful_trades = entity
+                .person_data
+                .transaction_history
+                .iter()
+                .filter(|tx| tx.step == self.current_step)
+                .count();
+
+            successful_trades_count.insert(entity.id, successful_trades);
+        }
+
+        // Apply RL updates to each active person
+        for entity in self.entities.iter_mut() {
+            if !entity.active {
+                continue;
+            }
+
+            let successful = *successful_trades_count.get(&entity.id).unwrap_or(&0);
+
+            // Calculate reward signal
+            // Note: We don't track failed trades explicitly, so we use 0 for failed count.
+            // The reward is primarily based on wealth growth and successful trades.
+            let reward = entity.person_data.strategy_params.calculate_reward(
+                entity.person_data.money,
+                entity.person_data.reputation,
+                successful,
+                0, // Failed trades not explicitly tracked
+                self.config.rl_reward_success_multiplier,
+                self.config.rl_reward_failure_multiplier,
+            );
+
+            // Apply Q-learning update
+            entity.person_data.strategy_params.apply_rl_update(
+                reward,
+                self.config.rl_learning_rate,
+                self.config.rl_discount_factor,
+            );
+
+            // Decay epsilon (exploration rate)
+            entity.person_data.strategy_params.decay_epsilon(self.config.rl_epsilon_decay);
+
+            // Update previous money for next step
+            entity
+                .person_data
+                .strategy_params
+                .update_previous_money(entity.person_data.money);
+
+            trace!(
+                "Person {} RL update: reward={:.4}, adjustment_factor={:.3}, epsilon={:.4}",
+                entity.id,
+                reward,
+                entity.person_data.strategy_params.adjustment_factor,
+                entity.person_data.strategy_params.current_epsilon
+            );
+        }
+
+        debug!(
+            "Applied RL updates at step {} to {} active agents",
+            self.current_step,
+            self.entities.iter().filter(|e| e.active).count()
+        );
     }
 
     /// Implements evolutionary strategy dynamics where agents imitate successful friends.
