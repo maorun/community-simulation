@@ -468,6 +468,17 @@ black_market_price_multiplier = 0.8
 # Default: 0.2
 black_market_participation_rate = 0.2
 
+# Enable auction-based trading
+# Alternative price discovery through bidding
+# Default: false
+enable_auctions = false
+
+# Auction participation rate (0.0-1.0)
+# Percentage of trades using auctions
+# 0.2 = 20% of trades use auctions
+# Default: 0.2
+auction_participation_rate = 0.2
+
 # Enable parallel trades
 # Multiple trades can occur simultaneously
 # Default: false

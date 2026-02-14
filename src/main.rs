@@ -504,6 +504,18 @@ struct RunArgs {
     #[arg(long, default_value_t = false)]
     enable_market_segments: bool,
 
+    /// Enable auction-based trading for price discovery
+    /// When enabled, a portion of trades use auctions where buyers submit bids
+    /// and the highest bidder wins (English auction). Provides an alternative to bilateral trading.
+    #[arg(long, default_value_t = false)]
+    enable_auctions: bool,
+
+    /// Percentage of trades using auctions instead of bilateral trading (0.0-1.0, default: 0.2)
+    /// For example, 0.2 means 20% of trades go through auctions
+    /// Only used when --enable-auctions is set
+    #[arg(long)]
+    auction_participation_rate: Option<f64>,
+
     /// Enable community resource pools for groups (requires --num-groups)
     /// Groups maintain shared pools where members contribute money each step
     /// Pools provide collective support and mutual aid to members in need
@@ -1108,6 +1120,10 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
                 .black_market_price_multiplier,
             black_market_participation_rate: SimulationConfig::default()
                 .black_market_participation_rate,
+            enable_auctions: args.enable_auctions,
+            auction_participation_rate: args
+                .auction_participation_rate
+                .unwrap_or(SimulationConfig::default().auction_participation_rate),
             enable_contracts: args.enable_contracts,
             max_contract_duration: args
                 .max_contract_duration

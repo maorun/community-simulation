@@ -540,6 +540,25 @@ pub struct SimulationConfig {
     #[serde(default = "default_black_market_participation_rate")]
     pub black_market_participation_rate: f64,
 
+    /// Enable auction-based price discovery as an alternative to bilateral trading.
+    ///
+    /// When enabled, some or all trades can occur through auctions where multiple
+    /// buyers submit bids and the highest bidder wins. This provides an alternative
+    /// price discovery mechanism to traditional bilateral negotiation.
+    /// Auctions can lead to more efficient price discovery, especially for scarce skills.
+    /// Set to false to use only bilateral trading (default).
+    #[serde(default)]
+    pub enable_auctions: bool,
+
+    /// Percentage of trades routed through auctions (0.0-1.0).
+    ///
+    /// Determines what fraction of trades use auction mechanism instead of
+    /// bilateral trading. For example, 0.3 means 30% of trades go through auctions.
+    /// Only used when enable_auctions is true.
+    /// Default: 0.2 (20% of trades)
+    #[serde(default = "default_auction_participation_rate")]
+    pub auction_participation_rate: f64,
+
     /// Enable contract system for long-term agreements between persons.
     ///
     /// When enabled, persons can form long-term contracts that lock in prices
@@ -1826,6 +1845,10 @@ fn default_black_market_participation_rate() -> f64 {
     0.2 // 20% of trades use black market
 }
 
+fn default_auction_participation_rate() -> f64 {
+    0.2 // 20% of trades use auctions
+}
+
 fn default_price_elasticity_factor() -> f64 {
     0.1 // 10% price adjustment per unit supply/demand imbalance
 }
@@ -2014,6 +2037,8 @@ impl Default for SimulationConfig {
             enable_black_market: false,           // Disabled by default
             black_market_price_multiplier: 0.8,   // 20% cheaper
             black_market_participation_rate: 0.2, // 20% of trades
+            enable_auctions: false,               // Disabled by default
+            auction_participation_rate: 0.2,      // 20% of trades use auctions
             enable_contracts: false,              // Disabled by default
             max_contract_duration: 50,            // Maximum 50 steps
             min_contract_duration: 10,            // Minimum 10 steps
