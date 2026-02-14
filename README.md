@@ -61,6 +61,7 @@ This framework enables you to simulate and analyze:
 - **Investment Tracking**: Monitor capital allocation and returns
 - **Comprehensive Statistics**: Wealth distribution, transaction patterns, mobility metrics
 - **Multiple Output Formats**: JSON, CSV, time-series exports
+- **Terminal Visualization**: ASCII-based price history charts showing skill price evolution over time (`--show-price-chart`)
 
 📖 **For detailed feature explanations**, see [FEATURES.md](FEATURES.md).
 
@@ -260,6 +261,8 @@ Essential parameters for customizing simulations:
 --timeseries-output <FILE>      Export time-series CSV for analysis
 --config <FILE>                 Load configuration from YAML/TOML file
 --seed <SEED>                   RNG seed for reproducibility (default: 42)
+--show-price-chart              Display ASCII price history chart in terminal
+--no-histogram                  Disable wealth distribution histogram
 ```
 
 For the complete parameter list, see [FEATURES.md](FEATURES.md) or run:

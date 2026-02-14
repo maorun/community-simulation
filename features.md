@@ -93,20 +93,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Debugging-Tools
 
-#### 1.1 Visualisierung des Simulations-Ablaufs
-**Beschreibung:** Graphische Visualisierung der Simulation: Netzwerk-Graphen, Preis-Charts, Wealth-Histogramme in Echtzeit oder Post-Hoc.
-
-**Nutzen:**
-- Intuitive Verständlichkeit für Non-Technical Users
-- Präsentations-Qualität für Forschung/Lehre
-- Pattern-Erkennung durch visuelle Inspektion
-
-**Implementierung:**
-- Optional Feature mit `plotters` crate für Terminal-Plots
-- HTML-Export mit interaktiven Charts (Chart.js/Plotly)
-- Netzwerk-Visualisierung via GraphML-Export
-- Integration mit Grafana via Prometheus-Exporter
-
 ## 🎯 Priorisierung
 
 ### Hohe Priorität (Kurzfristig - hohe Harmonie-Effekte)

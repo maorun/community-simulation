@@ -284,6 +284,11 @@ struct RunArgs {
     #[arg(long, default_value_t = false)]
     no_histogram: bool,
 
+    /// Show ASCII price history chart for top skills in output
+    /// Displays a terminal-based chart showing how the most valuable skills' prices evolved over time
+    #[arg(long, default_value_t = false)]
+    show_price_chart: bool,
+
     /// Cost multiplier for learning a skill based on market price (e.g., 3.0 = 3x market price)
     /// Only used when --enable-education is set
     #[arg(long)]
@@ -1428,7 +1433,7 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             info!("{}", format!("Parquet data saved to: {}", parquet_path).bright_blue());
         }
 
-        result.print_summary(!args.no_histogram);
+        result.print_summary_with_options(!args.no_histogram, args.show_price_chart);
     }
 
     Ok(())
