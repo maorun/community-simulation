@@ -317,6 +317,81 @@ fn bench_incremental_stats(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark VecPool performance for memory pooling
+fn bench_vec_pool(c: &mut Criterion) {
+    use community_simulation::VecPool;
+
+    let mut group = c.benchmark_group("vec_pool");
+
+    // Benchmark standard Vec allocation and deallocation
+    group.bench_function("standard_vec_alloc", |b| {
+        b.iter(|| {
+            let mut vecs = Vec::new();
+            for _ in 0..100 {
+                let mut v: Vec<i32> = Vec::with_capacity(50);
+                for j in 0..20 {
+                    v.push(j);
+                }
+                vecs.push(v);
+            }
+            black_box(vecs);
+            // Vecs are dropped here, deallocating memory
+        });
+    });
+
+    // Benchmark VecPool allocation and reuse
+    group.bench_function("vec_pool_alloc", |b| {
+        b.iter(|| {
+            let mut pool: VecPool<i32> = VecPool::with_capacity(100);
+            let mut vecs = Vec::new();
+            for _ in 0..100 {
+                let mut v = pool.acquire();
+                v.reserve(50);
+                for j in 0..20 {
+                    v.push(j);
+                }
+                vecs.push(v);
+            }
+            // Return vecs to pool for reuse
+            for v in vecs {
+                pool.release(v);
+            }
+            black_box(pool);
+        });
+    });
+
+    // Benchmark VecPool with multiple acquire/release cycles
+    group.bench_function("vec_pool_reuse_cycles", |b| {
+        b.iter(|| {
+            let mut pool: VecPool<i32> = VecPool::with_capacity(20);
+            for _ in 0..100 {
+                let mut v = pool.acquire();
+                for j in 0..20 {
+                    v.push(j);
+                }
+                pool.release(v); // Immediate reuse
+            }
+            black_box(pool);
+        });
+    });
+
+    // Benchmark standard Vec with multiple allocation cycles
+    group.bench_function("standard_vec_reuse_cycles", |b| {
+        b.iter(|| {
+            for _ in 0..100 {
+                let mut v: Vec<i32> = Vec::with_capacity(20);
+                for j in 0..20 {
+                    v.push(j);
+                }
+                black_box(&v);
+                // v is dropped and memory deallocated
+            }
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_engine_initialization,
@@ -326,6 +401,7 @@ criterion_group!(
     bench_statistics,
     bench_market_operations,
     bench_serialization,
-    bench_incremental_stats
+    bench_incremental_stats,
+    bench_vec_pool
 );
 criterion_main!(benches);
