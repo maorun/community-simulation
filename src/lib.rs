@@ -67,6 +67,7 @@
 //! - [`config`] - Simulation configuration parameters
 //! - [`contract`] - Contract system for long-term agreements
 //! - [`credit_rating`] - Credit scoring system for evaluating creditworthiness
+//! - [`currency`] - Multi-currency system with exchange rates for international trade
 //! - [`database`] - SQLite database export functionality
 //! - [`engine`] - Main simulation engine and execution loop
 //! - [`entity`] - Entity wrapper around Person for simulation framework
@@ -99,6 +100,7 @@ pub mod config;
 pub mod contract;
 pub mod credit_rating;
 pub mod crisis;
+pub mod currency;
 pub mod database;
 pub mod engine;
 pub mod entity; // Represents a Person in the simulation
@@ -139,6 +141,7 @@ pub use config::{PresetName, SimulationConfig};
 pub use contract::{Contract, ContractId};
 pub use credit_rating::CreditScore;
 pub use crisis::CrisisEvent;
+pub use currency::{Currency, CurrencyId, CurrencySystem};
 pub use engine::{SimulationCheckpoint, SimulationEngine};
 pub use entity::Entity; // This is our Person struct, wrapped for the engine
 pub use environment::{Environment, Resource};

@@ -278,6 +278,18 @@ impl TestConfigBuilder {
         self
     }
 
+    /// Set the currency system
+    pub fn currency_system(mut self, system: crate::currency::CurrencySystem) -> Self {
+        self.config.currency_system = system;
+        self
+    }
+
+    /// Enable or disable multi-currency features
+    pub fn enable_multi_currency(mut self, enable: bool) -> Self {
+        self.config.enable_multi_currency = enable;
+        self
+    }
+
     /// Set the satisficing threshold for "good enough" decisions
     pub fn satisficing_threshold(mut self, threshold: f64) -> Self {
         self.config.satisficing_threshold = threshold;
