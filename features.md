@@ -16,17 +16,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 1. Architektur und Design
 
-#### 1.1 Erweiterbare Agentenarchitektur
-**Beschreibung:** Refactoring der Person-Struktur zu einer modularen, komponenten-basierten Architektur (Entity-Component-System inspiriert).
-
-**Nutzen:** Einfachere Erweiterung mit neuen Features ohne Monolith-Struktur, bessere Testbarkeit, modulare Aktivierung von Features.
-
-**Implementierung:**
-- `Component` Trait für verschiedene Fähigkeiten (Trading, Learning, Investing, etc.)
-- `ComponentManager` zur Verwaltung von Komponenten pro Person
-- Feature-Flags zur Compile-Zeit-Aktivierung von Komponenten
-- Dependency Injection für Komponenten-Kommunikation
-
 ### 2. Performance-Optimierungen
 
 ### 3. Code-Qualität
