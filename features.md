@@ -29,20 +29,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Performance-Optimierungen
 
-#### 2.1 Memory Pooling und Arena Allocation
-**Beschreibung:** Optimierung von Speicher-Allokationen durch Objekt-Pooling und Arena-Allocatoren für häufig allokierte Strukturen.
-
-**Nutzen:**
-- Reduzierte Allokations-Overhead
-- Bessere Cache-Locality
-- Niedrigerer Memory-Footprint bei großen Simulationen
-
-**Implementierung:**
-- `Arena` Allocator für Transaction-Objects
-- Recycling von häufig allokierten Event-Objekten
-- Memory-Profiling mit Valgrind/Heaptrack zur Identifikation von Hot-Spots
-- Opt-in via Feature-Flag
-
 ### 3. Code-Qualität
 
 ### 4. Datenmanagement

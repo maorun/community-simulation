@@ -278,6 +278,7 @@ For the complete parameter list, see [FEATURES.md](FEATURES.md) or run:
 - **SIMD Optimization**: Statistical calculations use vectorized algorithms for 2-4x speedup on modern CPUs
 - **Memory**: Proportional to persons × steps (for transaction history)
 - **Optimization**: Release builds use LTO and are 10-20x faster than debug builds
+- **Memory Pooling**: VecPool available for reducing allocation overhead in custom extensions (see `src/pool.rs` for API documentation and usage examples)
 
 ## License
 
