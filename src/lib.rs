@@ -64,6 +64,7 @@
 //! - [`auction`] - Auction mechanisms for alternative price discovery
 //! - [`causal_analysis`] - Causal inference framework for policy evaluation
 //! - [`centrality`] - Network centrality analysis for trading networks
+//! - [`component`] - Component-based architecture foundation for extensible person capabilities
 //! - [`config`] - Simulation configuration parameters
 //! - [`contract`] - Contract system for long-term agreements
 //! - [`credit_rating`] - Credit scoring system for evaluating creditworthiness
@@ -96,6 +97,7 @@ pub mod auction;
 pub mod causal_analysis;
 pub mod centrality;
 pub mod completion;
+pub mod component;
 pub mod config;
 pub mod contract;
 pub mod credit_rating;
@@ -137,6 +139,7 @@ pub use asset::{Asset, AssetId, AssetType};
 pub use auction::{Auction, AuctionType};
 pub use causal_analysis::{CausalAnalysisConfig, CausalAnalysisResult, StatisticalTest};
 pub use centrality::{calculate_centrality, CentralityAnalysis, NodeCentrality};
+pub use component::{Component, ComponentContainer, TradingBehaviorComponent};
 pub use config::{PresetName, SimulationConfig};
 pub use contract::{Contract, ContractId};
 pub use credit_rating::CreditScore;
