@@ -28,58 +28,11 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ## 🎯 Priorisierung
 
-### Hohe Priorität (Kurzfristig - hohe Harmonie-Effekte)
-
-1. **Qualitätsbewertungssystem** - Fügt wichtige Marktdimension hinzu (NOTE: Quality rating is already implemented!)
-2. **Mentorschaft** - Natürliche Erweiterung von Bildung + Freundschaft (NOTE: Mentorship is already implemented!)
-
 ### Niedrige Priorität (Langfristig - Spezialfälle)
 
-8. **Regulatorische Interventionen** - Erfordert umfangreiche Modellierung
-9. **Spezielle Anwendungsfälle** - Domänenspezifisch
+1. **Spezielle Anwendungsfälle** - Domänenspezifisch
 
-## 💡 Harmonien-Matrix
-
-Diese Matrix zeigt, welche Features besonders gut zusammenwirken:
-
-### Reputation als Zentrum
-- **Reputation** ↔ **Kredite**: Bessere Konditionen
-- **Reputation** ↔ **Qualität**: Gegenseitige Verstärkung
-- **Reputation** ↔ **Mentorschaft**: Effektivere Mentoren
-
-### Bildung als Wachstumsmotor
-- **Bildung** ↔ **Mentorschaft**: Reduzierte Kosten, höherer Erfolg
-- **Bildung** ↔ **Qualität**: Erlernte Skills starten mit niedriger Qualität
-- **Bildung** ↔ **Investitionen**: Investition in Bildung anderer
-- **Bildung** ↔ **Spezialisierung**: Spezialist vs. Generalist-Strategie
-
-### Soziales Kapital
-- **Freundschaft** ↔ **Vertrauensnetzwerke**: Basis für Vertrauen
-- **Freundschaft** ↔ **Mentorschaft**: Mentorschaft führt zu Freundschaft
-- **Freundschaft** ↔ **Gemeinschaftspools**: Solidarität in Gruppen
-
-### Risikomanagement
-- **Ersparnisse** ↔ **Investitionen**: Kapitalallokation
-- **Ersparnisse** ↔ **Kreditrating**: Besseres Rating
-
-### Marktstruktur
-- **Qualität** ↔ **Preise**: Qualitätswettbewerb
-- **Produktion** ↔ **Investitionen**: Produktionskapazitäts-Investitionen
-- **Produktion** ↔ **Qualität**: Qualitäts-Vererbung in Produktionsketten
-- **Schwarzmarkt** ↔ **Regulierung**: Regulierung treibt Schwarzmarkt
-
-## 🔄 Implementations-Roadmap
-
-### Phase 1: Grundlegende Harmonien (3-6 Monate)
-1. Qualitätsbewertungssystem implementieren (NOTE: Already implemented!)
-2. Mentorschaftssystem implementieren (NOTE: Already implemented!)
-
-**Warum diese Reihenfolge?**
-- Qualität ist relativ unabhängig und bringt sofort Mehrwert (bereits implementiert!)
-- Mentorschaft rundet soziale Features ab (bereits implementiert!)
-- Event-System ist nun vollständig integriert und ermöglicht besseres Debugging aller Features
-
-### Kontinuierlich: Code-Qualität und Performance
+## 🔄 Kontinuierliche Verbesserungen
 - Integration-Tests für jedes neue Feature
 - Refactoring zu komponenten-basierter Architektur
 - Dokumentations-Updates
@@ -108,13 +61,6 @@ Bei der Entwicklung neuer Features sollten folgende Prinzipien beachtet werden:
 4. **Datensynergien**: Features sollten Daten produzieren, die andere Features nutzen können
 5. **Mechanismus-Komposition**: Einfache Mechanismen kombiniert zu komplexem Verhalten
 
-### Beispiele erfolgreicher Harmonien im aktuellen System
-
-- **Reputation + Freundschaft + Verträge**: Reputation beeinflusst Vertragspreise, Freundschaft beschleunigt Reputationsaufbau, Verträge schaffen langfristige Beziehungen
-- **Kredite + Reputation + Savings**: Gute Reputation ermöglicht günstige Kredite, Ersparnisse verbessern Kreditwürdigkeit, Kreditrückzahlungen stärken Reputation
-- **Bildung + Produktion + Qualität**: Bildung ermöglicht Produktion, Produktion erzeugt hochwertige Skills, Qualität beeinflusst Bildungseffizienz
-- **Steuern + Umverteilung + Ungleichheit**: Steuern finanzieren Umverteilung, Umverteilung reduziert Ungleichheit, Ungleichheit beeinflusst politische Stabilität (via Voting)
-
 ### Vorschläge zur Feature-Priorisierung
 
 Verwende diese Kriterien für die Priorisierung zusätzlicher Features:
@@ -124,14 +70,6 @@ Verwende diese Kriterien für die Priorisierung zusätzlicher Features:
 3. **Forschungs-Relevanz** (0-10): Wie interessant ist das Feature für ökonomische Forschung?
 4. **Praxis-Relevanz** (0-10): Wie relevant ist das Feature für reale Wirtschaftssysteme?
 5. **Lehr-Eignung** (0-10): Wie gut eignet sich das Feature für Lehrzwecke?
-
-**Beispiel-Scoring:**
-
-| Feature | Harmonie | Aufwand | Forschung | Praxis | Lehre | Gesamt |
-|---------|----------|---------|-----------|--------|-------|--------|
-| Kreditrating | 10 | S | 7 | 10 | 7 | 34/50 |
-| Qualität | 8 | M | 7 | 9 | 9 | 33/50 |
-| Mentorschaft | 7 | S | 6 | 7 | 10 | 30/50 |
 
 Contributions sind willkommen! Bitte öffnen Sie ein Issue oder Pull Request, um Diskussionen zu starten oder Änderungen vorzuschlagen.
 
