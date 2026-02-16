@@ -119,13 +119,34 @@ This framework enables you to simulate and analyze:
   --crisis-probability 0.02 \
   -o custom_results.json
 
+# Social network simulation with voting and trust
+./target/release/community-simulation run \
+  --steps 500 \
+  --persons 50 \
+  --enable-friendships \
+  --friendship-probability 0.2 \
+  --enable-trust-networks \
+  --enable-influence \
+  --enable-voting \
+  --voting-participation-rate 0.4 \
+  --enable-trade-agreements \
+  -o social_network.json
+
+# Financial system with credit ratings
+./target/release/community-simulation run \
+  --steps 500 \
+  --persons 50 \
+  --enable-loans \
+  --enable-credit-rating \
+  --loan-interest-rate 0.015 \
+  -o credit_system.json
+
 # Market segmentation simulation
 ./target/release/community-simulation run \
   --steps 500 \
   --persons 100 \
   --enable-market-segments \
   --enable-quality \
-  --enable-reputation \
   -o market_segments.json
 
 # Satisficing (bounded rationality) simulation

@@ -572,6 +572,75 @@ struct RunArgs {
     /// Only used when --enable-invariant-checking is set
     #[arg(long, default_value_t = false)]
     strict_invariant_mode: bool,
+
+    // ============================================================================
+    // Social Systems
+    // ============================================================================
+    /// Enable friendship formation system based on successful trades
+    /// When enabled, persons can form friendships that provide trading benefits
+    /// Friendships provide price discounts and influence social network dynamics
+    #[arg(long, default_value_t = false)]
+    enable_friendships: bool,
+
+    /// Probability that a successful trade leads to friendship formation (0.0-1.0, default: 0.1)
+    /// Only used when --enable-friendships is set
+    /// Higher values = friendships form more quickly
+    #[arg(long)]
+    friendship_probability: Option<f64>,
+
+    /// Price discount for trades between friends as a percentage (0.0-1.0, default: 0.1)
+    /// Only used when --enable-friendships is set
+    /// Example: 0.1 = 10% discount for friend trades
+    #[arg(long)]
+    friendship_discount: Option<f64>,
+
+    /// Enable credit rating system (FICO-like scoring 300-850)
+    /// When enabled, persons have credit scores that affect loan interest rates
+    /// Requires --enable-loans to be set
+    #[arg(long, default_value_t = false)]
+    enable_credit_rating: bool,
+
+    /// Enable trust networks based on friendship relationships
+    /// When enabled, trust scores affect trading decisions and prices
+    /// Requires --enable-friendships to be set
+    #[arg(long, default_value_t = false)]
+    enable_trust_networks: bool,
+
+    /// Enable influence tracking based on social network position
+    /// When enabled, influential persons have greater impact on market dynamics
+    /// Requires --enable-friendships to be set
+    #[arg(long, default_value_t = false)]
+    enable_influence: bool,
+
+    /// Enable bilateral trade agreements between persons
+    /// When enabled, persons can form long-term trading partnerships
+    /// Requires --enable-friendships for optimal functionality
+    #[arg(long, default_value_t = false)]
+    enable_trade_agreements: bool,
+
+    /// Enable voting system for collective decision-making
+    /// When enabled, persons vote on proposals affecting market rules
+    /// Examples: tax rates, redistribution policies, regulations
+    #[arg(long, default_value_t = false)]
+    enable_voting: bool,
+
+    /// Voting participation rate (0.0-1.0, default: 0.3)
+    /// Percentage of persons who participate in each vote
+    /// Only used when --enable-voting is set
+    #[arg(long)]
+    voting_participation_rate: Option<f64>,
+
+    /// Proposal probability per step (0.0-1.0, default: 0.05)
+    /// Probability that a new proposal is made each step
+    /// Only used when --enable-voting is set
+    #[arg(long)]
+    proposal_probability: Option<f64>,
+
+    /// Proposal duration in steps (default: 20)
+    /// Number of steps a proposal remains open for voting
+    /// Only used when --enable-voting is set
+    #[arg(long)]
+    proposal_duration: Option<usize>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -844,6 +913,42 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
         if let Some(production_prob) = args.production_probability {
             cfg.production_probability = production_prob;
         }
+
+        // Social Systems overrides
+        if args.enable_friendships {
+            cfg.enable_friendships = true;
+        }
+        if let Some(probability) = args.friendship_probability {
+            cfg.friendship_probability = probability;
+        }
+        if let Some(discount) = args.friendship_discount {
+            cfg.friendship_discount = discount;
+        }
+        if args.enable_credit_rating {
+            cfg.enable_credit_rating = true;
+        }
+        if args.enable_trust_networks {
+            cfg.enable_trust_networks = true;
+        }
+        if args.enable_influence {
+            cfg.enable_influence = true;
+        }
+        if args.enable_trade_agreements {
+            cfg.enable_trade_agreements = true;
+        }
+        if args.enable_voting {
+            cfg.enable_voting = true;
+        }
+        if let Some(rate) = args.voting_participation_rate {
+            cfg.voting_participation_rate = rate;
+        }
+        if let Some(probability) = args.proposal_probability {
+            cfg.proposal_probability = probability;
+        }
+        if let Some(duration) = args.proposal_duration {
+            cfg.proposal_duration = duration;
+        }
+
         cfg
     } else if let Some(config_path) = &args.config {
         info!("Loading configuration from: {}", config_path);
@@ -1041,6 +1146,41 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             if let Some(count) = args.initial_sick_persons {
                 cfg.initial_sick_persons = count;
             }
+
+            // Social Systems overrides
+            if args.enable_friendships {
+                cfg.enable_friendships = true;
+            }
+            if let Some(probability) = args.friendship_probability {
+                cfg.friendship_probability = probability;
+            }
+            if let Some(discount) = args.friendship_discount {
+                cfg.friendship_discount = discount;
+            }
+            if args.enable_credit_rating {
+                cfg.enable_credit_rating = true;
+            }
+            if args.enable_trust_networks {
+                cfg.enable_trust_networks = true;
+            }
+            if args.enable_influence {
+                cfg.enable_influence = true;
+            }
+            if args.enable_trade_agreements {
+                cfg.enable_trade_agreements = true;
+            }
+            if args.enable_voting {
+                cfg.enable_voting = true;
+            }
+            if let Some(rate) = args.voting_participation_rate {
+                cfg.voting_participation_rate = rate;
+            }
+            if let Some(probability) = args.proposal_probability {
+                cfg.proposal_probability = probability;
+            }
+            if let Some(duration) = args.proposal_duration {
+                cfg.proposal_duration = duration;
+            }
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
@@ -1087,7 +1227,7 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or(SimulationConfig::default().transaction_fee),
             savings_rate: args.savings_rate.unwrap_or(SimulationConfig::default().savings_rate),
             enable_loans: args.enable_loans,
-            enable_credit_rating: SimulationConfig::default().enable_credit_rating,
+            enable_credit_rating: args.enable_credit_rating,
             loan_interest_rate: args
                 .loan_interest_rate
                 .unwrap_or(SimulationConfig::default().loan_interest_rate),
@@ -1178,15 +1318,19 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             insurance_coverage_amount: args
                 .insurance_coverage_amount
                 .unwrap_or(SimulationConfig::default().insurance_coverage_amount),
-            enable_friendships: SimulationConfig::default().enable_friendships,
-            friendship_probability: SimulationConfig::default().friendship_probability,
-            friendship_discount: SimulationConfig::default().friendship_discount,
-            enable_trade_agreements: SimulationConfig::default().enable_trade_agreements,
+            enable_friendships: args.enable_friendships,
+            friendship_probability: args
+                .friendship_probability
+                .unwrap_or(SimulationConfig::default().friendship_probability),
+            friendship_discount: args
+                .friendship_discount
+                .unwrap_or(SimulationConfig::default().friendship_discount),
+            enable_trade_agreements: args.enable_trade_agreements,
             trade_agreement_probability: SimulationConfig::default().trade_agreement_probability,
             trade_agreement_discount: SimulationConfig::default().trade_agreement_discount,
             trade_agreement_duration: SimulationConfig::default().trade_agreement_duration,
-            enable_trust_networks: SimulationConfig::default().enable_trust_networks,
-            enable_influence: SimulationConfig::default().enable_influence,
+            enable_trust_networks: args.enable_trust_networks,
+            enable_influence: args.enable_influence,
             num_groups: args.num_groups,
             distance_cost_factor: args
                 .distance_cost_factor
@@ -1210,11 +1354,17 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             resource_cost_per_transaction: SimulationConfig::default()
                 .resource_cost_per_transaction,
             custom_resource_reserves: None,
-            enable_voting: SimulationConfig::default().enable_voting,
+            enable_voting: args.enable_voting,
             voting_method: SimulationConfig::default().voting_method,
-            proposal_duration: SimulationConfig::default().proposal_duration,
-            proposal_probability: SimulationConfig::default().proposal_probability,
-            voting_participation_rate: SimulationConfig::default().voting_participation_rate,
+            proposal_duration: args
+                .proposal_duration
+                .unwrap_or(SimulationConfig::default().proposal_duration),
+            proposal_probability: args
+                .proposal_probability
+                .unwrap_or(SimulationConfig::default().proposal_probability),
+            voting_participation_rate: args
+                .voting_participation_rate
+                .unwrap_or(SimulationConfig::default().voting_participation_rate),
             enable_quality: args.enable_quality,
             quality_improvement_rate: args
                 .quality_improvement_rate
