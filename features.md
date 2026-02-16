@@ -22,20 +22,6 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 4. Datenmanagement
 
-#### 4.1 Time-Series-Datenbank-Integration
-**Beschreibung:** Optionale Integration mit Time-Series-Datenbanken wie InfluxDB oder TimescaleDB für effizientes Speichern großer Simulationsläufe.
-
-**Nutzen:**
-- Persistenz großer Datenmengen ohne Memory-Overhead
-- Effiziente Range-Queries für Zeitreihen-Analysen
-- Langzeit-Analyse über viele Runs
-
-**Implementierung:**
-- Optional Feature `database-integration`
-- `influxdb` oder `tokio-postgres` Client
-- Batch-Inserts für Performance
-- Async-Runtime für Non-Blocking I/O
-
 ## 🛠️ Entwickler-Tools
 
 ### 1. Debugging-Tools
