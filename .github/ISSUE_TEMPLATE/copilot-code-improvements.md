@@ -249,7 +249,7 @@ Even minor changes require full validation to ensure no regressions are introduc
 
 **Read these carefully before starting:**
 
-1. **Autonomous Analysis Required:** You must analyze the codebase yourself to identify improvements. Do NOT rely on features.md or external suggestions. Use grep, glob, and code exploration tools.
+1. **Autonomous Analysis Required:** You must analyze the codebase yourself to identify improvements. Do NOT rely on TODO.md or external suggestions. Use grep, glob, and code exploration tools.
 
 2. **No Behavior Changes:** Code improvements should NOT change external behavior. Tests should pass without modification (except for internal implementation details).
 

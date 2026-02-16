@@ -161,7 +161,8 @@ cargo run --release -- -s 10 -p 5 -o /tmp/test.json
 ├── Cargo.toml                # Package manifest and dependencies
 ├── Cargo.lock                # Locked dependency versions
 ├── README.md                 # User documentation
-├── features.md               # German-language feature wishlist
+├── TODO.md                   # German-language feature TODO list
+├── FEATURES.md               # Comprehensive feature documentation
 ├── LICENSE                   # MIT License
 ├── renovate.json             # Renovate bot configuration
 └── .gitignore                # Git ignore rules (target/, debug/, *.rs.bk, etc.)
@@ -351,19 +352,19 @@ codeql_checker
 - If an alert is a false positive, document it
 - Include a Security Summary with any discovered vulnerabilities
 
-## Implementing Features from features.md
+## Implementing Features from TODO.md
 
-When implementing a feature from the `features.md` file as part of autonomous feature development:
+When implementing a feature from the `TODO.md` file as part of autonomous feature development:
 
 1. **Feature Selection:**
-   - **Primary Strategy:** Select ONE feature from `features.md` based on simplicity and minimal changes required
-   - **Fallback Strategy:** If no feature meets the simplicity criteria, select the next feature in priority order from `features.md`
+   - **Primary Strategy:** Select ONE feature from `TODO.md` based on simplicity and minimal changes required
+   - **Fallback Strategy:** If no feature meets the simplicity criteria, select the next feature in priority order from `TODO.md`
    - Priority order is determined by:
      1. Features listed under "Mittlere Priorität" (Medium Priority) in the order they appear
      2. Features listed under "Niedrige Priorität" (Low Priority) in the order they appear
      3. Any other features listed in the document in the order they appear
    - Document your selection clearly in the PR description with Feature ID and rationale
-   - **IMPORTANT:** Do NOT add new features to `features.md` - only implement existing ones
+   - **IMPORTANT:** Do NOT add new features to `TODO.md` - only implement existing ones
 
 2. **During Implementation:**
    - Follow all guidelines in this document
@@ -372,7 +373,7 @@ When implementing a feature from the `features.md` file as part of autonomous fe
    - Ensure all existing tests still pass
 
 3. **After Implementation (CRITICAL):**
-   - **COMPLETELY DELETE the implemented feature from `features.md`**
+   - **COMPLETELY DELETE the implemented feature from `TODO.md`**
    - **DO NOT comment it out** with `<!-- -->` HTML comment tags
    - **DO NOT mark it as "IMPLEMENTED"** in a comment
    - **DELETE all lines** of the feature including:
@@ -385,8 +386,8 @@ When implementing a feature from the `features.md` file as part of autonomous fe
    - Mention the feature removal in your commit message
 
 **Why Complete Removal?**
-- The `features.md` file is a TODO list, not a changelog
-- Implemented features should be documented in `README.md` and commit history
+- The `TODO.md` file is a TODO list, not a changelog
+- Implemented features should be documented in `FEATURES.md` and commit history
 - Keeping old features (even as comments) clutters the file and creates confusion
 - Future copilot agents should only see unimplemented features
 
