@@ -6,7 +6,7 @@ This directory contains issue templates for the Community Simulation project.
 
 ### 1. Copilot Feature Development (`copilot-feature-development.md`)
 
-**Purpose:** This template is specifically designed for GitHub Copilot to systematically develop features from the `features.md` file.
+**Purpose:** This template is specifically designed for GitHub Copilot to systematically develop features from the `TODO.md` file.
 
 **When to use:**
 - When you want GitHub Copilot to implement a feature from the features list
@@ -15,7 +15,7 @@ This directory contains issue templates for the Community Simulation project.
 
 **How to use:**
 1. Create a new issue using this template
-2. Select a feature from `features.md`
+2. Select a feature from `TODO.md`
 3. Fill in the feature details (ID, name, category, priority)
 4. Describe implementation requirements
 5. Assign to GitHub Copilot or use Copilot to implement the feature
@@ -87,7 +87,7 @@ This directory contains issue templates for the Community Simulation project.
 ## Template Configuration (`config.yml`)
 
 The `config.yml` file provides:
-- Quick links to important documentation (features.md, README.md, copilot-instructions.md)
+- Quick links to important documentation (TODO.md, FEATURES.md, README.md, copilot-instructions.md)
 - Configuration for blank issue creation
 - Easy navigation to project resources
 
@@ -98,7 +98,7 @@ When you create a new issue on GitHub:
 1. Go to the [Issues page](https://github.com/maorun/community-simulation/issues)
 2. Click "New issue"
 3. Select the appropriate template:
-   - **Copilot Feature Development** - For implementing new features from features.md
+   - **Copilot Feature Development** - For implementing new features from TODO.md
    - **Copilot Code Improvements** - For code quality, performance, or test improvements
    - **Bug Report** - For reporting bugs
    - **General Issue / Question** - For questions or discussions
@@ -118,11 +118,11 @@ Both the **Copilot Feature Development** and **Copilot Code Improvements** templ
 ### Differences Between Templates
 
 **Copilot Feature Development:**
-- For implementing NEW features from features.md (🚀 Neue Features section)
+- For implementing NEW features from TODO.md (🚀 Neue Features section)
 - Adds new functionality and behavior
 - May require new data structures and APIs
 - Focus on value-add for users
-- Uses predefined feature list from features.md
+- Uses predefined feature list from TODO.md
 
 **Copilot Code Improvements:**
 - For improving EXISTING code through autonomous analysis
@@ -131,14 +131,14 @@ Both the **Copilot Feature Development** and **Copilot Code Improvements** templ
 - Focus on performance, quality, and maintainability
 - Uses grep, glob, and code analysis tools
 - May improve tests and documentation
-- Does NOT use features.md - finds improvements independently
+- Does NOT use TODO.md - finds improvements independently
 
 ### Example Workflow with Copilot - Feature Development
 
 ```bash
 # 1. Create issue using the Copilot Feature Development template
 # 2. Select feature (e.g., "1.1 Spar- und Investitionssystem")
-# 3. GitHub Copilot reads the issue and features.md
+# 3. GitHub Copilot reads the issue and TODO.md
 # 4. Copilot implements following the checklist:
 #    - Phase 1: Core Implementation
 #    - Phase 2: Integration
@@ -173,7 +173,9 @@ Both the **Copilot Feature Development** and **Copilot Code Improvements** templ
 
 ## Features Reference
 
-All features are documented in `features.md` at the repository root. The file contains:
+All features are documented in `FEATURES.md` at the repository root. This file contains comprehensive documentation of all implemented features in the Economic Simulation Framework.
+
+For a list of features to be implemented, see `TODO.md` which contains:
 
 - 🚀 **Neue Features** (New Features)
   - Erweiterte Wirtschaftsmechaniken (Advanced Economic Mechanics)
@@ -194,7 +196,7 @@ All features are documented in `features.md` at the repository root. The file co
 - 🛠️ **Entwickler-Tools** (Developer Tools)
 - 🌍 **Erweiterungen für spezifische Anwendungsfälle** (Extensions for Specific Use Cases)
 
-## Priority Levels (from features.md)
+## Priority Levels (from TODO.md)
 
 ### For New Features (Copilot Feature Development)
 
@@ -255,7 +257,8 @@ When implementing features or improvements:
 ## Additional Resources
 
 - **Project README:** [README.md](../../README.md)
-- **Features List:** [features.md](../../features.md)
+- **Features Documentation:** [FEATURES.md](../../FEATURES.md)
+- **Feature TODO List:** [TODO.md](../../TODO.md)
 - **Copilot Instructions:** [copilot-instructions.md](../copilot-instructions.md)
 - **CI/CD Workflow:** [.github/workflows/rust.yml](../workflows/rust.yml)
 

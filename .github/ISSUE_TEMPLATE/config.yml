@@ -1,8 +1,11 @@
 blank_issues_enabled: true
 contact_links:
-  - name: 📋 Features Documentation
-    url: https://github.com/maorun/community-simulation/blob/master/features.md
-    about: View the complete list of proposed features and improvements
+  - name: 📋 Features TODO List
+    url: https://github.com/maorun/community-simulation/blob/master/TODO.md
+    about: View the list of features to be implemented
+  - name: 📚 Features Documentation
+    url: https://github.com/maorun/community-simulation/blob/master/FEATURES.md
+    about: View comprehensive documentation of all implemented features
   - name: 📖 Project Documentation
     url: https://github.com/maorun/community-simulation/blob/master/README.md
     about: Read the project documentation and user guide

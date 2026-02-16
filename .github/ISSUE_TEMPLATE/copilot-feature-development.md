@@ -1,7 +1,7 @@
 ---
 name: Copilot Feature Development (Auto-Select)
-about: GitHub Copilot autonomously selects and implements a feature from features.md
-title: '[FEATURE] Auto-implement from features.md'
+about: GitHub Copilot autonomously selects and implements a feature from TODO.md
+title: '[FEATURE] Auto-implement from TODO.md'
 labels: ['enhancement', 'copilot', 'auto-implementation']
 assignees: ''
 ---
@@ -12,10 +12,10 @@ assignees: ''
 
 ### Instructions for Copilot
 
-You are tasked with autonomously selecting and implementing a feature from the features.md file. Follow these steps:
+You are tasked with autonomously selecting and implementing a feature from the TODO.md file. Follow these steps:
 
 1. **Feature Selection:**
-   - Review `/home/runner/work/community-simulation/community-simulation/features.md`
+   - Review `/home/runner/work/community-simulation/community-simulation/TODO.md`
    - Select ONE feature to implement based on the following criteria (in priority order):
      a) Features marked as "Hohe Priorität (Quick Wins)" - prioritize these
      b) Features that are simpler and can be implemented with minimal changes
@@ -36,7 +36,7 @@ You are tasked with autonomously selecting and implementing a feature from the f
    - Add documentation (inline doc comments)
 
 4. **After Implementation:**
-   - **CRITICAL: COMPLETELY REMOVE the implemented feature from `features.md`**
+   - **CRITICAL: COMPLETELY REMOVE the implemented feature from `TODO.md`**
      - Do NOT comment it out with `<!-- -->` tags
      - Do NOT mark it as "IMPLEMENTED" 
      - DELETE the entire feature section (title, description, benefits, implementation notes)
@@ -58,7 +58,7 @@ The feature implementation is complete when:
 - [ ] **Code coverage:** Maintains or improves coverage (goal: 100%, minimum: 56%)
 - [ ] Feature tested manually with example run
 - [ ] Documentation added (doc comments for public APIs)
-- [ ] Feature **completely removed** from `features.md` (not commented out, not marked as implemented - DELETED)
+- [ ] Feature **completely removed** from `TODO.md` (not commented out, not marked as implemented - DELETED)
 - [ ] If user-facing: Feature mentioned in `README.md`
 - [ ] No regressions in existing functionality
 
@@ -105,7 +105,7 @@ When implementing features:
 
 **Prioritize features in this order:**
 
-1. **High Priority (Quick Wins) from features.md:**
+1. **High Priority (Quick Wins) from TODO.md:**
    - Logging-System implementieren
    - Erweiterte Tests schreiben
    - Dokumentation vervollständigen
@@ -127,7 +127,7 @@ When implementing features:
 ### Implementation Workflow
 
 1. **Explore & Plan** (use `report_progress` to share your plan)
-   - Read features.md and select ONE feature
+   - Read TODO.md and select ONE feature
    - Review existing code architecture
    - Create implementation checklist
    
@@ -149,7 +149,7 @@ When implementing features:
    - Run `cargo clippy --all-targets --all-features -- -D warnings -A deprecated` (must pass)
    - Add doc comments
    - Update README.md (if user-facing)
-   - **COMPLETELY REMOVE feature from features.md** (delete the entire section, do NOT comment out or mark as "IMPLEMENTED")
+   - **COMPLETELY REMOVE feature from TODO.md** (delete the entire section, do NOT comment out or mark as "IMPLEMENTED")
 
 5. **Validation & Review**
    - Build release: `cargo build --release`
@@ -206,7 +206,7 @@ Even minor changes require full validation to ensure no regressions are introduc
 
 6. **Progress Reporting:** Use `report_progress` tool frequently to commit changes.
 
-7. **Feature Removal:** After successful implementation, **COMPLETELY DELETE** the feature section from `features.md`. Do NOT comment it out with `<!-- -->` tags or mark it as "IMPLEMENTED". Remove all lines of the feature including the heading, description, benefits, and implementation notes. Mention the removal in your commit message.
+7. **Feature Removal:** After successful implementation, **COMPLETELY DELETE** the feature section from `TODO.md`. Do NOT comment it out with `<!-- -->` tags or mark it as "IMPLEMENTED". Remove all lines of the feature including the heading, description, benefits, and implementation notes. Mention the removal in your commit message.
 
 8. **README Update:** If feature is user-facing (new CLI args, new output, changed behavior), add a brief note in README.md.
 
@@ -214,7 +214,7 @@ Even minor changes require full validation to ensure no regressions are introduc
 
 - **Project Architecture:** See `.github/copilot-instructions.md`
 - **Build/Test Commands:** See `.github/copilot-instructions.md`
-- **Feature List:** See `features.md` (select ONE to implement)
+- **Feature List:** See `TODO.md` (select ONE to implement)
 - **Example Implementation:** See `.github/ISSUE_TEMPLATE/EXAMPLE.md`
 
 ### Example Feature Selection
@@ -237,4 +237,4 @@ Selected Feature: 4.4 Geografische Komponente
 
 ---
 
-**Note:** This template enables autonomous feature implementation by Copilot. No manual feature specification is required - Copilot will select and implement a feature from features.md automatically.
+**Note:** This template enables autonomous feature implementation by Copilot. No manual feature specification is required - Copilot will select and implement a feature from TODO.md automatically.

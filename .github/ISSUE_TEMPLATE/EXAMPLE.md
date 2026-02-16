@@ -1,6 +1,6 @@
 # Example: Using the Copilot Feature Development Template
 
-This is an example of how to fill out the Copilot Feature Development template to implement a feature from features.md.
+This is an example of how to fill out the Copilot Feature Development template to implement a feature from TODO.md.
 
 ---
 
@@ -141,7 +141,7 @@ pub struct Person {
 
 - [ ] Update README.md to mention savings and investment system
 - [ ] Add doc comments to all public functions
-- [ ] Update features.md to mark 1.1 as implemented
+- [ ] Update TODO.md to mark 1.1 as implemented
 - [ ] Add example showing how to run simulation with investments enabled
 
 ## Implementation Checklist
@@ -179,7 +179,7 @@ pub struct Person {
 - [ ] Add doc comments to Savings struct
 - [ ] Add doc comments to Investment struct
 - [ ] Update README.md
-- [ ] Update features.md (mark 1.1 as done)
+- [ ] Update TODO.md (mark 1.1 as done)
 
 ### Phase 6: Validation
 - [ ] Build release version: `cargo build --release`
