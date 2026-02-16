@@ -735,6 +735,43 @@ fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Apply social systems configuration overrides from CLI arguments
+fn apply_social_systems_overrides(cfg: &mut SimulationConfig, args: &RunArgs) {
+    if args.enable_friendships {
+        cfg.enable_friendships = true;
+    }
+    if let Some(probability) = args.friendship_probability {
+        cfg.friendship_probability = probability;
+    }
+    if let Some(discount) = args.friendship_discount {
+        cfg.friendship_discount = discount;
+    }
+    if args.enable_credit_rating {
+        cfg.enable_credit_rating = true;
+    }
+    if args.enable_trust_networks {
+        cfg.enable_trust_networks = true;
+    }
+    if args.enable_influence {
+        cfg.enable_influence = true;
+    }
+    if args.enable_trade_agreements {
+        cfg.enable_trade_agreements = true;
+    }
+    if args.enable_voting {
+        cfg.enable_voting = true;
+    }
+    if let Some(rate) = args.voting_participation_rate {
+        cfg.voting_participation_rate = rate;
+    }
+    if let Some(probability) = args.proposal_probability {
+        cfg.proposal_probability = probability;
+    }
+    if let Some(duration) = args.proposal_duration {
+        cfg.proposal_duration = duration;
+    }
+}
+
 /// Run the main simulation
 fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Handle --no-color flag to disable colored output globally
@@ -914,40 +951,8 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             cfg.production_probability = production_prob;
         }
 
-        // Social Systems overrides
-        if args.enable_friendships {
-            cfg.enable_friendships = true;
-        }
-        if let Some(probability) = args.friendship_probability {
-            cfg.friendship_probability = probability;
-        }
-        if let Some(discount) = args.friendship_discount {
-            cfg.friendship_discount = discount;
-        }
-        if args.enable_credit_rating {
-            cfg.enable_credit_rating = true;
-        }
-        if args.enable_trust_networks {
-            cfg.enable_trust_networks = true;
-        }
-        if args.enable_influence {
-            cfg.enable_influence = true;
-        }
-        if args.enable_trade_agreements {
-            cfg.enable_trade_agreements = true;
-        }
-        if args.enable_voting {
-            cfg.enable_voting = true;
-        }
-        if let Some(rate) = args.voting_participation_rate {
-            cfg.voting_participation_rate = rate;
-        }
-        if let Some(probability) = args.proposal_probability {
-            cfg.proposal_probability = probability;
-        }
-        if let Some(duration) = args.proposal_duration {
-            cfg.proposal_duration = duration;
-        }
+        // Apply social systems overrides
+        apply_social_systems_overrides(&mut cfg, &args);
 
         cfg
     } else if let Some(config_path) = &args.config {
@@ -1147,40 +1152,8 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
                 cfg.initial_sick_persons = count;
             }
 
-            // Social Systems overrides
-            if args.enable_friendships {
-                cfg.enable_friendships = true;
-            }
-            if let Some(probability) = args.friendship_probability {
-                cfg.friendship_probability = probability;
-            }
-            if let Some(discount) = args.friendship_discount {
-                cfg.friendship_discount = discount;
-            }
-            if args.enable_credit_rating {
-                cfg.enable_credit_rating = true;
-            }
-            if args.enable_trust_networks {
-                cfg.enable_trust_networks = true;
-            }
-            if args.enable_influence {
-                cfg.enable_influence = true;
-            }
-            if args.enable_trade_agreements {
-                cfg.enable_trade_agreements = true;
-            }
-            if args.enable_voting {
-                cfg.enable_voting = true;
-            }
-            if let Some(rate) = args.voting_participation_rate {
-                cfg.voting_participation_rate = rate;
-            }
-            if let Some(probability) = args.proposal_probability {
-                cfg.proposal_probability = probability;
-            }
-            if let Some(duration) = args.proposal_duration {
-                cfg.proposal_duration = duration;
-            }
+            // Apply social systems overrides
+            apply_social_systems_overrides(cfg, &args);
         })?
     } else {
         // No config file or preset, use CLI arguments or defaults
