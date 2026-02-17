@@ -28,6 +28,7 @@ This framework enables you to simulate and analyze:
 - Transaction history and behavioral patterns
 - **Satisficing Behavior**: Agents can use "good enough" heuristics instead of optimal decision-making (bounded rationality)
 - **Reinforcement Learning**: Agents adapt spending strategies through Q-learning, using epsilon-greedy exploration to balance exploitation vs exploration
+- **Time Preferences (Patience)**: Heterogeneous discount factors model different patience levels - patient agents save more and invest for long-term returns, while impatient agents borrow and focus on immediate consumption
 
 ### Economic Mechanisms
 - **Pricing Scenarios**: Supply/demand, dynamic, adaptive, auction, climate change
