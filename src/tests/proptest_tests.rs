@@ -21,7 +21,7 @@ mod proptests {
         )| {
             let skill = Skill::new("TestSkill".to_string(), 10.0);
             let location = crate::person::Location::new(50.0, 50.0);
-            let mut person = Person::new(0, initial_money, vec![skill], Strategy::Balanced, location);
+            let mut person = Person::new(0, initial_money, vec![skill], Strategy::Balanced, location, 0.95);
 
             // Apply seller reputation increases
             for _ in 0..seller_increases {
@@ -53,7 +53,7 @@ mod proptests {
         )| {
             let skill = Skill::new("TestSkill".to_string(), 10.0);
             let location = crate::person::Location::new(50.0, 50.0);
-            let person = Person::new(0, money, vec![skill], Strategy::Balanced, location);
+            let person = Person::new(0, money, vec![skill], Strategy::Balanced, location, 0.95);
 
             let can_afford = person.can_afford(amount);
 
@@ -146,7 +146,7 @@ mod proptests {
         )| {
             let skill = Skill::new("TestSkill".to_string(), 10.0);
             let location = crate::person::Location::new(50.0, 50.0);
-            let mut person = Person::new(0, initial_money, vec![skill.clone()], Strategy::Balanced, location);
+            let mut person = Person::new(0, initial_money, vec![skill.clone()], Strategy::Balanced, location, 0.95);
 
             let skill_id = skill.id.clone();
             person.record_transaction(
