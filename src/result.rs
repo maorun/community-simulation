@@ -5311,7 +5311,7 @@ mod tests {
         for i in 0..5 {
             let skill = Skill::new(format!("Skill{}", i), 10.0);
             let location = crate::person::Location::new(50.0, 50.0);
-            entities.push(Entity::new(i, 100.0, vec![skill], Strategy::Balanced, location));
+            entities.push(Entity::new(i, 100.0, vec![skill], Strategy::Balanced, location, 0.95));
         }
 
         // Add transactions to simulate trades

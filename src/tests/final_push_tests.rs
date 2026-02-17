@@ -501,6 +501,7 @@ fn test_person_transaction_history_comprehensive() {
         vec![skill1.clone()],
         Strategy::Conservative,
         Location::new(0.0, 0.0),
+        0.95,
     );
 
     // Add various transaction types

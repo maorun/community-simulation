@@ -138,14 +138,7 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 **Implementierung:** Risiko-Parameter (risk_aversion coefficient), beeinflusst Utility-Berechnung bei unsicheren Outcomes.
 
-#### 4.4 Geduld & Zeitpräferenzen
-**Beschreibung:** Verschiedene Diskontierungsraten für zukünftige Belohnungen - manche sehr ungeduldig, andere geduldig und langfristig orientiert.
-
-**Nutzen:** Sparquoten, Bildungsinvestitionen, Kreditaufnahme-Entscheidungen, Altersvorsorge.
-
-**Implementierung:** Discount-Faktor als Persönlichkeitsmerkmal, beeinflusst intertemporale Entscheidungen.
-
-#### 4.5 Emotionale & irrationale Strategien
+#### 4.4 Emotionale & irrationale Strategien
 **Beschreibung:** Panik-Verkäufe bei Krisen, FOMO (Fear of Missing Out) bei Booms, Rache-Verhalten nach schlechten Erfahrungen.
 
 **Nutzen:** Blasenbildung und Crashes, herding behavior, emotional-getriebene Volatilität.

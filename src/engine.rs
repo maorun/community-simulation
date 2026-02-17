@@ -747,8 +747,31 @@ impl SimulationEngine {
                 rng.random_range(0.0..=100.0),
             );
 
-            let mut entity =
-                Entity::new(i, config.initial_money_per_person, person_skills, strategy, location);
+            // Generate discount factor (time preference) for this person
+            let discount_factor = if config.enable_time_preferences {
+                // Sample from normal distribution with configured mean and std_dev
+                use rand_distr::{Distribution, Normal};
+                let normal =
+                    Normal::new(config.time_preference_mean, config.time_preference_std_dev)
+                        .unwrap_or_else(|_| {
+                            // Fallback if distribution parameters are invalid
+                            Normal::new(0.90, 0.10).unwrap()
+                        });
+                // Clamp to valid range [0.3, 0.99] to avoid extreme values
+                normal.sample(rng).clamp(0.3, 0.99)
+            } else {
+                // Default: moderately patient (0.95)
+                0.95
+            };
+
+            let mut entity = Entity::new(
+                i,
+                config.initial_money_per_person,
+                person_skills,
+                strategy,
+                location,
+                discount_factor,
+            );
 
             // Assign specialization strategy if enabled
             if config.enable_specialization {

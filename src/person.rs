@@ -469,23 +469,21 @@ impl StrategyParameters {
 
     /// Applies a Q-learning style update to the adjustment factor.
     ///
-    /// Uses a simplified TD-learning approach where we update based on the reward change:
-    /// `adjustment_factor += learning_rate * (reward - previous_reward)`
-    ///
-    /// Note: This is a simplified implementation that doesn't use the discount factor.
-    /// The discount factor parameter is reserved for future enhancements when we
-    /// implement multi-step lookahead or value function estimation.
+    /// Uses temporal difference (TD) learning to update the adjustment factor based on
+    /// the reward change over time. The discount factor influences the magnitude of updates
+    /// for agents with different time preferences.
     ///
     /// The adjustment factor is clamped to stay within reasonable bounds (0.1-2.0).
     ///
     /// # Arguments
     /// * `reward` - Current reward signal (typically based on wealth growth)
     /// * `learning_rate` - Step size for learning (alpha in Q-learning)
-    /// * `_discount_factor` - Reserved for future use (not used in current simplified implementation)
-    pub fn apply_rl_update(&mut self, reward: f64, learning_rate: f64, _discount_factor: f64) {
-        // Calculate TD error: reward + gamma * next_reward - previous_reward
-        // For simplicity, we use reward difference as the update signal
-        let td_error = reward - self.previous_reward;
+    /// * `discount_factor` - Time preference (gamma), influences update magnitude (0.0-1.0)
+    pub fn apply_rl_update(&mut self, reward: f64, learning_rate: f64, discount_factor: f64) {
+        // Calculate TD error as change in reward
+        // Patient agents (high discount_factor) give more weight to consistent rewards
+        // Impatient agents (low discount_factor) focus more on immediate changes
+        let td_error = (reward - self.previous_reward) * (1.0 + discount_factor);
 
         // Q-learning update: adjust the adjustment_factor based on TD error
         let update = learning_rate * td_error;
@@ -726,6 +724,22 @@ pub struct Person {
     /// Used for currency conversion during inter-currency trades.
     #[serde(default = "default_currency_id")]
     pub currency_id: String,
+    /// Time preference discount factor (0.0-1.0) representing patience level.
+    ///
+    /// Determines how much this person values future rewards versus immediate rewards:
+    /// - **High values (0.9-1.0)**: Patient, long-term oriented, willing to invest and save
+    /// - **Medium values (0.7-0.9)**: Balanced time preferences
+    /// - **Low values (0.0-0.7)**: Impatient, present-focused, prefer immediate consumption
+    ///
+    /// The discount factor is used in intertemporal decision-making:
+    /// - Reinforcement learning: Values future rewards as `discount_factor * future_value`
+    /// - Savings decisions: Higher discount factor → higher propensity to save
+    /// - Investment decisions: Patient persons more likely to invest for long-term returns
+    /// - Loan decisions: Impatient persons more likely to borrow for immediate needs
+    ///
+    /// Valid range: 0.0 to 1.0 (0% to 100% valuation of future rewards)
+    /// Default: 0.95 (moderately patient)
+    pub discount_factor: f64,
 }
 
 impl Person {
@@ -737,12 +751,14 @@ impl Person {
     /// * `own_skills` - Vector of skills this person can provide
     /// * `strategy` - Behavioral strategy for spending decisions
     /// * `location` - Geographic location of this person
+    /// * `discount_factor` - Time preference (0.0-1.0, default 0.95 if not specified)
     pub fn new(
         id: PersonId,
         initial_money: f64,
         own_skills: Vec<Skill>,
         strategy: Strategy,
         location: Location,
+        discount_factor: f64,
     ) -> Self {
         Person {
             id,
@@ -774,6 +790,7 @@ impl Person {
             owned_assets: Vec::new(),             // Start with no assets
             market_segment: MarketSegment::default(), // Start with Mittelklasse segment (will be updated based on wealth)
             currency_id: default_currency_id(),       // Start with base currency
+            discount_factor: discount_factor.clamp(0.0, 1.0), // Clamp to valid range
         }
     }
 
@@ -915,6 +932,79 @@ impl Person {
         amount_to_save
     }
 
+    /// Calculates the present value of a future reward using this person's discount factor.
+    ///
+    /// The discount factor represents time preference (patience):
+    /// - Patient persons (high discount factor) value future rewards more
+    /// - Impatient persons (low discount factor) heavily discount future rewards
+    ///
+    /// # Arguments
+    /// * `future_value` - The value of the reward in the future
+    /// * `time_steps` - Number of steps in the future
+    ///
+    /// # Returns
+    /// The present value of the future reward: `future_value * discount_factor^time_steps`
+    ///
+    /// # Examples
+    /// ```
+    /// use community_simulation::person::{Person, Strategy, Location};
+    /// use community_simulation::skill::Skill;
+    ///
+    /// let person = Person::new(0, 100.0, vec![], Strategy::Balanced, Location::new(0.0, 0.0), 0.9);
+    ///
+    /// // Patient person (0.9 discount factor) values 100.0 in 5 steps
+    /// let present_value = person.discount_future_value(100.0, 5);
+    /// assert!((present_value - 59.049).abs() < 0.01); // 100 * 0.9^5 ≈ 59.05
+    /// ```
+    pub fn discount_future_value(&self, future_value: f64, time_steps: usize) -> f64 {
+        future_value * self.discount_factor.powi(time_steps as i32)
+    }
+
+    /// Determines the propensity to save based on discount factor.
+    ///
+    /// More patient persons (higher discount factor) have higher propensity to save.
+    /// This can be used to modify the effective savings rate for this person.
+    ///
+    /// # Returns
+    /// A multiplier (0.0-2.0) to adjust savings behavior:
+    /// - Low discount factor (0.5): Returns 1.0 (normal savings)
+    /// - Medium discount factor (0.9): Returns 1.8 (save more)
+    /// - High discount factor (0.99): Returns 1.98 (save much more)
+    pub fn savings_propensity_multiplier(&self) -> f64 {
+        // Linear mapping: discount_factor 0.0->0.0, 0.5->1.0, 1.0->2.0
+        self.discount_factor * 2.0
+    }
+
+    /// Determines the propensity to invest based on discount factor.
+    ///
+    /// More patient persons (higher discount factor) are more willing to invest
+    /// for long-term returns, while impatient persons prefer immediate consumption.
+    ///
+    /// # Returns
+    /// A score (0.0-1.0) representing investment propensity:
+    /// - Low discount factor (0.5): Returns 0.25 (low propensity)
+    /// - Medium discount factor (0.9): Returns 0.81 (high propensity)
+    /// - High discount factor (0.99): Returns 0.98 (very high propensity)
+    pub fn investment_propensity(&self) -> f64 {
+        // Quadratic relationship emphasizes patience for long-term investments
+        self.discount_factor * self.discount_factor
+    }
+
+    /// Determines the propensity to borrow based on discount factor.
+    ///
+    /// More impatient persons (lower discount factor) are more willing to borrow
+    /// to satisfy immediate consumption needs, while patient persons avoid debt.
+    ///
+    /// # Returns
+    /// A score (0.0-1.0) representing borrowing propensity:
+    /// - Low discount factor (0.5): Returns 0.75 (high propensity to borrow)
+    /// - Medium discount factor (0.9): Returns 0.19 (low propensity to borrow)
+    /// - High discount factor (0.99): Returns 0.02 (very low propensity to borrow)
+    pub fn borrowing_propensity(&self) -> f64 {
+        // Inverse relationship: impatient persons borrow more
+        1.0 - self.discount_factor * self.discount_factor
+    }
+
     /// Adds a friend to this person's friend list.
     /// Friendship is not automatically bidirectional - both persons must add each other.
     pub fn add_friend(&mut self, friend_id: PersonId) {
@@ -968,7 +1058,7 @@ impl Person {
     /// use community_simulation::person::{Person, Strategy, Location, SocialClass};
     /// use community_simulation::skill::Skill;
     ///
-    /// let mut person = Person::new(1, 100.0, vec![Skill::new("Test".to_string(), 10.0)], Strategy::Balanced, Location::new(0.0, 0.0));
+    /// let mut person = Person::new(1, 100.0, vec![Skill::new("Test".to_string(), 10.0)], Strategy::Balanced, Location::new(0.0, 0.0), 0.95);
     /// person.update_social_class(0.5, 100); // Middle class at 50th percentile
     /// assert_eq!(person.social_class, SocialClass::Middle);
     /// assert_eq!(person.class_history.len(), 0); // No change recorded (started as Middle)
@@ -1106,6 +1196,10 @@ mod tests {
     // Helper function for tests - creates a default test location
     fn test_location() -> Location {
         Location::new(50.0, 50.0)
+    }
+
+    fn test_discount_factor() -> f64 {
+        0.95 // Default moderately patient discount factor for tests
     }
 
     #[test]
@@ -1251,7 +1345,14 @@ mod tests {
     #[test]
     fn test_person_market_segment_initialization() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
         assert_eq!(
             person.market_segment,
             MarketSegment::default(),
@@ -1262,14 +1363,28 @@ mod tests {
     #[test]
     fn test_person_reputation_initialization() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
         assert_eq!(person.reputation, 1.0, "Reputation should start at 1.0");
     }
 
     #[test]
     fn test_increase_reputation_as_seller() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.increase_reputation_as_seller();
         assert_eq!(person.reputation, 1.01, "Reputation should increase by 0.01");
@@ -1284,7 +1399,14 @@ mod tests {
     #[test]
     fn test_increase_reputation_as_buyer() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.increase_reputation_as_buyer();
         assert_eq!(person.reputation, 1.005, "Reputation should increase by 0.005");
@@ -1299,7 +1421,14 @@ mod tests {
     #[test]
     fn test_reputation_decay_above_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
         person.reputation = 1.5;
 
         person.apply_reputation_decay();
@@ -1314,7 +1443,14 @@ mod tests {
     #[test]
     fn test_reputation_decay_below_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
         person.reputation = 0.5;
 
         person.apply_reputation_decay();
@@ -1332,7 +1468,14 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_neutral() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
         let multiplier = person.reputation_price_multiplier();
         assert_eq!(multiplier, 1.0, "Neutral reputation should have no price effect");
     }
@@ -1340,7 +1483,14 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_high() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
         person.reputation = 2.0; // Maximum reputation
 
         let multiplier = person.reputation_price_multiplier();
@@ -1350,7 +1500,14 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_low() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
         person.reputation = 0.5;
 
         let multiplier = person.reputation_price_multiplier();
@@ -1366,7 +1523,14 @@ mod tests {
     #[test]
     fn test_reputation_price_multiplier_clamping() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Test extreme high reputation
         person.reputation = 10.0;
@@ -1382,7 +1546,14 @@ mod tests {
     #[test]
     fn test_savings_basic() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Test 10% savings rate
         let saved = person.apply_savings(0.1);
@@ -1400,7 +1571,14 @@ mod tests {
     #[test]
     fn test_savings_zero_rate() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let saved = person.apply_savings(0.0);
         assert_eq!(saved, 0.0, "Should save nothing with 0% rate");
@@ -1411,7 +1589,14 @@ mod tests {
     #[test]
     fn test_savings_negative_money() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, -10.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            -10.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let saved = person.apply_savings(0.1);
         assert_eq!(saved, 0.0, "Should not save with negative money");
@@ -1422,7 +1607,14 @@ mod tests {
     #[test]
     fn test_savings_full_amount() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let saved = person.apply_savings(1.0);
         assert_eq!(saved, 100.0, "Should save 100% (all money)");
@@ -1446,7 +1638,14 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_conservative() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Conservative, test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Conservative,
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Conservative has 0.7x multiplier, so with $100 can afford up to $70
         assert!(person.can_afford_with_strategy(70.0));
@@ -1458,7 +1657,14 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_balanced() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Balanced,
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Balanced has 1.0x multiplier, so with $100 can afford up to $100
         assert!(person.can_afford_with_strategy(100.0));
@@ -1469,7 +1675,14 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_aggressive() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive, test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Aggressive,
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Aggressive has 1.3x multiplier, so with $100 can afford up to $130
         assert!(person.can_afford_with_strategy(130.0));
@@ -1480,7 +1693,14 @@ mod tests {
     #[test]
     fn test_can_afford_with_strategy_frugal() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Frugal, test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Frugal,
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Frugal has 0.5x multiplier, so with $100 can afford up to $50
         assert!(person.can_afford_with_strategy(50.0));
@@ -1492,7 +1712,14 @@ mod tests {
     #[test]
     fn test_person_has_strategy_field() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive, test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Aggressive,
+            test_location(),
+            test_discount_factor(),
+        );
 
         assert_eq!(person.strategy, Strategy::Aggressive);
     }
@@ -1500,8 +1727,14 @@ mod tests {
     #[test]
     fn test_learn_skill_success() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person =
-            Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let new_skill = Skill::new("NewSkill".to_string(), 15.0);
         let learning_cost = 30.0;
@@ -1517,8 +1750,14 @@ mod tests {
     #[test]
     fn test_learn_skill_cannot_afford() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person =
-            Person::new(1, 50.0, vec![own_skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            50.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let new_skill = Skill::new("ExpensiveSkill".to_string(), 15.0);
         let learning_cost = 100.0; // More than person has
@@ -1533,8 +1772,14 @@ mod tests {
     #[test]
     fn test_learn_skill_already_has_as_own_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person =
-            Person::new(1, 100.0, vec![own_skill.clone()], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill.clone()],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let learning_cost = 30.0;
         let result = person.learn_skill(own_skill, learning_cost);
@@ -1547,8 +1792,14 @@ mod tests {
     #[test]
     fn test_learn_skill_already_learned() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person =
-            Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let new_skill = Skill::new("NewSkill".to_string(), 15.0);
         let learning_cost = 20.0;
@@ -1571,7 +1822,14 @@ mod tests {
     #[test]
     fn test_has_skill_with_own_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         assert!(person.has_skill(&"OwnSkill".to_string()), "Should have OwnSkill as own_skill");
         assert!(!person.has_skill(&"OtherSkill".to_string()), "Should not have OtherSkill");
@@ -1580,8 +1838,14 @@ mod tests {
     #[test]
     fn test_has_skill_with_learned_skill() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person =
-            Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let learned_skill = Skill::new("LearnedSkill".to_string(), 15.0);
         person.learn_skill(learned_skill, 30.0);
@@ -1596,8 +1860,14 @@ mod tests {
     #[test]
     fn test_all_skills() {
         let own_skill = Skill::new("OwnSkill".to_string(), 10.0);
-        let mut person =
-            Person::new(1, 100.0, vec![own_skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![own_skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let learned_skill1 = Skill::new("LearnedSkill1".to_string(), 15.0);
         let learned_skill2 = Skill::new("LearnedSkill2".to_string(), 20.0);
@@ -1616,7 +1886,14 @@ mod tests {
     #[test]
     fn test_strategy_parameters_initialization() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         assert_eq!(person.strategy_params.initial_money, 100.0);
         assert_eq!(person.strategy_params.previous_money, 100.0);
@@ -1629,7 +1906,14 @@ mod tests {
     #[test]
     fn test_strategy_params_growth_rate_calculation() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Simulate wealth growth
         person.money = 110.0; // 10% growth
@@ -1647,7 +1931,14 @@ mod tests {
     #[test]
     fn test_strategy_adaptation_positive_growth() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Balanced,
+            test_location(),
+            test_discount_factor(),
+        );
         let mut rng = rand::rngs::StdRng::seed_from_u64(0); // Deterministic RNG that avoids exploration
 
         // Simulate wealth growth
@@ -1667,7 +1958,14 @@ mod tests {
     #[test]
     fn test_strategy_adaptation_negative_growth() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Balanced,
+            test_location(),
+            test_discount_factor(),
+        );
         let mut rng = rand::rngs::StdRng::seed_from_u64(0); // Deterministic RNG
 
         // Simulate wealth decline
@@ -1687,7 +1985,14 @@ mod tests {
     #[test]
     fn test_strategy_no_adaptation_small_change() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Balanced,
+            test_location(),
+            test_discount_factor(),
+        );
         let mut rng = rand::rngs::StdRng::seed_from_u64(0);
 
         // Simulate very small wealth change (less than 1%)
@@ -1706,7 +2011,14 @@ mod tests {
     #[test]
     fn test_strategy_adjustment_bounds() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Balanced,
+            test_location(),
+            test_discount_factor(),
+        );
         let mut rng = rand::rngs::StdRng::seed_from_u64(0);
 
         // Simulate extreme wealth growth multiple times
@@ -1730,7 +2042,14 @@ mod tests {
     #[test]
     fn test_can_afford_with_adjusted_strategy() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Balanced,
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Initially with adjustment_factor = 1.0, Balanced strategy (1.0x multiplier)
         // Can afford up to 100.0 * 1.0 * 1.0 = 100.0
@@ -1748,7 +2067,14 @@ mod tests {
     #[test]
     fn test_record_successful_trades() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Initially no trades
         assert_eq!(person.strategy_params.total_successful_trades(), 0);
@@ -1818,7 +2144,14 @@ mod tests {
     #[test]
     fn test_person_specialization_strategy_initialization() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
         assert_eq!(
             person.specialization_strategy,
             SpecializationStrategy::default(),
@@ -1829,7 +2162,14 @@ mod tests {
     #[test]
     fn test_can_afford_basic() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         assert!(person.can_afford(100.0));
         assert!(person.can_afford(50.0));
@@ -1841,7 +2181,14 @@ mod tests {
     #[test]
     fn test_can_afford_negative_money() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, -50.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            -50.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         assert!(!person.can_afford(0.0));
         assert!(!person.can_afford(10.0));
@@ -1850,7 +2197,14 @@ mod tests {
     #[test]
     fn test_record_transaction_buy() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.record_transaction(10, "SomeSkill".to_string(), TransactionType::Buy, 25.0, Some(2));
 
@@ -1864,7 +2218,14 @@ mod tests {
     #[test]
     fn test_record_transaction_sell() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.record_transaction(
             15,
@@ -1884,7 +2245,14 @@ mod tests {
     #[test]
     fn test_record_multiple_transactions() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.record_transaction(1, "Skill1".to_string(), TransactionType::Buy, 10.0, Some(2));
         person.record_transaction(2, "Skill2".to_string(), TransactionType::Sell, 20.0, Some(3));
@@ -1896,7 +2264,14 @@ mod tests {
     #[test]
     fn test_is_healthy_default() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         assert!(person.is_healthy());
         assert!(!person.is_sick());
@@ -1905,7 +2280,14 @@ mod tests {
     #[test]
     fn test_infect_person() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.infect(50);
 
@@ -1920,7 +2302,14 @@ mod tests {
     #[test]
     fn test_try_recover_success() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.infect(10);
         assert!(person.is_sick());
@@ -1940,7 +2329,14 @@ mod tests {
     #[test]
     fn test_try_recover_after_duration() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.infect(10);
 
@@ -1953,7 +2349,14 @@ mod tests {
     #[test]
     fn test_try_recover_when_healthy() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Person is healthy, try_recover should return false
         let recovered = person.try_recover(100, 5);
@@ -1964,7 +2367,14 @@ mod tests {
     #[test]
     fn test_health_productivity_multiplier_healthy() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         assert_eq!(person.health_productivity_multiplier(), 1.0);
     }
@@ -1972,7 +2382,14 @@ mod tests {
     #[test]
     fn test_health_productivity_multiplier_sick() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.infect(10);
         assert_eq!(person.health_productivity_multiplier(), 0.5);
@@ -1981,7 +2398,14 @@ mod tests {
     #[test]
     fn test_add_friend() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         assert_eq!(person.friend_count(), 0);
         assert!(!person.is_friend_with(2));
@@ -1996,7 +2420,14 @@ mod tests {
     #[test]
     fn test_add_multiple_friends() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.add_friend(2);
         person.add_friend(3);
@@ -2012,7 +2443,14 @@ mod tests {
     #[test]
     fn test_add_friend_duplicate() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.add_friend(2);
         person.add_friend(2); // Add same friend again
@@ -2063,7 +2501,14 @@ mod tests {
     #[test]
     fn test_update_influence_score() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Initially 0 friends
         person.update_influence_score();
@@ -2087,7 +2532,14 @@ mod tests {
     #[test]
     fn test_update_social_class_no_change() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Person starts as Middle class (default)
         assert_eq!(person.social_class, SocialClass::Middle);
@@ -2102,7 +2554,14 @@ mod tests {
     #[test]
     fn test_update_social_class_upward() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Person starts as Middle class
         assert_eq!(person.social_class, SocialClass::Middle);
@@ -2122,7 +2581,14 @@ mod tests {
     #[test]
     fn test_update_social_class_downward() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Start as Middle class, update to Lower
         person.update_social_class(0.15, 50);
@@ -2136,7 +2602,14 @@ mod tests {
     #[test]
     fn test_update_social_class_multiple_changes() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         person.update_social_class(0.85, 10); // Move to Upper
         person.update_social_class(0.97, 20); // Move to Elite
@@ -2149,7 +2622,14 @@ mod tests {
     #[test]
     fn test_get_effective_spending_multiplier() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Aggressive, test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Aggressive,
+            test_location(),
+            test_discount_factor(),
+        );
 
         // Initial: Aggressive (1.3) * adjustment_factor (1.0) = 1.3
         let multiplier = person.get_effective_spending_multiplier();
@@ -2344,7 +2824,7 @@ mod tests {
     fn test_person_initialization_all_fields() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
         let location = Location::new(25.0, 75.0);
-        let person = Person::new(1, 100.0, vec![skill], Strategy::Conservative, location);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::Conservative, location, 0.95);
 
         assert_eq!(person.id, 1);
         assert_eq!(person.money, 100.0);
@@ -2385,6 +2865,7 @@ mod tests {
             vec![skill1, skill2, skill3],
             Strategy::default(),
             test_location(),
+            test_discount_factor(),
         );
 
         assert_eq!(person.own_skills.len(), 3);
@@ -2394,7 +2875,14 @@ mod tests {
     #[test]
     fn test_strategy_adaptation_exploration() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::Balanced, test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::Balanced,
+            test_location(),
+            test_discount_factor(),
+        );
         let mut rng = rand::rngs::StdRng::seed_from_u64(42);
 
         let _initial_factor = person.strategy_params.adjustment_factor;
@@ -2410,11 +2898,247 @@ mod tests {
     #[test]
     fn test_savings_negative_rate() {
         let skill = Skill::new("TestSkill".to_string(), 10.0);
-        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location());
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![skill],
+            Strategy::default(),
+            test_location(),
+            test_discount_factor(),
+        );
 
         let saved = person.apply_savings(-0.1);
         assert_eq!(saved, 0.0, "Should not save with negative rate");
         assert_eq!(person.money, 100.0);
         assert_eq!(person.savings, 0.0);
+    }
+
+    // ============== Time Preferences Tests ==============
+
+    #[test]
+    fn test_discount_factor_initialization() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location(), 0.85);
+
+        assert_eq!(person.discount_factor, 0.85);
+    }
+
+    #[test]
+    fn test_discount_factor_clamping() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+
+        // Test upper bound clamping
+        let person_high =
+            Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 1.5);
+        assert_eq!(person_high.discount_factor, 1.0, "Discount factor should be clamped to 1.0");
+
+        // Test lower bound clamping
+        let person_low =
+            Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), -0.3);
+        assert_eq!(person_low.discount_factor, 0.0, "Discount factor should be clamped to 0.0");
+    }
+
+    #[test]
+    fn test_discount_future_value_basic() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location(), 0.9);
+
+        // Test discounting 100 units 1 step in the future
+        let present_value = person.discount_future_value(100.0, 1);
+        assert!((present_value - 90.0).abs() < 0.01, "100 * 0.9^1 should be 90");
+
+        // Test discounting 100 units 5 steps in the future
+        let present_value_5 = person.discount_future_value(100.0, 5);
+        let expected = 100.0 * 0.9_f64.powi(5);
+        assert!((present_value_5 - expected).abs() < 0.01, "100 * 0.9^5 should be ~59.05");
+    }
+
+    #[test]
+    fn test_discount_future_value_patient_vs_impatient() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+
+        // Patient person (high discount factor)
+        let patient =
+            Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.95);
+
+        // Impatient person (low discount factor)
+        let impatient =
+            Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.5);
+
+        // Both evaluate 100 units 10 steps in the future
+        let patient_value = patient.discount_future_value(100.0, 10);
+        let impatient_value = impatient.discount_future_value(100.0, 10);
+
+        assert!(
+            patient_value > impatient_value,
+            "Patient person should value future rewards more"
+        );
+        assert!(patient_value > 50.0, "Patient person should value future highly");
+        assert!(impatient_value < 10.0, "Impatient person should heavily discount future");
+    }
+
+    #[test]
+    fn test_savings_propensity_multiplier() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+
+        // Very impatient (0.5)
+        let impatient =
+            Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.5);
+
+        // Very patient (0.95)
+        let patient =
+            Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.95);
+
+        let impatient_propensity = impatient.savings_propensity_multiplier();
+        let patient_propensity = patient.savings_propensity_multiplier();
+
+        assert_eq!(impatient_propensity, 1.0, "Impatient person (0.5) should have 1.0 multiplier");
+        assert_eq!(patient_propensity, 1.9, "Patient person (0.95) should have 1.9 multiplier");
+        assert!(patient_propensity > impatient_propensity, "Patient person should save more");
+    }
+
+    #[test]
+    fn test_investment_propensity() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+
+        // Very impatient (0.5)
+        let impatient =
+            Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.5);
+
+        // Very patient (0.9)
+        let patient = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.9);
+
+        let impatient_investment = impatient.investment_propensity();
+        let patient_investment = patient.investment_propensity();
+
+        // Investment propensity is discount_factor squared
+        assert!((impatient_investment - 0.25).abs() < 0.01, "0.5^2 = 0.25");
+        assert!((patient_investment - 0.81).abs() < 0.01, "0.9^2 = 0.81");
+        assert!(
+            patient_investment > impatient_investment,
+            "Patient person more likely to invest"
+        );
+    }
+
+    #[test]
+    fn test_borrowing_propensity() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+
+        // Very impatient (0.5)
+        let impatient =
+            Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.5);
+
+        // Very patient (0.9)
+        let patient = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.9);
+
+        let impatient_borrowing = impatient.borrowing_propensity();
+        let patient_borrowing = patient.borrowing_propensity();
+
+        // Borrowing propensity is 1 - discount_factor^2
+        assert!((impatient_borrowing - 0.75).abs() < 0.01, "1 - 0.5^2 = 0.75");
+        assert!((patient_borrowing - 0.19).abs() < 0.01, "1 - 0.9^2 = 0.19");
+        assert!(
+            impatient_borrowing > patient_borrowing,
+            "Impatient person more likely to borrow"
+        );
+    }
+
+    #[test]
+    fn test_time_preference_extremes() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+
+        // Extremely patient (close to 1.0)
+        let very_patient =
+            Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.99);
+
+        // Extremely impatient (close to 0.0)
+        let very_impatient =
+            Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.01);
+
+        // Check savings propensity
+        assert!(very_patient.savings_propensity_multiplier() > 1.9);
+        assert!(very_impatient.savings_propensity_multiplier() < 0.1);
+
+        // Check investment propensity
+        assert!(very_patient.investment_propensity() > 0.95);
+        assert!(very_impatient.investment_propensity() < 0.01);
+
+        // Check borrowing propensity
+        assert!(very_patient.borrowing_propensity() < 0.05);
+        assert!(very_impatient.borrowing_propensity() > 0.95);
+    }
+
+    #[test]
+    fn test_discount_factor_zero_steps() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location(), 0.8);
+
+        // Discounting 0 steps in the future should return the original value
+        let present_value = person.discount_future_value(100.0, 0);
+        assert_eq!(present_value, 100.0, "0 steps should not discount");
+    }
+
+    #[test]
+    fn test_rl_update_with_discount_factor() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person =
+            Person::new(1, 100.0, vec![skill], Strategy::default(), test_location(), 0.9);
+
+        // Initial adjustment factor should be 1.0
+        assert_eq!(person.strategy_params.adjustment_factor, 1.0);
+
+        // Apply RL update with positive reward
+        person.strategy_params.apply_rl_update(0.1, 0.1, person.discount_factor);
+
+        // Adjustment factor should increase (because reward is positive and discounted future is positive)
+        assert!(
+            person.strategy_params.adjustment_factor > 1.0,
+            "Positive reward should increase adjustment"
+        );
+
+        // Apply RL update with negative reward
+        person.strategy_params.apply_rl_update(-0.2, 0.1, person.discount_factor);
+
+        // Adjustment factor should decrease (because reward is negative)
+        assert!(
+            person.strategy_params.adjustment_factor < 1.1,
+            "Negative reward should decrease adjustment"
+        );
+    }
+
+    #[test]
+    fn test_rl_discount_factor_effect() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+
+        // Patient person (high discount factor = values future more)
+        let mut patient =
+            Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.95);
+
+        // Impatient person (low discount factor = values future less)
+        let mut impatient =
+            Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.3);
+
+        // Same reward, but different discount factors
+        let reward = 0.1;
+        let learning_rate = 0.1;
+
+        let patient_before = patient.strategy_params.adjustment_factor;
+        let impatient_before = impatient.strategy_params.adjustment_factor;
+
+        patient
+            .strategy_params
+            .apply_rl_update(reward, learning_rate, patient.discount_factor);
+        impatient
+            .strategy_params
+            .apply_rl_update(reward, learning_rate, impatient.discount_factor);
+
+        let patient_change = patient.strategy_params.adjustment_factor - patient_before;
+        let impatient_change = impatient.strategy_params.adjustment_factor - impatient_before;
+
+        // Patient person should update more (higher discount factor means bigger update)
+        assert!(
+            patient_change > impatient_change,
+            "Patient person should have larger update due to higher discount factor"
+        );
     }
 }

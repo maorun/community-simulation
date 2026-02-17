@@ -913,6 +913,46 @@ pub struct SimulationConfig {
     #[serde(default = "default_rl_reward_failure_multiplier")]
     pub rl_reward_failure_multiplier: f64,
 
+    /// Enable heterogeneous time preferences (patience levels) for persons.
+    ///
+    /// When enabled, each person is assigned a discount factor representing their
+    /// patience level (time preference). This affects intertemporal decisions:
+    /// - Savings: Patient persons save more
+    /// - Investments: Patient persons invest more for long-term returns
+    /// - Loans: Impatient persons are more likely to borrow
+    /// - RL updates: Discount factor affects how future rewards are valued
+    ///
+    /// When disabled, all persons use the default discount factor (0.95).
+    /// Set to true to enable diverse time preferences (default: false).
+    #[serde(default)]
+    pub enable_time_preferences: bool,
+
+    /// Mean discount factor for person time preferences (0.0-1.0).
+    ///
+    /// Controls the average patience level across the population:
+    /// - High values (0.9-0.99): Patient, long-term oriented population
+    /// - Medium values (0.7-0.9): Balanced time preferences
+    /// - Low values (0.3-0.7): Impatient, present-focused population
+    ///
+    /// When enable_time_preferences is true, individual discount factors are
+    /// sampled from a distribution centered on this mean.
+    /// Default: 0.90 (moderately patient population)
+    #[serde(default = "default_time_preference_mean")]
+    pub time_preference_mean: f64,
+
+    /// Standard deviation for discount factor distribution (0.0-0.3).
+    ///
+    /// Controls the heterogeneity of patience levels in the population:
+    /// - Low values (0.05): Homogeneous population, similar time preferences
+    /// - Medium values (0.1): Moderate diversity in patience
+    /// - High values (0.15+): Highly diverse, from very impatient to very patient
+    ///
+    /// Discount factors are sampled from a normal distribution and clamped to [0.3, 0.99].
+    /// Only used when enable_time_preferences is true.
+    /// Default: 0.10 (moderate diversity)
+    #[serde(default = "default_time_preference_std_dev")]
+    pub time_preference_std_dev: f64,
+
     /// Enable friendship system where persons can form social bonds.
     ///
     /// When enabled, persons who successfully trade together have a chance to become friends.
@@ -2058,6 +2098,14 @@ fn default_rl_reward_failure_multiplier() -> f64 {
     0.5 // Moderate penalty
 }
 
+fn default_time_preference_mean() -> f64 {
+    0.90 // Moderately patient population
+}
+
+fn default_time_preference_std_dev() -> f64 {
+    0.10 // Moderate diversity in time preferences
+}
+
 fn default_friendship_probability() -> f64 {
     0.1 // 10% chance per successful trade
 }
@@ -2211,6 +2259,9 @@ impl Default for SimulationConfig {
             rl_epsilon_decay: default_rl_epsilon_decay(),                // 0.995
             rl_reward_success_multiplier: default_rl_reward_success_multiplier(), // 1.0
             rl_reward_failure_multiplier: default_rl_reward_failure_multiplier(), // 0.5
+            enable_time_preferences: false,                              // Disabled by default
+            time_preference_mean: default_time_preference_mean(),        // 0.90
+            time_preference_std_dev: default_time_preference_std_dev(),  // 0.10
             enable_friendships: false,                                   // Disabled by default
             friendship_probability: 0.1,                                 // 10% chance per trade
             friendship_discount: 0.1,                                    // 10% discount for friends
