@@ -2913,4 +2913,200 @@ mod tests {
         assert_eq!(person.money, 100.0);
         assert_eq!(person.savings, 0.0);
     }
+
+    // ============== Time Preferences Tests ==============
+
+    #[test]
+    fn test_discount_factor_initialization() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location(), 0.85);
+        
+        assert_eq!(person.discount_factor, 0.85);
+    }
+
+    #[test]
+    fn test_discount_factor_clamping() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        
+        // Test upper bound clamping
+        let person_high = Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 1.5);
+        assert_eq!(person_high.discount_factor, 1.0, "Discount factor should be clamped to 1.0");
+        
+        // Test lower bound clamping
+        let person_low = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), -0.3);
+        assert_eq!(person_low.discount_factor, 0.0, "Discount factor should be clamped to 0.0");
+    }
+
+    #[test]
+    fn test_discount_future_value_basic() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location(), 0.9);
+        
+        // Test discounting 100 units 1 step in the future
+        let present_value = person.discount_future_value(100.0, 1);
+        assert!((present_value - 90.0).abs() < 0.01, "100 * 0.9^1 should be 90");
+        
+        // Test discounting 100 units 5 steps in the future
+        let present_value_5 = person.discount_future_value(100.0, 5);
+        let expected = 100.0 * 0.9_f64.powi(5);
+        assert!((present_value_5 - expected).abs() < 0.01, "100 * 0.9^5 should be ~59.05");
+    }
+
+    #[test]
+    fn test_discount_future_value_patient_vs_impatient() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        
+        // Patient person (high discount factor)
+        let patient = Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.95);
+        
+        // Impatient person (low discount factor)
+        let impatient = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.5);
+        
+        // Both evaluate 100 units 10 steps in the future
+        let patient_value = patient.discount_future_value(100.0, 10);
+        let impatient_value = impatient.discount_future_value(100.0, 10);
+        
+        assert!(patient_value > impatient_value, "Patient person should value future rewards more");
+        assert!(patient_value > 50.0, "Patient person should value future highly");
+        assert!(impatient_value < 10.0, "Impatient person should heavily discount future");
+    }
+
+    #[test]
+    fn test_savings_propensity_multiplier() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        
+        // Very impatient (0.5)
+        let impatient = Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.5);
+        
+        // Very patient (0.95)
+        let patient = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.95);
+        
+        let impatient_propensity = impatient.savings_propensity_multiplier();
+        let patient_propensity = patient.savings_propensity_multiplier();
+        
+        assert_eq!(impatient_propensity, 1.0, "Impatient person (0.5) should have 1.0 multiplier");
+        assert_eq!(patient_propensity, 1.9, "Patient person (0.95) should have 1.9 multiplier");
+        assert!(patient_propensity > impatient_propensity, "Patient person should save more");
+    }
+
+    #[test]
+    fn test_investment_propensity() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        
+        // Very impatient (0.5)
+        let impatient = Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.5);
+        
+        // Very patient (0.9)
+        let patient = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.9);
+        
+        let impatient_investment = impatient.investment_propensity();
+        let patient_investment = patient.investment_propensity();
+        
+        // Investment propensity is discount_factor squared
+        assert!((impatient_investment - 0.25).abs() < 0.01, "0.5^2 = 0.25");
+        assert!((patient_investment - 0.81).abs() < 0.01, "0.9^2 = 0.81");
+        assert!(patient_investment > impatient_investment, "Patient person more likely to invest");
+    }
+
+    #[test]
+    fn test_borrowing_propensity() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        
+        // Very impatient (0.5)
+        let impatient = Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.5);
+        
+        // Very patient (0.9)
+        let patient = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.9);
+        
+        let impatient_borrowing = impatient.borrowing_propensity();
+        let patient_borrowing = patient.borrowing_propensity();
+        
+        // Borrowing propensity is 1 - discount_factor^2
+        assert!((impatient_borrowing - 0.75).abs() < 0.01, "1 - 0.5^2 = 0.75");
+        assert!((patient_borrowing - 0.19).abs() < 0.01, "1 - 0.9^2 = 0.19");
+        assert!(impatient_borrowing > patient_borrowing, "Impatient person more likely to borrow");
+    }
+
+    #[test]
+    fn test_time_preference_extremes() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        
+        // Extremely patient (close to 1.0)
+        let very_patient = Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.99);
+        
+        // Extremely impatient (close to 0.0)
+        let very_impatient = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.01);
+        
+        // Check savings propensity
+        assert!(very_patient.savings_propensity_multiplier() > 1.9);
+        assert!(very_impatient.savings_propensity_multiplier() < 0.1);
+        
+        // Check investment propensity
+        assert!(very_patient.investment_propensity() > 0.95);
+        assert!(very_impatient.investment_propensity() < 0.01);
+        
+        // Check borrowing propensity
+        assert!(very_patient.borrowing_propensity() < 0.05);
+        assert!(very_impatient.borrowing_propensity() > 0.95);
+    }
+
+    #[test]
+    fn test_discount_factor_zero_steps() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location(), 0.8);
+        
+        // Discounting 0 steps in the future should return the original value
+        let present_value = person.discount_future_value(100.0, 0);
+        assert_eq!(present_value, 100.0, "0 steps should not discount");
+    }
+
+    #[test]
+    fn test_rl_update_with_discount_factor() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        let mut person = Person::new(1, 100.0, vec![skill], Strategy::default(), test_location(), 0.9);
+        
+        // Initial adjustment factor should be 1.0
+        assert_eq!(person.strategy_params.adjustment_factor, 1.0);
+        
+        // Apply RL update with positive reward
+        person.strategy_params.apply_rl_update(0.1, 0.1, person.discount_factor);
+        
+        // Adjustment factor should increase (because reward is positive and discounted future is positive)
+        assert!(person.strategy_params.adjustment_factor > 1.0, "Positive reward should increase adjustment");
+        
+        // Apply RL update with negative reward
+        person.strategy_params.apply_rl_update(-0.2, 0.1, person.discount_factor);
+        
+        // Adjustment factor should decrease (because reward is negative)
+        assert!(person.strategy_params.adjustment_factor < 1.1, "Negative reward should decrease adjustment");
+    }
+
+    #[test]
+    fn test_rl_discount_factor_effect() {
+        let skill = Skill::new("TestSkill".to_string(), 10.0);
+        
+        // Patient person (high discount factor = values future more)
+        let mut patient = Person::new(1, 100.0, vec![skill.clone()], Strategy::default(), test_location(), 0.95);
+        
+        // Impatient person (low discount factor = values future less)
+        let mut impatient = Person::new(2, 100.0, vec![skill], Strategy::default(), test_location(), 0.3);
+        
+        // Same reward, but different discount factors
+        let reward = 0.1;
+        let learning_rate = 0.1;
+        
+        let patient_before = patient.strategy_params.adjustment_factor;
+        let impatient_before = impatient.strategy_params.adjustment_factor;
+        
+        patient.strategy_params.apply_rl_update(reward, learning_rate, patient.discount_factor);
+        impatient.strategy_params.apply_rl_update(reward, learning_rate, impatient.discount_factor);
+        
+        let patient_change = patient.strategy_params.adjustment_factor - patient_before;
+        let impatient_change = impatient.strategy_params.adjustment_factor - impatient_before;
+        
+        // Patient person should update more (higher discount factor means bigger update)
+        assert!(patient_change > impatient_change, 
+            "Patient person should have larger update due to higher discount factor");
+    }
 }
+
