@@ -24,7 +24,7 @@ rustyline = "17.0"
 petgraph = { version = "0.8", features = ["serde-1"] }
 chrono = { version = "0.4", features = ["serde"] }
 inquire = "0.9"
-parquet = "57.3"
+parquet = "58.0"
 rand_distr = "0.6.0"
 
 [dev-dependencies]
