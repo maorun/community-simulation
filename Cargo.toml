@@ -20,7 +20,7 @@ env_logger = "0.11"
 flate2 = "1.0"
 colored = "3.0"
 rusqlite = "0.39"
-rustyline = "17.0"
+rustyline = "18.0"
 petgraph = { version = "0.8", features = ["serde-1"] }
 chrono = { version = "0.4", features = ["serde"] }
 inquire = "0.9"
