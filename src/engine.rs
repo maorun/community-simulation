@@ -948,7 +948,7 @@ impl SimulationEngine {
                             crisis.apply_effect(1.0, self.config.crisis_severity, &mut self.rng);
                         let keep_ratio = 1.0 - reduction_factor;
                         let keep_count = ((original_count as f64) * keep_ratio).ceil() as usize;
-                        entity.person_data.needed_skills.truncate(keep_count.max(0));
+                        entity.person_data.needed_skills.truncate(keep_count);
                     }
                 }
             },
