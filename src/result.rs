@@ -3791,7 +3791,7 @@ pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartn
                 // Sort partners by trade count (descending) and take top 5
                 let mut partner_list: Vec<(usize, usize, f64)> =
                     partners.iter().map(|(&id, &(count, value))| (id, count, value)).collect();
-                partner_list.sort_by(|a, b| b.1.cmp(&a.1));
+                partner_list.sort_by_key(|b| std::cmp::Reverse(b.1));
 
                 let top_partners: Vec<PartnerInfo> = partner_list
                     .iter()
@@ -3825,7 +3825,7 @@ pub fn calculate_trading_partner_statistics(entities: &[Entity]) -> TradingPartn
             // Sort partners by trade count (descending) and take top 5
             let mut partner_list: Vec<(usize, usize, f64)> =
                 partners.iter().map(|(&id, &(count, value))| (id, count, value)).collect();
-            partner_list.sort_by(|a, b| b.1.cmp(&a.1));
+            partner_list.sort_by_key(|b| std::cmp::Reverse(b.1));
 
             let top_partners: Vec<PartnerInfo> = partner_list
                 .iter()
