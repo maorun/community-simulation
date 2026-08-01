@@ -529,7 +529,7 @@ fn test_market_price_bounds_enforcement() {
 
     // Verify all prices are within bounds
     let market = engine.get_market();
-    for (_, skill) in market.skills.iter() {
+    for skill in market.skills.values() {
         assert!(skill.current_price >= 1.0);
     }
 }
