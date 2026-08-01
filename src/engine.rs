@@ -908,7 +908,7 @@ impl SimulationEngine {
             CrisisEvent::MarketCrash => {
                 // Reduce all skill prices
                 debug!("Applying market crash: reducing all skill prices");
-                for (_skill_id, skill) in self.market.skills.iter_mut() {
+                for skill in self.market.skills.values_mut() {
                     let old_price = skill.current_price;
                     skill.current_price = crisis.apply_effect(
                         skill.current_price,
@@ -924,7 +924,7 @@ impl SimulationEngine {
                 }
                 // Also apply to black market if enabled
                 if let Some(ref mut bm) = self.black_market {
-                    for (_skill_id, skill) in bm.skills.iter_mut() {
+                    for skill in bm.skills.values_mut() {
                         skill.current_price = crisis.apply_effect(
                             skill.current_price,
                             self.config.crisis_severity,
@@ -958,7 +958,7 @@ impl SimulationEngine {
                 // we could track "supply reduction" and reduce effective supply counts
                 debug!("Applying supply shock: supply chain disruptions");
                 // Apply effect to supply counts in the market
-                for (_skill_id, count) in self.market.supply_counts.iter_mut() {
+                for count in self.market.supply_counts.values_mut() {
                     let old_supply = *count;
                     let reduction_factor =
                         crisis.apply_effect(1.0, self.config.crisis_severity, &mut self.rng);

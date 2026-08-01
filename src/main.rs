@@ -1963,7 +1963,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
                             let demand = market.demand_counts.get(&skill.id).unwrap_or(&0);
                             println!(
                                 "{:>20} {:>10.2} {:>10} {:>10}",
-                                &skill.id, skill.current_price, supply, demand
+                                skill.id, skill.current_price, supply, demand
                             );
                         }
 
