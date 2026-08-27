@@ -15,6 +15,7 @@ mod satisficing_tests;
 mod scenario_integration_tests;
 pub mod test_helpers;
 mod ultimate_coverage_tests;
+mod profit_tax_tests;
 mod ultra_final_tests;
 
 #[cfg(test)]
