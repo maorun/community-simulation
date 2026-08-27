@@ -9,13 +9,13 @@ mod final_80_breakthrough;
 mod final_80_percent_push;
 mod final_push_tests;
 mod laser_focus_80;
+mod profit_tax_tests;
 mod proptest_tests;
 mod reinforcement_learning_tests;
 mod satisficing_tests;
 mod scenario_integration_tests;
 pub mod test_helpers;
 mod ultimate_coverage_tests;
-mod profit_tax_tests;
 mod ultra_final_tests;
 
 #[cfg(test)]

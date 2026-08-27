@@ -4217,7 +4217,8 @@ impl SimulationEngine {
             if loss_carryforward > 0.0 {
                 if loss_carryforward >= gross_transaction_profit {
                     // Entire profit is offset by loss carryforward
-                    self.entities[seller_idx].person_data.accumulated_loss -= gross_transaction_profit;
+                    self.entities[seller_idx].person_data.accumulated_loss -=
+                        gross_transaction_profit;
                     0.0
                 } else {
                     // Partial loss offset; remaining taxable profit is taxed

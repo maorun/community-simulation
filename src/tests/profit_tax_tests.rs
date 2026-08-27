@@ -5,14 +5,8 @@ mod profit_tax_tests {
 
     #[test]
     fn test_loss_carryforward_basic() {
-        let mut person = Person::new(
-            0,
-            100.0,
-            vec![],
-            Strategy::Balanced,
-            Location::new(0.0, 0.0),
-            0.95,
-        );
+        let mut person =
+            Person::new(0, 100.0, vec![], Strategy::Balanced, Location::new(0.0, 0.0), 0.95);
 
         assert_eq!(person.accumulated_loss, 0.0);
         person.accumulated_loss += 20.0;
