@@ -4196,16 +4196,54 @@ impl SimulationEngine {
             );
         }
 
-        // Calculate and collect tax on seller's proceeds (after transaction fee and health adjustment)
-        let tax = health_adjusted_proceeds * self.config.tax_rate;
+        // Profit tax calculation (Gewinnsteuer) with loss carryforward (Verlustvortrag)
+        // Cost basis: Base skill price + distance trade cost (if applicable)
+        let distance_cost = if self.config.distance_cost_factor > 0.0 {
+            let dist = self.entities[buyer_idx]
+                .person_data
+                .location
+                .distance_to(&self.entities[seller_idx].person_data.location);
+            price * dist * self.config.distance_cost_factor
+        } else {
+            0.0
+        };
+
+        let unit_cost = self.config.base_skill_price + distance_cost;
+        let gross_transaction_profit = health_adjusted_proceeds - unit_cost;
+
+        let tax = if gross_transaction_profit > 0.0 {
+            // Profit scenario: offset profit with accumulated loss carryforward
+            let loss_carryforward = self.entities[seller_idx].person_data.accumulated_loss;
+            if loss_carryforward > 0.0 {
+                if loss_carryforward >= gross_transaction_profit {
+                    // Entire profit is offset by loss carryforward
+                    self.entities[seller_idx].person_data.accumulated_loss -=
+                        gross_transaction_profit;
+                    0.0
+                } else {
+                    // Partial loss offset; remaining taxable profit is taxed
+                    let taxable_profit = gross_transaction_profit - loss_carryforward;
+                    self.entities[seller_idx].person_data.accumulated_loss = 0.0;
+                    taxable_profit * self.config.tax_rate
+                }
+            } else {
+                gross_transaction_profit * self.config.tax_rate
+            }
+        } else {
+            // Loss scenario: increase loss carryforward (no tax due)
+            let loss = -gross_transaction_profit;
+            self.entities[seller_idx].person_data.accumulated_loss += loss;
+            0.0
+        };
+
         self.entities[seller_idx].person_data.money -= tax;
 
         if tax > 0.0 {
             trace!(
-                "Person {} paid tax: ${:.2} on proceeds ${:.2}",
+                "Person {} paid profit tax: ${:.2} on profit ${:.2}",
                 seller_entity_id,
                 tax,
-                seller_proceeds
+                gross_transaction_profit
             );
         }
 

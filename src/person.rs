@@ -740,6 +740,9 @@ pub struct Person {
     /// Valid range: 0.0 to 1.0 (0% to 100% valuation of future rewards)
     /// Default: 0.95 (moderately patient)
     pub discount_factor: f64,
+    /// Accumulated tax loss carryforward (Verlustvortrag) used for profit-based taxation (Gewinnsteuer).
+    /// Tracks un-offset trading losses to reduce taxable profit on future profitable trades.
+    pub accumulated_loss: f64,
 }
 
 impl Person {
@@ -791,6 +794,7 @@ impl Person {
             market_segment: MarketSegment::default(), // Start with Mittelklasse segment (will be updated based on wealth)
             currency_id: default_currency_id(),       // Start with base currency
             discount_factor: discount_factor.clamp(0.0, 1.0), // Clamp to valid range
+            accumulated_loss: 0.0,                    // Start with no loss carryforward
         }
     }
 
