@@ -2891,16 +2891,20 @@ impl SimulationEngine {
                         .skills
                         .get(needed_skill_id)
                         .and_then(|s| s.certification.as_ref())
-                        .map_or(false, |c| !c.is_expired(self.current_step));
+                        .is_some_and(|c| !c.is_expired(self.current_step));
 
                     let mut inspection_cost_to_pay = 0.0;
                     // Buyer screening (inspection): If not certified and information asymmetry is enabled,
                     // buyer can pay inspection_cost to inspect true_quality
-                    if self.config.enable_information_asymmetry && !is_certified && self.config.inspection_cost > 0.0 {
+                    if self.config.enable_information_asymmetry
+                        && !is_certified
+                        && self.config.inspection_cost > 0.0
+                    {
                         let total_cost = skill_price + self.config.inspection_cost;
                         if buyer_money - total_inspection_cost >= total_cost {
                             // Pay inspection cost to reveal true quality
-                            if let Some(market_skill) = self.market.skills.get_mut(needed_skill_id) {
+                            if let Some(market_skill) = self.market.skills.get_mut(needed_skill_id)
+                            {
                                 perceived_quality = market_skill.inspect();
                             }
                             inspection_cost_to_pay = self.config.inspection_cost;
@@ -3814,7 +3818,9 @@ impl SimulationEngine {
                         };
 
                         // Calculate certification cost: use certification_cost if asymmetry enabled/configured
-                        let cert_cost = if self.config.enable_information_asymmetry && self.config.certification_cost > 0.0 {
+                        let cert_cost = if self.config.enable_information_asymmetry
+                            && self.config.certification_cost > 0.0
+                        {
                             self.config.certification_cost * (level as f64)
                         } else {
                             skill.current_price

@@ -2325,27 +2325,27 @@ impl Default for SimulationConfig {
             enable_information_asymmetry: false, // Disabled by default
             inspection_cost: 1.0,
             certification_cost: 5.0,
-            enable_certification: false,    // Disabled by default
+            enable_certification: false,        // Disabled by default
             certification_cost_multiplier: 2.0, // 2x base price per level
-            certification_duration: Some(200), // Certifications last 200 steps
-            certification_probability: 0.05, // 5% chance per step to attempt certification
-            enable_market_segments: false,  // Disabled by default
-            enable_resource_pools: false,   // Disabled by default
-            pool_contribution_rate: 0.02,   // 2% contribution per step
-            pool_withdrawal_threshold: 30.0, // Support for members below $30
-            enable_adaptive_strategies: false, // Disabled by default
-            adaptation_rate: 0.1,           // 10% adaptation rate
-            exploration_rate: 0.05,         // 5% exploration (ε-greedy)
-            enable_strategy_evolution: false, // Disabled by default
-            evolution_update_frequency: 50, // Evolution every 50 steps
-            imitation_probability: 0.3,     // 30% imitation chance
-            mutation_rate: 0.05,            // 5% mutation rate
-            enable_specialization: false,   // Disabled by default
-            enable_parallel_trades: false,  // Disabled by default
-            enable_externalities: false,    // Disabled by default
-            externality_rate: 0.0,          // No externalities by default
+            certification_duration: Some(200),  // Certifications last 200 steps
+            certification_probability: 0.05,    // 5% chance per step to attempt certification
+            enable_market_segments: false,      // Disabled by default
+            enable_resource_pools: false,       // Disabled by default
+            pool_contribution_rate: 0.02,       // 2% contribution per step
+            pool_withdrawal_threshold: 30.0,    // Support for members below $30
+            enable_adaptive_strategies: false,  // Disabled by default
+            adaptation_rate: 0.1,               // 10% adaptation rate
+            exploration_rate: 0.05,             // 5% exploration (ε-greedy)
+            enable_strategy_evolution: false,   // Disabled by default
+            evolution_update_frequency: 50,     // Evolution every 50 steps
+            imitation_probability: 0.3,         // 30% imitation chance
+            mutation_rate: 0.05,                // 5% mutation rate
+            enable_specialization: false,       // Disabled by default
+            enable_parallel_trades: false,      // Disabled by default
+            enable_externalities: false,        // Disabled by default
+            externality_rate: 0.0,              // No externalities by default
             externality_rates_per_skill: HashMap::new(), // No per-skill rates by default
-            enable_health: false,           // Disabled by default
+            enable_health: false,               // Disabled by default
             disease_transmission_rate: default_disease_transmission_rate(),
             disease_recovery_duration: default_disease_recovery_duration(),
             initial_sick_persons: 0,             // No initial infections

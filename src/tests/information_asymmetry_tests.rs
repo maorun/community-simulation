@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::tests::test_helpers::test_config;
     use crate::skill::{Certification, Skill};
+    use crate::tests::test_helpers::test_config;
     use crate::SimulationEngine;
 
     #[test]

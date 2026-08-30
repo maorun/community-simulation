@@ -1132,15 +1132,15 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             if let Some(production_prob) = args.production_probability {
                 cfg.production_probability = production_prob;
             }
-        if args.enable_information_asymmetry {
-            cfg.enable_information_asymmetry = true;
-        }
-        if let Some(cost) = args.inspection_cost {
-            cfg.inspection_cost = cost;
-        }
-        if let Some(cost) = args.certification_cost {
-            cfg.certification_cost = cost;
-        }
+            if args.enable_information_asymmetry {
+                cfg.enable_information_asymmetry = true;
+            }
+            if let Some(cost) = args.inspection_cost {
+                cfg.inspection_cost = cost;
+            }
+            if let Some(cost) = args.certification_cost {
+                cfg.certification_cost = cost;
+            }
             if args.enable_certification {
                 cfg.enable_certification = true;
             }
