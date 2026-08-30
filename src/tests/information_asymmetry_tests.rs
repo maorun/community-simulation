@@ -54,7 +54,7 @@ mod tests {
         let skills = engine.get_market().get_all_skill_prices();
         assert!(!skills.is_empty());
 
-        for (skill_id, _) in &skills {
+        for skill_id in skills.keys() {
             if let Some(market_skill) = engine.get_market().skills.get(skill_id) {
                 assert!(market_skill.true_quality >= 1.0 && market_skill.true_quality <= 5.0);
             }
