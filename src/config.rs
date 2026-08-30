@@ -1297,6 +1297,28 @@ pub struct SimulationConfig {
     #[serde(default = "default_initial_quality")]
     pub initial_quality: f64,
 
+    /// Enable information asymmetry (Lemons market mechanism).
+    ///
+    /// When enabled, sellers know the true quality of their offered skills/goods,
+    /// while buyers only observe perceived quality or market signals unless they pay
+    /// inspection costs to reveal true quality.
+    #[serde(default)]
+    pub enable_information_asymmetry: bool,
+
+    /// Cost paid by buyers to inspect and reveal the true quality of a skill before purchasing.
+    ///
+    /// Only used when enable_information_asymmetry is true.
+    /// Default: 1.0
+    #[serde(default = "default_inspection_cost")]
+    pub inspection_cost: f64,
+
+    /// Fixed cost to obtain quality certification for signaling true quality to buyers.
+    ///
+    /// Only used when enable_information_asymmetry or enable_certification is true.
+    /// Default: 5.0
+    #[serde(default = "default_certification_cost")]
+    pub certification_cost: f64,
+
     /// Enable skill certification system.
     ///
     /// When enabled, persons can get their skills certified by a central authority,
@@ -1898,6 +1920,14 @@ fn default_mutation_rate() -> f64 {
     0.05 // 5% mutation rate for strategic diversity
 }
 
+fn default_inspection_cost() -> f64 {
+    1.0
+}
+
+fn default_certification_cost() -> f64 {
+    5.0
+}
+
 fn default_certification_cost_multiplier() -> f64 {
     2.0 // Certification costs 2x the base skill price per level
 }
@@ -2292,6 +2322,9 @@ impl Default for SimulationConfig {
             quality_improvement_rate: 0.1,  // Quality increases by 0.1 per trade
             quality_decay_rate: 0.05,       // Quality decreases by 0.05 per step
             initial_quality: 3.0,           // Average quality (0.0-5.0 scale)
+            enable_information_asymmetry: false, // Disabled by default
+            inspection_cost: 1.0,
+            certification_cost: 5.0,
             enable_certification: false,    // Disabled by default
             certification_cost_multiplier: 2.0, // 2x base price per level
             certification_duration: Some(200), // Certifications last 200 steps
@@ -3024,6 +3057,22 @@ impl SimulationConfig {
                 "initial_quality must be between 0.0 and 5.0, got: {}",
                 self.initial_quality
             )));
+        }
+
+        // Information asymmetry validation
+        if self.enable_information_asymmetry {
+            if self.inspection_cost < 0.0 {
+                return Err(SimulationError::ValidationError(format!(
+                    "inspection_cost must be non-negative, got: {}",
+                    self.inspection_cost
+                )));
+            }
+            if self.certification_cost < 0.0 {
+                return Err(SimulationError::ValidationError(format!(
+                    "certification_cost must be non-negative, got: {}",
+                    self.certification_cost
+                )));
+            }
         }
 
         // Certification system validation

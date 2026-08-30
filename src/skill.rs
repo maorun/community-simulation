@@ -142,8 +142,20 @@ pub struct Skill {
     /// over time, simulating technological unemployment and labor market disruption.
     #[serde(default)]
     pub automation_risk: f64,
+
+    /// True quality of the skill/good (0.0 to 5.0), known accurately by the seller.
+    #[serde(default = "default_quality")]
+    pub true_quality: f64,
+
+    /// Perceived quality of the skill/good (0.0 to 5.0), observed by buyers/market.
+    #[serde(default = "default_quality")]
+    pub perceived_quality: f64,
     // Note: Supply is implicitly 1 per person offering it. Demand is calculated each step.
     // Price management is handled by the Market.
+}
+
+fn default_quality() -> f64 {
+    3.0
 }
 
 impl Skill {
@@ -169,7 +181,48 @@ impl Skill {
             efficiency_multiplier: 1.0,
             certification: None,
             automation_risk: 0.0,
+            true_quality: 3.0,
+            perceived_quality: 3.0,
         }
+    }
+
+    /// Creates a new skill with specific true and perceived qualities.
+    pub fn with_qualities(
+        id: SkillId,
+        base_price: f64,
+        true_quality: f64,
+        perceived_quality: f64,
+    ) -> Self {
+        Self {
+            id,
+            current_price: base_price,
+            efficiency_multiplier: 1.0,
+            certification: None,
+            automation_risk: 0.0,
+            true_quality,
+            perceived_quality,
+        }
+    }
+
+    /// Returns the effective perceived quality taking into account certification.
+    ///
+    /// If the skill has a valid (non-expired) certification, certification verifies
+    /// and signals the true quality to the market.
+    pub fn effective_perceived_quality(&self, current_step: usize) -> f64 {
+        if let Some(cert) = &self.certification {
+            if !cert.is_expired(current_step) {
+                return self.true_quality;
+            }
+        }
+        self.perceived_quality
+    }
+
+    /// Inspects the skill, revealing its true quality.
+    ///
+    /// Updates perceived quality to match true quality for the inspecting buyer.
+    pub fn inspect(&mut self) -> f64 {
+        self.perceived_quality = self.true_quality;
+        self.true_quality
     }
 
     /// Returns the effective price for this skill, taking into account certification.
@@ -312,6 +365,29 @@ mod tests {
         assert_eq!(skill.id, "Programming");
         assert_eq!(skill.current_price, 50.0);
         assert!(skill.certification.is_none());
+        assert_eq!(skill.true_quality, 3.0);
+        assert_eq!(skill.perceived_quality, 3.0);
+    }
+
+    #[test]
+    fn test_skill_information_asymmetry_and_inspection() {
+        let mut skill = Skill::with_qualities("Programming".to_string(), 50.0, 4.5, 2.0);
+
+        assert_eq!(skill.true_quality, 4.5);
+        assert_eq!(skill.perceived_quality, 2.0);
+        assert_eq!(skill.effective_perceived_quality(0), 2.0);
+
+        // With valid certification, effective perceived quality signals true quality
+        skill.certification = Some(Certification::new("Authority".to_string(), 3, Some(100)));
+        assert_eq!(skill.effective_perceived_quality(50), 4.5);
+
+        // Expired certification falls back to perceived_quality
+        assert_eq!(skill.effective_perceived_quality(150), 2.0);
+
+        // Inspection reveals true quality
+        let revealed = skill.inspect();
+        assert_eq!(revealed, 4.5);
+        assert_eq!(skill.perceived_quality, 4.5);
     }
 
     #[test]

@@ -456,6 +456,20 @@ struct RunArgs {
     #[arg(long)]
     record_actions: Option<String>,
 
+    /// Enable information asymmetry (Lemons market mechanism)
+    /// When enabled, sellers know true quality while buyers observe perceived quality or pay inspection costs
+    #[arg(long, default_value_t = false)]
+    enable_information_asymmetry: bool,
+
+    /// Cost paid by buyers to inspect and reveal true quality of a skill before purchasing
+    /// Only used when --enable-information-asymmetry is set
+    #[arg(long)]
+    inspection_cost: Option<f64>,
+
+    /// Fixed cost to obtain quality certification for signaling true quality
+    #[arg(long)]
+    certification_cost: Option<f64>,
+
     /// Enable quality rating system for skills (0.0-5.0 scale)
     /// Skills have quality that improves with successful trades and decays when not used
     /// Higher quality enables higher prices, creating quality competition in the market
@@ -1118,6 +1132,15 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             if let Some(production_prob) = args.production_probability {
                 cfg.production_probability = production_prob;
             }
+        if args.enable_information_asymmetry {
+            cfg.enable_information_asymmetry = true;
+        }
+        if let Some(cost) = args.inspection_cost {
+            cfg.inspection_cost = cost;
+        }
+        if let Some(cost) = args.certification_cost {
+            cfg.certification_cost = cost;
+        }
             if args.enable_certification {
                 cfg.enable_certification = true;
             }
@@ -1348,6 +1371,13 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             initial_quality: args
                 .initial_quality
                 .unwrap_or(SimulationConfig::default().initial_quality),
+            enable_information_asymmetry: args.enable_information_asymmetry,
+            inspection_cost: args
+                .inspection_cost
+                .unwrap_or(SimulationConfig::default().inspection_cost),
+            certification_cost: args
+                .certification_cost
+                .unwrap_or(SimulationConfig::default().certification_cost),
             enable_certification: args.enable_certification,
             certification_cost_multiplier: args
                 .certification_cost_multiplier

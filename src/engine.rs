@@ -710,7 +710,16 @@ impl SimulationEngine {
         let mut available_skills_for_market = Vec::new();
         for i in 0..config.entity_count {
             let skill_name = format!("Skill{}", i);
-            let skill = Skill::new(skill_name.clone(), config.base_skill_price);
+            let mut skill = Skill::new(skill_name.clone(), config.base_skill_price);
+
+            if config.enable_information_asymmetry {
+                // Generate a true quality between 1.0 and 5.0
+                let true_q = rng.random_range(1.0..=5.0);
+                // Perceived quality starts at baseline market average (3.0)
+                skill.true_quality = true_q;
+                skill.perceived_quality = 3.0;
+            }
+
             available_skills_for_market.push(skill.clone());
             market.add_skill(skill);
         }
@@ -2846,6 +2855,7 @@ impl SimulationEngine {
             // may be lower. Using exact capacity eliminates unnecessary allocations.
             let needed_count = self.entities[buyer_idx].person_data.needed_skills.len();
             let mut purchase_options: Vec<PurchaseOption> = Vec::with_capacity(needed_count);
+            let mut total_inspection_cost = 0.0;
 
             for (needed_item_index, needed_item) in
                 self.entities[buyer_idx].person_data.needed_skills.iter().enumerate()
@@ -2869,6 +2879,48 @@ impl SimulationEngine {
                 if let Some((skill_price, efficiency)) =
                     self.market.get_price_and_efficiency(needed_skill_id)
                 {
+                    let mut perceived_quality = self
+                        .market
+                        .skills
+                        .get(needed_skill_id)
+                        .map(|s| s.effective_perceived_quality(self.current_step))
+                        .unwrap_or(3.0);
+
+                    let is_certified = self
+                        .market
+                        .skills
+                        .get(needed_skill_id)
+                        .and_then(|s| s.certification.as_ref())
+                        .map_or(false, |c| !c.is_expired(self.current_step));
+
+                    let mut inspection_cost_to_pay = 0.0;
+                    // Buyer screening (inspection): If not certified and information asymmetry is enabled,
+                    // buyer can pay inspection_cost to inspect true_quality
+                    if self.config.enable_information_asymmetry && !is_certified && self.config.inspection_cost > 0.0 {
+                        let total_cost = skill_price + self.config.inspection_cost;
+                        if buyer_money - total_inspection_cost >= total_cost {
+                            // Pay inspection cost to reveal true quality
+                            if let Some(market_skill) = self.market.skills.get_mut(needed_skill_id) {
+                                perceived_quality = market_skill.inspect();
+                            }
+                            inspection_cost_to_pay = self.config.inspection_cost;
+                        }
+                    }
+
+                    // Under Information Asymmetry (Lemons market), if perceived/inspected quality is poor (< 2.0),
+                    // buyer rejects this lemon skill option
+                    if self.config.enable_information_asymmetry && perceived_quality < 2.0 {
+                        trace!(
+                            "Person {} rejected purchasing skill {} due to low quality ({:.2}) under Information Asymmetry",
+                            self.entities[buyer_idx].id,
+                            needed_skill_id,
+                            perceived_quality
+                        );
+                        continue;
+                    }
+
+                    total_inspection_cost += inspection_cost_to_pay;
+
                     let efficiency_adjusted_price = skill_price / efficiency;
 
                     // Get seller reputation if available
@@ -2926,6 +2978,10 @@ impl SimulationEngine {
                         cached_efficiency: efficiency,
                     });
                 }
+            }
+
+            if total_inspection_cost > 0.0 {
+                self.entities[buyer_idx].person_data.money -= total_inspection_cost;
             }
 
             // Satisficing decision strategy: If enabled, use "good enough" heuristic
@@ -3757,10 +3813,14 @@ impl SimulationEngine {
                             (self.rng.random::<u8>() % 5) + 1
                         };
 
-                        // Calculate certification cost: base_price * cost_multiplier * level
-                        let cert_cost = skill.current_price
-                            * self.config.certification_cost_multiplier
-                            * (level as f64);
+                        // Calculate certification cost: use certification_cost if asymmetry enabled/configured
+                        let cert_cost = if self.config.enable_information_asymmetry && self.config.certification_cost > 0.0 {
+                            self.config.certification_cost * (level as f64)
+                        } else {
+                            skill.current_price
+                                * self.config.certification_cost_multiplier
+                                * (level as f64)
+                        };
 
                         // Check if person can afford certification
                         if self.entities[i].person_data.money >= cert_cost {
