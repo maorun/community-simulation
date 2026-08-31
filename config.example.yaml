@@ -305,6 +305,12 @@ externality_rate: 0.0
 # entity_count: 500
 # initial_money_per_person: 200.0
 
-# For complete documentation of all 108 parameters, see:
+# Demographic System
+# enable_demographics: true
+# default_retirement_age: 65
+# default_max_age: 80
+# pension_contribution_rate: 0.05
+
+# For complete documentation of all parameters, see:
 # - config.comprehensive.yaml
 # - config.comprehensive.toml
