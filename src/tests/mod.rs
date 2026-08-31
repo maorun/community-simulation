@@ -1,5 +1,4 @@
 mod comprehensive_scenario_tests;
-mod demographics_tests;
 mod coverage_80_breakthrough;
 mod coverage_boost_tests;
 mod coverage_push_tests;
@@ -2980,3 +2979,5 @@ mod engine_tests {
         assert!(result.total_steps == 30);
     }
 }
+
+pub mod demographics_tests;

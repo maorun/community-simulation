@@ -781,6 +781,8 @@ impl SimulationEngine {
                 location,
                 discount_factor,
             );
+            entity.person_data.retirement_age = config.default_retirement_age;
+            entity.person_data.max_age = config.default_max_age;
 
             // Assign specialization strategy if enabled
             if config.enable_specialization {
@@ -3878,11 +3880,6 @@ impl SimulationEngine {
             }
         }
 
-        // Process demographic dynamics (aging, retirement, pension, death & succession)
-        if self.config.enable_demographics {
-            self.process_demographics();
-        }
-
         // Process loan payments - borrowers pay back loans
         if self.config.enable_loans {
             self.process_loan_payments();
@@ -4132,6 +4129,11 @@ impl SimulationEngine {
         // Apply reinforcement learning updates (if RL enabled)
         if self.config.enable_reinforcement_learning {
             self.apply_rl_updates();
+        }
+
+        // Process demographic updates (aging, pensions, succession) if enabled
+        if self.config.enable_demographics {
+            let _ = self.process_demographics();
         }
 
         self.current_step += 1;
@@ -4827,81 +4829,6 @@ impl SimulationEngine {
         let snapshot =
             crate::result::StrategyDistributionSnapshot { step: self.current_step, distribution };
         self.strategy_distribution_history.push(snapshot);
-    }
-
-    /// Processes demographic dynamics (aging, pensions, death, inheritance/succession).
-    fn process_demographics(&mut self) {
-        let mut central_pension_pool = 0.0;
-        let mut retired_count = 0usize;
-
-        // 1. Age each person and collect pension contributions
-        for entity in self.entities.iter_mut() {
-            if !entity.active {
-                continue;
-            }
-
-            entity.person_data.age += 1;
-
-            if entity.person_data.is_retired() {
-                retired_count += 1;
-            } else {
-                // Collect pension contribution from active working person
-                if self.config.pension_contribution_rate > 0.0 && entity.person_data.money > 0.0 {
-                    let contribution = entity.person_data.money * self.config.pension_contribution_rate;
-                    entity.person_data.money -= contribution;
-                    central_pension_pool += contribution;
-                }
-            }
-        }
-
-        // 2. Distribute pensions to retired persons
-        if retired_count > 0 && central_pension_pool > 0.0 {
-            let pension_payout = central_pension_pool / retired_count as f64;
-            for entity in self.entities.iter_mut() {
-                if entity.active && entity.person_data.is_retired() {
-                    entity.person_data.money += pension_payout;
-                }
-            }
-        }
-
-        // 3. Handle lifecycle end (death and succession)
-        for i in 0..self.entities.len() {
-            if !self.entities[i].active {
-                continue;
-            }
-
-            if self.entities[i].person_data.age >= self.entities[i].person_data.max_age {
-                let old_id = self.entities[i].id;
-                let old_money = self.entities[i].person_data.money;
-                let old_savings = self.entities[i].person_data.savings;
-                let total_inheritance = (old_money + old_savings) * 0.8; // 80% inheritance, 20% estate tax
-
-                let old_skills = self.entities[i].person_data.own_skills.clone();
-                let old_location = self.entities[i].person_data.location;
-                let old_strategy = self.entities[i].person_data.strategy;
-                let old_discount = self.entities[i].person_data.discount_factor;
-
-                // Create successor
-                let mut successor = Person::new(
-                    old_id,
-                    total_inheritance.max(self.config.initial_money_per_person),
-                    old_skills,
-                    old_strategy,
-                    old_location,
-                    old_discount,
-                );
-                successor.age = 0; // Starts at age 0
-                successor.retirement_age = self.config.default_retirement_age;
-                successor.max_age = self.config.default_max_age;
-
-                debug!(
-                    "Person {} reached max age ({}) and passed away. Successor created with inheritance ${:.2}",
-                    old_id, self.entities[i].person_data.max_age, total_inheritance
-                );
-
-                self.entities[i].person_data = successor;
-            }
-        }
     }
 
     /// Processes loan payments for the current step.
@@ -6142,6 +6069,10 @@ impl SimulationEngine {
         &self.entities
     }
 
+    pub fn get_entities_mut(&mut self) -> &mut Vec<crate::entity::Entity> {
+        &mut self.entities
+    }
+
     /// Get read-only access to the market.
     /// Useful for inspecting market state and prices in interactive mode.
     pub fn get_market(&self) -> &crate::market::Market {
@@ -6166,6 +6097,58 @@ impl SimulationEngine {
     /// Get the current simulation result snapshot
     /// This creates a simplified SimulationResult for display in interactive mode
     /// Note: Some complex statistics are omitted for simplicity
+    /// Process demographic updates: age entities, collect pension contributions, pay pensions, handle mortality & inheritance/succession.
+    pub fn process_demographics(&mut self) -> crate::error::Result<()> {
+        let retirement_age = self.config.default_retirement_age;
+        let max_age = self.config.default_max_age;
+        let contribution_rate = self.config.pension_contribution_rate;
+
+        // 1. Age all entities by 1 step
+        for entity in &mut self.entities {
+            entity.person_data.age += 1;
+        }
+
+        // 2. Collect pension contributions from working entities (non-retired)
+        let mut total_pension_pool = 0.0;
+        for entity in &mut self.entities {
+            if !entity.person_data.is_retired() {
+                let contribution = entity.person_data.money * contribution_rate;
+                if contribution > 0.0 {
+                    entity.person_data.money -= contribution;
+                    total_pension_pool += contribution;
+                }
+            }
+        }
+
+        // 3. Distribute pension pool equally among retired entities
+        let retired_count = self
+            .entities
+            .iter()
+            .filter(|e| e.person_data.is_retired())
+            .count();
+        if retired_count > 0 && total_pension_pool > 0.0 {
+            let pension_per_retired = total_pension_pool / (retired_count as f64);
+            for entity in &mut self.entities {
+                if entity.person_data.is_retired() {
+                    entity.person_data.money += pension_per_retired;
+                }
+            }
+        }
+
+        // 4. Handle deaths & generational succession (rebirth at age 18)
+        for entity in &mut self.entities {
+            if entity.person_data.age >= max_age {
+                let inherited_money = entity.person_data.money * 0.8;
+                entity.person_data.money = inherited_money;
+                entity.person_data.age = 18;
+                entity.person_data.retirement_age = retirement_age;
+                entity.person_data.max_age = max_age;
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn get_current_result(&self) -> SimulationResult {
         // Collect money distribution
         let mut final_money_distribution: Vec<f64> =

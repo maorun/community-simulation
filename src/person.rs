@@ -821,15 +821,13 @@ impl Person {
             0.5 + 0.5 * (self.age as f64 / 20.0)
         } else if self.age < self.retirement_age {
             1.0
+        } else if self.max_age <= self.retirement_age {
+            0.2
         } else {
-            if self.max_age <= self.retirement_age {
-                0.2
-            } else {
-                let span = (self.max_age - self.retirement_age) as f64;
-                let elapsed = (self.age - self.retirement_age) as f64;
-                let fraction = (elapsed / span).min(1.0);
-                (1.0 - 0.8 * fraction).max(0.2)
-            }
+            let span = (self.max_age - self.retirement_age) as f64;
+            let elapsed = (self.age - self.retirement_age) as f64;
+            let fraction = (elapsed / span).min(1.0);
+            (1.0 - 0.8 * fraction).max(0.2)
         }
     }
 

@@ -1,78 +1,73 @@
-use crate::{
-    person::{Location, Person, Strategy},
-    skill::Skill,
-    PresetName, SimulationConfig, SimulationEngine,
-};
+#[cfg(test)]
+mod tests {
+    use crate::config::{PresetName, SimulationConfig};
+    use crate::engine::SimulationEngine;
+    use crate::person::{Location, Person, Strategy};
 
-#[test]
-fn test_person_aging_and_productivity_factor() {
-    let skill = Skill::new("Programming".to_string(), 50.0);
-    let mut person = Person::new(
-        1,
-        100.0,
-        vec![skill],
-        Strategy::Balanced,
-        Location::new(10.0, 10.0),
-        0.95,
-    );
+    #[test]
+    fn test_person_productivity_by_age() {
+        let mut person = Person::new(
+            1,
+            100.0,
+            vec![],
+            Strategy::Balanced,
+            Location::new(0.0, 0.0),
+            0.95,
+        );
+        person.retirement_age = 65;
+        person.max_age = 80;
 
-    // Initial default age is 20
-    assert_eq!(person.age, 20);
-    assert_eq!(person.retirement_age, 65);
-    assert_eq!(person.max_age, 80);
-    assert!(!person.is_retired());
-    assert_eq!(person.productivity_factor(), 1.0);
+        // Young adult
+        person.age = 10;
+        assert!((person.productivity_factor() - 0.75).abs() < 1e-5);
 
-    // Youth (< 20)
-    person.age = 10;
-    assert_eq!(person.productivity_factor(), 0.75); // 0.5 + 0.5 * (10 / 20)
+        // Prime working age
+        person.age = 40;
+        assert_eq!(person.productivity_factor(), 1.0);
 
-    // Retirement age
-    person.age = 65;
-    assert!(person.is_retired());
-    assert_eq!(person.productivity_factor(), 1.0);
+        // Retired
+        person.age = 65;
+        assert_eq!(person.productivity_factor(), 1.0);
+        assert!(person.is_retired());
 
-    // Old age (towards max age)
-    person.age = 80;
-    assert_eq!(person.productivity_factor(), 0.2); // Floored at 0.2
-}
-
-#[test]
-fn test_engine_demographics_pension_and_aging() {
-    let mut config = SimulationConfig::default();
-    config.enable_demographics = true;
-    config.entity_count = 10;
-    config.max_steps = 10;
-    config.default_retirement_age = 65;
-    config.default_max_age = 80;
-    config.pension_contribution_rate = 0.05;
-
-    let mut engine = SimulationEngine::new(config);
-
-    // Initial age is 20
-    let entities = engine.get_entities();
-    assert_eq!(entities[0].person_data.age, 20);
-
-    // Run 5 steps
-    for _ in 0..5 {
-        engine.step();
+        person.age = 80;
+        assert!((person.productivity_factor() - 0.2).abs() < 1e-5);
     }
 
-    // Ages should increase by 5
-    let updated_entities = engine.get_entities();
-    assert_eq!(updated_entities[0].person_data.age, 25);
-}
+    #[test]
+    fn test_demographic_transition_preset() {
+        let config = SimulationConfig::from_preset(PresetName::DemographicTransition);
+        assert!(config.enable_demographics);
+        assert_eq!(config.default_retirement_age, 65);
+        assert_eq!(config.default_max_age, 80);
+        assert_eq!(config.pension_contribution_rate, 0.08);
+        assert!(config.validate().is_ok());
+    }
 
-#[test]
-fn test_engine_demographics_preset_and_succession() {
-    let mut config = SimulationConfig::from_preset(PresetName::DemographicTransition);
-    config.entity_count = 5;
-    config.max_steps = 10;
+    #[test]
+    fn test_demographic_aging_and_succession() {
+        let config = SimulationConfig {
+            enable_demographics: true,
+            default_retirement_age: 65,
+            default_max_age: 80,
+            entity_count: 10,
+            ..Default::default()
+        };
 
-    let mut engine = SimulationEngine::new(config);
-    assert!(engine.get_config().enable_demographics);
+        let mut engine = SimulationEngine::new(config);
 
-    let result = engine.run();
-    assert_eq!(result.total_steps, 10);
-    assert_eq!(result.active_persons, 5);
+        // Set entity near max age
+        if let Some(entity) = engine.get_entities_mut().get_mut(0) {
+            entity.person_data.age = 79;
+            entity.person_data.money = 1000.0;
+        }
+
+        // Run one step -> triggers process_demographics which increments age to 80, triggers rebirth & succession
+        engine.step();
+
+        // Entity 0 should have reached max_age (80) and been succeeded at age 18
+        let entity_0 = &engine.get_entities()[0];
+        assert_eq!(entity_0.person_data.age, 18); // Reborn at age 18
+        assert!(entity_0.person_data.money < 1000.0); // Money modified by pension deduction & inheritance
+    }
 }
