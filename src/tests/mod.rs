@@ -8,6 +8,7 @@ mod engine_focused_coverage;
 mod final_80_breakthrough;
 mod final_80_percent_push;
 mod final_push_tests;
+mod information_asymmetry_tests;
 mod laser_focus_80;
 mod profit_tax_tests;
 mod proptest_tests;

@@ -8,6 +8,7 @@ For a quick overview, see the [README](README.md). For development information, 
 
 - [Core Simulation Features](#core-simulation-features)
 - [Market Mechanisms](#market-mechanisms)
+- [Information Asymmetry & Signaling (Lemons Market)](#information-asymmetry--signaling-lemons-market)
 - [Social Systems](#social-systems)
 - [Economic & Financial Systems](#economic-financial-systems)
 - [Insurance & Risk Management](#insurance-risk-management)
@@ -174,6 +175,15 @@ Comprehensive market concentration metrics for each individual skill, enabling d
 ### Market Concentration Analysis
 
 Calculates the Herfindahl-Hirschman Index (HHI) to measure wealth concentration among participants. HHI values indicate market structure: < 1,500 (competitive), 1,500-2,500 (moderate concentration), > 2,500 (high concentration/oligopoly).
+
+### Information Asymmetry & Signaling (Lemons Market)
+
+Simulates asymmetric information between buyers and sellers where skill true quality differs from perceived quality (Akerlof's Lemons Market).
+  - **Asymmetric Information:** Sellers possess skills with private quality (`true_quality`), but buyers initially observe only `perceived_quality` (market default of 3.0 or initial average quality).
+  - **Screening (Buyer Inspection):** Buyers can pay an inspection cost (`--inspection-cost`) to evaluate a skill before purchase, revealing its `true_quality` and avoiding low-quality skills ("lemons").
+  - **Signaling (Seller Certification):** High-quality sellers can pay a certification cost (`--certification-cost`) to publicly verify their skill's `true_quality`, signaling quality to all market participants without requiring buyer inspection.
+
+  Enable via `--enable-information-asymmetry` flag or configuration file with `enable_information_asymmetry: true`. Configurable parameters: `--inspection-cost` (default: 1.0) and `--certification-cost` (default: 5.0). Perfect for studying adverse selection, signaling mechanisms, screening strategies, and market efficiency under imperfect information.
 
 ## Social Systems
 
