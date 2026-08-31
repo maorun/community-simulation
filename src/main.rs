@@ -1445,6 +1445,10 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             rental_income_rate: SimulationConfig::default().rental_income_rate,
             stock_return_rate: SimulationConfig::default().stock_return_rate,
             asset_price_multiplier: SimulationConfig::default().asset_price_multiplier,
+            enable_demographics: SimulationConfig::default().enable_demographics,
+            default_retirement_age: SimulationConfig::default().default_retirement_age,
+            default_max_age: SimulationConfig::default().default_max_age,
+            pension_contribution_rate: SimulationConfig::default().pension_contribution_rate,
         }
     };
 

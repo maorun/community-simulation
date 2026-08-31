@@ -743,6 +743,12 @@ pub struct Person {
     /// Accumulated tax loss carryforward (Verlustvortrag) used for profit-based taxation (Gewinnsteuer).
     /// Tracks un-offset trading losses to reduce taxable profit on future profitable trades.
     pub accumulated_loss: f64,
+    /// Current age of the person in simulation steps / epochs.
+    pub age: usize,
+    /// Retirement age at which the person transitions from labor force to retirement.
+    pub retirement_age: usize,
+    /// Maximum age after which the person dies and leaves inheritance / is replaced by a successor.
+    pub max_age: usize,
 }
 
 impl Person {
@@ -795,7 +801,41 @@ impl Person {
             currency_id: default_currency_id(),       // Start with base currency
             discount_factor: discount_factor.clamp(0.0, 1.0), // Clamp to valid range
             accumulated_loss: 0.0,                    // Start with no loss carryforward
+            age: 20,                                  // Default initial age of 20
+            retirement_age: 65,                       // Default retirement age of 65
+            max_age: 80,                              // Default max age of 80
         }
+    }
+
+    /// Returns the productivity factor based on age and retirement status.
+    ///
+    /// Productivity follows a lifecycle curve:
+    /// - Youth (< 20): Rises from 0.5 to 1.0
+    /// - Working age (20 to retirement_age): Peak productivity (1.0)
+    /// - Retirement age to max_age: Declines gradually (from 1.0 down to 0.2 at max_age)
+    ///
+    /// # Returns
+    /// Productivity multiplier (0.2 to 1.0 float)
+    pub fn productivity_factor(&self) -> f64 {
+        if self.age < 20 {
+            0.5 + 0.5 * (self.age as f64 / 20.0)
+        } else if self.age < self.retirement_age {
+            1.0
+        } else {
+            if self.max_age <= self.retirement_age {
+                0.2
+            } else {
+                let span = (self.max_age - self.retirement_age) as f64;
+                let elapsed = (self.age - self.retirement_age) as f64;
+                let fraction = (elapsed / span).min(1.0);
+                (1.0 - 0.8 * fraction).max(0.2)
+            }
+        }
+    }
+
+    /// Returns true if this person has reached retirement age.
+    pub fn is_retired(&self) -> bool {
+        self.age >= self.retirement_age
     }
 
     pub fn can_afford(&self, amount: f64) -> bool {

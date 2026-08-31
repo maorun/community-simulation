@@ -18,6 +18,7 @@ pub enum PresetName {
     QuickTest,
     GigEconomy,
     PostConflictReconstruction,
+    DemographicTransition,
 }
 
 impl PresetName {
@@ -33,6 +34,7 @@ impl PresetName {
             PresetName::QuickTest,
             PresetName::GigEconomy,
             PresetName::PostConflictReconstruction,
+            PresetName::DemographicTransition,
         ]
     }
 
@@ -48,6 +50,7 @@ impl PresetName {
             PresetName::QuickTest => "quick_test",
             PresetName::GigEconomy => "gig_economy",
             PresetName::PostConflictReconstruction => "post_conflict_reconstruction",
+            PresetName::DemographicTransition => "demographic_transition",
         }
     }
 
@@ -66,6 +69,9 @@ impl PresetName {
             },
             PresetName::PostConflictReconstruction => {
                 "Post-conflict reconstruction with damaged economy, trust rebuilding, and international aid"
+            },
+            PresetName::DemographicTransition => {
+                "Demographic transition scenario modeling aging population, retirement pensions, and generational succession"
             },
         }
     }
@@ -88,6 +94,7 @@ impl FromStr for PresetName {
             "post_conflict_reconstruction" | "post_conflict" => {
                 Ok(PresetName::PostConflictReconstruction)
             },
+            "demographic_transition" | "demographics" => Ok(PresetName::DemographicTransition),
             _ => Err(format!("Unknown preset: '{}'", s)),
         }
     }
@@ -1850,6 +1857,22 @@ pub struct SimulationConfig {
     /// Valid range: 1.0-100.0
     #[serde(default = "default_asset_price_multiplier")]
     pub asset_price_multiplier: f64,
+
+    /// Enable demographic dynamics (agent aging, retirement, pension, and life cycle succession).
+    #[serde(default)]
+    pub enable_demographics: bool,
+
+    /// Default retirement age at which agents stop earning regular labor income and start receiving pensions.
+    #[serde(default = "default_retirement_age")]
+    pub default_retirement_age: usize,
+
+    /// Default maximum age at which agents die and pass inheritance/skills to new entering agents.
+    #[serde(default = "default_max_age")]
+    pub default_max_age: usize,
+
+    /// Pension contribution rate deducted from active working persons' sales/income.
+    #[serde(default = "default_pension_contribution_rate")]
+    pub pension_contribution_rate: f64,
 }
 
 fn default_disease_transmission_rate() -> f64 {
@@ -2208,6 +2231,18 @@ fn default_asset_price_multiplier() -> f64 {
     10.0 // Assets cost 10x base skill price
 }
 
+fn default_retirement_age() -> usize {
+    65
+}
+
+fn default_max_age() -> usize {
+    80
+}
+
+fn default_pension_contribution_rate() -> f64 {
+    0.05 // 5% pension contribution
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -2361,6 +2396,10 @@ impl Default for SimulationConfig {
             rental_income_rate: 0.001,           // 0.1% rental income per step
             stock_return_rate: 0.003,            // 0.3% expected return per step
             asset_price_multiplier: 10.0,        // Assets cost 10x base skill price
+            enable_demographics: false,          // Disabled by default
+            default_retirement_age: 65,
+            default_max_age: 80,
+            pension_contribution_rate: 0.05,
         }
     }
 }
@@ -3015,6 +3054,27 @@ impl SimulationConfig {
             )));
         }
 
+        // Demographic system validation
+        if self.enable_demographics {
+            if self.default_retirement_age == 0 {
+                return Err(SimulationError::ValidationError(
+                    "default_retirement_age must be greater than 0".to_string(),
+                ));
+            }
+            if self.default_max_age <= self.default_retirement_age {
+                return Err(SimulationError::ValidationError(format!(
+                    "default_max_age ({}) must be greater than default_retirement_age ({})",
+                    self.default_max_age, self.default_retirement_age
+                )));
+            }
+            if !(0.0..=0.5).contains(&self.pension_contribution_rate) {
+                return Err(SimulationError::ValidationError(format!(
+                    "pension_contribution_rate must be between 0.0 and 0.5, got: {}",
+                    self.pension_contribution_rate
+                )));
+            }
+        }
+
         // Environment system validation
         // Validate resource_cost_per_transaction range unconditionally
         if !(0.0..=10.0).contains(&self.resource_cost_per_transaction) {
@@ -3371,6 +3431,17 @@ impl SimulationConfig {
                 price_elasticity_factor: 0.15, // Higher volatility due to instability
                 volatility_percentage: 0.04,   // Higher price volatility (4%)
 
+                ..Self::default()
+            },
+            PresetName::DemographicTransition => Self {
+                max_steps: 1000,
+                entity_count: 100,
+                initial_money_per_person: 100.0,
+                enable_demographics: true,
+                default_retirement_age: 65,
+                default_max_age: 80,
+                pension_contribution_rate: 0.08,
+                savings_rate: 0.05,
                 ..Self::default()
             },
         }
