@@ -6121,11 +6121,7 @@ impl SimulationEngine {
         }
 
         // 3. Distribute pension pool equally among retired entities
-        let retired_count = self
-            .entities
-            .iter()
-            .filter(|e| e.person_data.is_retired())
-            .count();
+        let retired_count = self.entities.iter().filter(|e| e.person_data.is_retired()).count();
         if retired_count > 0 && total_pension_pool > 0.0 {
             let pension_per_retired = total_pension_pool / (retired_count as f64);
             for entity in &mut self.entities {

@@ -6,14 +6,8 @@ mod tests {
 
     #[test]
     fn test_person_productivity_by_age() {
-        let mut person = Person::new(
-            1,
-            100.0,
-            vec![],
-            Strategy::Balanced,
-            Location::new(0.0, 0.0),
-            0.95,
-        );
+        let mut person =
+            Person::new(1, 100.0, vec![], Strategy::Balanced, Location::new(0.0, 0.0), 0.95);
         person.retirement_age = 65;
         person.max_age = 80;
 
