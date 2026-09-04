@@ -132,6 +132,9 @@ pub mod trade_agreement;
 pub mod trust_network;
 pub mod utils;
 pub mod voting;
+#[cfg(feature = "wasm")]
+pub mod wasm;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod wizard;
 pub mod wizard_helpers;
 

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Community Simulation Playground</title>
+    <style>
+      body { font: 16px system-ui, sans-serif; margin: 2rem auto; max-width: 64rem; padding: 0 1rem; }
+      form { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+      label { display: grid; gap: .25rem; }
+      fieldset { grid-column: 1 / -1; }
+      canvas { border: 1px solid #aaa; max-width: 100%; }
+      pre { overflow: auto; padding: 1rem; background: #f4f4f4; }
+    </style>
+  </head>
+  <body>
+    <h1>Community Simulation Playground</h1>
+    <form id="simulation-form">
+      <label>Steps <input name="steps" type="number" value="100" min="1"></label>
+      <label>Persons <input name="persons" type="number" value="20" min="1"></label>
+      <label>Seed <input name="seed" type="number" value="42" min="0"></label>
+      <label>Initial money <input name="initial_money" type="number" value="100" min="0" step="any"></label>
+      <label>Base price <input name="base_price" type="number" value="10" min="0.01" step="any"></label>
+      <label>Scenario <select name="scenario"><option>Original</option><option>DynamicPricing</option><option>AdaptivePricing</option><option>AuctionPricing</option><option>ClimateChange</option></select></label>
+      <fieldset>
+        <legend>Feature flags</legend>
+        <label><input name="enable_technology_breakthroughs" type="checkbox"> Technology breakthroughs</label>
+        <label><input name="enable_loans" type="checkbox"> Loans</label>
+        <label><input name="enable_auctions" type="checkbox"> Auctions</label>
+        <label><input name="enable_contracts" type="checkbox"> Contracts</label>
+        <label><input name="enable_education" type="checkbox"> Education</label>
+        <label><input name="enable_crisis_events" type="checkbox"> Crisis events</label>
+        <label><input name="enable_insurance" type="checkbox"> Insurance</label>
+      </fieldset>
+      <button>Run simulation</button>
+    </form>
+    <p id="error" role="alert"></p>
+    <canvas id="chart" width="900" height="300" aria-label="Skill price history"></canvas>
+    <pre id="summary"></pre>
+    <script type="module" src="playground.js"></script>
+  </body>
+</html>
