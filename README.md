@@ -160,6 +160,25 @@ This framework enables you to simulate and analyze:
   -o satisficing.json
 ```
 
+### Batch Parameter Sweeps
+
+Run a grid of scenarios, population sizes, and crisis probabilities concurrently. The command
+writes one aggregated row per configuration to both JSON and CSV, making comparison straightforward:
+
+```bash
+./target/release/community-simulation sweep \
+  --steps 500 \
+  --scenario Original,DynamicPricing \
+  --persons 50,100 \
+  --crisis-probability 0.01,0.05 \
+  --runs 3 \
+  --output policy_comparison
+```
+
+This produces `policy_comparison.json` and `policy_comparison.csv`, with average money, Gini
+coefficient, total trades, and total trade volume for each grid point. Use `--config` to supply a
+YAML or TOML base configuration for all runs.
+
 **Note:** Reinforcement Learning is currently configurable via YAML/TOML config files only. Example configuration:
 
 ```yaml

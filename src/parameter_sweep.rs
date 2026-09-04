@@ -96,6 +96,159 @@ pub struct ParameterSweepResult {
     pub total_simulations: usize,
 }
 
+/// Values identifying a single configuration in a grid sweep.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SweepConfiguration {
+    pub scenario: crate::scenario::Scenario,
+    pub persons: usize,
+    pub crisis_probability: f64,
+}
+
+/// One aggregated row in a grid sweep comparison report.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GridSweepPoint {
+    pub configuration: SweepConfiguration,
+    pub avg_money: f64,
+    pub gini_coefficient: f64,
+    pub total_trades: f64,
+    pub total_trade_volume: f64,
+}
+
+/// Comparison report for a batch of simulation configurations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GridSweepResult {
+    pub runs_per_configuration: usize,
+    pub base_seed: u64,
+    pub points: Vec<GridSweepPoint>,
+    pub total_simulations: usize,
+}
+
+impl GridSweepResult {
+    /// Run every combination of the supplied scenarios, populations, and crisis probabilities.
+    pub fn run(
+        base_config: SimulationConfig,
+        scenarios: Vec<crate::scenario::Scenario>,
+        persons: Vec<usize>,
+        crisis_probabilities: Vec<f64>,
+        runs_per_configuration: usize,
+    ) -> Result<Self> {
+        if scenarios.is_empty() || persons.is_empty() || crisis_probabilities.is_empty() {
+            return Err(SimulationError::ValidationError(
+                "Scenarios, persons, and crisis probabilities must not be empty".to_string(),
+            ));
+        }
+        if persons.contains(&0) {
+            return Err(SimulationError::ValidationError("Persons must be at least 1".to_string()));
+        }
+        if crisis_probabilities
+            .iter()
+            .any(|probability| !(0.0..=1.0).contains(probability))
+        {
+            return Err(SimulationError::ValidationError(
+                "Crisis probabilities must be between 0.0 and 1.0".to_string(),
+            ));
+        }
+        if runs_per_configuration == 0 {
+            return Err(SimulationError::ValidationError(
+                "Runs per configuration must be at least 1".to_string(),
+            ));
+        }
+
+        let mut configurations = Vec::new();
+        for scenario in scenarios {
+            for &person_count in &persons {
+                for &crisis_probability in &crisis_probabilities {
+                    configurations.push(SweepConfiguration {
+                        scenario: scenario.clone(),
+                        persons: person_count,
+                        crisis_probability,
+                    });
+                }
+            }
+        }
+        let base_seed = base_config.seed;
+        let points = configurations
+            .par_iter()
+            .enumerate()
+            .map(|(configuration_index, configuration)| {
+                let results: Vec<_> = (0..runs_per_configuration)
+                    .into_par_iter()
+                    .map(|run_index| {
+                        let mut config = base_config.clone();
+                        config.scenario = configuration.scenario.clone();
+                        config.entity_count = configuration.persons;
+                        config.crisis_probability = configuration.crisis_probability;
+                        config.enable_crisis_events = true;
+                        config.seed = base_seed
+                            + (configuration_index * runs_per_configuration + run_index) as u64;
+                        SimulationEngine::new(config).run_with_progress(false)
+                    })
+                    .collect();
+
+                let average = |values: Vec<f64>| calculate_statistics(&values).mean;
+                GridSweepPoint {
+                    configuration: configuration.clone(),
+                    avg_money: average(
+                        results.iter().map(|result| result.money_statistics.average).collect(),
+                    ),
+                    gini_coefficient: average(
+                        results
+                            .iter()
+                            .map(|result| result.money_statistics.gini_coefficient)
+                            .collect(),
+                    ),
+                    total_trades: average(
+                        results
+                            .iter()
+                            .map(|result| result.trade_volume_statistics.total_trades as f64)
+                            .collect(),
+                    ),
+                    total_trade_volume: average(
+                        results
+                            .iter()
+                            .map(|result| result.trade_volume_statistics.total_volume)
+                            .collect(),
+                    ),
+                }
+            })
+            .collect();
+        let total_simulations = configurations.len() * runs_per_configuration;
+
+        Ok(Self { runs_per_configuration, base_seed, points, total_simulations })
+    }
+
+    /// Save the comparison report as JSON.
+    pub fn save_json(&self, path: &str) -> Result<()> {
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|error| SimulationError::JsonSerialize(error.to_string()))?;
+        std::fs::write(path, json)?;
+        Ok(())
+    }
+
+    /// Save one aggregated comparison row per configuration as CSV.
+    pub fn save_csv(&self, path: &str) -> Result<()> {
+        let mut file = File::create(path)?;
+        writeln!(
+            file,
+            "scenario,persons,crisis_probability,avg_money,gini_coefficient,total_trades,total_trade_volume"
+        )?;
+        for point in &self.points {
+            writeln!(
+                file,
+                "{},{},{},{},{},{},{}",
+                point.configuration.scenario,
+                point.configuration.persons,
+                point.configuration.crisis_probability,
+                point.avg_money,
+                point.gini_coefficient,
+                point.total_trades,
+                point.total_trade_volume
+            )?;
+        }
+        Ok(())
+    }
+}
+
 impl ParameterSweepResult {
     /// Create a new ParameterSweepResult by running simulations across a parameter range
     pub fn run_sweep(
@@ -820,5 +973,52 @@ mod tests {
         // Should work with show_progress = true
         let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, true);
         assert_eq!(result.sweep_points.len(), 2);
+    }
+
+    #[test]
+    fn grid_sweep_runs_all_combinations_and_writes_reports() {
+        let result = GridSweepResult::run(
+            SimulationConfig { max_steps: 2, entity_count: 3, ..Default::default() },
+            vec![Scenario::Original, Scenario::DynamicPricing],
+            vec![2, 3],
+            vec![0.0, 0.1],
+            1,
+        )
+        .unwrap();
+
+        assert_eq!(result.points.len(), 8);
+        assert_eq!(result.total_simulations, 8);
+        assert_eq!(result.points[0].configuration.persons, 2);
+        assert_eq!(result.points[0].configuration.crisis_probability, 0.0);
+        assert!(result.points.iter().all(|point| point.avg_money.is_finite()));
+
+        let directory = tempfile::tempdir().unwrap();
+        let json_path = directory.path().join("report.json");
+        let csv_path = directory.path().join("report.csv");
+        result.save_json(json_path.to_str().unwrap()).unwrap();
+        result.save_csv(csv_path.to_str().unwrap()).unwrap();
+
+        assert_eq!(
+            serde_json::from_str::<GridSweepResult>(&std::fs::read_to_string(json_path).unwrap())
+                .unwrap()
+                .points
+                .len(),
+            8
+        );
+        assert_eq!(std::fs::read_to_string(csv_path).unwrap().lines().count(), 9);
+    }
+
+    #[test]
+    fn grid_sweep_rejects_invalid_values() {
+        let error = GridSweepResult::run(
+            SimulationConfig::default(),
+            vec![Scenario::Original],
+            vec![0],
+            vec![0.0],
+            1,
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("Persons must be at least 1"));
     }
 }
