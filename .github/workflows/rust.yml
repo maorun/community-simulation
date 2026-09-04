@@ -85,6 +85,23 @@ jobs:
     - name: Run doctests
       run: cargo test --doc --verbose
 
+  golden-regression:
+    name: Golden-File Regression Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+
+    - name: Install Rust toolchain
+      run: |
+        rustup update stable
+        rustup default stable
+
+    - name: Run golden-file regression tests
+      run: cargo test --test golden_regression -- --nocapture
+
   coverage-check:
     name: Coverage Check (Quick)
     runs-on: ubuntu-latest

@@ -207,6 +207,31 @@ impl Market {
         self.invalidate_cache();
     }
 
+    /// Returns all skill identifiers in a deterministic (lexicographically sorted) order.
+    ///
+    /// Skills are stored in a `HashMap`, whose iteration order differs between
+    /// processes. Any logic that consumes the random number generator per skill must
+    /// use this method to keep seeded simulation runs reproducible.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use community_simulation::market::Market;
+    /// use community_simulation::scenario::{PriceUpdater, Scenario};
+    /// use community_simulation::skill::Skill;
+    ///
+    /// let mut market = Market::new(10.0, 1.0, 0.1, 0.02, PriceUpdater::from(Scenario::Original));
+    /// market.add_skill(Skill::new("Writing".to_string(), 10.0));
+    /// market.add_skill(Skill::new("Accounting".to_string(), 10.0));
+    ///
+    /// assert_eq!(market.sorted_skill_ids(), vec!["Accounting".to_string(), "Writing".to_string()]);
+    /// ```
+    pub fn sorted_skill_ids(&self) -> Vec<SkillId> {
+        let mut skill_ids: Vec<SkillId> = self.skills.keys().cloned().collect();
+        skill_ids.sort();
+        skill_ids
+    }
+
     /// Increments the supply counter for a skill.
     ///
     /// Should be called once for each person who provides this skill.

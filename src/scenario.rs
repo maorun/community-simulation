@@ -1120,7 +1120,11 @@ impl OriginalPriceUpdater {
     /// * `market` - The market containing skills to update
     /// * `rng` - Random number generator for volatility
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
-        for (skill_id, skill) in market.skills.iter_mut() {
+        // Iterate skills in a deterministic order. `HashMap` iteration order varies
+        // between processes, and the random fluctuation below draws from the RNG once
+        // per skill, so an unstable order would break seeded reproducibility.
+        for skill_id in market.sorted_skill_ids() {
+            let skill_id = &skill_id;
             // Cache price limits to avoid duplicate HashMap lookups for better performance
             let (min_opt, max_opt) = market
                 .per_skill_price_limits
@@ -1132,6 +1136,10 @@ impl OriginalPriceUpdater {
 
             let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
             let supply = (*market.supply_counts.get(skill_id).unwrap_or(&1)).max(1) as f64;
+
+            let Some(skill) = market.skills.get_mut(skill_id) else {
+                continue;
+            };
 
             let mut new_price = skill.current_price;
 
@@ -1371,7 +1379,11 @@ impl AuctionPricingUpdater {
     /// * `market` - The market containing skills to update
     /// * `rng` - Random number generator for volatility
     pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
-        for (skill_id, skill) in market.skills.iter_mut() {
+        // Iterate skills in a deterministic order. `HashMap` iteration order varies
+        // between processes, and the random fluctuation below draws from the RNG once
+        // per skill, so an unstable order would break seeded reproducibility.
+        for skill_id in market.sorted_skill_ids() {
+            let skill_id = &skill_id;
             // Cache price limits to avoid duplicate HashMap lookups for better performance
             let (min_opt, max_opt) = market
                 .per_skill_price_limits
@@ -1383,6 +1395,10 @@ impl AuctionPricingUpdater {
 
             let demand = *market.demand_counts.get(skill_id).unwrap_or(&0) as f64;
             let supply = (*market.supply_counts.get(skill_id).unwrap_or(&1)).max(1) as f64;
+
+            let Some(skill) = market.skills.get_mut(skill_id) else {
+                continue;
+            };
 
             let old_price = skill.current_price;
             let mut new_price = old_price;

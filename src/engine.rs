@@ -317,7 +317,11 @@ impl SimulationEngine {
             }
         }
 
-        let all_skill_ids = market.skills.keys().cloned().collect::<Vec<SkillId>>();
+        // Sort the skill IDs to guarantee a deterministic order. `HashMap` iteration
+        // order varies between processes, which would otherwise make simulation runs
+        // with an identical seed produce different results.
+        let mut all_skill_ids = market.skills.keys().cloned().collect::<Vec<SkillId>>();
+        all_skill_ids.sort();
 
         // Initialize black market if enabled
         let black_market = if config.enable_black_market {
@@ -977,7 +981,11 @@ impl SimulationEngine {
             CrisisEvent::MarketCrash => {
                 // Reduce all skill prices
                 debug!("Applying market crash: reducing all skill prices");
-                for skill in self.market.skills.values_mut() {
+                // Sorted iteration keeps RNG consumption order stable across processes
+                for skill_id in self.market.sorted_skill_ids() {
+                    let Some(skill) = self.market.skills.get_mut(&skill_id) else {
+                        continue;
+                    };
                     let old_price = skill.current_price;
                     skill.current_price = crisis.apply_effect(
                         skill.current_price,
@@ -993,7 +1001,10 @@ impl SimulationEngine {
                 }
                 // Also apply to black market if enabled
                 if let Some(ref mut bm) = self.black_market {
-                    for skill in bm.skills.values_mut() {
+                    for skill_id in bm.sorted_skill_ids() {
+                        let Some(skill) = bm.skills.get_mut(&skill_id) else {
+                            continue;
+                        };
                         skill.current_price = crisis.apply_effect(
                             skill.current_price,
                             self.config.crisis_severity,
@@ -1027,12 +1038,18 @@ impl SimulationEngine {
                 // we could track "supply reduction" and reduce effective supply counts
                 debug!("Applying supply shock: supply chain disruptions");
                 // Apply effect to supply counts in the market
-                for count in self.market.supply_counts.values_mut() {
-                    let old_supply = *count;
+                // Sorted iteration keeps RNG consumption order stable across processes
+                let mut supply_skill_ids: Vec<SkillId> =
+                    self.market.supply_counts.keys().cloned().collect();
+                supply_skill_ids.sort();
+                for skill_id in supply_skill_ids {
                     let reduction_factor =
                         crisis.apply_effect(1.0, self.config.crisis_severity, &mut self.rng);
-                    *count = ((old_supply as f64) * reduction_factor) as usize;
-                    debug!("  Supply reduced from {} to {}", old_supply, *count);
+                    if let Some(count) = self.market.supply_counts.get_mut(&skill_id) {
+                        let old_supply = *count;
+                        *count = ((old_supply as f64) * reduction_factor) as usize;
+                        debug!("  Supply reduced from {} to {}", old_supply, *count);
+                    }
                 }
             },
             CrisisEvent::CurrencyDevaluation => {
