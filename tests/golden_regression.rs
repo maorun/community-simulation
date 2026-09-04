@@ -23,10 +23,12 @@ use std::path::PathBuf;
 
 /// Relative tolerance used when comparing floating point metrics.
 ///
-/// The simulation is deterministic, but floating point results can differ
-/// marginally between platforms and compiler versions, so an exact comparison
-/// would be too brittle. The tolerance is small enough to still catch
-/// behavioural drift.
+/// The simulation is fully deterministic for a fixed seed, so this tolerance only
+/// absorbs last-bit floating point noise (for example from reordered summations
+/// after a refactor) on the same platform. It is intentionally tight so that real
+/// behavioural drift is reported. Snapshots are recorded on the CI platform
+/// (x86_64 Linux); results produced by a different target may legitimately differ
+/// by more and then need to be regenerated there.
 const RELATIVE_TOLERANCE: f64 = 1e-9;
 
 /// Environment variable used to regenerate the committed snapshots.

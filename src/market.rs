@@ -228,7 +228,7 @@ impl Market {
     /// ```
     pub fn sorted_skill_ids(&self) -> Vec<SkillId> {
         let mut skill_ids: Vec<SkillId> = self.skills.keys().cloned().collect();
-        skill_ids.sort();
+        skill_ids.sort_unstable();
         skill_ids
     }
 
