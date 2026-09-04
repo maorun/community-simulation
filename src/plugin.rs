@@ -304,7 +304,8 @@ pub trait AgentStrategy: Send + Sync + Debug {
     /// The default implementation reproduces the built-in behaviour, which takes the
     /// person's [`Strategy`](crate::person::Strategy) and adaptive spending parameters
     /// into account.
-    fn should_purchase(&self, person: &Person, _skill_id: &SkillId, price: f64) -> bool {
+    fn should_purchase(&self, person: &Person, skill_id: &SkillId, price: f64) -> bool {
+        let _ = skill_id;
         person.can_afford_with_strategy(price)
     }
 }

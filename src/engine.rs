@@ -6,7 +6,9 @@ use crate::{
     event::EventBus,
     loan::{Loan, LoanId},
     person::{Person, PersonId, Strategy},
-    plugin::{PluginContext, PluginRegistry},
+    plugin::{
+        AgentStrategy, CustomPricingStrategy, PluginContext, PluginRegistry, PricingStrategy,
+    },
     result::{write_step_to_stream, StepData},
     scenario::{DemandGenerator, PriceUpdater},
     Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
@@ -230,7 +232,7 @@ pub struct SimulationEngine {
     // Plugin system for extending simulation
     plugin_registry: PluginRegistry,
     // Optional user provided agent decision logic (see crate::plugin::AgentStrategy)
-    agent_strategy: Option<std::sync::Arc<dyn crate::plugin::AgentStrategy>>,
+    agent_strategy: Option<Arc<dyn AgentStrategy>>,
     // Resource pool tracking: group_id -> (balance, total_contributions, total_withdrawals)
     resource_pools: HashMap<usize, (f64, f64, f64)>,
     // Production system recipes (cached for performance)
@@ -631,9 +633,9 @@ impl SimulationEngine {
     /// let mut engine = SimulationEngine::new(SimulationConfig::default());
     /// engine.set_pricing_strategy(Arc::new(FrozenPricing));
     /// ```
-    pub fn set_pricing_strategy(&mut self, strategy: Arc<dyn crate::plugin::PricingStrategy>) {
+    pub fn set_pricing_strategy(&mut self, strategy: Arc<dyn PricingStrategy>) {
         log::info!("Installing custom pricing strategy: {}", strategy.name());
-        let updater = PriceUpdater::Custom(crate::plugin::CustomPricingStrategy::new(strategy));
+        let updater = PriceUpdater::Custom(CustomPricingStrategy::new(strategy));
         self.market.set_price_updater(updater.clone());
         if let Some(ref mut black_market) = self.black_market {
             black_market.set_price_updater(updater);
@@ -644,7 +646,7 @@ impl SimulationEngine {
     ///
     /// The strategy decides for every candidate trade whether the buyer is willing to
     /// purchase the skill at the offered price.
-    pub fn set_agent_strategy(&mut self, strategy: Arc<dyn crate::plugin::AgentStrategy>) {
+    pub fn set_agent_strategy(&mut self, strategy: Arc<dyn AgentStrategy>) {
         log::info!("Installing custom agent strategy: {}", strategy.name());
         self.agent_strategy = Some(strategy);
     }
@@ -6556,6 +6558,10 @@ impl SimulationEngine {
     /// **Note:** Plugins are not persisted in checkpoints. After loading a checkpoint,
     /// you must re-register any plugins that were previously registered before
     /// continuing the simulation. This ensures plugin state is properly initialized.
+    /// The same applies to custom strategies installed with
+    /// [`set_pricing_strategy`](Self::set_pricing_strategy) and
+    /// [`set_agent_strategy`](Self::set_agent_strategy): they are not persisted and the
+    /// restored engine falls back to the built-in behaviour until they are re-installed.
     ///
     /// # Arguments
     ///

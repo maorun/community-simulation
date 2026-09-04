@@ -197,7 +197,7 @@ mod tests {
                 PriceUpdater::AuctionPricing(_) => Scenario::AuctionPricing,
                 PriceUpdater::ClimateChange(_) => Scenario::ClimateChange,
                 PriceUpdater::Custom(_) => {
-                    panic!("Custom pricing strategies have no built-in scenario")
+                    unreachable!("test configurations never use custom pricing strategies")
                 },
             }
         }
