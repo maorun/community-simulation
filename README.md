@@ -21,6 +21,18 @@ This framework enables you to simulate and analyze:
 
 ## Core Features
 
+### Browser Playground (WebAssembly)
+
+Build the browser bundle with [`wasm-pack`](https://rustwasm.github.io/wasm-pack/):
+
+```bash
+wasm-pack build --target web --features wasm
+```
+
+Serve the repository root with a static web server, then open `web/index.html`. The playground
+runs the simulation locally in the browser, supports core parameters and selected feature flags,
+and charts skill price history on a canvas.
+
 ### Agent-Based Simulation
 - Autonomous persons with money, skills, and needs
 - Geographic locations with distance-based trade costs
