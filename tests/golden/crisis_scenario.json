@@ -1,0 +1,23 @@
+{
+  "preset": "crisis_scenario",
+  "seed": 42,
+  "max_steps": 200,
+  "metrics": {
+    "active_persons": 100.0,
+    "avg_transaction_value": 83.4576166845556,
+    "failed_steps": 0.0,
+    "failed_trade_attempts": 68951.0,
+    "gini_coefficient": 3.2001425629577547,
+    "least_valuable_skill_price": 830.9696591780138,
+    "money_average": 49.99999999999999,
+    "money_max": 1182.7193174729018,
+    "money_median": 50.488756094813446,
+    "money_min": -1968.3220742000499,
+    "money_std_dev": 352.867744978438,
+    "most_valuable_skill_price": 1000.0,
+    "total_fees_collected": 0.0,
+    "total_steps": 200.0,
+    "total_trades": 739.0,
+    "total_volume": 61675.17872988659
+  }
+}

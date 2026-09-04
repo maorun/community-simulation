@@ -1,0 +1,23 @@
+{
+  "preset": "gig_economy",
+  "seed": 42,
+  "max_steps": 200,
+  "metrics": {
+    "active_persons": 200.0,
+    "avg_transaction_value": 8.480033185265421,
+    "failed_steps": 0.0,
+    "failed_trade_attempts": 123763.0,
+    "gini_coefficient": -0.707489529908113,
+    "least_valuable_skill_price": 1.0,
+    "money_average": -1.5377973520718349,
+    "money_max": 1.139296434938898,
+    "money_median": -1.0937456001802164,
+    "money_min": -7.324620790473119,
+    "money_std_dev": 1.9776496834542228,
+    "most_valuable_skill_price": 1.0,
+    "total_fees_collected": 20307.559470414293,
+    "total_steps": 200.0,
+    "total_trades": 15965.0,
+    "total_volume": 135383.72980276245
+  }
+}

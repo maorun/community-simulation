@@ -1,0 +1,23 @@
+{
+  "preset": "small_economy",
+  "seed": 42,
+  "max_steps": 100,
+  "metrics": {
+    "active_persons": 20.0,
+    "avg_transaction_value": 66.8092067571182,
+    "failed_steps": 0.0,
+    "failed_trade_attempts": 6387.0,
+    "gini_coefficient": 2.6457727691200263,
+    "least_valuable_skill_price": 897.9727064714012,
+    "money_average": 99.99999999999997,
+    "money_max": 1207.7902635795722,
+    "money_median": 113.11055902050514,
+    "money_min": -1729.2403366487679,
+    "money_std_dev": 563.6638978653045,
+    "most_valuable_skill_price": 1000.0,
+    "total_fees_collected": 0.0,
+    "total_steps": 100.0,
+    "total_trades": 632.0,
+    "total_volume": 42223.41867049871
+  }
+}

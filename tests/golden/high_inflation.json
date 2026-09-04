@@ -1,0 +1,23 @@
+{
+  "preset": "high_inflation",
+  "seed": 42,
+  "max_steps": 200,
+  "metrics": {
+    "active_persons": 100.0,
+    "avg_transaction_value": 1.9046011194803563,
+    "failed_steps": 0.0,
+    "failed_trade_attempts": 382.0,
+    "gini_coefficient": 0.3760436513550449,
+    "least_valuable_skill_price": 1.0,
+    "money_average": 100.00000000000004,
+    "money_max": 398.01540705164473,
+    "money_median": 87.73367846405057,
+    "money_min": 0.8415060300949923,
+    "money_std_dev": 70.13766145185076,
+    "most_valuable_skill_price": 1.0,
+    "total_fees_collected": 0.0,
+    "total_steps": 200.0,
+    "total_trades": 69391.0,
+    "total_volume": 132162.1762818614
+  }
+}

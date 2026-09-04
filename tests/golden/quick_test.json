@@ -1,0 +1,23 @@
+{
+  "preset": "quick_test",
+  "seed": 42,
+  "max_steps": 50,
+  "metrics": {
+    "active_persons": 10.0,
+    "avg_transaction_value": 73.83478158415348,
+    "failed_steps": 0.0,
+    "failed_trade_attempts": 1401.0,
+    "gini_coefficient": 2.2053602199643128,
+    "least_valuable_skill_price": 1000.0,
+    "money_average": 99.99999999999997,
+    "money_max": 753.6987488044997,
+    "money_median": 121.05744645725147,
+    "money_min": -658.6165006640365,
+    "money_std_dev": 412.3316524652453,
+    "most_valuable_skill_price": 1000.0,
+    "total_fees_collected": 0.0,
+    "total_steps": 50.0,
+    "total_trades": 355.0,
+    "total_volume": 26211.347462374484
+  }
+}

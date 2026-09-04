@@ -214,12 +214,38 @@ The test suite includes:
    - Reputation and trade volume tracking
    - Result statistics validation
 
-4. **Module Tests** (inline in source files):
+4. **Golden-File Regression Tests** (`tests/golden_regression.rs`): Deterministic snapshot tests
+   - Runs a fixed set of seeded preset scenarios (`quick_test`, `small_economy`, `gig_economy`,
+     `crisis_scenario`, `high_inflation`, all with `--seed 42`)
+   - Compares key output metrics (wealth statistics, trade volume, skill prices) against the
+     snapshots committed in `tests/golden/`
+   - Fails with a metric-by-metric diff if simulation behaviour drifts unexpectedly
+
+5. **Module Tests** (inline in source files):
    - `src/result.rs`: Tests for result calculation, statistics, and JSON/CSV output
    - `src/scenario.rs`: Tests for price update mechanisms in different scenarios
    - `src/config.rs`: Tests for configuration file loading (YAML/TOML)
    - `src/person.rs`: Tests for person behavior and reputation system
    - `src/skill.rs`: Tests for skill generation and management
+
+### Golden-File Regression Tests
+
+The simulation is deterministic for a fixed RNG seed, so representative runs are captured as
+"golden" snapshots of key metrics under `tests/golden/`. Run them with:
+
+```bash
+cargo test --test golden_regression
+```
+
+If a change intentionally alters simulation behaviour, regenerate the snapshots and review the
+resulting diff before committing it:
+
+```bash
+UPDATE_GOLDEN=1 cargo test --test golden_regression
+```
+
+Only a small set of key metrics is stored (instead of the full JSON output) to keep the snapshots
+readable and to avoid excessive churn.
 
 ### Writing New Tests
 
@@ -312,7 +338,8 @@ The main CI pipeline enforces code quality through:
 2. **Linting**: Runs Clippy to catch common mistakes and enforce best practices with `cargo clippy --all-targets --all-features -- -D warnings -A deprecated`
 3. **Build**: Compiles the project with `cargo build --verbose`
 4. **Tests**: Runs all tests with `cargo test --verbose`
-5. **Release Build**: Verifies that release builds succeed with `cargo build --release --verbose`
+5. **Golden-File Regression Tests**: Detects unintended behaviour drift with `cargo test --test golden_regression`
+6. **Release Build**: Verifies that release builds succeed with `cargo build --release --verbose`
 
 ### Code Coverage Pipeline (`coverage.yml`)
 
