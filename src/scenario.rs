@@ -1,4 +1,5 @@
 use crate::market::Market;
+use crate::plugin::CustomPricingStrategy;
 use log::debug;
 use rand::{Rng, RngExt};
 use serde::{Deserialize, Serialize};
@@ -195,6 +196,9 @@ mod tests {
                 PriceUpdater::AdaptivePricing(_) => Scenario::AdaptivePricing,
                 PriceUpdater::AuctionPricing(_) => Scenario::AuctionPricing,
                 PriceUpdater::ClimateChange(_) => Scenario::ClimateChange,
+                PriceUpdater::Custom(_) => {
+                    panic!("Custom pricing strategies have no built-in scenario")
+                },
             }
         }
     }
@@ -1041,6 +1045,12 @@ pub enum PriceUpdater {
     AdaptivePricing(AdaptivePricingUpdater),
     AuctionPricing(AuctionPricingUpdater),
     ClimateChange(ClimateChangePriceUpdater),
+    /// A user provided pricing strategy implementing [`PricingStrategy`].
+    ///
+    /// This variant is the extension point for custom pricing mechanisms and is
+    /// never (de)serialized, since user code cannot be reconstructed from data.
+    #[serde(skip)]
+    Custom(CustomPricingStrategy),
 }
 
 impl Default for PriceUpdater {
@@ -1063,6 +1073,7 @@ impl PriceUpdater {
             PriceUpdater::AdaptivePricing(updater) => updater.update_prices(market, rng),
             PriceUpdater::AuctionPricing(updater) => updater.update_prices(market, rng),
             PriceUpdater::ClimateChange(updater) => updater.update_prices(market, rng),
+            PriceUpdater::Custom(updater) => updater.update_prices(market, rng),
         }
     }
 }

@@ -4,6 +4,7 @@ mod coverage_boost_tests;
 mod coverage_push_tests;
 mod coverage_sprint_80;
 mod currency_integration_tests;
+mod custom_strategy_tests;
 mod engine_focused_coverage;
 mod final_80_breakthrough;
 mod final_80_percent_push;

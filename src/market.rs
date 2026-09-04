@@ -306,6 +306,30 @@ impl Market {
         self.invalidate_cache();
     }
 
+    /// Replaces the pricing strategy used by this market.
+    ///
+    /// This is the extension point that allows installing a custom
+    /// [`PricingStrategy`](crate::plugin::PricingStrategy) via
+    /// [`PriceUpdater::Custom`](crate::scenario::PriceUpdater::Custom).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use community_simulation::Market;
+    /// use community_simulation::scenario::{PriceUpdater, Scenario};
+    ///
+    /// let mut market = Market::new(10.0, 1.0, 0.1, 0.02, PriceUpdater::default());
+    /// market.set_price_updater(PriceUpdater::from(Scenario::DynamicPricing));
+    /// ```
+    pub fn set_price_updater(&mut self, price_updater: PriceUpdater) {
+        self.price_updater = price_updater;
+    }
+
+    /// Returns the pricing strategy currently used by this market.
+    pub fn price_updater(&self) -> &PriceUpdater {
+        &self.price_updater
+    }
+
     /// Records the current demand and supply counts to history for elasticity analysis.
     ///
     /// This should be called once per simulation step after demand counts are collected
