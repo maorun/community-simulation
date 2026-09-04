@@ -76,6 +76,7 @@ and charts skill price history on a canvas.
 - **Comprehensive Statistics**: Wealth distribution, transaction patterns, mobility metrics
 - **Multiple Output Formats**: JSON, CSV, time-series exports
 - **Terminal Visualization**: ASCII-based price history charts showing skill price evolution over time (`--show-price-chart`)
+- **Interactive Web Dashboard**: Browser-based dashboard (`community-simulation dashboard`) visualizing price history, wealth distribution, and social class mobility from a results JSON file
 
 📖 **For detailed feature explanations**, see [FEATURES.md](FEATURES.md).
 
@@ -289,13 +290,29 @@ community-simulation <COMMAND> [OPTIONS]
 
 Commands:
   run        Run a simulation
-  export     Export results to different formats
+  sweep      Run a concurrent grid sweep and write JSON/CSV comparison reports
   wizard     Interactive configuration wizard
   list       List available presets and scenarios
+  dashboard  Launch an interactive web dashboard for a results JSON file (alias: serve)
+  completion Generate shell completion scripts
   help       Print help information
 
 Run 'community-simulation help <COMMAND>' for command-specific help.
 ```
+
+### Interactive Web Dashboard
+
+Explore a saved results JSON file in the browser instead of the terminal ASCII charts:
+
+```bash
+./target/release/community-simulation run -s 500 -p 100 -o results.json
+./target/release/community-simulation dashboard --input results.json --port 8080
+```
+
+Then open `http://127.0.0.1:8080` in a browser. The dashboard is a self-contained page
+(charts rendered client-side with [Chart.js](https://www.chartjs.org/) loaded from a CDN,
+no build step required) showing skill price history over time, the wealth distribution
+histogram, and social class mobility.
 
 ### Common CLI Parameters
 

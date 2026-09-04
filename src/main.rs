@@ -52,6 +52,21 @@ enum Commands {
         #[arg(value_name = "SHELL")]
         shell: String,
     },
+
+    /// Launch an interactive web dashboard visualizing a results JSON file
+    #[command(visible_alias = "serve")]
+    Dashboard(DashboardArgs),
+}
+
+#[derive(Parser)]
+struct DashboardArgs {
+    /// Path to a results JSON file previously produced with `run --output`
+    #[arg(short, long)]
+    input: String,
+
+    /// Local port to serve the dashboard on
+    #[arg(short, long, default_value_t = 8080)]
+    port: u16,
 }
 
 #[derive(Parser)]
@@ -704,7 +719,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Wizard { no_color } => run_wizard(no_color),
         Commands::List { list_type } => run_list(list_type),
         Commands::Completion { shell } => run_completion(&shell),
+        Commands::Dashboard(args) => run_dashboard(args),
     }
+}
+
+/// Load a results JSON file and start the interactive web dashboard.
+fn run_dashboard(args: DashboardArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use community_simulation::dashboard;
+    use community_simulation::result::SimulationResult;
+
+    let contents = std::fs::read_to_string(&args.input)
+        .map_err(|e| format!("Failed to read '{}': {e}", args.input))?;
+    let result: SimulationResult = serde_json::from_str(&contents)
+        .map_err(|e| format!("Failed to parse '{}' as simulation results: {e}", args.input))?;
+
+    let html = dashboard::generate_dashboard_html(&result);
+    dashboard::serve(html, args.port)?;
+    Ok(())
 }
 
 /// Run a Cartesian product of scenarios, populations, and crisis probabilities.
