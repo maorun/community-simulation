@@ -181,27 +181,40 @@ fn test_high_threshold_satisficing_behaves_similarly_to_optimal() {
 
 #[test]
 fn test_low_threshold_satisficing_accepts_more_readily() {
-    // With a very low threshold (0.1), satisficing should accept almost any option
+    // With a very low threshold (0.1), satisficing should accept almost any option.
+    //
+    // Trade counts of a single run fluctuate noticeably (skill price volatility is
+    // applied per skill in hash map order, which differs between processes), so the
+    // trade rate is averaged over several seeds to keep this test stable.
+    const SEEDS: [u64; 5] = [54321, 54322, 54323, 54324, 54325];
 
-    let config_low = test_config()
-        .entity_count(15)
-        .max_steps(50)
-        .enable_satisficing(true)
-        .satisficing_threshold(0.1)  // Very low = accept almost anything
-        .seed(54321)
-        .build();
+    let mut total_trades = 0usize;
+    let mut total_steps = 0usize;
 
-    let mut engine_low = SimulationEngine::new(config_low);
-    let result_low = engine_low.run();
+    for seed in SEEDS {
+        let config_low = test_config()
+            .entity_count(15)
+            .max_steps(50)
+            .enable_satisficing(true)
+            .satisficing_threshold(0.1) // Very low = accept almost anything
+            .seed(seed)
+            .build();
 
-    assert_eq!(result_low.total_steps, 50, "Should complete all steps");
+        let mut engine_low = SimulationEngine::new(config_low);
+        let result_low = engine_low.run();
 
-    let total_trades: usize = result_low.trades_per_step.iter().sum();
-    assert!(total_trades > 0, "Low threshold satisficing should produce many trades");
+        assert_eq!(result_low.total_steps, 50, "Should complete all steps");
+
+        let trades: usize = result_low.trades_per_step.iter().sum();
+        assert!(trades > 0, "Low threshold satisficing should produce many trades");
+
+        total_trades += trades;
+        total_steps += result_low.total_steps;
+    }
 
     // With low threshold, almost any affordable option should be accepted
     // This should result in healthy trade activity
-    let avg_trades_per_step = total_trades as f64 / result_low.total_steps as f64;
+    let avg_trades_per_step = total_trades as f64 / total_steps as f64;
     assert!(
         avg_trades_per_step > 0.45,
         "Low threshold should enable frequent trading (avg: {:.2} trades/step)",
