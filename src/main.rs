@@ -29,6 +29,9 @@ enum Commands {
     #[command(visible_alias = "simulate")]
     Run(Box<RunArgs>),
 
+    /// Run a concurrent grid sweep and write JSON and CSV comparison reports
+    Sweep(SweepArgs),
+
     /// Launch interactive configuration wizard
     Wizard {
         /// Disable colored terminal output
@@ -49,6 +52,41 @@ enum Commands {
         #[arg(value_name = "SHELL")]
         shell: String,
     },
+}
+
+#[derive(Parser)]
+struct SweepArgs {
+    /// Optional YAML or TOML base configuration
+    #[arg(short, long)]
+    config: Option<String>,
+
+    /// Simulation steps for each run
+    #[arg(short, long)]
+    steps: Option<usize>,
+
+    /// Comma-separated pricing scenarios to combine
+    #[arg(long, value_delimiter = ',', required = true)]
+    scenario: Vec<Scenario>,
+
+    /// Comma-separated population sizes to combine
+    #[arg(long, value_delimiter = ',', required = true)]
+    persons: Vec<usize>,
+
+    /// Comma-separated per-step crisis probabilities to combine
+    #[arg(long, value_delimiter = ',', required = true)]
+    crisis_probability: Vec<f64>,
+
+    /// Number of seeded repetitions for each grid point
+    #[arg(long, default_value_t = 1)]
+    runs: usize,
+
+    /// Base random seed
+    #[arg(long)]
+    seed: Option<u64>,
+
+    /// Output file prefix; creates `<prefix>.json` and `<prefix>.csv`
+    #[arg(short, long, default_value = "sweep_report")]
+    output: String,
 }
 
 #[derive(Subcommand)]
@@ -662,10 +700,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.command {
         Commands::Run(args) => run_simulation(*args),
+        Commands::Sweep(args) => run_grid_sweep(args),
         Commands::Wizard { no_color } => run_wizard(no_color),
         Commands::List { list_type } => run_list(list_type),
         Commands::Completion { shell } => run_completion(&shell),
     }
+}
+
+/// Run a Cartesian product of scenarios, populations, and crisis probabilities.
+fn run_grid_sweep(args: SweepArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use community_simulation::GridSweepResult;
+
+    let mut config = match args.config {
+        Some(path) => SimulationConfig::from_file(path)?,
+        None => SimulationConfig::default(),
+    };
+    if let Some(steps) = args.steps {
+        config.max_steps = steps;
+    }
+    if let Some(seed) = args.seed {
+        config.seed = seed;
+    }
+    config.validate()?;
+
+    let result = GridSweepResult::run(
+        config,
+        args.scenario,
+        args.persons,
+        args.crisis_probability,
+        args.runs,
+    )?;
+    let json_path = format!("{}.json", args.output);
+    let csv_path = format!("{}.csv", args.output);
+    result.save_json(&json_path)?;
+    result.save_csv(&csv_path)?;
+
+    println!(
+        "Completed {} simulations across {} configurations.",
+        result.total_simulations,
+        result.points.len()
+    );
+    println!("JSON report: {json_path}");
+    println!("CSV report: {csv_path}");
+    Ok(())
 }
 
 /// Run the list subcommand

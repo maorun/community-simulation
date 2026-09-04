@@ -163,7 +163,9 @@ pub use investment::{Investment, InvestmentId, InvestmentType};
 pub use lending_marketplace::{LendingMarketplace, LendingOffer, LendingOfferId};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
-pub use parameter_sweep::{ParameterRange, ParameterSweepResult};
+pub use parameter_sweep::{
+    GridSweepPoint, GridSweepResult, ParameterRange, ParameterSweepResult, SweepConfiguration,
+};
 pub use person::{
     ClassChange, Location, Person, PersonId, SocialClass, Strategy, Transaction, TransactionType,
 };
