@@ -68,13 +68,25 @@ pub fn generate_dashboard_html(result: &SimulationResult) -> String {
 
     let data_json = serde_json::to_string(&data).unwrap_or_else(|_| "{}".to_string());
 
+    // Chart.js is pinned to a fixed version (rather than "latest") so the dashboard's
+    // appearance and behavior stay stable across runs and are not affected by upstream
+    // CDN changes.
+    const CHART_JS_VERSION: &str = "4.4.4";
+    // Maximum number of skill price-history lines to show by default; datasets beyond
+    // this count are still available for toggling in the legend but start hidden so the
+    // chart stays readable for simulations with many skills.
+    const MAX_VISIBLE_PRICE_SERIES: usize = 10;
+    // Maximum number of buckets used for the wealth distribution histogram, keeping the
+    // chart readable regardless of population size.
+    const MAX_WEALTH_BUCKETS: usize = 20;
+
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Community Simulation Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@{chart_js_version}/dist/chart.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
   body {{ font-family: sans-serif; margin: 2rem; background: #111; color: #eee; }}
   h1 {{ font-size: 1.4rem; }}
@@ -96,6 +108,8 @@ pub fn generate_dashboard_html(result: &SimulationResult) -> String {
 <div class="chart-container"><canvas id="mobilityChart"></canvas></div>
 <script>
 const DASHBOARD_DATA = {data_json};
+const MAX_VISIBLE_PRICE_SERIES = {max_visible_price_series};
+const MAX_WEALTH_BUCKETS = {max_wealth_buckets};
 
 document.getElementById('total-steps').textContent = DASHBOARD_DATA.total_steps;
 document.getElementById('active-persons').textContent = DASHBOARD_DATA.active_persons;
@@ -111,7 +125,7 @@ const priceDatasets = Object.entries(DASHBOARD_DATA.skill_price_history).map(([s
   data: prices,
   borderWidth: 1,
   fill: false,
-  hidden: idx >= 10,
+  hidden: idx >= MAX_VISIBLE_PRICE_SERIES,
 }}));
 new Chart(document.getElementById('priceChart'), {{
   type: 'line',
@@ -125,7 +139,7 @@ new Chart(document.getElementById('priceChart'), {{
 
 // Wealth distribution histogram
 const money = DASHBOARD_DATA.final_money_distribution.slice().sort((a, b) => a - b);
-const bucketCount = Math.min(20, Math.max(1, money.length));
+const bucketCount = Math.min(MAX_WEALTH_BUCKETS, Math.max(1, money.length));
 const min = money.length ? money[0] : 0;
 const max = money.length ? money[money.length - 1] : 0;
 const bucketSize = (max - min) / bucketCount || 1;
@@ -172,7 +186,10 @@ new Chart(document.getElementById('mobilityChart'), {{
 </body>
 </html>
 "#,
-        data_json = data_json
+        data_json = data_json,
+        chart_js_version = CHART_JS_VERSION,
+        max_visible_price_series = MAX_VISIBLE_PRICE_SERIES,
+        max_wealth_buckets = MAX_WEALTH_BUCKETS,
     )
 }
 
