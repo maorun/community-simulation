@@ -69,6 +69,7 @@
 //! - [`contract`] - Contract system for long-term agreements
 //! - [`credit_rating`] - Credit scoring system for evaluating creditworthiness
 //! - [`currency`] - Multi-currency system with exchange rates for international trade
+//! - [`dashboard`] - Interactive web dashboard for exploring simulation results
 //! - [`database`] - SQLite database export functionality
 //! - [`engine`] - Main simulation engine and execution loop
 //! - [`entity`] - Entity wrapper around Person for simulation framework
@@ -103,6 +104,7 @@ pub mod contract;
 pub mod credit_rating;
 pub mod crisis;
 pub mod currency;
+pub mod dashboard;
 pub mod database;
 pub mod engine;
 pub mod entity; // Represents a Person in the simulation
