@@ -6,7 +6,9 @@ use crate::{
     event::EventBus,
     loan::{Loan, LoanId},
     person::{Person, PersonId, Strategy},
-    plugin::{PluginContext, PluginRegistry},
+    plugin::{
+        AgentStrategy, CustomPricingStrategy, PluginContext, PluginRegistry, PricingStrategy,
+    },
     result::{write_step_to_stream, StepData},
     scenario::{DemandGenerator, PriceUpdater},
     Entity, Market, SimulationConfig, SimulationResult, Skill, SkillId,
@@ -23,6 +25,7 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::panic;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Instant;
 
 // Technology shock crisis constants
@@ -228,6 +231,8 @@ pub struct SimulationEngine {
     mobility_quintiles: HashMap<usize, Vec<usize>>,
     // Plugin system for extending simulation
     plugin_registry: PluginRegistry,
+    // Optional user provided agent decision logic (see crate::plugin::AgentStrategy)
+    agent_strategy: Option<Arc<dyn AgentStrategy>>,
     // Resource pool tracking: group_id -> (balance, total_contributions, total_withdrawals)
     resource_pools: HashMap<usize, (f64, f64, f64)>,
     // Production system recipes (cached for performance)
@@ -511,6 +516,7 @@ impl SimulationEngine {
             max_money: f64::NEG_INFINITY,
             mobility_quintiles: HashMap::new(),
             plugin_registry: PluginRegistry::new(),
+            agent_strategy: None,
             resource_pools,
             production_recipes,
             environment,
@@ -591,6 +597,58 @@ impl SimulationEngine {
     /// This allows external code to interact with plugins.
     pub fn plugin_registry_mut(&mut self) -> &mut PluginRegistry {
         &mut self.plugin_registry
+    }
+
+    /// Installs a custom pricing strategy, replacing the scenario based pricing.
+    ///
+    /// This is the extension point for pricing mechanisms that are not covered by the
+    /// built-in [`Scenario`](crate::scenario::Scenario) variants. The strategy is applied
+    /// to the regular market and, if enabled, to the black market as well.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use community_simulation::plugin::PricingStrategy;
+    /// use community_simulation::{Market, SimulationConfig, SimulationEngine};
+    /// use rand::Rng;
+    /// use std::sync::Arc;
+    ///
+    /// #[derive(Debug)]
+    /// struct FrozenPricing;
+    ///
+    /// impl PricingStrategy for FrozenPricing {
+    ///     fn name(&self) -> &str {
+    ///         "FrozenPricing"
+    ///     }
+    ///
+    ///     fn update_prices(&self, market: &mut Market, _rng: &mut dyn Rng) {
+    ///         for (skill_id, skill) in market.skills.iter_mut() {
+    ///             if let Some(history) = market.skill_price_history.get_mut(skill_id) {
+    ///                 history.push(skill.current_price);
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// let mut engine = SimulationEngine::new(SimulationConfig::default());
+    /// engine.set_pricing_strategy(Arc::new(FrozenPricing));
+    /// ```
+    pub fn set_pricing_strategy(&mut self, strategy: Arc<dyn PricingStrategy>) {
+        log::info!("Installing custom pricing strategy: {}", strategy.name());
+        let updater = PriceUpdater::Custom(CustomPricingStrategy::new(strategy));
+        self.market.set_price_updater(updater.clone());
+        if let Some(ref mut black_market) = self.black_market {
+            black_market.set_price_updater(updater);
+        }
+    }
+
+    /// Installs custom agent decision logic, replacing the built-in purchase decision.
+    ///
+    /// The strategy decides for every candidate trade whether the buyer is willing to
+    /// purchase the skill at the offered price.
+    pub fn set_agent_strategy(&mut self, strategy: Arc<dyn AgentStrategy>) {
+        log::info!("Installing custom agent strategy: {}", strategy.name());
+        self.agent_strategy = Some(strategy);
     }
 
     /// Enable action recording for replay and debugging.
@@ -3257,7 +3315,18 @@ impl SimulationEngine {
                     }
                 }
 
-                if self.entities[buyer_idx].person_data.can_afford_with_strategy(final_price) {
+                let willing_to_buy = match self.agent_strategy {
+                    Some(ref strategy) => strategy.should_purchase(
+                        &self.entities[buyer_idx].person_data,
+                        &needed_skill_id,
+                        final_price,
+                    ),
+                    None => {
+                        self.entities[buyer_idx].person_data.can_afford_with_strategy(final_price)
+                    },
+                };
+
+                if willing_to_buy {
                     if let Some(seller_entity_idx) = seller_id {
                         if buyer_idx == seller_entity_idx {
                             trace!(
@@ -6489,6 +6558,10 @@ impl SimulationEngine {
     /// **Note:** Plugins are not persisted in checkpoints. After loading a checkpoint,
     /// you must re-register any plugins that were previously registered before
     /// continuing the simulation. This ensures plugin state is properly initialized.
+    /// The same applies to custom strategies installed with
+    /// [`set_pricing_strategy`](Self::set_pricing_strategy) and
+    /// [`set_agent_strategy`](Self::set_agent_strategy): they are not persisted and the
+    /// restored engine falls back to the built-in behaviour until they are re-installed.
     ///
     /// # Arguments
     ///
@@ -6618,6 +6691,7 @@ impl SimulationEngine {
             max_money: checkpoint.max_money,
             mobility_quintiles: checkpoint.mobility_quintiles,
             plugin_registry: PluginRegistry::new(),
+            agent_strategy: None,
             resource_pools: checkpoint.resource_pools,
             production_recipes,
             environment: checkpoint.environment,

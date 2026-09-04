@@ -7,6 +7,7 @@ This document provides comprehensive information for developers working on the E
 - [Prerequisites](#prerequisites)
 - [Building the Project](#building-the-project)
 - [Code Structure](#code-structure)
+- [Extension Points (Plugin Architecture)](#extension-points-plugin-architecture)
 - [Testing](#testing)
 - [Code Coverage](#code-coverage)
 - [Benchmarks](#benchmarks)
@@ -61,7 +62,111 @@ The project is organized as follows:
 *   **`src/entity.rs`**: Defines the `Entity` struct which wraps a `Person` for compatibility with the engine structure.
 *   **`src/result.rs`**: Defines `SimulationResult` and helper structs (`MoneyStats`, `SkillPriceInfo`) for structuring and outputting simulation results. It also includes `print_summary` and `save_to_file` methods.
 *   **`src/scenario.rs`**: Defines scenario types and price update mechanisms.
+*   **`src/plugin.rs`**: Defines the public extension points (`Plugin`, `PricingStrategy`, `AgentStrategy`) for extending the simulation without modifying core code.
 *   **`src/tests/mod.rs`**: Contains integration tests for the simulation engine.
+
+## Extension Points (Plugin Architecture)
+
+The simulation exposes stable, trait-based extension points in `src/plugin.rs`. They allow
+adding new pricing mechanisms, agent behaviour, and observers **without forking the core
+code** — either in-tree or from an external crate that depends on `community-simulation`.
+
+A complete, runnable example that uses all three extension points is available in
+[`examples/custom_strategy_plugin.rs`](examples/custom_strategy_plugin.rs):
+
+```bash
+cargo run --example custom_strategy_plugin
+```
+
+### `PricingStrategy` — custom price mechanisms
+
+Implement `PricingStrategy` when the built-in `Scenario` variants (Original,
+DynamicPricing, AdaptivePricing, AuctionPricing, ClimateChange) are not sufficient:
+
+```rust
+use community_simulation::plugin::PricingStrategy;
+use community_simulation::{Market, SimulationConfig, SimulationEngine};
+use rand::Rng;
+use std::sync::Arc;
+
+#[derive(Debug)]
+struct MeanRevertingPricing {
+    reversion_rate: f64,
+}
+
+impl PricingStrategy for MeanRevertingPricing {
+    fn name(&self) -> &str {
+        "MeanRevertingPricing"
+    }
+
+    fn update_prices(&self, market: &mut Market, _rng: &mut dyn Rng) {
+        let base_price = market.base_skill_price;
+        let (min_price, max_price) = (market.min_skill_price, market.max_skill_price);
+        for (skill_id, skill) in market.skills.iter_mut() {
+            let gap = base_price - skill.current_price;
+            skill.current_price =
+                (skill.current_price + gap * self.reversion_rate).clamp(min_price, max_price);
+            // Implementations are responsible for recording price history.
+            if let Some(history) = market.skill_price_history.get_mut(skill_id) {
+                history.push(skill.current_price);
+            }
+        }
+    }
+}
+
+let mut engine = SimulationEngine::new(SimulationConfig::default());
+engine.set_pricing_strategy(Arc::new(MeanRevertingPricing { reversion_rate: 0.2 }));
+```
+
+Implementations are responsible for:
+
+- respecting `min_skill_price`, `max_skill_price` and `per_skill_price_limits`
+- appending the new price to `market.skill_price_history` (once per skill and step)
+
+Internally the strategy is wrapped in `PriceUpdater::Custom`, so it can also be installed on a
+single `Market` via `Market::set_price_updater`. Custom strategies are never serialized,
+because user code cannot be reconstructed from configuration data.
+
+### `AgentStrategy` — custom agent decision logic
+
+Implement `AgentStrategy` to override how agents decide whether to buy a needed skill.
+The default implementation reproduces the built-in behaviour (`Person::can_afford_with_strategy`),
+so only the methods that should differ need to be implemented:
+
+```rust
+use community_simulation::plugin::AgentStrategy;
+use community_simulation::{Person, SimulationConfig, SimulationEngine, SkillId};
+use std::sync::Arc;
+
+#[derive(Debug)]
+struct BudgetCappedAgent {
+    max_share_of_wealth: f64,
+}
+
+impl AgentStrategy for BudgetCappedAgent {
+    fn name(&self) -> &str {
+        "BudgetCappedAgent"
+    }
+
+    fn should_purchase(&self, person: &Person, _skill_id: &SkillId, price: f64) -> bool {
+        price <= person.money * self.max_share_of_wealth
+    }
+}
+
+let mut engine = SimulationEngine::new(SimulationConfig::default());
+engine.set_agent_strategy(Arc::new(BudgetCappedAgent { max_share_of_wealth: 0.25 }));
+```
+
+### `Plugin` — lifecycle observers
+
+Implement `Plugin` to observe (and post-process) a simulation run through the
+`on_simulation_start`, `on_step_start`, `on_step_end`, and `on_simulation_end` hooks.
+Plugins are registered with `SimulationEngine::register_plugin` and can be retrieved again
+via `SimulationEngine::plugin_registry`.
+
+> **Note:** Plugins and custom strategies are not restored from checkpoints. After
+> `SimulationEngine::from_checkpoint`, re-install them before continuing the simulation.
+
 
 ## Testing
 

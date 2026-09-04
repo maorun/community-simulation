@@ -171,7 +171,9 @@ pub use parameter_sweep::{
 pub use person::{
     ClassChange, Location, Person, PersonId, SocialClass, Strategy, Transaction, TransactionType,
 };
-pub use plugin::{Plugin, PluginContext, PluginRegistry};
+pub use plugin::{
+    AgentStrategy, CustomPricingStrategy, Plugin, PluginContext, PluginRegistry, PricingStrategy,
+};
 pub use pool::VecPool;
 pub use production::{generate_default_recipes, Recipe};
 pub use replay::{ActionLog, SimulationAction};

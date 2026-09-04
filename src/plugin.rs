@@ -32,9 +32,14 @@
 //! ```
 
 use crate::config::SimulationConfig;
+use crate::market::Market;
 use crate::person::Person;
 use crate::result::SimulationResult;
+use crate::skill::SkillId;
+use rand::Rng;
 use std::any::Any;
+use std::fmt::Debug;
+use std::sync::Arc;
 
 /// Context provided to plugins containing simulation state.
 ///
@@ -183,6 +188,128 @@ impl PluginRegistry {
     }
 }
 
+/// Extension point for custom pricing mechanisms.
+///
+/// Implement this trait to define a pricing mechanism that is not covered by the
+/// built-in [`Scenario`](crate::scenario::Scenario) variants. A custom strategy can be
+/// installed with [`SimulationEngine::set_pricing_strategy`](crate::engine::SimulationEngine::set_pricing_strategy)
+/// or by constructing a [`PriceUpdater::Custom`](crate::scenario::PriceUpdater) directly.
+///
+/// # Example
+///
+/// ```rust
+/// use community_simulation::plugin::PricingStrategy;
+/// use community_simulation::Market;
+/// use rand::Rng;
+///
+/// #[derive(Debug)]
+/// struct FixedPricing;
+///
+/// impl PricingStrategy for FixedPricing {
+///     fn name(&self) -> &str {
+///         "FixedPricing"
+///     }
+///
+///     fn update_prices(&self, market: &mut Market, _rng: &mut dyn Rng) {
+///         for (skill_id, skill) in market.skills.iter_mut() {
+///             if let Some(history) = market.skill_price_history.get_mut(skill_id) {
+///                 history.push(skill.current_price);
+///             }
+///         }
+///     }
+/// }
+/// ```
+pub trait PricingStrategy: Send + Sync + Debug {
+    /// Returns the name of the pricing strategy.
+    fn name(&self) -> &str;
+
+    /// Updates all skill prices in the market.
+    ///
+    /// Implementations are responsible for respecting the market's price limits
+    /// (`min_skill_price`, `max_skill_price` and `per_skill_price_limits`) and for
+    /// appending the new price to `market.skill_price_history`.
+    ///
+    /// # Arguments
+    ///
+    /// * `market` - The market containing the skills whose prices should be updated
+    /// * `rng` - Random number generator for stochastic price components
+    fn update_prices(&self, market: &mut Market, rng: &mut dyn Rng);
+}
+
+/// Wrapper making a user provided [`PricingStrategy`] usable inside the simulation.
+///
+/// The strategy is stored behind an [`Arc`] so it can be cheaply cloned together with
+/// the market it is attached to.
+#[derive(Clone, Debug)]
+pub struct CustomPricingStrategy {
+    strategy: Arc<dyn PricingStrategy>,
+}
+
+impl CustomPricingStrategy {
+    /// Wraps a pricing strategy so it can be used as a price updater.
+    pub fn new(strategy: Arc<dyn PricingStrategy>) -> Self {
+        Self { strategy }
+    }
+
+    /// Returns the name of the wrapped strategy.
+    pub fn name(&self) -> &str {
+        self.strategy.name()
+    }
+
+    /// Returns a reference to the wrapped strategy.
+    pub fn strategy(&self) -> &Arc<dyn PricingStrategy> {
+        &self.strategy
+    }
+
+    /// Delegates the price update to the wrapped strategy.
+    pub fn update_prices<R: Rng + ?Sized>(&self, market: &mut Market, rng: &mut R) {
+        // `&mut R` itself implements `Rng`, which allows creating a trait object
+        // even when `R` is unsized.
+        let mut rng_ref = rng;
+        self.strategy.update_prices(market, &mut rng_ref);
+    }
+}
+
+/// Extension point for custom agent decision logic.
+///
+/// Implement this trait to override how agents decide whether to purchase a needed
+/// skill. A custom strategy can be installed with
+/// [`SimulationEngine::set_agent_strategy`](crate::engine::SimulationEngine::set_agent_strategy).
+///
+/// # Example
+///
+/// ```rust
+/// use community_simulation::plugin::AgentStrategy;
+/// use community_simulation::{Person, SkillId};
+///
+/// #[derive(Debug)]
+/// struct NeverSpendMoreThanHalf;
+///
+/// impl AgentStrategy for NeverSpendMoreThanHalf {
+///     fn name(&self) -> &str {
+///         "NeverSpendMoreThanHalf"
+///     }
+///
+///     fn should_purchase(&self, person: &Person, _skill_id: &SkillId, price: f64) -> bool {
+///         price <= person.money * 0.5
+///     }
+/// }
+/// ```
+pub trait AgentStrategy: Send + Sync + Debug {
+    /// Returns the name of the agent strategy.
+    fn name(&self) -> &str;
+
+    /// Decides whether the given person should buy `skill_id` at `price`.
+    ///
+    /// The default implementation reproduces the built-in behaviour, which takes the
+    /// person's [`Strategy`](crate::person::Strategy) and adaptive spending parameters
+    /// into account.
+    fn should_purchase(&self, person: &Person, skill_id: &SkillId, price: f64) -> bool {
+        let _ = skill_id;
+        person.can_afford_with_strategy(price)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -297,5 +424,109 @@ mod tests {
         assert!(test_plugin.start_called);
         assert_eq!(test_plugin.step_start_called, 5);
         assert_eq!(test_plugin.step_end_called, 5);
+    }
+
+    /// A minimal custom pricing strategy used to verify the extension point.
+    #[derive(Debug)]
+    struct DoublingPricingStrategy;
+
+    impl PricingStrategy for DoublingPricingStrategy {
+        fn name(&self) -> &str {
+            "DoublingPricing"
+        }
+
+        fn update_prices(&self, market: &mut Market, _rng: &mut dyn Rng) {
+            let max_price = market.max_skill_price;
+            for (skill_id, skill) in market.skills.iter_mut() {
+                skill.current_price = (skill.current_price * 2.0).min(max_price);
+                if let Some(history) = market.skill_price_history.get_mut(skill_id) {
+                    history.push(skill.current_price);
+                }
+            }
+        }
+    }
+
+    /// A custom agent strategy that refuses every purchase.
+    #[derive(Debug)]
+    struct NeverBuyStrategy;
+
+    impl AgentStrategy for NeverBuyStrategy {
+        fn name(&self) -> &str {
+            "NeverBuy"
+        }
+
+        fn should_purchase(&self, _person: &Person, _skill_id: &SkillId, _price: f64) -> bool {
+            false
+        }
+    }
+
+    /// A custom agent strategy relying on the default decision logic.
+    #[derive(Debug)]
+    struct DefaultAgentStrategy;
+
+    impl AgentStrategy for DefaultAgentStrategy {
+        fn name(&self) -> &str {
+            "DefaultAgent"
+        }
+    }
+
+    #[test]
+    fn test_custom_pricing_strategy_updates_market_prices() {
+        use crate::scenario::PriceUpdater;
+        use crate::skill::Skill;
+        use rand::{rngs::StdRng, SeedableRng};
+
+        let mut market = Market::new(10.0, 1.0, 0.1, 0.02, PriceUpdater::default());
+        market.add_skill(Skill::new("Test Skill".to_string(), 10.0));
+
+        let strategy = CustomPricingStrategy::new(Arc::new(DoublingPricingStrategy));
+        assert_eq!(strategy.name(), "DoublingPricing");
+        market.set_price_updater(PriceUpdater::Custom(strategy));
+
+        let mut rng = StdRng::seed_from_u64(42);
+        market.update_prices(&mut rng);
+
+        let price = market.skills.get("Test Skill").unwrap().current_price;
+        assert!((price - 20.0).abs() < f64::EPSILON, "Expected doubled price, got {}", price);
+        assert_eq!(market.skill_price_history.get("Test Skill").unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_custom_pricing_strategy_accessors() {
+        let strategy = CustomPricingStrategy::new(Arc::new(DoublingPricingStrategy));
+        assert_eq!(strategy.strategy().name(), "DoublingPricing");
+        assert_eq!(strategy.clone().name(), "DoublingPricing");
+    }
+
+    #[test]
+    fn test_agent_strategy_custom_decision() {
+        use crate::person::{Location, Strategy};
+
+        let person =
+            Person::new(0, 100.0, vec![], Strategy::Balanced, Location::new(0.0, 0.0), 0.9);
+        let strategy = NeverBuyStrategy;
+
+        assert_eq!(strategy.name(), "NeverBuy");
+        assert!(!strategy.should_purchase(&person, &"Test Skill".to_string(), 1.0));
+    }
+
+    #[test]
+    fn test_agent_strategy_default_decision_matches_builtin() {
+        use crate::person::{Location, Strategy};
+
+        let person =
+            Person::new(0, 100.0, vec![], Strategy::Balanced, Location::new(0.0, 0.0), 0.9);
+        let strategy = DefaultAgentStrategy;
+        let skill_id = "Test Skill".to_string();
+
+        assert_eq!(strategy.name(), "DefaultAgent");
+        assert_eq!(
+            strategy.should_purchase(&person, &skill_id, 50.0),
+            person.can_afford_with_strategy(50.0)
+        );
+        assert_eq!(
+            strategy.should_purchase(&person, &skill_id, 5_000.0),
+            person.can_afford_with_strategy(5_000.0)
+        );
     }
 }
