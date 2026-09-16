@@ -28,7 +28,7 @@ colored = "3.0"
 rusqlite = "0.40"
 petgraph = { version = "0.8", features = ["serde-1"] }
 chrono = { version = "0.4", features = ["serde"] }
-parquet = "59.0"
+parquet = "60.0"
 rand_distr = "0.6.0"
 wasm-bindgen = { version = "0.2.127", optional = true }
 
