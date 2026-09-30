@@ -4,7 +4,7 @@ use crate::insurance::InsuranceId;
 use crate::investment::InvestmentId;
 use crate::loan::LoanId;
 use crate::skill::{Skill, SkillId};
-use rand::RngExt;
+use rand::{rngs::StdRng, RngExt, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -375,6 +375,15 @@ impl Strategy {
             Strategy::Frugal,
         ]
     }
+
+    fn q_index(self) -> usize {
+        match self {
+            Strategy::Conservative => 0,
+            Strategy::Balanced => 1,
+            Strategy::Aggressive => 2,
+            Strategy::Frugal => 3,
+        }
+    }
 }
 
 /// Parameters tracking strategy performance and adaptation for an agent.
@@ -411,22 +420,44 @@ pub struct StrategyParameters {
     /// Total accumulated reward over the simulation (RL only).
     /// Sum of all rewards received, useful for tracking overall performance.
     pub total_reward: f64,
+    /// Learned value for each [`Strategy`], in [`Strategy::all_variants`] order.
+    #[serde(default)]
+    pub q_values: [f64; 4],
+    /// Seed used to initialize this agent's Q values.
+    #[serde(default)]
+    pub q_seed: u64,
 }
 
 impl StrategyParameters {
-    /// Creates a new StrategyParameters with initial values.
+    /// Creates new strategy parameters with a stable default seed.
     pub fn new(initial_money: f64) -> Self {
-        StrategyParameters {
+        Self::new_with_seed(initial_money, 0)
+    }
+
+    /// Creates strategy parameters whose Q values are deterministic for `seed`.
+    pub fn new_with_seed(initial_money: f64, seed: u64) -> Self {
+        let mut parameters = StrategyParameters {
             initial_money,
             previous_money: initial_money,
             successful_buys: 0,
             successful_sells: 0,
-            adjustment_factor: 1.0, // Start with neutral adjustment
+            adjustment_factor: 1.0,
             adaptation_count: 0,
-            current_epsilon: 0.1, // Default epsilon, will be overridden by config
+            current_epsilon: 0.1,
             previous_reward: 0.0,
             total_reward: 0.0,
-        }
+            q_values: [0.0; 4],
+            q_seed: seed,
+        };
+        parameters.initialize_q_values(seed);
+        parameters
+    }
+
+    /// Reinitializes this agent's Q values from a simulation-derived seed.
+    pub fn initialize_q_values(&mut self, seed: u64) {
+        let mut rng = StdRng::seed_from_u64(seed);
+        self.q_seed = seed;
+        self.q_values = std::array::from_fn(|_| rng.random_range(-0.01..0.01));
     }
 
     /// Calculates the wealth growth rate since the previous step.
@@ -496,6 +527,41 @@ impl StrategyParameters {
         self.previous_reward = reward;
         self.total_reward += reward;
         self.adaptation_count += 1;
+    }
+
+    /// Updates both the legacy adjustment factor and the Q value of the active strategy.
+    pub fn apply_rl_update_for_strategy(
+        &mut self,
+        strategy: Strategy,
+        reward: f64,
+        learning_rate: f64,
+        discount_factor: f64,
+    ) {
+        let action = strategy.q_index();
+        let current_q = self.q_values[action];
+        let best_future_q = self.q_values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        self.q_values[action] =
+            current_q + learning_rate * (reward + discount_factor * best_future_q - current_q);
+        self.apply_rl_update(reward, learning_rate, discount_factor);
+    }
+
+    /// Selects the next strategy with an epsilon-greedy policy over learned Q values.
+    pub fn select_strategy(&self, rng: &mut impl rand::Rng) -> Strategy {
+        let strategies = Strategy::all_variants();
+        if self.should_explore(rng) {
+            return strategies[rng.random_range(0..strategies.len())];
+        }
+        let best_value = self.q_values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let best_indices: Vec<usize> = self
+            .q_values
+            .iter()
+            .enumerate()
+            .filter_map(|(index, value)| (*value == best_value).then_some(index))
+            .collect();
+        if best_indices.is_empty() {
+            return Strategy::Balanced;
+        }
+        strategies[best_indices[rng.random_range(0..best_indices.len())]]
     }
 
     /// Calculates the reward signal for reinforcement learning.
