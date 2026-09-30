@@ -122,10 +122,10 @@ fn main() {
     println!("  Trades: {}", result.trade_volume_statistics.total_trades);
     println!("  Gini:   {:.3}", result.money_statistics.gini_coefficient);
 
-    if let Some(plugin) = engine.plugin_registry().get("ProgressPlugin") {
-        if let Some(progress) = plugin.as_any().downcast_ref::<ProgressPlugin>() {
-            println!("  Steps observed by plugin: {}", progress.steps_observed);
-        }
+    if let Some(plugin) = engine.plugin_registry().get("ProgressPlugin")
+        && let Some(progress) = plugin.as_any().downcast_ref::<ProgressPlugin>()
+    {
+        println!("  Steps observed by plugin: {}", progress.steps_observed);
     }
 
     println!("\nFinal prices (mean-reverting towards the base price of 10.0):");

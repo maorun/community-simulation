@@ -1710,6 +1710,10 @@ mod integration_tests {
 
     /// Test externality system with only positive externalities
     #[test]
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn test_externality_positive_only() {
         use std::collections::HashMap;
 
@@ -1764,6 +1768,10 @@ mod integration_tests {
 
     /// Test externality system with mixed externalities
     #[test]
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn test_externality_mixed_rates() {
         use std::collections::HashMap;
 
@@ -1824,6 +1832,10 @@ mod integration_tests {
 
     /// Test per-skill price limits with minimum prices
     #[test]
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn test_per_skill_price_limits_minimum() {
         use std::collections::HashMap;
 
@@ -1890,6 +1902,10 @@ mod integration_tests {
 
     /// Test per-skill price limits with maximum prices
     #[test]
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn test_per_skill_price_limits_maximum() {
         use std::collections::HashMap;
 
@@ -2111,6 +2127,10 @@ mod integration_tests {
 
     /// Test that influence tracking system works correctly
     #[test]
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn test_influence_tracking() {
         let config = test_config()
             .entity_count(20)

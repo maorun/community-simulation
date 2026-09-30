@@ -1658,9 +1658,15 @@ impl DemandGenerator {
         rng: &mut R,
     ) -> usize {
         match self {
-            DemandGenerator::Uniform(gen) => gen.generate_demand_count(person_id, step, rng),
-            DemandGenerator::Concentrated(gen) => gen.generate_demand_count(person_id, step, rng),
-            DemandGenerator::Cyclical(gen) => gen.generate_demand_count(person_id, step, rng),
+            DemandGenerator::Uniform(generator) => {
+                generator.generate_demand_count(person_id, step, rng)
+            },
+            DemandGenerator::Concentrated(generator) => {
+                generator.generate_demand_count(person_id, step, rng)
+            },
+            DemandGenerator::Cyclical(generator) => {
+                generator.generate_demand_count(person_id, step, rng)
+            },
         }
     }
 }

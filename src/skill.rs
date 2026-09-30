@@ -208,6 +208,10 @@ impl Skill {
     ///
     /// If the skill has a valid (non-expired) certification, certification verifies
     /// and signals the true quality to the market.
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     pub fn effective_perceived_quality(&self, current_step: usize) -> f64 {
         if let Some(cert) = &self.certification {
             if !cert.is_expired(current_step) {
@@ -237,6 +241,10 @@ impl Skill {
     /// # Returns
     ///
     /// The effective price including any certification premium
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     pub fn effective_price(&self, current_step: usize) -> f64 {
         if let Some(cert) = &self.certification {
             if !cert.is_expired(current_step) {

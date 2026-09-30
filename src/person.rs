@@ -989,6 +989,10 @@ impl Person {
     /// # Arguments
     /// * `current_step` - The current simulation step
     /// * `recovery_duration` - Number of steps required to recover
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     pub fn try_recover(&mut self, current_step: usize, recovery_duration: usize) -> bool {
         if let HealthStatus::Sick { infected_at_step } = self.health_status {
             if current_step >= infected_at_step + recovery_duration {

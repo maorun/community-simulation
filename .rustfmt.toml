@@ -4,6 +4,7 @@
 
 # Edition and basic settings
 edition = "2021"
+style_edition = "2021"
 
 # Imports formatting
 reorder_imports = true

@@ -901,12 +901,9 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
         colored::control::set_override(false);
     }
 
-    // Initialize logging
-    // If RUST_LOG is not set, use the CLI argument
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", &args.log_level);
-    }
-    env_logger::init();
+    // Initialize logging, preferring RUST_LOG over the CLI default.
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(&args.log_level))
+        .init();
 
     if let Some(num_threads) = args.threads {
         rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global()?;

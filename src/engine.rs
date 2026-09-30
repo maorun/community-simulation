@@ -284,6 +284,10 @@ pub struct SimulationEngine {
 }
 
 impl SimulationEngine {
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     pub fn new(config: SimulationConfig) -> Self {
         let mut rng = StdRng::seed_from_u64(config.seed);
         let price_updater = PriceUpdater::from(config.scenario.clone());
@@ -2678,6 +2682,10 @@ impl SimulationEngine {
         productions_count
     }
 
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     pub fn step(&mut self) {
         self.market.reset_demand_counts();
         for entity in self.entities.iter_mut() {
@@ -4275,6 +4283,10 @@ impl SimulationEngine {
     /// - Friendship formation
     /// - Event emission
     /// - Statistics tracking
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn execute_single_trade(
         &mut self,
         buyer_idx: usize,
@@ -4672,6 +4684,10 @@ impl SimulationEngine {
     /// Quality is floored at 0.0 (minimum quality).
     ///
     /// This simulates the need for ongoing practice and "skills rust" over time.
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn apply_quality_decay(&mut self) {
         for entity in self.entities.iter_mut() {
             if !entity.active {
@@ -4810,6 +4826,10 @@ impl SimulationEngine {
     /// 3. Selection: Successful strategies spread through the population
     ///
     /// This creates cultural evolution where good strategies proliferate and bad ones die out.
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn evolve_strategies(&mut self) {
         debug!(
             "Strategy evolution update at step {} (frequency: every {} steps)",
@@ -5112,6 +5132,10 @@ impl SimulationEngine {
     /// When a crisis occurs, persons with active Crisis insurance receive payouts
     /// to compensate for their losses. The payout amount is calculated based on
     /// the crisis severity and the policy coverage.
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn process_crisis_insurance_payouts(&mut self, crisis_severity: f64) {
         if !self.config.enable_insurance {
             return;
@@ -5168,6 +5192,10 @@ impl SimulationEngine {
     ///
     /// When a person's trade income (successful sales) falls below a threshold,
     /// their income insurance pays out to help maintain minimum living standards.
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn process_income_insurance_payouts(&mut self) {
         if !self.config.enable_insurance {
             return;
@@ -5242,6 +5270,10 @@ impl SimulationEngine {
     /// When a borrower faces financial distress (low money relative to outstanding debt),
     /// their credit insurance provides funds to help pay off loans, reducing default risk.
     /// This protects borrowers from defaulting and indirectly protects lenders from losses.
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn process_credit_insurance_payouts(&mut self) {
         if !self.config.enable_insurance || !self.config.enable_loans {
             return;
@@ -5321,6 +5353,10 @@ impl SimulationEngine {
     /// - Is not the learner themselves
     ///
     /// Returns Some((mentor_id, mentor_quality)) if a mentor is found, None otherwise.
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn find_mentor_for_skill(&self, skill_id: &SkillId, learner_id: usize) -> Option<(usize, f64)> {
         let mut potential_mentors = Vec::new();
 
@@ -6845,6 +6881,10 @@ impl SimulationEngine {
     }
 
     /// Records a trade under a trade agreement, if applicable.
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn record_trade_in_agreement(
         &mut self,
         buyer_id: PersonId,
