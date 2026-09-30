@@ -552,9 +552,12 @@ impl SimulationEngine {
             total_assets_sold: 0,
         };
 
-        // Initialize RL epsilon for all entities if RL is enabled
+        // Initialize per-agent RL state from the simulation seed.
         if enable_rl {
             for entity in engine.entities.iter_mut() {
+                let agent_seed =
+                    engine.config.seed ^ (entity.id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                entity.person_data.strategy_params.initialize_q_values(agent_seed);
                 entity.person_data.strategy_params.current_epsilon = rl_epsilon;
             }
             debug!("Reinforcement learning enabled with initial epsilon: {}", rl_epsilon);
@@ -4762,12 +4765,17 @@ impl SimulationEngine {
                 self.config.rl_reward_failure_multiplier,
             );
 
-            // Apply Q-learning update
-            entity.person_data.strategy_params.apply_rl_update(
+            // Update the value of the strategy used for this step, then choose the
+            // next strategy epsilon-greedily from the learned values.
+            let current_strategy = entity.person_data.strategy;
+            entity.person_data.strategy_params.apply_rl_update_for_strategy(
+                current_strategy,
                 reward,
                 self.config.rl_learning_rate,
                 self.config.rl_discount_factor,
             );
+            entity.person_data.strategy =
+                entity.person_data.strategy_params.select_strategy(&mut self.rng);
 
             // Decay epsilon (exploration rate)
             entity.person_data.strategy_params.decay_epsilon(self.config.rl_epsilon_decay);

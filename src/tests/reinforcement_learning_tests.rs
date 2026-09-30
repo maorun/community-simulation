@@ -2,7 +2,7 @@
 
 use crate::config::SimulationConfig;
 use crate::engine::SimulationEngine;
-use crate::person::StrategyParameters;
+use crate::person::{Strategy, StrategyParameters};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
@@ -239,4 +239,102 @@ fn test_rl_with_different_learning_rates() {
     let slow_change = (params_slow.adjustment_factor - 1.0).abs();
 
     assert!(fast_change > slow_change);
+}
+
+#[test]
+fn test_q_values_are_deterministic_per_seed() {
+    let first = StrategyParameters::new_with_seed(100.0, 42);
+    let second = StrategyParameters::new_with_seed(100.0, 42);
+    let different = StrategyParameters::new_with_seed(100.0, 43);
+
+    assert_eq!(first.q_values, second.q_values);
+    assert_ne!(first.q_values, different.q_values);
+}
+
+#[test]
+fn test_q_update_changes_only_each_active_strategy_value() {
+    for (active_index, strategy) in Strategy::all_variants().into_iter().enumerate() {
+        let mut parameters = StrategyParameters::new_with_seed(100.0, 7);
+        let before = parameters.q_values;
+        parameters.apply_rl_update_for_strategy(strategy, 1.0, 0.5, 0.9);
+
+        for (index, value) in parameters.q_values.iter().enumerate() {
+            if index == active_index {
+                assert_ne!(*value, before[index]);
+            } else {
+                assert_eq!(*value, before[index]);
+            }
+        }
+    }
+}
+
+#[test]
+fn test_exploitation_selects_highest_value_strategy() {
+    let mut parameters = StrategyParameters::new_with_seed(100.0, 7);
+    parameters.current_epsilon = 0.0;
+    parameters.q_values = [-1.0, 0.25, 2.0, 0.5];
+    let mut rng = StdRng::seed_from_u64(99);
+
+    assert_eq!(parameters.select_strategy(&mut rng), Strategy::Aggressive);
+}
+
+#[test]
+fn test_seeded_tie_breaking_is_reproducible_and_uses_only_best_strategies() {
+    let mut parameters = StrategyParameters::new_with_seed(100.0, 7);
+    parameters.current_epsilon = 0.0;
+    parameters.q_values = [-1.0, 2.0, 2.0, 0.5];
+    let mut first_rng = StdRng::seed_from_u64(123);
+    let mut second_rng = StdRng::seed_from_u64(123);
+
+    let first: Vec<_> = (0..8).map(|_| parameters.select_strategy(&mut first_rng)).collect();
+    let second: Vec<_> = (0..8).map(|_| parameters.select_strategy(&mut second_rng)).collect();
+
+    assert_eq!(first, second);
+    assert!(first
+        .iter()
+        .all(|strategy| matches!(strategy, Strategy::Balanced | Strategy::Aggressive)));
+}
+
+#[test]
+fn test_strategy_parameters_deserialize_without_q_learning_fields() {
+    let parameters = StrategyParameters::new(100.0);
+    let mut value = serde_json::to_value(parameters).expect("serialize strategy parameters");
+    let object = value.as_object_mut().expect("strategy parameters object");
+    object.remove("q_values");
+    object.remove("q_seed");
+
+    let restored: StrategyParameters =
+        serde_json::from_value(value).expect("deserialize legacy strategy parameters");
+    assert_eq!(restored.q_values, [0.0; 4]);
+    assert_eq!(restored.q_seed, 0);
+}
+
+#[test]
+fn test_rl_state_and_trajectory_follow_simulation_seed() {
+    fn run(seed: u64) -> (Vec<[f64; 4]>, Vec<Strategy>, Vec<f64>) {
+        let config = SimulationConfig {
+            seed,
+            max_steps: 5,
+            entity_count: 6,
+            enable_reinforcement_learning: true,
+            rl_epsilon: 0.2,
+            ..Default::default()
+        };
+        let mut engine = SimulationEngine::new(config);
+        let initial_q_values = engine
+            .get_entities()
+            .iter()
+            .map(|entity| entity.person_data.strategy_params.q_values)
+            .collect();
+        for _ in 0..5 {
+            engine.step();
+        }
+        let strategies =
+            engine.get_entities().iter().map(|entity| entity.person_data.strategy).collect();
+        let wealth = engine.get_entities().iter().map(|entity| entity.person_data.money).collect();
+        (initial_q_values, strategies, wealth)
+    }
+
+    assert_eq!(run(1234), run(1234));
+    assert_ne!(run(1234).0, run(1235).0);
 }
