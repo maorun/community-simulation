@@ -567,6 +567,10 @@ mod tests {
     }
 
     #[test]
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     fn test_component_mutation() {
         let mut container = ComponentContainer::new();
         container.add_component(Box::new(TradingBehaviorComponent::new(0.5)));

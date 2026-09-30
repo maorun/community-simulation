@@ -201,6 +201,10 @@ impl VotingSystem {
     /// # Returns
     ///
     /// `true` if vote was successfully cast, `false` if proposal doesn't exist or is closed
+    #[expect(
+        clippy::collapsible_if,
+        reason = "preserve existing nested control flow"
+    )]
     pub fn cast_vote(
         &mut self,
         proposal_id: ProposalId,
