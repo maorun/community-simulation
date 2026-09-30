@@ -1,4 +1,22 @@
 mod comprehensive_scenario_tests;
+
+#[cfg(test)]
+mod causal_analysis_config_tests {
+    use crate::CausalAnalysisConfig;
+
+    #[test]
+    fn deserializing_config_without_optional_values_uses_documented_defaults() {
+        let config: CausalAnalysisConfig = serde_json::from_str(
+            r#"{"treatment_name":"Policy change","control_name":"Current policy"}"#,
+        )
+        .expect("a config with required names should deserialize");
+
+        assert_eq!(config.treatment_name, "Policy change");
+        assert_eq!(config.control_name, "Current policy");
+        assert_eq!(config.confidence_level, 0.95);
+        assert_eq!(config.bootstrap_samples, 1000);
+    }
+}
 mod coverage_80_breakthrough;
 mod coverage_boost_tests;
 mod coverage_push_tests;
