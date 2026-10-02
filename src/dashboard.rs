@@ -32,7 +32,12 @@ use std::net::{TcpListener, TcpStream};
 struct DashboardData<'a> {
     total_steps: usize,
     active_persons: usize,
+    average_money: f64,
+    average_money_trend: &'static str,
+    median_money: f64,
+    median_money_trend: &'static str,
     gini_coefficient: f64,
+    gini_coefficient_trend: &'static str,
     skill_price_history: &'a HashMap<String, Vec<f64>>,
     final_money_distribution: &'a [f64],
     social_class_labels: Vec<&'static str>,
@@ -42,16 +47,47 @@ struct DashboardData<'a> {
     transition_matrix: &'a [Vec<usize>],
 }
 
+/// Return the visual trend for a metric's change since the preceding simulation step.
+///
+/// A missing prior value and an unchanged or non-finite comparison are rendered as a
+/// neutral arrow so every metric has a consistent indicator.
+fn trend_symbol(current: f64, previous: Option<f64>) -> &'static str {
+    match previous.and_then(|previous| current.partial_cmp(&previous)) {
+        Some(std::cmp::Ordering::Greater) => "↑",
+        Some(std::cmp::Ordering::Less) => "↓",
+        _ => "→",
+    }
+}
+
 /// Render a self-contained interactive HTML dashboard for the given simulation result.
 ///
 /// The returned string is a complete HTML document (including an inline `<script>`
 /// that loads Chart.js from a CDN) that can be written to a file or served directly
 /// over HTTP via [`serve`].
 pub fn generate_dashboard_html(result: &SimulationResult) -> String {
+    let previous_snapshot = result
+        .wealth_stats_history
+        .len()
+        .checked_sub(2)
+        .and_then(|index| result.wealth_stats_history.get(index));
     let data = DashboardData {
         total_steps: result.total_steps,
         active_persons: result.active_persons,
+        average_money: result.money_statistics.average,
+        average_money_trend: trend_symbol(
+            result.money_statistics.average,
+            previous_snapshot.map(|snapshot| snapshot.average),
+        ),
+        median_money: result.money_statistics.median,
+        median_money_trend: trend_symbol(
+            result.money_statistics.median,
+            previous_snapshot.map(|snapshot| snapshot.median),
+        ),
         gini_coefficient: result.money_statistics.gini_coefficient,
+        gini_coefficient_trend: trend_symbol(
+            result.money_statistics.gini_coefficient,
+            previous_snapshot.map(|snapshot| snapshot.gini_coefficient),
+        ),
         skill_price_history: &result.skill_price_history,
         final_money_distribution: &result.final_money_distribution,
         social_class_labels: vec!["Lower", "Middle", "Upper", "Elite"],
@@ -92,6 +128,7 @@ pub fn generate_dashboard_html(result: &SimulationResult) -> String {
   h1 {{ font-size: 1.4rem; }}
   .summary {{ display: flex; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; }}
   .summary div {{ background: #222; padding: 0.75rem 1rem; border-radius: 6px; }}
+  .trend {{ margin-left: 0.25rem; font-weight: bold; }}
   .chart-container {{ background: #1b1b1b; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }}
   canvas {{ max-height: 400px; }}
 </style>
@@ -101,7 +138,9 @@ pub fn generate_dashboard_html(result: &SimulationResult) -> String {
 <div class="summary">
   <div>Total steps: <strong id="total-steps"></strong></div>
   <div>Active persons: <strong id="active-persons"></strong></div>
-  <div>Gini coefficient: <strong id="gini"></strong></div>
+  <div>Average wealth: <strong id="average-money"></strong><span class="trend" id="average-money-trend"></span></div>
+  <div>Median wealth: <strong id="median-money"></strong><span class="trend" id="median-money-trend"></span></div>
+  <div>Gini coefficient: <strong id="gini"></strong><span class="trend" id="gini-trend"></span></div>
 </div>
 <div class="chart-container"><canvas id="priceChart"></canvas></div>
 <div class="chart-container"><canvas id="wealthChart"></canvas></div>
@@ -113,7 +152,12 @@ const MAX_WEALTH_BUCKETS = {max_wealth_buckets};
 
 document.getElementById('total-steps').textContent = DASHBOARD_DATA.total_steps;
 document.getElementById('active-persons').textContent = DASHBOARD_DATA.active_persons;
+document.getElementById('average-money').textContent = DASHBOARD_DATA.average_money.toFixed(2);
+document.getElementById('average-money-trend').textContent = DASHBOARD_DATA.average_money_trend;
+document.getElementById('median-money').textContent = DASHBOARD_DATA.median_money.toFixed(2);
+document.getElementById('median-money-trend').textContent = DASHBOARD_DATA.median_money_trend;
 document.getElementById('gini').textContent = DASHBOARD_DATA.gini_coefficient.toFixed(4);
+document.getElementById('gini-trend').textContent = DASHBOARD_DATA.gini_coefficient_trend;
 
 // Price history over time
 const priceLabels = Array.from(
@@ -276,6 +320,37 @@ mod tests {
         let html = generate_dashboard_html(&result);
         assert!(html.contains("<!DOCTYPE html>"));
         assert!(html.contains("\"skill_price_history\":{}"));
+    }
+
+    #[test]
+    fn generate_dashboard_html_embeds_metric_trends_from_previous_snapshot() {
+        let mut result = sample_result();
+        let previous = result
+            .wealth_stats_history
+            .get(result.wealth_stats_history.len() - 2)
+            .expect("sample result has a previous wealth snapshot")
+            .clone();
+
+        result.money_statistics.average = previous.average + 1.0;
+        result.money_statistics.median = previous.median - 1.0;
+        result.money_statistics.gini_coefficient = previous.gini_coefficient;
+
+        let html = generate_dashboard_html(&result);
+        assert!(html.contains("\"average_money_trend\":\"↑\""));
+        assert!(html.contains("\"median_money_trend\":\"↓\""));
+        assert!(html.contains("\"gini_coefficient_trend\":\"→\""));
+        assert!(html.contains("average-money-trend"));
+        assert!(html.contains("median-money-trend"));
+        assert!(html.contains("gini-trend"));
+    }
+
+    #[test]
+    fn trend_symbol_is_neutral_without_a_previous_value_or_comparable_delta() {
+        assert_eq!(trend_symbol(2.0, Some(1.0)), "↑");
+        assert_eq!(trend_symbol(1.0, Some(2.0)), "↓");
+        assert_eq!(trend_symbol(1.0, Some(1.0)), "→");
+        assert_eq!(trend_symbol(1.0, None), "→");
+        assert_eq!(trend_symbol(f64::NAN, Some(1.0)), "→");
     }
 
     #[test]
