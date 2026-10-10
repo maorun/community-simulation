@@ -1,4 +1,5 @@
 mod comprehensive_scenario_tests;
+mod externality_tests;
 
 #[cfg(test)]
 mod causal_analysis_config_tests {
