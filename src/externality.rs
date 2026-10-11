@@ -2,6 +2,11 @@ use crate::skill::SkillId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Default impact weight for externalities
+fn default_impact_weight() -> f64 {
+    1.0
+}
+
 /// Represents an externality effect (positive or negative) from a transaction.
 ///
 /// Externalities are costs or benefits that affect third parties not directly
@@ -19,8 +24,13 @@ pub struct Externality {
     /// The external cost (negative) or benefit (positive) to society
     /// Positive values are positive externalities, negative values are negative externalities
     pub external_value: f64,
-    /// The social value (private + external)
+    /// Social value (private + external)
     pub social_value: f64,
+    /// Impact weight for calibrating policy severity across scenarios
+    /// A multiplier applied to the externality effect to adjust policy impact
+    /// Default is 1.0 (no scaling)
+    #[serde(default = "default_impact_weight")]
+    pub impact_weight: f64,
 }
 
 impl Externality {
@@ -31,14 +41,55 @@ impl Externality {
     /// * `step` - The current simulation step
     /// * `private_value` - The private transaction amount
     /// * `externality_rate` - Rate of externality as percentage of private value
+    /// * `impact_weight` - Weight multiplier for calibrating policy severity (default: 1.0)
     ///
     /// # Returns
     /// A new Externality instance
     pub fn new(skill_id: SkillId, step: usize, private_value: f64, externality_rate: f64) -> Self {
-        let external_value = private_value * externality_rate;
+        Self::with_weight(skill_id, step, private_value, externality_rate, 1.0)
+    }
+
+    /// Creates a new externality with custom impact weight.
+    ///
+    /// # Arguments
+    /// * `skill_id` - The skill involved in the transaction
+    /// * `step` - The current simulation step
+    /// * `private_value` - The private transaction amount
+    /// * `externality_rate` - Rate of externality as percentage of private value
+    /// * `impact_weight` - Weight multiplier for calibrating policy severity
+    ///
+    /// # Returns
+    /// A new Externality instance with custom impact weight
+    pub fn with_weight(
+        skill_id: SkillId,
+        step: usize,
+        private_value: f64,
+        externality_rate: f64,
+        impact_weight: f64,
+    ) -> Self {
+        let external_value = private_value * externality_rate * impact_weight;
         let social_value = private_value + external_value;
 
-        Self { skill_id, step, private_value, external_value, social_value }
+        Self { skill_id, step, private_value, external_value, social_value, impact_weight }
+    }
+
+    /// Creates a new externality record from a transaction with default weight of 1.0.
+    ///
+    /// # Arguments
+    /// * `skill_id` - The skill involved in the transaction
+    /// * `step` - The current simulation step
+    /// * `private_value` - The private transaction amount
+    /// * `externality_rate` - Rate of externality as percentage of private value
+    ///
+    /// # Returns
+    /// A new Externality instance with impact_weight = 1.0
+    pub fn new_with_default_weight(
+        skill_id: SkillId,
+        step: usize,
+        private_value: f64,
+        externality_rate: f64,
+    ) -> Self {
+        Self::with_weight(skill_id, step, private_value, externality_rate, 1.0)
     }
 
     /// Returns true if this is a positive externality (benefit to society).
