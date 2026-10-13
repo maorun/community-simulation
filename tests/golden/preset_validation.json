@@ -1,0 +1,282 @@
+{
+  "description": "Golden test file for preset validation scenarios",
+  "version": "1.0",
+  "scenarios": {
+    "valid_presets": {
+      "description": "All built-in presets should validate successfully",
+      "presets": [
+        {
+          "name": "default",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 100,
+            "max_steps": 500,
+            "initial_money_per_person": 100.0,
+            "base_skill_price": 10.0
+          }
+        },
+        {
+          "name": "small_economy",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 20,
+            "max_steps": 100,
+            "initial_money_per_person": 100.0,
+            "base_skill_price": 10.0
+          }
+        },
+        {
+          "name": "large_economy",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 500,
+            "max_steps": 2000,
+            "initial_money_per_person": 200.0,
+            "base_skill_price": 10.0
+          }
+        },
+        {
+          "name": "crisis_scenario",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 100,
+            "max_steps": 1000,
+            "initial_money_per_person": 50.0,
+            "base_skill_price": 25.0
+          }
+        },
+        {
+          "name": "high_inflation",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 100,
+            "max_steps": 1000,
+            "initial_money_per_person": 100.0,
+            "base_skill_price": 15.0
+          }
+        },
+        {
+          "name": "tech_growth",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 150,
+            "max_steps": 1500,
+            "initial_money_per_person": 250.0,
+            "base_skill_price": 8.0
+          }
+        },
+        {
+          "name": "quick_test",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 10,
+            "max_steps": 50,
+            "initial_money_per_person": 100.0,
+            "base_skill_price": 10.0
+          }
+        },
+        {
+          "name": "gig_economy",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 200,
+            "max_steps": 1000,
+            "initial_money_per_person": 100.0,
+            "base_skill_price": 15.0
+          }
+        },
+        {
+          "name": "post_conflict_reconstruction",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 80,
+            "max_steps": 500,
+            "initial_money_per_person": 25.0,
+            "base_skill_price": 20.0
+          }
+        },
+        {
+          "name": "demographic_transition",
+          "expected_valid": true,
+          "expected_config": {
+            "entity_count": 100,
+            "max_steps": 1000,
+            "initial_money_per_person": 100.0,
+            "base_skill_price": 10.0
+          }
+        }
+      ]
+    },
+    "invalid_presets": {
+      "description": "Invalid preset names should be rejected by validation",
+      "invalid_names": [
+        {
+          "name": "unknown_preset",
+          "expected_valid": false,
+          "expected_error": "Unknown preset"
+        },
+        {
+          "name": "nonexistent",
+          "expected_valid": false,
+          "expected_error": "Unknown preset"
+        },
+        {
+          "name": "invalid_preset_name_123",
+          "expected_valid": false,
+          "expected_error": "Unknown preset"
+        },
+        {
+          "name": "",
+          "expected_valid": false,
+          "expected_error": "Unknown preset"
+        }
+      ]
+    },
+    "invalid_configurations": {
+      "description": "Configuration validation should catch invalid parameter combinations",
+      "invalid_configs": [
+        {
+          "name": "zero_max_steps",
+          "description": "max_steps must be greater than 0",
+          "config": {
+            "preset": "default",
+            "max_steps": 0
+          },
+          "expected_valid": false,
+          "expected_error_contains": "max_steps must be greater than 0"
+        },
+        {
+          "name": "zero_entity_count",
+          "description": "entity_count must be greater than 0",
+          "config": {
+            "preset": "default",
+            "entity_count": 0
+          },
+          "expected_valid": false,
+          "expected_error_contains": "entity_count must be greater than 0"
+        },
+        {
+          "name": "negative_initial_money",
+          "description": "initial_money_per_person must be non-negative",
+          "config": {
+            "preset": "default",
+            "initial_money_per_person": -100.0
+          },
+          "expected_valid": false,
+          "expected_error_contains": "initial_money_per_person must be non-negative"
+        },
+        {
+          "name": "zero_base_skill_price",
+          "description": "base_skill_price must be greater than 0",
+          "config": {
+            "preset": "default",
+            "base_skill_price": 0.0
+          },
+          "expected_valid": false,
+          "expected_error_contains": "base_skill_price must be greater than 0"
+        },
+        {
+          "name": "min_skill_price_exceeds_base",
+          "description": "min_skill_price cannot exceed base_skill_price",
+          "config": {
+            "preset": "default",
+            "base_skill_price": 10.0,
+            "min_skill_price": 15.0
+          },
+          "expected_valid": false,
+          "expected_error_contains": "min_skill_price cannot exceed base_skill_price"
+        },
+        {
+          "name": "invalid_transaction_fee",
+          "description": "transaction_fee must be between 0.0 and 1.0",
+          "config": {
+            "preset": "default",
+            "transaction_fee": 1.5
+          },
+          "expected_valid": false,
+          "expected_error_contains": "transaction_fee must be between 0.0 and 1.0"
+        },
+        {
+          "name": "invalid_crisis_probability",
+          "description": "crisis_probability must be between 0.0 and 1.0",
+          "config": {
+            "preset": "crisis_scenario",
+            "crisis_probability": 1.5
+          },
+          "expected_valid": false,
+          "expected_error_contains": "crisis_probability must be between 0.0 and 1.0"
+        },
+        {
+          "name": "invalid_skill_per_person",
+          "description": "skills_per_person cannot exceed entity_count",
+          "config": {
+            "preset": "small_economy",
+            "skills_per_person": 100
+          },
+          "expected_valid": false,
+          "expected_error_contains": "skills_per_person cannot exceed entity_count"
+        },
+        {
+          "name": "invalid_loan_interest_rate",
+          "description": "loan_interest_rate must be between 0.0 and 1.0",
+          "config": {
+            "preset": "default",
+            "loan_interest_rate": 2.0
+          },
+          "expected_valid": false,
+          "expected_error_contains": "loan_interest_rate must be between 0.0 and 1.0"
+        },
+        {
+          "name": "invalid_savings_rate",
+          "description": "savings_rate must be between 0.0 and 1.0",
+          "config": {
+            "preset": "default",
+            "savings_rate": 1.5
+          },
+          "expected_valid": false,
+          "expected_error_contains": "savings_rate must be between 0.0 and 1.0"
+        }
+      ]
+    },
+    "backward_compatibility": {
+      "description": "Existing presets and configurations should continue to work",
+      "scenarios": [
+        {
+          "name": "preset_from_str_lowercase",
+          "description": "Preset names should accept lowercase variants",
+          "test": "PresetName::from_str(\"small\") should return PresetName::SmallEconomy",
+          "expected_valid": true
+        },
+        {
+          "name": "preset_from_str_abbreviations",
+          "description": "Preset names should accept abbreviations",
+          "test": "PresetName::from_str(\"crisis\") should return PresetName::CrisisScenario",
+          "expected_valid": true
+        },
+        {
+          "name": "preset_as_str_roundtrip",
+          "description": "as_str() and from_str() should be inverses",
+          "test": "PresetName::from_str(p.as_str()) should equal p for all presets p",
+          "expected_valid": true
+        },
+        {
+          "name": "preset_all_contains_all_presets",
+          "description": "PresetName::all() should return all 10 presets",
+          "expected_count": 10,
+          "expected_valid": true
+        },
+        {
+          "name": "preset_description_returns_string",
+          "description": "description() should return non-empty description for all presets",
+          "expected_valid": true
+        }
+      ]
+    }
+  },
+  "validation_rules": {
+    "preset_name_format": "Must match one of: default, small_economy, large_economy, crisis_scenario, high_inflation, tech_growth, quick_test, gig_economy, post_conflict_reconstruction, demographic_transition",
+    "config_validation": "All SimulationConfig parameters must be within valid ranges as defined in config.rs::SimulationConfig::validate()",
+    "feature_dependencies": "Some features require other features to be enabled (e.g., enable_credit_rating requires enable_loans)",
+    "parameter_ranges": "All percentage-based parameters must be between 0.0 and 1.0, counts must be positive integers, monetary values must be non-negative"
+  }
+}

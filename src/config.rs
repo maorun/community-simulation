@@ -100,6 +100,38 @@ impl FromStr for PresetName {
     }
 }
 
+impl PresetName {
+    /// Validate that a preset name exists and produces a valid configuration.
+    ///
+    /// This method verifies:
+    /// - The preset name is recognized (not an unknown string)
+    /// - The preset produces a configuration that passes all validation rules
+    /// - All required parameters are set to valid values
+    ///
+    /// # Returns
+    /// * `Ok(())` if the preset is valid and produces a valid configuration
+    /// * `Err(SimulationError::ValidationError)` if the preset is invalid or produces an invalid configuration
+    ///
+    /// # Examples
+    /// ```
+    /// use community_simulation::PresetName;
+    /// use std::str::FromStr;
+    ///
+    /// // Valid preset
+    /// assert!(PresetName::SmallEconomy.validate().is_ok());
+    ///
+    /// // Invalid preset (unknown name)
+    /// assert!(PresetName::from_str("unknown_preset").is_err());
+    /// ```
+    pub fn validate(&self) -> Result<()> {
+        // Create the configuration from this preset
+        let config = SimulationConfig::from_preset(self.clone());
+
+        // Validate the configuration
+        config.validate()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationConfig {
     // General simulation parameters
