@@ -1,6 +1,6 @@
 # 📋 GitHub Issues - Copy & Paste Vorlagen
 
-Hier findest du 5 evaluierte Verbesserungsvorschläge und Erweiterungen für das **Economic Simulation Framework**. Jedes Issue ist so formatiert, dass du **Titel**, **Labels** und **Beschreibung** einzeln kopieren und direkt in GitHub als neues Issue einfügen kannst.
+Hier findest du 7 evaluierte Verbesserungsvorschläge und Erweiterungen für das **Economic Simulation Framework**. Jedes Issue ist so formatiert, dass du **Titel**, **Labels** und **Beschreibung** einzeln kopieren und direkt in GitHub als neues Issue einfügen kannst.
 
 ---
 
@@ -22,7 +22,7 @@ enhancement, economic-mechanics, market-dynamics
 Implementierung von Informationsasymmetrie zwischen Käufern und Verkäufern auf dem Marktplatz (Akerlof's "Market for Lemons"). Verkäufer kennen die exakte Qualität ihrer angebotenen Skills/Güter (`true_quality`), während Käufer nur die durchschnittliche Marktqualität oder unvollständige Signale wahrnehmen (`perceived_quality`).
 
 ## 🎯 Nutzen & Relevanz
-- **Ökonomische Forschung**: Simulation von Marktversagen durch Adverse Selektion (minderwertige Qualität verdrängt hochwertige Angeboten).
+- **Ökonomische Forschung**: Simulation von Marktversagen durch Adverse Selektion (minderwertige Qualität verdrängt hochwertige Angebote).
 - **Signaling-Mechanismen**: Untersuchung der Effizienz von Zertifikaten, Garantien und Reputation zur Überwindung von Informationsasymmetrie.
 - **Realismus**: Erhöhung der Realitätstreue von Dienstleistungs- und Gütermärkten.
 
@@ -228,4 +228,88 @@ Erweiterung des Simulation-Frameworks um demografische Dynamiken: Alterung der A
 - [ ] CLI-Flags (`--enable-demographics`, `--retirement-age`) & Config-Optionen hinzufügen
 - [ ] Preset `demographic_transition` erstellen
 - [ ] Tests zur Umlagerenten-Stabilität unter Alterungsdruck schreiben
+```
+
+---
+
+## 6. Arbitrage-Handel & Markt-Zwischenhändler (Intermediaries)
+
+### 📌 Title (Kopieren)
+```text
+[FEATURE] Arbitrage-Handel & Markt-Zwischenhändler (Intermediaries)
+```
+
+### 🏷️ Labels (Kopieren)
+```text
+enhancement, market-mechanisms, trading-strategies
+```
+
+### 📝 Issue Body / Description (Kopieren)
+```markdown
+## 📌 Beschreibung
+Einführung einer Arbitrageur- bzw. Zwischenhändler-Strategie. Agenten mit dieser Strategie identifizieren Preisunterschiede zwischen geografischen Regionen oder Marktsegmenten, kaufen Skills/Güter in günstigen Teilmärkten und verkaufen sie mit Marge in teuren Teilmärkten weiter.
+
+## 🎯 Nutzen & Relevanz
+- **Markteffizienz**: Preisangleichung über Regionen und Marktsegmente hinweg (Law of One Price).
+- **Händlerrollen**: Simulation der Rolle von Groß- und Einzelhändlern, Logistik- und Handelsunternehmen.
+- **Handelsströme**: Entstehung komplexer Versorgungs- und Handelsketten im Multi-Regionen-Modell.
+
+## 📐 Technische Spezifikation & Implementierung
+1. **Agentenstrategie `Arbitrageur`**:
+   - Neue `AgentStrategy::Arbitrageur` in `src/plugin.rs` / `src/person.rs`.
+   - Regelmäßiges Scannen der Marktpreise in verschiedenen Regionen (`location`) oder Segmenten (`MarketSegment`).
+2. **Handelslogik**:
+   - Berücksichtigung von Transport- und Transaktionskosten (`distance_cost_factor`, `transaction_fee`).
+   - Marge muss Transportkosten übersteigen: `expected_profit = price_sell - price_buy - transport_cost - fee`.
+3. **Konfiguration**:
+   - `enable_arbitrage: bool`, `arbitrage_min_margin: f64`.
+
+## 📋 Implementation Checklist
+- [ ] `Arbitrageur`-Strategie in Agenten-Verhaltenslogik einbauen
+- [ ] Regionalübergreifende Preisscans in `src/market.rs` ermöglichen
+- [ ] Transaktions- und Transportkostenberechnung für Zwischenhändler anpassen
+- [ ] Statistiken zu Händlermargen und Handelsvolumen in `src/result.rs` aufnehmen
+- [ ] Integrationstests zur Preiskonvergenz durch Arbitrage schreiben
+```
+
+---
+
+## 7. Marktmacht, Oligopole & Kartellbildung (Collusion & Market Power)
+
+### 📌 Title (Kopieren)
+```text
+[FEATURE] Marktmacht, Oligopole & Kartellbildung (Collusion & Market Power)
+```
+
+### 🏷️ Labels (Kopieren)
+```text
+enhancement, market-dynamics, economic-policy
+```
+
+### 📝 Issue Body / Description (Kopieren)
+```markdown
+## 📌 Beschreibung
+Erweiterung der Marktmechanismen um strategisches Verhalten bei hoher Marktkonzentration (HHI > 2500): Verkäufer mit hohem Marktanteil können Preise oberhalb des Grenzkostenniveaus setzen oder explizit/stillschweigend Kartelle zur Preisabsprache bilden.
+
+## 🎯 Nutzen & Relevanz
+- **Wettbewerbspolitik**: Erforschung von Wohlfahrtsverlusten (Deadweight Loss) durch Oligopole und Monopole.
+- **Kartellstabilität**: Untersuchung von Anreizen zum Abweichen vom Kartellpreis (Defektion/Gefangenendilemma).
+- **Regulierung**: Evaluierung von Kartellamts-Interventionen (Straffortzahlungen, Preiskappen).
+
+## 📐 Technische Spezifikation & Implementierung
+1. **Preissetzungsmacht**:
+   - Nutzen der bereits berechneten Herfindahl-Hirschman-Index (HHI) und CR4-Kennzahlen (`skill_market_concentration`).
+   - Preisaufschlag (Markup) als Funktion des Marktanteils $s_i$: $p_i = p_{base} \cdot (1 + \mu \cdot s_i)$.
+2. **Kartell-Koordinationsmechanismus**:
+   - Gruppe führender Anbieter vereinbart Mindestpreis für bestimmte Skills.
+   - Anreiz zur Defektion: Heimliches Unterbieten zur Marktanteilsgewinnung.
+3. **Kartellaufsicht / Regulatory Intervention**:
+   - Zufällige Prüfwahrscheinlichkeit (`anti_trust_audit_probability`) und Bußgelder bei Entdeckung.
+
+## 📋 Implementation Checklist
+- [ ] Markup-Berechnung basierend auf HHI/Marktanteil in `src/market.rs` integrieren
+- [ ] Kartellabsprachen-Logik und Defektionsentscheidung implementieren
+- [ ] Kartellamts-Audits und Strafzahlungen in `src/engine.rs` einbauen
+- [ ] Metriken zu Monopolrenten und Wohlfahrtsverlusten in `src/result.rs` ergänzen
+- [ ] Tests zur Stabilität von Kartellen unter verschiedenen Marktstrukturen schreiben
 ```
