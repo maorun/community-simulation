@@ -9,7 +9,12 @@ use crate::scenario::Scenario;
 /// List all available preset configurations with their details
 ///
 /// Prints a formatted list of all available presets including their
-/// descriptions and key configuration parameters.
+/// descriptions and key configuration parameters. Each preset is validated
+/// to ensure it produces a valid configuration before being displayed.
+///
+/// # Returns
+/// * `Ok(())` if all presets are valid and listed successfully
+/// * `Err` if any preset produces an invalid configuration
 ///
 /// # Examples
 ///
@@ -19,8 +24,17 @@ use crate::scenario::Scenario;
 /// list_presets().expect("Failed to list presets");
 /// ```
 pub fn list_presets() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Available preset configurations:\n");
+    println!("Available preset configurations:");
     for preset in PresetName::all() {
+        // Validate each preset to ensure it produces a valid configuration
+        preset.validate().map_err(|e| {
+            let msg = std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Failed to validate preset '{}': {}", preset.as_str(), e),
+            );
+            Box::new(msg) as Box<dyn std::error::Error>
+        })?;
+
         let config = SimulationConfig::from_preset(preset.clone());
         println!("  {}", preset.as_str());
         println!("    Description: {}", preset.description());
