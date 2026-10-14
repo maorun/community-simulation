@@ -32,6 +32,27 @@ pub struct Contract {
     pub transactions_executed: usize,
     /// Whether the contract is still active (not expired or terminated)
     pub is_active: bool,
+    /// Compliance verification status for the contract
+    /// Set to true when economic and legal compliance checks pass
+    #[serde(default)]
+    pub compliance_verified: bool,
+    /// Economic stability score (0.0 to 1.0) representing contract stability
+    /// Higher values indicate better economic stability
+    #[serde(default)]
+    pub economic_stability_score: f64,
+    /// Risk assessment level for this contract
+    /// One of: "low", "medium", "high"
+    #[serde(default = "default_risk_assessment")]
+    pub risk_assessment: String,
+    /// Description of the enforcement mechanism for this contract
+    #[serde(default)]
+    pub enforcement_mechanism: String,
+    /// Conditions that would trigger contract termination
+    #[serde(default)]
+    pub termination_conditions: Vec<String>,
+    /// The simulation step when the contract was last verified
+    #[serde(default)]
+    pub last_verified_at_step: usize,
 }
 
 impl Contract {
@@ -70,6 +91,12 @@ impl Contract {
             created_at_step,
             transactions_executed: 0,
             is_active: true,
+            compliance_verified: false,
+            economic_stability_score: 0.0,
+            risk_assessment: "low".to_string(),
+            enforcement_mechanism: "none".to_string(),
+            termination_conditions: Vec::new(),
+            last_verified_at_step: created_at_step,
         }
     }
 
@@ -110,6 +137,12 @@ impl Contract {
     pub fn expected_total_value(&self) -> f64 {
         self.duration as f64 * self.price
     }
+}
+
+/// Default risk assessment value for contracts
+#[allow(dead_code)]
+fn default_risk_assessment() -> String {
+    "low".to_string()
 }
 
 #[cfg(test)]
@@ -199,5 +232,77 @@ mod tests {
         contract.execute_step();
         assert_eq!(contract.transactions_executed, 1);
         assert_eq!(contract.remaining_steps, 0);
+    }
+
+    #[test]
+    fn test_contract_validation_fields() {
+        let contract = Contract::new(1, 10, 20, TEST_SKILL_ID.to_string(), 15.0, 10, 100);
+
+        // Check default values for validation fields
+        assert!(!contract.compliance_verified, "compliance_verified should default to false");
+        assert_eq!(
+            contract.economic_stability_score, 0.0,
+            "economic_stability_score should default to 0.0"
+        );
+        assert_eq!(contract.risk_assessment, "low", "risk_assessment should default to \"low\"");
+        assert_eq!(
+            contract.enforcement_mechanism, "none",
+            "enforcement_mechanism should default to \"none\""
+        );
+        assert!(
+            contract.termination_conditions.is_empty(),
+            "termination_conditions should default to empty"
+        );
+        assert_eq!(
+            contract.last_verified_at_step, 100,
+            "last_verified_at_step should match created_at_step"
+        );
+
+        // Verify new fields serialize correctly
+        let json = serde_json::to_string(&contract).unwrap();
+        assert!(json.contains("compliance_verified"));
+        assert!(json.contains("economic_stability_score"));
+        assert!(json.contains("risk_assessment"));
+        assert!(json.contains("enforcement_mechanism"));
+        assert!(json.contains("termination_conditions"));
+        assert!(json.contains("last_verified_at_step"));
+    }
+
+    #[test]
+    fn test_contract_field_updates() {
+        let mut contract = Contract::new(1, 10, 20, TEST_SKILL_ID.to_string(), 15.0, 10, 100);
+
+        // Update validation fields
+        contract.compliance_verified = true;
+        contract.economic_stability_score = 0.85;
+        contract.risk_assessment = "medium".to_string();
+        contract.enforcement_mechanism = "legal_enforcement".to_string();
+        contract.termination_conditions.push("breach_of_terms".to_string());
+        contract.termination_conditions.push("financial_default".to_string());
+
+        // Verify updates
+        assert!(contract.compliance_verified, "compliance_verified should be true");
+        assert_eq!(
+            contract.economic_stability_score, 0.85,
+            "economic_stability_score should be 0.85"
+        );
+        assert_eq!(contract.risk_assessment, "medium", "risk_assessment should be \"medium\"");
+        assert_eq!(
+            contract.enforcement_mechanism, "legal_enforcement",
+            "enforcement_mechanism should be \"legal_enforcement\""
+        );
+        assert_eq!(
+            contract.termination_conditions.len(),
+            2,
+            "Should have 2 termination conditions"
+        );
+        assert_eq!(contract.last_verified_at_step, 100, "last_verified_at_step unchanged");
+
+        // Verify serialization includes all fields
+        let json = serde_json::to_string(&contract).unwrap();
+        assert!(json.contains("\"compliance_verified\":true"));
+        assert!(json.contains("\"economic_stability_score\":0.85"));
+        assert!(json.contains("\"risk_assessment\":\"medium\""));
+        assert!(json.contains("\"enforcement_mechanism\":\"legal_enforcement\""));
     }
 }
