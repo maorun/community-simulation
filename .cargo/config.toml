@@ -1,0 +1,9 @@
+[alias]
+test-all = "test"
+test-unit = "test --lib -- --skip integration_tests"
+test-integration = "test --lib -- integration_tests"
+test-integration-scenarios = "test --lib -- integration_tests:: --skip integration_tests::coverage --skip integration_tests::final --skip integration_tests::ultimate --skip integration_tests::ultra --skip integration_tests::laser"
+test-integration-coverage = "test --lib -- integration_tests::coverage integration_tests::final integration_tests::ultimate integration_tests::ultra integration_tests::laser"
+test-doc = "test --doc"
+test-golden = "test --test golden_regression"
+test-fast = "test --lib -- --skip integration_tests"

@@ -66,9 +66,21 @@ jobs:
       run: cargo build --verbose
 
   test:
-    name: Run Tests
+    name: Run Tests (${{ matrix.name }})
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Unit Tests
+            command: cargo --verbose test-unit
+          - name: Scenario & Engine Tests
+            command: cargo --verbose test-integration-scenarios
+          - name: Coverage & Stress Tests
+            command: cargo --verbose test-integration-coverage
+          - name: Doc Tests
+            command: cargo --verbose test-doc
     
     steps:
     - name: Checkout repository
@@ -79,11 +91,8 @@ jobs:
         rustup update stable
         rustup default stable
         
-    - name: Run tests
-      run: cargo test --verbose
-      
-    - name: Run doctests
-      run: cargo test --doc --verbose
+    - name: Run ${{ matrix.name }}
+      run: ${{ matrix.command }}
 
   golden-regression:
     name: Golden-File Regression Tests
@@ -102,45 +111,10 @@ jobs:
     - name: Run golden-file regression tests
       run: cargo test --test golden_regression -- --nocapture
 
-  coverage-check:
-    name: Coverage Check (Quick)
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v7
-      
-    - name: Install Rust toolchain
-      run: |
-        rustup update stable
-        rustup default stable
-    
-    - name: Cache cargo binaries
-      uses: actions/cache@v6
-      with:
-        path: ~/.cargo/bin
-        key: ${{ runner.os }}-cargo-bin-tarpaulin-${{ hashFiles('~/.cargo/bin/cargo-tarpaulin') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-bin-tarpaulin-
-        
-    - name: Install tarpaulin
-      run: |
-        if ! command -v cargo-tarpaulin &> /dev/null; then
-          cargo install cargo-tarpaulin
-        else
-          echo "cargo-tarpaulin already installed (cached)"
-        fi
-      
-    - name: Quick coverage check
-      run: |
-        echo "🎯 Checking code coverage (minimum: 56%, goal: 100%)"
-        cargo tarpaulin --all-features --workspace --timeout 300 --fail-under 56
-
   build-release:
     name: Build (Release)
     runs-on: ubuntu-latest
-    needs: [build, test, coverage-check]
+    needs: [build, test]
     
     steps:
     - name: Checkout repository

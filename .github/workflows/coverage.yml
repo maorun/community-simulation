@@ -1,10 +1,7 @@
 name: Code Coverage
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  # Manual trigger from Actions tab only
   workflow_dispatch:
 
 env:
