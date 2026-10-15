@@ -44,9 +44,7 @@ impl ParameterRange {
             | ParameterRange::BasePrice { min, max, steps }
             | ParameterRange::SavingsRate { min, max, steps }
             | ParameterRange::TransactionFee { min, max, steps } => {
-                if *steps == 0 {
-                    vec![]
-                } else if *steps <= 1 {
+                if *steps <= 1 {
                     vec![*min]
                 } else {
                     let step_size = (max - min) / (*steps - 1) as f64;

@@ -181,13 +181,7 @@ fn test_parameter_range_validate_inverted_bounds() {
 fn test_parameter_range_validate_zero_step() {
     let range = ParameterRange::InitialMoney { min: 10.0, max: 100.0, steps: 0 };
     assert!(range.validate().is_err());
-}
-
-#[test]
-fn test_parameter_range_validate_empty_list() {
-    let range = ParameterRange::BasePrice { min: 10.0, max: 20.0, steps: 0 };
-    assert!(range.validate().is_err());
-    assert!(range.values().is_empty());
+    assert_eq!(range.values(), vec![10.0]);
 }
 
 // ============================================================================
