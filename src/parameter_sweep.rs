@@ -54,6 +54,42 @@ impl ParameterRange {
         }
     }
 
+    /// Validate bounds consistency (min <= max, step > 0, list non-empty)
+    pub fn validate(&self) -> Result<()> {
+        let (min, max, steps) = match self {
+            ParameterRange::InitialMoney { min, max, steps }
+            | ParameterRange::BasePrice { min, max, steps }
+            | ParameterRange::SavingsRate { min, max, steps }
+            | ParameterRange::TransactionFee { min, max, steps } => (*min, *max, *steps),
+        };
+
+        if min > max {
+            return Err(SimulationError::ValidationError(format!(
+                "Invalid parameter range for {}: min ({}) must be <= max ({})",
+                self.name(),
+                min,
+                max
+            )));
+        }
+
+        if steps == 0 {
+            return Err(SimulationError::ValidationError(format!(
+                "Invalid parameter range for {}: step / steps must be greater than 0",
+                self.name()
+            )));
+        }
+
+        let vals = self.values();
+        if vals.is_empty() {
+            return Err(SimulationError::ValidationError(format!(
+                "Invalid parameter range for {}: generated values list cannot be empty",
+                self.name()
+            )));
+        }
+
+        Ok(())
+    }
+
     /// Apply this parameter value to a configuration
     pub fn apply_to_config(&self, config: &mut SimulationConfig, value: f64) {
         match self {
@@ -61,6 +97,25 @@ impl ParameterRange {
             ParameterRange::BasePrice { .. } => config.base_skill_price = value,
             ParameterRange::SavingsRate { .. } => config.savings_rate = value,
             ParameterRange::TransactionFee { .. } => config.transaction_fee = value,
+        }
+    }
+}
+
+impl std::fmt::Display for ParameterRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParameterRange::InitialMoney { min, max, steps } => {
+                write!(f, "InitialMoney(min={}, max={}, steps={})", min, max, steps)
+            },
+            ParameterRange::BasePrice { min, max, steps } => {
+                write!(f, "BasePrice(min={}, max={}, steps={})", min, max, steps)
+            },
+            ParameterRange::SavingsRate { min, max, steps } => {
+                write!(f, "SavingsRate(min={}, max={}, steps={})", min, max, steps)
+            },
+            ParameterRange::TransactionFee { min, max, steps } => {
+                write!(f, "TransactionFee(min={}, max={}, steps={})", min, max, steps)
+            },
         }
     }
 }
