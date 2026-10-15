@@ -194,4 +194,8 @@ pub use voting::{
 };
 
 #[cfg(test)]
-mod tests;
+#[path = "tests/mod.rs"]
+mod integration_tests;
+
+#[cfg(test)]
+use integration_tests as tests;

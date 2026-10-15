@@ -179,9 +179,45 @@ Run all tests with:
 cargo test
 ```
 
-For verbose output with detailed test information:
+### Partitioned & Fast Test Execution
+
+To accelerate test execution during local development and in CI, the test suite is partitioned into focused suites:
+
 ```bash
-cargo test --verbose
+# 1. Fast Unit Tests (~790+ unit tests across modules, ~1-2s):
+cargo test-unit
+# or: cargo test-fast
+
+# 2. Scenario & Engine Integration Tests (~320+ tests, ~3-4s):
+cargo test-integration-scenarios
+
+# 3. Coverage Breakthrough & Stress Integration Tests (~410+ tests, ~7s):
+cargo test-integration-coverage
+
+# 4. All Integration Tests combined:
+cargo test-integration
+
+# 5. Golden-File Regression Tests (7 snapshot tests, ~1.5s):
+cargo test-golden
+
+# 6. Documentation Tests (~120 doctests, ~2s):
+cargo test-doc
+```
+
+> **Tip:** When passing libtest flags to aliases that already contain argument separators (e.g. `cargo test-unit`), pass flags directly without an additional `--` (for example: `cargo test-unit --nocapture`).
+
+#### Test Runner Script
+
+You can also use `./scripts/run_tests.sh` for convenient partitioned execution with timing:
+
+```bash
+./scripts/run_tests.sh unit                 # Unit tests only
+./scripts/run_tests.sh scenarios            # Scenario & engine tests
+./scripts/run_tests.sh coverage-suites      # Coverage & stress test suites
+./scripts/run_tests.sh golden               # Golden snapshot regression tests
+./scripts/run_tests.sh doc                  # Doctests
+./scripts/run_tests.sh partition 1 2        # Partition 1 of 2
+./scripts/run_tests.sh all                  # All suites sequentially with timings
 ```
 
 Run tests for a specific module:
