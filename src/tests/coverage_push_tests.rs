@@ -153,6 +153,43 @@ fn test_parameter_range_single_step_value() {
     assert_eq!(values[0], 100.0);
 }
 
+#[test]
+fn test_parameter_range_display() {
+    let range = ParameterRange::InitialMoney { min: 10.0, max: 100.0, steps: 5 };
+    let display_str = format!("{}", range);
+    assert!(display_str.contains("InitialMoney"));
+    assert!(display_str.contains("10"));
+    assert!(display_str.contains("100"));
+}
+
+#[test]
+fn test_parameter_range_validate_valid() {
+    let range = ParameterRange::BasePrice { min: 5.0, max: 20.0, steps: 4 };
+    assert!(range.validate().is_ok());
+
+    let single = ParameterRange::SavingsRate { min: 0.1, max: 0.1, steps: 1 };
+    assert!(single.validate().is_ok());
+}
+
+#[test]
+fn test_parameter_range_validate_inverted_bounds() {
+    let range = ParameterRange::TransactionFee { min: 0.2, max: 0.1, steps: 3 };
+    assert!(range.validate().is_err());
+}
+
+#[test]
+fn test_parameter_range_validate_zero_step() {
+    let range = ParameterRange::InitialMoney { min: 10.0, max: 100.0, steps: 0 };
+    assert!(range.validate().is_err());
+}
+
+#[test]
+fn test_parameter_range_validate_empty_list() {
+    let range = ParameterRange::BasePrice { min: 10.0, max: 20.0, steps: 0 };
+    assert!(range.validate().is_err());
+    assert!(range.values().is_empty());
+}
+
 // ============================================================================
 // TRUST_NETWORK.RS - Quick win (97.1% -> 100%)
 // ============================================================================
