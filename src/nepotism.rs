@@ -43,6 +43,24 @@ pub struct NepotismStats {
     pub total_welfare_loss: f64,
     /// Number of loans granted to friends despite sub-standard credit scores or preferred over better market rates
     pub nepotistic_loans_count: usize,
+    /// Historical log of nepotism and favoritism events
+    #[serde(default)]
+    pub history: Vec<NepotismEvent>,
+}
+
+/// Details of a single historical event tracked in nepotism analytics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NepotismEvent {
+    /// Simulation step when the event occurred
+    pub step: usize,
+    /// Event type ("trade", "outgroup_penalty", "nepotistic_loan")
+    pub event_type: String,
+    /// Whether the action/trade was nepotistic
+    pub is_nepotistic: bool,
+    /// Whether the action was within the inner circle
+    pub is_inner_circle: bool,
+    /// Welfare loss incurred
+    pub welfare_loss: f64,
 }
 
 impl Default for NepotismStats {
@@ -63,6 +81,7 @@ impl NepotismStats {
             outgroup_penalties_applied: 0,
             total_welfare_loss: 0.0,
             nepotistic_loans_count: 0,
+            history: Vec::new(),
         }
     }
 
@@ -90,14 +109,88 @@ impl NepotismStats {
         }
     }
 
+    /// Records an evaluated trade decision with historical tracking at a given simulation step.
+    pub fn record_trade_with_step(
+        &mut self,
+        step: usize,
+        is_nepotistic: bool,
+        is_inner_circle: bool,
+        welfare_loss: f64,
+    ) {
+        self.record_trade(is_nepotistic, is_inner_circle, welfare_loss);
+        self.history.push(NepotismEvent {
+            step,
+            event_type: "trade".to_string(),
+            is_nepotistic,
+            is_inner_circle,
+            welfare_loss,
+        });
+    }
+
     /// Records an applied outgroup penalty.
     pub fn record_outgroup_penalty(&mut self) {
         self.outgroup_penalties_applied += 1;
     }
 
+    /// Records an applied outgroup penalty with historical tracking at a given simulation step.
+    pub fn record_outgroup_penalty_with_step(&mut self, step: usize) {
+        self.record_outgroup_penalty();
+        self.history.push(NepotismEvent {
+            step,
+            event_type: "outgroup_penalty".to_string(),
+            is_nepotistic: false,
+            is_inner_circle: false,
+            welfare_loss: 0.0,
+        });
+    }
+
     /// Records a nepotistic loan match.
     pub fn record_nepotistic_loan(&mut self) {
         self.nepotistic_loans_count += 1;
+    }
+
+    /// Records a nepotistic loan match with historical tracking at a given simulation step.
+    pub fn record_nepotistic_loan_with_step(&mut self, step: usize) {
+        self.record_nepotistic_loan();
+        self.history.push(NepotismEvent {
+            step,
+            event_type: "nepotistic_loan".to_string(),
+            is_nepotistic: true,
+            is_inner_circle: true,
+            welfare_loss: 0.0,
+        });
+    }
+
+    /// Validates the internal consistency and invariants of nepotism statistics.
+    pub fn validate(&self) -> crate::error::Result<()> {
+        if self.total_trades_evaluated != self.nepotistic_trades_count + self.merit_trades_count {
+            return Err(crate::error::SimulationError::ValidationError(
+                format!(
+                    "NepotismStats validation error: total_trades_evaluated ({}) != nepotistic_trades_count ({}) + merit_trades_count ({})",
+                    self.total_trades_evaluated, self.nepotistic_trades_count, self.merit_trades_count
+                ),
+            ));
+        }
+
+        if self.inner_circle_trades_count + self.outgroup_trades_count
+            != self.total_trades_evaluated
+        {
+            return Err(crate::error::SimulationError::ValidationError(
+                format!(
+                    "NepotismStats validation error: inner_circle_trades_count ({}) + outgroup_trades_count ({}) != total_trades_evaluated ({})",
+                    self.inner_circle_trades_count, self.outgroup_trades_count, self.total_trades_evaluated
+                ),
+            ));
+        }
+
+        if self.total_welfare_loss < 0.0 {
+            return Err(crate::error::SimulationError::ValidationError(format!(
+                "NepotismStats validation error: total_welfare_loss cannot be negative ({})",
+                self.total_welfare_loss
+            )));
+        }
+
+        Ok(())
     }
 
     /// Calculates the rate of nepotistic choices among evaluated competitive trades (0.0 - 1.0).

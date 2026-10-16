@@ -269,3 +269,33 @@ fn test_calculate_social_closeness_all_tiers() {
     assert_eq!(calculate_social_closeness(false, TrustLevel::ThirdDegree), 0.25);
     assert_eq!(calculate_social_closeness(false, TrustLevel::None), 0.0);
 }
+
+#[test]
+fn test_nepotism_stats_historical_tracking_and_validation() {
+    let mut stats = NepotismStats::new();
+    assert!(stats.validate().is_ok());
+
+    stats.record_trade_with_step(1, true, true, 10.0);
+    stats.record_outgroup_penalty_with_step(2);
+    stats.record_nepotistic_loan_with_step(3);
+
+    assert_eq!(stats.history.len(), 3);
+    assert_eq!(stats.history[0].step, 1);
+    assert_eq!(stats.history[0].event_type, "trade");
+    assert!(stats.history[0].is_nepotistic);
+
+    assert_eq!(stats.history[1].step, 2);
+    assert_eq!(stats.history[1].event_type, "outgroup_penalty");
+
+    assert_eq!(stats.history[2].step, 3);
+    assert_eq!(stats.history[2].event_type, "nepotistic_loan");
+
+    assert!(stats.validate().is_ok());
+
+    // Test validation failure with inconsistent trades count
+    let mut invalid_stats = NepotismStats::new();
+    invalid_stats.total_trades_evaluated = 5;
+    invalid_stats.nepotistic_trades_count = 1;
+    invalid_stats.merit_trades_count = 1;
+    assert!(invalid_stats.validate().is_err());
+}
