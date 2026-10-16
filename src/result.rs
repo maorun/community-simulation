@@ -1550,6 +1550,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trust_network_statistics: Option<crate::trust_network::TrustNetworkStats>,
 
+    /// Nepotism and favoritism statistics (only present if nepotism is enabled)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nepotism_statistics: Option<crate::nepotism::NepotismStats>,
+
     /// Trade agreement system statistics (only present if trade agreements are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trade_agreement_statistics: Option<crate::trade_agreement::TradeAgreementStatistics>,
@@ -1731,6 +1735,7 @@ impl SimulationResult {
     /// #     friendship_statistics: None,
     /// #     influence_statistics: None,
     /// #     trust_network_statistics: None,
+    /// #     nepotism_statistics: None,
     /// #     trade_agreement_statistics: None,
     /// #     insurance_statistics: None,
     /// #     asset_statistics: None,
@@ -4474,6 +4479,7 @@ mod tests {
             friendship_statistics: None,
             influence_statistics: None,
             trust_network_statistics: None,
+            nepotism_statistics: None,
             trade_agreement_statistics: None,
             insurance_statistics: None,
             asset_statistics: None,

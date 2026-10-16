@@ -392,6 +392,7 @@ mod tests {
             friendship_statistics: None,
             influence_statistics: None,
             trust_network_statistics: None,
+            nepotism_statistics: None,
             trade_agreement_statistics: None,
             insurance_statistics: None,
             asset_statistics: None,

@@ -30,6 +30,7 @@ mod final_80_percent_push;
 mod final_push_tests;
 mod information_asymmetry_tests;
 mod laser_focus_80;
+mod nepotism_tests;
 mod profit_tax_tests;
 mod proptest_tests;
 mod reinforcement_learning_tests;

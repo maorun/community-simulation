@@ -1094,6 +1094,41 @@ pub struct SimulationConfig {
     #[serde(default)]
     pub enable_influence: bool,
 
+    /// Enable nepotism and favoritism (Nepotismus & Vetternwirtschaft).
+    ///
+    /// When enabled, agents prioritize friends and social connections over cheaper or
+    /// higher-quality alternatives when selecting trading partners and lending counterparties.
+    /// Non-friends / out-group members face penalties or exclusion.
+    /// Requires enable_friendships to be true.
+    /// Set to false to disable nepotism (default).
+    #[serde(default)]
+    pub enable_nepotism: bool,
+
+    /// Weight of nepotism/favoritism in partner selection decisions (0.0 to 1.0).
+    ///
+    /// - 0.0: Purely meritocratic / economic choice (lowest price / best reputation).
+    /// - 1.0: Maximum favoritism (heavily favors friends even with large price disparities).
+    ///
+    /// Default is 0.3.
+    #[serde(default = "default_nepotism_bias")]
+    pub nepotism_bias: f64,
+
+    /// Surcharge penalty applied to out-group members (non-friends) by sellers (0.0 to 1.0).
+    ///
+    /// When nepotism is active, transactions with persons outside the friendship/trust
+    /// network incur an out-group surcharge, modeling discrimination and social closure.
+    /// Default is 0.15 (+15% surcharge for non-friends).
+    #[serde(default = "default_nepotism_outgroup_penalty")]
+    pub nepotism_outgroup_penalty: f64,
+
+    /// Restrict trades strictly to inner-circle connections when available.
+    ///
+    /// When enabled, an agent will exclusively trade with friends or trust-network connections
+    /// as long as at least one inner-circle provider is available for the needed skill.
+    /// Default is false.
+    #[serde(default)]
+    pub nepotism_inner_circle_only: bool,
+
     /// Number of groups/organizations to create in the simulation.
     ///
     /// When set, persons are assigned to groups in a round-robin fashion at initialization.
@@ -2275,6 +2310,14 @@ fn default_pension_contribution_rate() -> f64 {
     0.05 // 5% pension contribution
 }
 
+fn default_nepotism_bias() -> f64 {
+    0.3 // 30% weight for social connections
+}
+
+fn default_nepotism_outgroup_penalty() -> f64 {
+    0.15 // 15% outgroup surcharge for non-friends
+}
+
 impl Default for SimulationConfig {
     fn default() -> Self {
         Self {
@@ -2368,6 +2411,10 @@ impl Default for SimulationConfig {
             trade_agreement_duration: 100,  // Agreements last 100 steps
             enable_trust_networks: false,   // Disabled by default
             enable_influence: false,        // Disabled by default
+            enable_nepotism: false,         // Disabled by default
+            nepotism_bias: 0.3,             // 30% default favoritism bias
+            nepotism_outgroup_penalty: 0.15, // 15% default outgroup surcharge
+            nepotism_inner_circle_only: false, // Disabled by default
             num_groups: None,               // No groups by default
             distance_cost_factor: 0.0,      // Disabled by default
             price_elasticity_factor: 0.1,   // 10% price adjustment per unit imbalance
@@ -3013,6 +3060,34 @@ impl SimulationConfig {
                      Influence scores are calculated based on friendship network position. \
                      Solution: Set enable_friendships=true or disable influence tracking.".to_string(),
                 ));
+            }
+        }
+
+        // Nepotism system validation
+        if self.enable_nepotism {
+            // Nepotism requires friendships to be enabled
+            if !self.enable_friendships {
+                return Err(SimulationError::ValidationError(
+                    "Feature Dependency Error: enable_nepotism requires enable_friendships to be true. \
+                     Nepotism relies on friendship ties to identify inner-circle members. \
+                     Solution: Set enable_friendships=true or disable nepotism.".to_string(),
+                ));
+            }
+
+            if !(0.0..=1.0).contains(&self.nepotism_bias) {
+                return Err(SimulationError::ValidationError(format!(
+                    "Configuration Error: nepotism_bias must be between 0.0 and 1.0, got {}. \
+                     Solution: Set nepotism_bias within [0.0, 1.0].",
+                    self.nepotism_bias
+                )));
+            }
+
+            if !(0.0..=1.0).contains(&self.nepotism_outgroup_penalty) {
+                return Err(SimulationError::ValidationError(format!(
+                    "Configuration Error: nepotism_outgroup_penalty must be between 0.0 and 1.0, got {}. \
+                     Solution: Set nepotism_outgroup_penalty within [0.0, 1.0].",
+                    self.nepotism_outgroup_penalty
+                )));
             }
         }
 
@@ -4368,6 +4443,68 @@ scenario: Original
         assert!(config.validate().is_err());
         let err = config.validate().unwrap_err();
         assert!(err.to_string().contains("enable_influence requires enable_friendships"));
+    }
+
+    #[test]
+    fn test_validate_nepotism_requires_friendships() {
+        let config = SimulationConfig {
+            enable_nepotism: true,
+            enable_friendships: false,
+            ..Default::default()
+        };
+        assert!(config.validate().is_err());
+        let err = config.validate().unwrap_err();
+        assert!(err.to_string().contains("enable_nepotism requires enable_friendships"));
+    }
+
+    #[test]
+    fn test_validate_nepotism_parameters() {
+        // Bias < 0.0
+        let config1 = SimulationConfig {
+            enable_nepotism: true,
+            enable_friendships: true,
+            nepotism_bias: -0.1,
+            ..Default::default()
+        };
+        assert!(config1.validate().is_err());
+
+        // Bias > 1.0
+        let config2 = SimulationConfig {
+            enable_nepotism: true,
+            enable_friendships: true,
+            nepotism_bias: 1.5,
+            ..Default::default()
+        };
+        assert!(config2.validate().is_err());
+
+        // Outgroup penalty < 0.0
+        let config3 = SimulationConfig {
+            enable_nepotism: true,
+            enable_friendships: true,
+            nepotism_outgroup_penalty: -0.1,
+            ..Default::default()
+        };
+        assert!(config3.validate().is_err());
+
+        // Outgroup penalty > 1.0
+        let config4 = SimulationConfig {
+            enable_nepotism: true,
+            enable_friendships: true,
+            nepotism_outgroup_penalty: 1.2,
+            ..Default::default()
+        };
+        assert!(config4.validate().is_err());
+
+        // Valid configuration
+        let config_valid = SimulationConfig {
+            enable_nepotism: true,
+            enable_friendships: true,
+            nepotism_bias: 0.5,
+            nepotism_outgroup_penalty: 0.2,
+            nepotism_inner_circle_only: true,
+            ..Default::default()
+        };
+        assert!(config_valid.validate().is_ok());
     }
 
     #[test]
