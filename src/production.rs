@@ -4,8 +4,14 @@
 //! two skills they own to produce a new, more valuable skill. This simulates supply chains,
 //! skill composition, and economic specialization.
 
+use crate::error::{Result, SimulationError};
 use crate::skill::SkillId;
 use serde::{Deserialize, Serialize};
+
+/// Default execution time in steps for a recipe
+fn default_execution_time() -> usize {
+    1
+}
 
 /// Represents a production recipe that combines two input skills into one output skill.
 ///
@@ -22,10 +28,13 @@ pub struct Recipe {
     pub output_skill: SkillId,
     /// Cost multiplier for production (1.0 = sum of input prices, 1.5 = 1.5x sum, etc.)
     pub cost_multiplier: f64,
+    /// Execution time in steps required to complete production
+    #[serde(default = "default_execution_time")]
+    pub execution_time: usize,
 }
 
 impl Recipe {
-    /// Creates a new production recipe.
+    /// Creates a new production recipe with default execution time (1 step).
     ///
     /// # Arguments
     /// * `input_skill_1` - ID of the first input skill
@@ -50,7 +59,35 @@ impl Recipe {
         output_skill: SkillId,
         cost_multiplier: f64,
     ) -> Self {
-        Recipe { input_skill_1, input_skill_2, output_skill, cost_multiplier }
+        Recipe { input_skill_1, input_skill_2, output_skill, cost_multiplier, execution_time: 1 }
+    }
+
+    /// Creates a new production recipe with a specified execution time.
+    ///
+    /// # Arguments
+    /// * `input_skill_1` - ID of the first input skill
+    /// * `input_skill_2` - ID of the second input skill
+    /// * `output_skill` - ID of the skill produced by this recipe
+    /// * `cost_multiplier` - Cost multiplier (typically 1.0-2.0)
+    /// * `execution_time` - Number of simulation steps required for execution
+    pub fn with_execution_time(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        execution_time: usize,
+    ) -> Self {
+        Recipe { input_skill_1, input_skill_2, output_skill, cost_multiplier, execution_time }
+    }
+
+    /// Validates the recipe parameters (e.g., positive execution time/duration).
+    pub fn validate(&self) -> Result<()> {
+        if self.execution_time == 0 {
+            return Err(SimulationError::ValidationError(
+                "Recipe execution time (duration) must be greater than 0".to_string(),
+            ));
+        }
+        Ok(())
     }
 
     /// Checks if the recipe can be crafted with the given skills.
