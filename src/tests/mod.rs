@@ -1,5 +1,51 @@
 mod comprehensive_scenario_tests;
 mod externality_tests;
+mod recipe_execution_time_tests {
+    use crate::production::Recipe;
+
+    #[test]
+    fn test_recipe_execution_time_initialization() {
+        let recipe = Recipe::new(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+        );
+        assert_eq!(recipe.execution_time, 1);
+        assert!(recipe.validate().is_ok());
+
+        let custom = Recipe::with_execution_time(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            5,
+        );
+        assert_eq!(custom.execution_time, 5);
+        assert!(custom.validate().is_ok());
+    }
+
+    #[test]
+    fn test_recipe_duration_validation() {
+        let invalid = Recipe::with_execution_time(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            0,
+        );
+        assert_eq!(invalid.execution_time, 0);
+        assert!(invalid.validate().is_err());
+    }
+
+    #[test]
+    fn test_recipe_serialization_backward_compatibility() {
+        let json = r#"{"input_skill_1":"Programming","input_skill_2":"DataAnalysis","output_skill":"MachineLearning","cost_multiplier":1.5}"#;
+        let recipe: Recipe = serde_json::from_str(json).expect("should deserialize legacy recipe");
+        assert_eq!(recipe.execution_time, 1);
+        assert!(recipe.validate().is_ok());
+    }
+}
 
 #[cfg(test)]
 mod causal_analysis_config_tests {
