@@ -151,6 +151,8 @@ pub struct SimulationCheckpoint {
     pub trade_agreement_counter: usize,
     /// Trust network system (if enabled)
     pub trust_network: Option<crate::trust_network::TrustNetwork>,
+    /// Nepotism and favoritism tracking (if enabled)
+    pub nepotism_stats: Option<crate::nepotism::NepotismStats>,
     /// Insurance system tracking
     pub insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
     pub insurance_counter: usize,
@@ -251,6 +253,8 @@ pub struct SimulationEngine {
     trade_agreement_counter: usize,
     // Trust network system (if enabled)
     trust_network: Option<crate::trust_network::TrustNetwork>,
+    // Nepotism and favoritism tracking (if enabled)
+    nepotism_stats: Option<crate::nepotism::NepotismStats>,
     // Insurance system tracking
     insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
     insurance_counter: usize,
@@ -454,6 +458,13 @@ impl SimulationEngine {
             None
         };
 
+        // Initialize nepotism tracking if enabled
+        let nepotism_stats = if config.enable_nepotism {
+            Some(crate::nepotism::NepotismStats::new())
+        } else {
+            None
+        };
+
         // Initialize skill providers cache
         let mut skill_providers: HashMap<SkillId, Vec<usize>> =
             HashMap::with_capacity(all_skill_ids.len());
@@ -535,6 +546,7 @@ impl SimulationEngine {
             total_trade_agreements_expired: 0,
             trade_agreement_counter: 0,
             trust_network,
+            nepotism_stats,
             insurances: HashMap::new(),
             insurance_counter: 0,
             total_insurance_policies_issued: 0,
@@ -2198,6 +2210,7 @@ impl SimulationEngine {
                 .trust_network
                 .as_ref()
                 .map(|trust_network| trust_network.get_statistics()),
+            nepotism_statistics: self.nepotism_stats.clone(),
             trade_agreement_statistics: if self.config.enable_trade_agreements {
                 // Calculate trade agreement statistics
                 let active_agreements = self
@@ -3155,13 +3168,105 @@ impl SimulationEngine {
                 let efficiency = option.cached_efficiency;
                 let efficiency_adjusted_price = skill_price / efficiency;
 
-                // Find a provider for this skill - select the first available one
-                // Performance optimization: Compute seller_id once and reuse throughout purchase logic.
-                // This avoids repeated Option pattern matching in subsequent conditional blocks
-                // (reputation, friendship, trade agreements, quality, specialization, distance, execution).
-                let seller_id = skill_providers
-                    .get(&needed_skill_id)
-                    .and_then(|providers| providers.first().copied());
+                // Find a provider for this skill
+                let mut trade_is_nepotistic = false;
+                let mut trade_is_inner_circle = false;
+                let mut trade_welfare_loss = 0.0;
+
+                let seller_id = if self.config.enable_nepotism {
+                    if let Some(providers) = skill_providers.get(&needed_skill_id) {
+                        let buyer_person_id = self.entities[buyer_idx].id;
+                        let mut candidates: Vec<crate::nepotism::CandidateSeller> =
+                            Vec::with_capacity(providers.len());
+
+                        for &cand_idx in providers {
+                            if cand_idx == buyer_idx || !self.entities[cand_idx].active {
+                                continue;
+                            }
+
+                            let cand_person_id = self.entities[cand_idx].id;
+                            let is_friend =
+                                self.entities[buyer_idx].person_data.is_friend_with(cand_person_id);
+                            let trust_level = if self.config.enable_trust_networks {
+                                if let Some(ref mut tn) = self.trust_network {
+                                    tn.get_trust_level(buyer_person_id, cand_person_id)
+                                } else {
+                                    crate::trust_network::TrustLevel::None
+                                }
+                            } else {
+                                crate::trust_network::TrustLevel::None
+                            };
+
+                            let closeness =
+                                crate::nepotism::calculate_social_closeness(is_friend, trust_level);
+                            let rep = self.entities[cand_idx].person_data.reputation;
+                            let rep_multiplier =
+                                self.entities[cand_idx].person_data.reputation_price_multiplier();
+
+                            // Estimate candidate effective price
+                            let mut cand_price = efficiency_adjusted_price * rep_multiplier;
+                            if is_friend {
+                                cand_price *= 1.0 - self.config.friendship_discount;
+                            } else if trust_level != crate::trust_network::TrustLevel::None {
+                                cand_price *= 1.0
+                                    - (self.config.friendship_discount
+                                        * trust_level.discount_multiplier());
+                            } else {
+                                cand_price *= 1.0 + self.config.nepotism_outgroup_penalty;
+                            }
+
+                            if self.config.distance_cost_factor > 0.0 {
+                                let dist = self.entities[buyer_idx]
+                                    .person_data
+                                    .location
+                                    .distance_to(&self.entities[cand_idx].person_data.location);
+                                cand_price *= 1.0 + (dist * self.config.distance_cost_factor);
+                            }
+
+                            let pref_score = crate::nepotism::calculate_candidate_score(
+                                cand_price,
+                                rep,
+                                closeness,
+                                self.config.nepotism_bias,
+                            );
+
+                            candidates.push(crate::nepotism::CandidateSeller {
+                                entity_idx: cand_idx,
+                                person_id: cand_person_id,
+                                effective_price: cand_price,
+                                reputation: rep,
+                                is_friend,
+                                trust_level,
+                                social_closeness: closeness,
+                                preference_score: pref_score,
+                            });
+                        }
+
+                        if let Some((selected, is_nep, welfare_l)) =
+                            crate::nepotism::select_seller_with_nepotism(
+                                &candidates,
+                                self.config.enable_nepotism,
+                                self.config.nepotism_inner_circle_only,
+                            )
+                        {
+                            trade_is_nepotistic = is_nep;
+                            trade_is_inner_circle = selected.social_closeness > 0.0;
+                            trade_welfare_loss = welfare_l;
+                            Some(selected.entity_idx)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    // Performance optimization: Compute seller_id once and reuse throughout purchase logic.
+                    // This avoids repeated Option pattern matching in subsequent conditional blocks
+                    // (reputation, friendship, trade agreements, quality, specialization, distance, execution).
+                    skill_providers
+                        .get(&needed_skill_id)
+                        .and_then(|providers| providers.first().copied())
+                };
 
                 // Apply reputation-based price multiplier for the seller
                 let mut final_price = if let Some(seller_idx) = seller_id {
@@ -3172,7 +3277,7 @@ impl SimulationEngine {
                     efficiency_adjusted_price
                 };
 
-                // Apply friendship discount if enabled and buyer-seller are friends
+                // Apply friendship discount or outgroup penalty if enabled
                 if self.config.enable_friendships {
                     if let Some(seller_idx) = seller_id {
                         let buyer_person_id = self.entities[buyer_idx].id;
@@ -3183,33 +3288,61 @@ impl SimulationEngine {
                             let friendship_multiplier = 1.0 - self.config.friendship_discount;
                             final_price *= friendship_multiplier;
                             trace!(
-                                    "Friendship discount applied: Person {} and Person {} are friends, price reduced by {:.1}%",
-                                    buyer_person_id,
-                                    seller_person_id,
-                                    self.config.friendship_discount * 100.0
-                                );
+                                "Friendship discount applied: Person {} and Person {} are friends, price reduced by {:.1}%",
+                                buyer_person_id,
+                                seller_person_id,
+                                self.config.friendship_discount * 100.0
+                            );
                         } else if self.config.enable_trust_networks {
                             // Check for trust network discount (indirect trust)
+                            let mut has_trust = false;
                             if let Some(ref mut trust_network) = self.trust_network {
                                 let trust_level = trust_network
                                     .get_trust_level(buyer_person_id, seller_person_id);
                                 let trust_multiplier = trust_level.discount_multiplier();
 
                                 if trust_multiplier > 0.0 {
+                                    has_trust = true;
                                     // Apply partial friendship discount based on trust level
                                     let trust_discount =
                                         self.config.friendship_discount * trust_multiplier;
                                     let trust_price_multiplier = 1.0 - trust_discount;
                                     final_price *= trust_price_multiplier;
                                     trace!(
-                                            "Trust network discount applied: Person {} trusts Person {} at level {:?}, price reduced by {:.1}%",
-                                            buyer_person_id,
-                                            seller_person_id,
-                                            trust_level,
-                                            trust_discount * 100.0
-                                        );
+                                        "Trust network discount applied: Person {} trusts Person {} at level {:?}, price reduced by {:.1}%",
+                                        buyer_person_id,
+                                        seller_person_id,
+                                        trust_level,
+                                        trust_discount * 100.0
+                                    );
                                 }
                             }
+                            if !has_trust && self.config.enable_nepotism {
+                                let outgroup_multiplier =
+                                    1.0 + self.config.nepotism_outgroup_penalty;
+                                final_price *= outgroup_multiplier;
+                                if let Some(ref mut stats) = self.nepotism_stats {
+                                    stats.record_outgroup_penalty();
+                                }
+                                trace!(
+                                    "Nepotism out-group penalty applied: Person {} and Person {} have no trust connection, price increased by {:.1}%",
+                                    buyer_person_id,
+                                    seller_person_id,
+                                    self.config.nepotism_outgroup_penalty * 100.0
+                                );
+                            }
+                        } else if self.config.enable_nepotism {
+                            let outgroup_multiplier = 1.0 + self.config.nepotism_outgroup_penalty;
+                            final_price *= outgroup_multiplier;
+                            if let Some(ref mut stats) = self.nepotism_stats {
+                                stats.record_outgroup_penalty();
+                            }
+                            trace!(
+                                "Nepotism out-group penalty applied: Person {} and Person {} are not friends, price increased by {:.1}%",
+                                buyer_person_id,
+                                seller_person_id,
+                                self.config.nepotism_outgroup_penalty * 100.0
+                            );
                         }
                     }
                 }
@@ -3389,6 +3522,13 @@ impl SimulationEngine {
                             needed_skill_id.clone(),
                             final_price,
                         ));
+                        if let Some(ref mut stats) = self.nepotism_stats {
+                            stats.record_trade(
+                                trade_is_nepotistic,
+                                trade_is_inner_circle,
+                                trade_welfare_loss,
+                            );
+                        }
                         self.entities[buyer_idx]
                             .person_data
                             .satisfied_needs_current_step
@@ -6224,6 +6364,11 @@ impl SimulationEngine {
         self.total_taxes_collected
     }
 
+    /// Get the current nepotism statistics, if nepotism is enabled.
+    pub fn get_nepotism_stats(&self) -> Option<&crate::nepotism::NepotismStats> {
+        self.nepotism_stats.as_ref()
+    }
+
     /// Get the current simulation result snapshot
     /// This creates a simplified SimulationResult for display in interactive mode
     /// Note: Some complex statistics are omitted for simplicity
@@ -6483,9 +6628,10 @@ impl SimulationEngine {
             friendship_statistics: None,  // Simplified
             influence_statistics: None,   // Simplified
             trust_network_statistics: None, // Simplified
-            trade_agreement_statistics: None, // Simplified
-            insurance_statistics: None,   // Simplified
-            asset_statistics: None,       // Simplified for interactive mode
+            nepotism_statistics: self.nepotism_stats.clone(),
+            trade_agreement_statistics: None,         // Simplified
+            insurance_statistics: None,               // Simplified
+            asset_statistics: None,                   // Simplified for interactive mode
             technology_breakthrough_statistics: None, // Simplified
             group_statistics: None,
             trading_partner_statistics: crate::result::TradingPartnerStats {
@@ -6591,6 +6737,7 @@ impl SimulationEngine {
             total_trade_agreements_expired: self.total_trade_agreements_expired,
             trade_agreement_counter: self.trade_agreement_counter,
             trust_network: self.trust_network.clone(),
+            nepotism_stats: self.nepotism_stats.clone(),
             insurances: self.insurances.clone(),
             insurance_counter: self.insurance_counter,
             total_insurance_policies_issued: self.total_insurance_policies_issued,
@@ -6763,6 +6910,7 @@ impl SimulationEngine {
             total_trade_agreements_expired: checkpoint.total_trade_agreements_expired,
             trade_agreement_counter: checkpoint.trade_agreement_counter,
             trust_network: checkpoint.trust_network,
+            nepotism_stats: checkpoint.nepotism_stats,
             insurances: checkpoint.insurances,
             insurance_counter: checkpoint.insurance_counter,
             total_insurance_policies_issued: checkpoint.total_insurance_policies_issued,

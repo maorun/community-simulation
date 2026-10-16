@@ -192,6 +192,105 @@ impl LendingMarketplace {
             })
     }
 
+    /// Finds the best matching lending offer for a borrower, optionally incorporating nepotism / favoritism.
+    ///
+    /// When nepotism is enabled:
+    /// - Lenders who are friends or in the trust network of the borrower may accept a lower credit score
+    ///   (credit leniency / tolerance proportional to nepotism_bias).
+    /// - If `inner_circle_only` is true, offers from inner-circle lenders are strictly prioritized
+    ///   if any exist with sufficient funds.
+    /// - The borrower discounts interest rates of friends when comparing offers:
+    ///   effective interest = rate / (1.0 + nepotism_bias * social_closeness * 2.0).
+    ///
+    /// Returns `(best_offer, is_nepotistic)` where `is_nepotistic` is true if the selected offer
+    /// was chosen due to social connections despite not being the optimal economic offer under pure merit.
+    pub fn find_best_offer_with_nepotism<F>(
+        &self,
+        borrower_credit_score: u16,
+        requested_amount: f64,
+        nepotism_enabled: bool,
+        nepotism_bias: f64,
+        inner_circle_only: bool,
+        mut social_closeness_fn: F,
+    ) -> Option<(&LendingOffer, bool)>
+    where
+        F: FnMut(PersonId) -> f64,
+    {
+        if !nepotism_enabled {
+            return self
+                .find_best_offer(borrower_credit_score, requested_amount)
+                .map(|o| (o, false));
+        }
+
+        // What would standard meritocratic matching choose?
+        let standard_best = self.find_best_offer(borrower_credit_score, requested_amount);
+        let safe_bias = nepotism_bias.clamp(0.0, 1.0);
+
+        // Filter offers by amount and credit score (with friendship credit leniency)
+        let mut candidates: Vec<(&LendingOffer, f64)> = Vec::new(); // (offer, social_closeness)
+
+        for offer in &self.offers {
+            if offer.max_amount < requested_amount {
+                continue;
+            }
+
+            let social_closeness = social_closeness_fn(offer.lender_id).clamp(0.0, 1.0);
+
+            // Credit score leniency for friends:
+            // A friend lender is willing to forgive up to (safe_bias * 150) credit points
+            let effective_min_credit = match offer.min_credit_score {
+                Some(min_score) => {
+                    let forgiveness =
+                        (safe_bias * social_closeness * 150.0).round().max(0.0) as u16;
+                    min_score.saturating_sub(forgiveness)
+                },
+                None => 0,
+            };
+
+            if borrower_credit_score >= effective_min_credit {
+                candidates.push((offer, social_closeness));
+            }
+        }
+
+        if candidates.is_empty() {
+            return None;
+        }
+
+        // If inner_circle_only, filter to offers from connections if any exist
+        let filtered_candidates: Vec<(&LendingOffer, f64)> = if inner_circle_only {
+            let inner_circle: Vec<(&LendingOffer, f64)> =
+                candidates.iter().filter(|(_, closeness)| *closeness > 0.0).copied().collect();
+            if !inner_circle.is_empty() {
+                inner_circle
+            } else {
+                candidates
+            }
+        } else {
+            candidates
+        };
+
+        // Select the offer with the lowest perceived interest rate (discounted by social closeness)
+        let selected = filtered_candidates
+            .into_iter()
+            .min_by(|(offer_a, closeness_a), (offer_b, closeness_b)| {
+                let perceived_rate_a =
+                    offer_a.interest_rate / (1.0 + safe_bias * closeness_a * 2.0);
+                let perceived_rate_b =
+                    offer_b.interest_rate / (1.0 + safe_bias * closeness_b * 2.0);
+                perceived_rate_a
+                    .partial_cmp(&perceived_rate_b)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .map(|(offer, _)| offer)?;
+
+        let is_nepotistic = match standard_best {
+            Some(best_merit) => selected.id != best_merit.id,
+            None => true, // Approved only because of friendship leniency
+        };
+
+        Some((selected, is_nepotistic))
+    }
+
     /// Removes a lending offer from the marketplace.
     ///
     /// # Arguments
@@ -369,5 +468,93 @@ mod tests {
 
         marketplace.clear_offers();
         assert_eq!(marketplace.offers.len(), 0);
+    }
+
+    #[test]
+    fn test_marketplace_find_best_offer_with_nepotism_credit_leniency() {
+        let mut marketplace = LendingMarketplace::new(0.01);
+        marketplace.add_offer(10, 1000.0, 0.03, Some(700), 0); // Friend lender requires 700
+
+        // Borrower has 660 credit score (below 700)
+        // Without nepotism -> None
+        let standard = marketplace.find_best_offer(660, 500.0);
+        assert!(standard.is_none());
+
+        // With nepotism, lender is a friend (closeness = 1.0, bias = 0.5 -> leniency = 75 points)
+        // 700 - 75 = 625 <= 660 -> Accepted!
+        let result =
+            marketplace.find_best_offer_with_nepotism(660, 500.0, true, 0.5, false, |lender_id| {
+                if lender_id == 10 {
+                    1.0
+                } else {
+                    0.0
+                }
+            });
+        assert!(result.is_some());
+        let (offer, is_nepotistic) = result.unwrap();
+        assert_eq!(offer.lender_id, 10);
+        assert!(is_nepotistic);
+    }
+
+    #[test]
+    fn test_marketplace_find_best_offer_with_nepotism_rate_preference() {
+        let mut marketplace = LendingMarketplace::new(0.01);
+        marketplace.add_offer(1, 1000.0, 0.020, Some(600), 0); // Stranger: 2.0%
+        marketplace.add_offer(2, 1000.0, 0.024, Some(600), 0); // Friend: 2.4%
+
+        // Without nepotism -> Stranger offer 1 wins (2.0% < 2.4%)
+        let standard = marketplace.find_best_offer(650, 500.0).unwrap();
+        assert_eq!(standard.lender_id, 1);
+
+        // With nepotism (bias 0.5, lender 2 is friend) -> Friend offer 2 wins!
+        let (offer, is_nepotistic) = marketplace
+            .find_best_offer_with_nepotism(650, 500.0, true, 0.5, false, |id| {
+                if id == 2 {
+                    1.0
+                } else {
+                    0.0
+                }
+            })
+            .unwrap();
+        assert_eq!(offer.lender_id, 2);
+        assert!(is_nepotistic);
+    }
+
+    #[test]
+    fn test_marketplace_find_best_offer_with_nepotism_inner_circle_only() {
+        let mut marketplace = LendingMarketplace::new(0.01);
+        marketplace.add_offer(1, 1000.0, 0.01, Some(600), 0); // Stranger: very cheap 1.0%
+        marketplace.add_offer(2, 1000.0, 0.05, Some(600), 0); // Friend: expensive 5.0%
+
+        // With inner_circle_only = true, stranger is excluded
+        let (offer, is_nepotistic) = marketplace
+            .find_best_offer_with_nepotism(650, 500.0, true, 0.3, true, |id| {
+                if id == 2 {
+                    1.0
+                } else {
+                    0.0
+                }
+            })
+            .unwrap();
+        assert_eq!(offer.lender_id, 2);
+        assert!(is_nepotistic);
+    }
+
+    #[test]
+    fn test_marketplace_find_best_offer_with_nepotism_out_of_range_bias_and_closeness() {
+        let mut marketplace = LendingMarketplace::new(0.01);
+        marketplace.add_offer(1, 1000.0, 0.05, Some(700), 0);
+
+        // Negative bias and negative closeness should not panic or cause division by zero / negative rates
+        let res =
+            marketplace.find_best_offer_with_nepotism(600, 500.0, true, -1.0, false, |_| -0.5);
+        assert!(res.is_none()); // 600 < 700 and forgiveness is clamped to 0
+
+        // Excessively high bias (> 1.0) and closeness (> 1.0) should be clamped safely to 1.0
+        let (offer, is_nepotistic) = marketplace
+            .find_best_offer_with_nepotism(550, 500.0, true, 2.5, false, |_| 3.0)
+            .expect("Should clamp and forgive up to 150 points (700 - 150 = 550)");
+        assert_eq!(offer.id, 0);
+        assert!(is_nepotistic);
     }
 }

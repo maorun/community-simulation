@@ -43,12 +43,18 @@ Dieses Dokument enthält eine Sammlung möglicher Features und Verbesserungen f�
 
 ### 2. Soziale Netzwerke und Beziehungen
 
-#### 2.1 Nepotismus & Vetternwirtschaft
+#### 2.1 Nepotismus & Vetternwirtschaft ✅ (Implementiert)
 **Beschreibung:** Bevorzugung von Freunden/Familienmitgliedern bei Jobvergabe, Krediten oder Handelspartnern, auch wenn andere qualifizierter/günstiger sind.
 
 **Nutzen:** Ineffizienzen durch soziale Präferenzen, Korruption, Netzwerk-basierte Vorteile vs. Meritokratie.
 
-**Implementierung:** Freundschafts-Bonus wird zu einem Negativfaktor für Nicht-Freunde, Exklusive Angebote für "Inner Circle".
+**Implementierung:**
+- Konfiguration: `enable_nepotism`, `nepotism_bias`, `nepotism_outgroup_penalty`, `nepotism_inner_circle_only`.
+- Bevorzugte Partnerauswahl im Handel (`select_seller_with_nepotism`): Gewichtung von sozialer Nähe (`calculate_social_closeness`) und ökonomischem Angebot (`calculate_candidate_score`).
+- Negativfaktor / Surcharge für Nicht-Freunde (`nepotism_outgroup_penalty`): Preisaufschlag für Transaktionen außerhalb des Freundschafts- bzw. Vertrauensnetzwerks.
+- Inner-Circle-Exklusivität (`nepotism_inner_circle_only`): Beschränkung auf Kontakte aus dem sozialen Umfeld, wenn vorhanden.
+- Kredittoleranz & Bevorzugung im P2P-Lending (`find_best_offer_with_nepotism`).
+- Detailliertes Metrik-Tracking (`NepotismStats`): Nepotistische vs. meritokratische Transaktionen, Inner-Circle-Quote, angewandte Outgroup-Penalties, aggregierter Wohlfahrtsverlust (`total_welfare_loss`).
 
 #### 2.2 Soziale Mobilität & Klassenbarrieren
 **Beschreibung:** Explizite Klassensysteme (Unterschicht/Mittelschicht/Oberschicht) mit erschwerten Aufstiegschancen und ungleichem Zugang zu Bildung/Krediten.

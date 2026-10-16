@@ -679,6 +679,24 @@ struct RunArgs {
     #[arg(long, default_value_t = false)]
     enable_influence: bool,
 
+    /// Enable nepotism and favoritism (Nepotismus & Vetternwirtschaft)
+    /// When enabled, agents prioritize friends over cheaper alternatives
+    /// Requires --enable-friendships to be set
+    #[arg(long, default_value_t = false)]
+    enable_nepotism: bool,
+
+    /// Weight of nepotism/favoritism in partner selection (0.0 to 1.0)
+    #[arg(long)]
+    nepotism_bias: Option<f64>,
+
+    /// Surcharge penalty applied to out-group members (non-friends) (0.0 to 1.0)
+    #[arg(long)]
+    nepotism_outgroup_penalty: Option<f64>,
+
+    /// Restrict trades strictly to inner-circle connections when available
+    #[arg(long, default_value_t = false)]
+    nepotism_inner_circle_only: bool,
+
     /// Enable bilateral trade agreements between persons
     /// When enabled, persons can form long-term trading partnerships
     /// Requires --enable-friendships for optimal functionality
@@ -876,6 +894,18 @@ fn apply_social_systems_overrides(cfg: &mut SimulationConfig, args: &RunArgs) {
     }
     if args.enable_influence {
         cfg.enable_influence = true;
+    }
+    if args.enable_nepotism {
+        cfg.enable_nepotism = true;
+    }
+    if let Some(bias) = args.nepotism_bias {
+        cfg.nepotism_bias = bias;
+    }
+    if let Some(penalty) = args.nepotism_outgroup_penalty {
+        cfg.nepotism_outgroup_penalty = penalty;
+    }
+    if args.nepotism_inner_circle_only {
+        cfg.nepotism_inner_circle_only = true;
     }
     if args.enable_trade_agreements {
         cfg.enable_trade_agreements = true;
@@ -1432,6 +1462,12 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             trade_agreement_duration: SimulationConfig::default().trade_agreement_duration,
             enable_trust_networks: args.enable_trust_networks,
             enable_influence: args.enable_influence,
+            enable_nepotism: args.enable_nepotism,
+            nepotism_bias: args.nepotism_bias.unwrap_or(SimulationConfig::default().nepotism_bias),
+            nepotism_outgroup_penalty: args
+                .nepotism_outgroup_penalty
+                .unwrap_or(SimulationConfig::default().nepotism_outgroup_penalty),
+            nepotism_inner_circle_only: args.nepotism_inner_circle_only,
             num_groups: args.num_groups,
             distance_cost_factor: args
                 .distance_cost_factor

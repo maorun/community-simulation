@@ -119,6 +119,7 @@ pub mod lending_marketplace;
 pub mod list_commands;
 pub mod loan;
 pub mod market;
+pub mod nepotism;
 pub mod parameter_sweep;
 pub mod person;
 // pub mod physics; // Removed
@@ -165,6 +166,7 @@ pub use investment::{Investment, InvestmentId, InvestmentType};
 pub use lending_marketplace::{LendingMarketplace, LendingOffer, LendingOfferId};
 pub use loan::{Loan, LoanId};
 pub use market::Market;
+pub use nepotism::NepotismStats;
 pub use parameter_sweep::{
     GridSweepPoint, GridSweepResult, ParameterRange, ParameterSweepResult, SweepConfiguration,
 };
