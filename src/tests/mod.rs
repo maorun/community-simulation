@@ -48,6 +48,64 @@ mod recipe_execution_time_tests {
 }
 
 #[cfg(test)]
+mod invariant_severity_tests {
+    use crate::invariant::{InvariantSeverity, InvariantViolation};
+
+    #[test]
+    fn test_invariant_severity_ordering_and_display() {
+        assert!(InvariantSeverity::Low < InvariantSeverity::Medium);
+        assert!(InvariantSeverity::Medium < InvariantSeverity::High);
+        assert!(InvariantSeverity::High < InvariantSeverity::Critical);
+
+        assert_eq!(InvariantSeverity::Low.to_string(), "LOW");
+        assert_eq!(InvariantSeverity::Medium.to_string(), "MEDIUM");
+        assert_eq!(InvariantSeverity::High.to_string(), "HIGH");
+        assert_eq!(InvariantSeverity::Critical.to_string(), "CRITICAL");
+    }
+
+    #[test]
+    fn test_invariant_violation_severity_and_validation() {
+        let v1 = InvariantViolation::new("TestInv".to_string(), "Description".to_string(), 10);
+        assert_eq!(v1.severity(), InvariantSeverity::Medium);
+        assert!(v1.validate().is_ok());
+
+        let v2 = InvariantViolation::with_severity(
+            "TestInv2".to_string(),
+            "Critical failure".to_string(),
+            20,
+            InvariantSeverity::Critical,
+        );
+        assert_eq!(v2.severity(), InvariantSeverity::Critical);
+        assert!(v2.validate().is_ok());
+
+        let v_bad_name = InvariantViolation::with_severity(
+            "".to_string(),
+            "desc".to_string(),
+            1,
+            InvariantSeverity::High,
+        );
+        assert!(v_bad_name.validate().is_err());
+
+        let v_bad_desc = InvariantViolation::with_severity(
+            "name".to_string(),
+            "   ".to_string(),
+            1,
+            InvariantSeverity::High,
+        );
+        assert!(v_bad_desc.validate().is_err());
+    }
+
+    #[test]
+    fn test_invariant_violation_deserialization_backward_compatibility() {
+        let json = r#"{"invariant_name":"Legacy","description":"Old violation","step":3,"expected":null,"actual":null}"#;
+        let violation: InvariantViolation = serde_json::from_str(json).expect("should deserialize");
+        assert_eq!(violation.invariant_name, "Legacy");
+        assert_eq!(violation.severity(), InvariantSeverity::Medium);
+        assert!(violation.validate().is_ok());
+    }
+}
+
+#[cfg(test)]
 mod causal_analysis_config_tests {
     use crate::CausalAnalysisConfig;
 

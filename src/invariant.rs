@@ -21,10 +21,38 @@
 /// assert!(money_conservation.check(&engine).is_ok());
 /// ```
 use crate::engine::SimulationEngine;
+use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
 
+/// Severity level of an invariant violation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
+pub enum InvariantSeverity {
+    Low,
+    #[default]
+    Medium,
+    High,
+    Critical,
+}
+
+impl fmt::Display for InvariantSeverity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InvariantSeverity::Low => write!(f, "LOW"),
+            InvariantSeverity::Medium => write!(f, "MEDIUM"),
+            InvariantSeverity::High => write!(f, "HIGH"),
+            InvariantSeverity::Critical => write!(f, "CRITICAL"),
+        }
+    }
+}
+
+thread_local! {
+    static SEVERITY_STORE: RefCell<HashMap<(String, usize, String), InvariantSeverity>> = RefCell::new(HashMap::new());
+}
+
 /// Represents a violation of an invariant.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct InvariantViolation {
     /// Name of the violated invariant
     pub invariant_name: String,
@@ -36,6 +64,71 @@ pub struct InvariantViolation {
     pub expected: Option<String>,
     /// Optional: Actual value observed
     pub actual: Option<String>,
+}
+
+impl InvariantViolation {
+    /// Creates a new invariant violation with default Medium severity.
+    pub fn new(invariant_name: String, description: String, step: usize) -> Self {
+        let v = InvariantViolation {
+            invariant_name: invariant_name.clone(),
+            description: description.clone(),
+            step,
+            expected: None,
+            actual: None,
+        };
+        SEVERITY_STORE.with(|store| {
+            store
+                .borrow_mut()
+                .insert((invariant_name, step, description), InvariantSeverity::Medium);
+        });
+        v
+    }
+
+    /// Creates a new invariant violation with specified severity.
+    pub fn with_severity(
+        invariant_name: String,
+        description: String,
+        step: usize,
+        severity: InvariantSeverity,
+    ) -> Self {
+        let v = InvariantViolation {
+            invariant_name: invariant_name.clone(),
+            description: description.clone(),
+            step,
+            expected: None,
+            actual: None,
+        };
+        SEVERITY_STORE.with(|store| {
+            store.borrow_mut().insert((invariant_name, step, description), severity);
+        });
+        v
+    }
+
+    /// Returns the severity level of this violation.
+    pub fn severity(&self) -> InvariantSeverity {
+        SEVERITY_STORE.with(|store| {
+            store
+                .borrow()
+                .get(&(self.invariant_name.clone(), self.step, self.description.clone()))
+                .copied()
+                .unwrap_or(InvariantSeverity::Medium)
+        })
+    }
+
+    /// Validates the invariant violation fields.
+    pub fn validate(&self) -> crate::error::Result<()> {
+        if self.invariant_name.trim().is_empty() {
+            return Err(crate::error::SimulationError::ValidationError(
+                "Invariant violation name cannot be empty".to_string(),
+            ));
+        }
+        if self.description.trim().is_empty() {
+            return Err(crate::error::SimulationError::ValidationError(
+                "Invariant violation description cannot be empty".to_string(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 impl fmt::Display for InvariantViolation {
