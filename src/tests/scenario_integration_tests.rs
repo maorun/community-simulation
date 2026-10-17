@@ -2220,4 +2220,73 @@ mod integration_tests {
         // Validation should panic
         config.validate().unwrap();
     }
+
+    /// Test that ScenarioComparisonPoint validates confidence scores correctly (0.0 to 1.0)
+    #[test]
+    fn test_scenario_comparison_point_confidence_validation() {
+        use crate::result::MonteCarloStats;
+        use crate::scenario_comparison::ScenarioComparisonPoint;
+
+        let dummy_stats =
+            MonteCarloStats { mean: 100.0, median: 100.0, std_dev: 10.0, min: 80.0, max: 120.0 };
+
+        // 1. None confidence is valid
+        let point_none = ScenarioComparisonPoint {
+            scenario: Scenario::Original,
+            results: vec![],
+            avg_money_stats: dummy_stats.clone(),
+            gini_coefficient_stats: dummy_stats.clone(),
+            total_trades_stats: dummy_stats.clone(),
+            avg_reputation_stats: dummy_stats.clone(),
+            confidence: None,
+        };
+        assert!(point_none.validate().is_ok());
+
+        // 2. Valid boundary scores [0.0, 1.0]
+        for conf in [0.0, 0.25, 0.5, 0.75, 1.0] {
+            let point = ScenarioComparisonPoint {
+                scenario: Scenario::Original,
+                results: vec![],
+                avg_money_stats: dummy_stats.clone(),
+                gini_coefficient_stats: dummy_stats.clone(),
+                total_trades_stats: dummy_stats.clone(),
+                avg_reputation_stats: dummy_stats.clone(),
+                confidence: Some(conf),
+            };
+            assert!(point.validate().is_ok(), "Confidence {} should be valid", conf);
+        }
+
+        // 3. Invalid scores (< 0.0, > 1.0, NaN)
+        for conf in [-0.01, 1.01, f64::NAN] {
+            let point = ScenarioComparisonPoint {
+                scenario: Scenario::Original,
+                results: vec![],
+                avg_money_stats: dummy_stats.clone(),
+                gini_coefficient_stats: dummy_stats.clone(),
+                total_trades_stats: dummy_stats.clone(),
+                avg_reputation_stats: dummy_stats.clone(),
+                confidence: Some(conf),
+            };
+            assert!(point.validate().is_err(), "Confidence {} should be invalid", conf);
+        }
+    }
+
+    /// Test backward compatibility when deserializing older ScenarioComparisonPoint without confidence
+    #[test]
+    fn test_scenario_comparison_point_backward_compatibility() {
+        use crate::scenario_comparison::ScenarioComparisonPoint;
+
+        let json_data = r#"{
+            "scenario": "Original",
+            "results": [],
+            "avg_money_stats": {"mean": 100.0, "median": 100.0, "std_dev": 10.0, "min": 80.0, "max": 120.0},
+            "gini_coefficient_stats": {"mean": 0.3, "median": 0.3, "std_dev": 0.05, "min": 0.2, "max": 0.4},
+            "total_trades_stats": {"mean": 50.0, "median": 50.0, "std_dev": 5.0, "min": 40.0, "max": 60.0},
+            "avg_reputation_stats": {"mean": 1.0, "median": 1.0, "std_dev": 0.1, "min": 0.8, "max": 1.2}
+        }"#;
+
+        let parsed: ScenarioComparisonPoint = serde_json::from_str(json_data).unwrap();
+        assert_eq!(parsed.confidence, None);
+        assert!(parsed.validate().is_ok());
+    }
 }

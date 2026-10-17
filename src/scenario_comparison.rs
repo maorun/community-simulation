@@ -25,6 +25,25 @@ pub struct ScenarioComparisonPoint {
     pub gini_coefficient_stats: MonteCarloStats,
     pub total_trades_stats: MonteCarloStats,
     pub avg_reputation_stats: MonteCarloStats,
+    /// Optional statistical confidence score (0.0 to 1.0)
+    #[serde(default)]
+    pub confidence: Option<f64>,
+}
+
+impl ScenarioComparisonPoint {
+    /// Validates the comparison point, ensuring confidence score is within valid bounds [0.0, 1.0] if present.
+    #[allow(clippy::collapsible_if)]
+    pub fn validate(&self) -> Result<()> {
+        if let Some(conf) = self.confidence {
+            if conf < 0.0 || conf > 1.0 || conf.is_nan() {
+                return Err(SimulationError::ValidationError(format!(
+                    "ScenarioComparisonPoint confidence score must be between 0.0 and 1.0, got {}",
+                    conf
+                )));
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Complete results from a scenario comparison analysis
@@ -58,6 +77,24 @@ pub struct ComparisonWinners {
 }
 
 impl ScenarioComparisonResult {
+    /// Validates the scenario comparison result and all comparison points
+    pub fn validate(&self) -> Result<()> {
+        if self.scenarios.is_empty() {
+            return Err(SimulationError::ValidationError(
+                "At least one scenario must be provided for comparison".to_string(),
+            ));
+        }
+        if self.runs_per_scenario == 0 {
+            return Err(SimulationError::ValidationError(
+                "Runs per scenario must be at least 1".to_string(),
+            ));
+        }
+        for point in &self.comparison_points {
+            point.validate()?;
+        }
+        Ok(())
+    }
+
     /// Create a new ScenarioComparisonResult by running simulations across multiple scenarios
     pub fn run(
         base_config: SimulationConfig,
@@ -143,6 +180,7 @@ impl ScenarioComparisonResult {
                     gini_coefficient_stats,
                     total_trades_stats,
                     avg_reputation_stats,
+                    confidence: None,
                 }
             })
             .collect();
