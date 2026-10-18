@@ -24,6 +24,39 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::io;
 
+/// Category of a simulation error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ErrorCategory {
+    /// Configuration related errors
+    Configuration,
+    /// Parsing related errors
+    Parsing,
+    /// Validation related errors
+    Validation,
+    /// I/O related errors
+    Io,
+    /// Serialization related errors
+    Serialization,
+    /// Storage related errors (action log)
+    Storage,
+    /// Export related errors (Parquet)
+    Export,
+}
+
+impl fmt::Display for ErrorCategory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ErrorCategory::Configuration => write!(f, "CONFIGURATION"),
+            ErrorCategory::Parsing => write!(f, "PARSING"),
+            ErrorCategory::Validation => write!(f, "VALIDATION"),
+            ErrorCategory::Io => write!(f, "IO"),
+            ErrorCategory::Serialization => write!(f, "SERIALIZATION"),
+            ErrorCategory::Storage => write!(f, "STORAGE"),
+            ErrorCategory::Export => write!(f, "EXPORT"),
+        }
+    }
+}
+
 /// Custom error type for the simulation framework.
 ///
 /// This enum represents all possible errors that can occur during
@@ -126,6 +159,46 @@ impl StdError for SimulationError {
             },
             _ => None,
         }
+    }
+}
+
+impl SimulationError {
+    /// Returns the category of this error.
+    pub fn category(&self) -> ErrorCategory {
+        match self {
+            SimulationError::ConfigFileRead(_) => ErrorCategory::Configuration,
+            SimulationError::YamlParse(_) => ErrorCategory::Parsing,
+            SimulationError::TomlParse(_) => ErrorCategory::Parsing,
+            SimulationError::UnsupportedConfigFormat(_) => ErrorCategory::Configuration,
+            SimulationError::ValidationError(_) => ErrorCategory::Validation,
+            SimulationError::IoError(_) => ErrorCategory::Io,
+            SimulationError::JsonSerialize(_) => ErrorCategory::Serialization,
+            SimulationError::ActionLogWrite(_) => ErrorCategory::Storage,
+            SimulationError::ActionLogRead(_) => ErrorCategory::Storage,
+            SimulationError::ActionLogSerialize(_) => ErrorCategory::Serialization,
+            SimulationError::ActionLogDeserialize(_) => ErrorCategory::Serialization,
+            SimulationError::ParquetExport(_) => ErrorCategory::Export,
+        }
+    }
+
+    /// Validates the error state.
+    pub fn validate(&self) -> Result<()> {
+        match self {
+            SimulationError::YamlParse(msg)
+            | SimulationError::TomlParse(msg)
+            | SimulationError::UnsupportedConfigFormat(msg)
+            | SimulationError::ValidationError(msg)
+            | SimulationError::JsonSerialize(msg)
+            | SimulationError::ParquetExport(msg)
+                if msg.is_empty() =>
+            {
+                return Err(SimulationError::ValidationError(
+                    "Error message cannot be empty".to_string(),
+                ));
+            },
+            _ => {},
+        }
+        Ok(())
     }
 }
 
@@ -325,5 +398,81 @@ mod tests {
         let err = SimulationError::ValidationError("test".to_string());
         let debug_str = format!("{:?}", err);
         assert!(debug_str.contains("ValidationError"));
+    }
+
+    #[test]
+    fn test_error_categories() {
+        let io_err = io::Error::new(io::ErrorKind::NotFound, "not found");
+        assert_eq!(
+            SimulationError::ConfigFileRead(io_err).category(),
+            ErrorCategory::Configuration
+        );
+        assert_eq!(
+            SimulationError::YamlParse("bad".to_string()).category(),
+            ErrorCategory::Parsing
+        );
+        assert_eq!(
+            SimulationError::TomlParse("bad".to_string()).category(),
+            ErrorCategory::Parsing
+        );
+        assert_eq!(
+            SimulationError::UnsupportedConfigFormat("json".to_string()).category(),
+            ErrorCategory::Configuration
+        );
+        assert_eq!(
+            SimulationError::ValidationError("bad".to_string()).category(),
+            ErrorCategory::Validation
+        );
+        assert_eq!(SimulationError::IoError(io::Error::other("io")).category(), ErrorCategory::Io);
+        assert_eq!(
+            SimulationError::JsonSerialize("bad".to_string()).category(),
+            ErrorCategory::Serialization
+        );
+        assert_eq!(
+            SimulationError::ActionLogWrite(io::Error::other("io")).category(),
+            ErrorCategory::Storage
+        );
+        assert_eq!(
+            SimulationError::ActionLogRead(io::Error::other("io")).category(),
+            ErrorCategory::Storage
+        );
+        assert_eq!(
+            SimulationError::ActionLogSerialize(
+                serde_json::from_str::<serde_json::Value>("invalid").unwrap_err()
+            )
+            .category(),
+            ErrorCategory::Serialization
+        );
+        assert_eq!(
+            SimulationError::ActionLogDeserialize(
+                serde_json::from_str::<serde_json::Value>("invalid").unwrap_err()
+            )
+            .category(),
+            ErrorCategory::Serialization
+        );
+        assert_eq!(
+            SimulationError::ParquetExport("bad".to_string()).category(),
+            ErrorCategory::Export
+        );
+    }
+
+    #[test]
+    fn test_error_validation() {
+        let err = SimulationError::ValidationError("invalid config".to_string());
+        assert!(err.validate().is_ok());
+
+        let empty_err = SimulationError::ValidationError("".to_string());
+        assert!(empty_err.validate().is_err());
+    }
+
+    #[test]
+    fn test_error_category_display() {
+        assert_eq!(format!("{}", ErrorCategory::Configuration), "CONFIGURATION");
+        assert_eq!(format!("{}", ErrorCategory::Parsing), "PARSING");
+        assert_eq!(format!("{}", ErrorCategory::Validation), "VALIDATION");
+        assert_eq!(format!("{}", ErrorCategory::Io), "IO");
+        assert_eq!(format!("{}", ErrorCategory::Serialization), "SERIALIZATION");
+        assert_eq!(format!("{}", ErrorCategory::Storage), "STORAGE");
+        assert_eq!(format!("{}", ErrorCategory::Export), "EXPORT");
     }
 }

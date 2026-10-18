@@ -685,4 +685,39 @@ mod comprehensive_scenarios {
             "Trading should occur with environment tracking"
         );
     }
+
+    /// Test: Error Categorization and Handling Scenario
+    /// Verifies error categorization, matching, and validation in simulation workflows
+    #[test]
+    fn test_error_categorization_and_handling_scenario() {
+        use crate::error::{ErrorCategory, SimulationError};
+
+        // Test config file read error category
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "config.yaml not found");
+        let err = SimulationError::ConfigFileRead(io_err);
+        assert_eq!(err.category(), ErrorCategory::Configuration);
+        assert!(err.validate().is_ok());
+
+        // Test validation error handling and matching
+        let val_err = SimulationError::ValidationError("Entity count must be positive".to_string());
+        assert_eq!(val_err.category(), ErrorCategory::Validation);
+        assert!(val_err.validate().is_ok());
+
+        match val_err {
+            SimulationError::ValidationError(msg) => {
+                assert!(msg.contains("Entity count"));
+            },
+            _ => panic!("Expected ValidationError"),
+        }
+
+        // Test parsing error category
+        let parse_err = SimulationError::YamlParse("syntax error at line 5".to_string());
+        assert_eq!(parse_err.category(), ErrorCategory::Parsing);
+        assert!(parse_err.validate().is_ok());
+
+        // Test export error category
+        let export_err = SimulationError::ParquetExport("failed to write column".to_string());
+        assert_eq!(export_err.category(), ErrorCategory::Export);
+        assert!(export_err.validate().is_ok());
+    }
 }
