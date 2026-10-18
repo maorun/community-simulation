@@ -25,6 +25,42 @@ pub enum Scenario {
     ClimateChange,
 }
 
+/// Category of a simulation scenario.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum ScenarioCategory {
+    /// Standard / benchmark scenarios
+    Standard,
+    /// Pricing mechanism scenarios
+    Pricing,
+    /// Macroenvironmental impact scenarios
+    Environmental,
+}
+
+impl Display for ScenarioCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ScenarioCategory::Standard => write!(f, "STANDARD"),
+            ScenarioCategory::Pricing => write!(f, "PRICING"),
+            ScenarioCategory::Environmental => write!(f, "ENVIRONMENTAL"),
+        }
+    }
+}
+
+/// Metadata associated with a simulation scenario.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ScenarioMetadata {
+    /// Category of the scenario
+    pub category: ScenarioCategory,
+    /// Complexity score (0.0 to 1.0)
+    pub complexity: f64,
+    /// Descriptive tags
+    pub tags: Vec<String>,
+    /// Version string
+    pub version: String,
+    /// Whether the scenario is experimental
+    pub is_experimental: bool,
+}
+
 impl Display for Scenario {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -89,6 +125,94 @@ impl Scenario {
     /// Check if this is the default scenario
     pub fn is_default(&self) -> bool {
         matches!(self, Scenario::Original)
+    }
+
+    /// Get the category of this scenario
+    pub fn category(&self) -> ScenarioCategory {
+        match self {
+            Scenario::Original => ScenarioCategory::Standard,
+            Scenario::DynamicPricing => ScenarioCategory::Pricing,
+            Scenario::AdaptivePricing => ScenarioCategory::Pricing,
+            Scenario::AuctionPricing => ScenarioCategory::Pricing,
+            Scenario::ClimateChange => ScenarioCategory::Environmental,
+        }
+    }
+
+    /// Get comprehensive metadata for this scenario
+    pub fn metadata(&self) -> ScenarioMetadata {
+        match self {
+            Scenario::Original => ScenarioMetadata {
+                category: ScenarioCategory::Standard,
+                complexity: 0.2,
+                tags: vec![
+                    "baseline".to_string(),
+                    "supply-demand".to_string(),
+                    "market".to_string(),
+                ],
+                version: "1.0".to_string(),
+                is_experimental: false,
+            },
+            Scenario::DynamicPricing => ScenarioMetadata {
+                category: ScenarioCategory::Pricing,
+                complexity: 0.4,
+                tags: vec![
+                    "pricing".to_string(),
+                    "sales-based".to_string(),
+                    "adaptive".to_string(),
+                ],
+                version: "1.0".to_string(),
+                is_experimental: false,
+            },
+            Scenario::AdaptivePricing => ScenarioMetadata {
+                category: ScenarioCategory::Pricing,
+                complexity: 0.6,
+                tags: vec!["pricing".to_string(), "ema".to_string(), "smooth".to_string()],
+                version: "1.0".to_string(),
+                is_experimental: false,
+            },
+            Scenario::AuctionPricing => ScenarioMetadata {
+                category: ScenarioCategory::Pricing,
+                complexity: 0.7,
+                tags: vec!["pricing".to_string(), "auction".to_string(), "competitive".to_string()],
+                version: "1.0".to_string(),
+                is_experimental: false,
+            },
+            Scenario::ClimateChange => ScenarioMetadata {
+                category: ScenarioCategory::Environmental,
+                complexity: 0.8,
+                tags: vec!["environmental".to_string(), "climate".to_string(), "macro".to_string()],
+                version: "1.0".to_string(),
+                is_experimental: false,
+            },
+        }
+    }
+
+    /// Get tags associated with this scenario
+    pub fn tags(&self) -> Vec<&str> {
+        match self {
+            Scenario::Original => vec!["baseline", "supply-demand", "market"],
+            Scenario::DynamicPricing => vec!["pricing", "sales-based", "adaptive"],
+            Scenario::AdaptivePricing => vec!["pricing", "ema", "smooth"],
+            Scenario::AuctionPricing => vec!["pricing", "auction", "competitive"],
+            Scenario::ClimateChange => vec!["environmental", "climate", "macro"],
+        }
+    }
+
+    /// Validates scenario metadata and configuration parameters.
+    pub fn validate(&self) -> crate::error::Result<()> {
+        let meta = self.metadata();
+        if meta.complexity < 0.0 || meta.complexity > 1.0 || meta.complexity.is_nan() {
+            return Err(crate::error::SimulationError::ValidationError(format!(
+                "Scenario complexity must be between 0.0 and 1.0, got {}",
+                meta.complexity
+            )));
+        }
+        if meta.version.is_empty() {
+            return Err(crate::error::SimulationError::ValidationError(
+                "Scenario version cannot be empty".to_string(),
+            ));
+        }
+        Ok(())
     }
 }
 
