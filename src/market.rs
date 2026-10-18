@@ -4,6 +4,7 @@
 //! and manages skill prices based on supply, demand, and configured pricing strategies.
 
 use crate::{
+    error::{Result, SimulationError},
     scenario::PriceUpdater,
     skill::{Skill, SkillId},
 };
@@ -79,6 +80,14 @@ pub struct Market {
     /// Adds market volatility. For example, 0.02 means ±2% random variation.
     pub volatility_percentage: f64,
 
+    /// Current computed market volatility metric for risk and stability analysis.
+    ///
+    /// Average coefficient of variation (std/mean) across skill price histories.
+    /// Updated via [`Market::update_volatility_metrics`]. Defaults to `0.0` when
+    /// no price history is available (backward compatible).
+    #[serde(default)]
+    pub current_volatility: f64,
+
     /// Minimum allowed price for any skill
     pub min_skill_price: f64,
 
@@ -106,21 +115,21 @@ pub struct Market {
     ///
     /// Maps skill IDs to a vector of prices, with one entry per simulation step.
     /// This data is useful for analyzing price trends and market dynamics.
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub skill_price_history: HashMap<SkillId, Vec<f64>>,
 
     /// Historical demand counts for each skill across all simulation steps
     ///
     /// Maps skill IDs to a vector of demand counts (number of persons needing the skill),
     /// with one entry per simulation step. Used for elasticity calculations.
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub demand_history: HashMap<SkillId, Vec<usize>>,
 
     /// Historical supply counts for each skill across all simulation steps
     ///
     /// Maps skill IDs to a vector of supply counts (number of persons providing the skill),
     /// with one entry per simulation step. Used for elasticity calculations.
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub supply_history: HashMap<SkillId, Vec<usize>>,
 
     /// Strategy used to update prices each step
@@ -176,6 +185,7 @@ impl Market {
             base_skill_price,
             price_elasticity_factor,
             volatility_percentage,
+            current_volatility: 0.0,
             min_skill_price,
             max_skill_price: 1000.0,
             per_skill_price_limits: HashMap::new(),
@@ -545,6 +555,89 @@ impl Market {
             // If both are None, remove the entry
             self.per_skill_price_limits.remove(skill_id);
         }
+    }
+
+    /// Computes the current market volatility metric from skill price histories.
+    ///
+    /// Returns the average coefficient of variation (standard deviation / mean)
+    /// across skills that have at least two recorded prices. Returns `0.0` when
+    /// insufficient history is available.
+    pub fn compute_volatility(&self) -> f64 {
+        let mut skill_volatilities = Vec::new();
+
+        for history in self.skill_price_history.values() {
+            if history.len() < 2 {
+                continue;
+            }
+
+            let n = history.len() as f64;
+            let mean: f64 = history.iter().sum::<f64>() / n;
+            if mean.abs() < f64::EPSILON {
+                continue;
+            }
+
+            let variance: f64 = history
+                .iter()
+                .map(|price| {
+                    let delta = price - mean;
+                    delta * delta
+                })
+                .sum::<f64>()
+                / n;
+            skill_volatilities.push(variance.sqrt() / mean.abs());
+        }
+
+        if skill_volatilities.is_empty() {
+            0.0
+        } else {
+            skill_volatilities.iter().sum::<f64>() / skill_volatilities.len() as f64
+        }
+    }
+
+    /// Recomputes and stores [`Market::current_volatility`] from price history.
+    pub fn update_volatility_metrics(&mut self) {
+        self.current_volatility = self.compute_volatility();
+    }
+
+    /// Validates market volatility and stability configuration metrics.
+    ///
+    /// Checks:
+    /// - `volatility_percentage` is in `[0.0, 0.5]` and finite
+    /// - `current_volatility` is non-negative and finite
+    /// - `min_skill_price` is non-negative and `max_skill_price >= min_skill_price`
+    pub fn validate(&self) -> Result<()> {
+        if !self.volatility_percentage.is_finite()
+            || self.volatility_percentage.is_sign_negative()
+            || self.volatility_percentage > 0.5
+        {
+            return Err(SimulationError::ValidationError(format!(
+                "volatility_percentage must be between 0.0 and 0.5, got {}",
+                self.volatility_percentage
+            )));
+        }
+
+        if !self.current_volatility.is_finite() || self.current_volatility.is_sign_negative() {
+            return Err(SimulationError::ValidationError(format!(
+                "current_volatility must be a non-negative finite value, got {}",
+                self.current_volatility
+            )));
+        }
+
+        if !self.min_skill_price.is_finite() || self.min_skill_price.is_sign_negative() {
+            return Err(SimulationError::ValidationError(format!(
+                "min_skill_price must be a non-negative finite value, got {}",
+                self.min_skill_price
+            )));
+        }
+
+        if !self.max_skill_price.is_finite() || self.max_skill_price < self.min_skill_price {
+            return Err(SimulationError::ValidationError(format!(
+                "max_skill_price must be finite and >= min_skill_price ({}), got {}",
+                self.min_skill_price, self.max_skill_price
+            )));
+        }
+
+        Ok(())
     }
 }
 
