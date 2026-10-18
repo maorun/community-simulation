@@ -48,6 +48,102 @@ mod recipe_execution_time_tests {
 }
 
 #[cfg(test)]
+mod market_volatility_tracking_tests {
+    use crate::market::Market;
+    use crate::scenario::{PriceUpdater, Scenario};
+    use crate::skill::Skill;
+
+    fn test_market() -> Market {
+        Market::new(10.0, 1.0, 0.1, 0.02, PriceUpdater::from(Scenario::Original))
+    }
+
+    #[test]
+    fn test_current_volatility_defaults_and_validation() {
+        let market = test_market();
+        assert_eq!(market.current_volatility, 0.0);
+        assert!(market.validate().is_ok());
+    }
+
+    #[test]
+    fn test_volatility_percentage_bounds_validation() {
+        let mut market = test_market();
+
+        for valid in [0.0, 0.02, 0.25, 0.5] {
+            market.volatility_percentage = valid;
+            assert!(market.validate().is_ok(), "volatility_percentage {} should be valid", valid);
+        }
+
+        for invalid in [-0.01, 0.51, f64::NAN, f64::INFINITY] {
+            market.volatility_percentage = invalid;
+            assert!(
+                market.validate().is_err(),
+                "volatility_percentage {} should be invalid",
+                invalid
+            );
+        }
+    }
+
+    #[test]
+    fn test_current_volatility_bounds_validation() {
+        let mut market = test_market();
+
+        market.current_volatility = 0.0;
+        assert!(market.validate().is_ok());
+        market.current_volatility = 1.5;
+        assert!(market.validate().is_ok());
+
+        for invalid in [-0.01, f64::NAN, f64::NEG_INFINITY] {
+            market.current_volatility = invalid;
+            assert!(market.validate().is_err(), "current_volatility {} should be invalid", invalid);
+        }
+    }
+
+    #[test]
+    fn test_compute_and_update_volatility_metrics() {
+        let mut market = test_market();
+        let skill = Skill::new("Programming".to_string(), 50.0);
+        let skill_id = skill.id.clone();
+        market.add_skill(skill);
+
+        // Insufficient history -> zero volatility
+        assert_eq!(market.compute_volatility(), 0.0);
+        market.update_volatility_metrics();
+        assert_eq!(market.current_volatility, 0.0);
+        assert!(market.validate().is_ok());
+
+        // Stable prices -> near-zero volatility
+        market.skill_price_history.insert(skill_id.clone(), vec![50.0, 50.0, 50.0]);
+        market.update_volatility_metrics();
+        assert!((market.current_volatility - 0.0).abs() < f64::EPSILON);
+        assert!(market.validate().is_ok());
+
+        // Variable prices -> positive volatility
+        market.skill_price_history.insert(skill_id, vec![40.0, 50.0, 60.0]);
+        let computed = market.compute_volatility();
+        assert!(computed > 0.0);
+        market.update_volatility_metrics();
+        assert!((market.current_volatility - computed).abs() < f64::EPSILON);
+        assert!(market.validate().is_ok());
+    }
+
+    #[test]
+    fn test_market_volatility_serialization_backward_compatibility() {
+        let market = test_market();
+        let json = serde_json::to_string(&market).expect("serialize market");
+        let parsed: Market = serde_json::from_str(&json).expect("deserialize market");
+        assert_eq!(parsed.current_volatility, 0.0);
+        assert!(parsed.validate().is_ok());
+
+        // Legacy payloads without current_volatility default to 0.0
+        let legacy = json.replace(",\"current_volatility\":0.0", "");
+        let legacy_parsed: Market =
+            serde_json::from_str(&legacy).expect("deserialize legacy market");
+        assert_eq!(legacy_parsed.current_volatility, 0.0);
+        assert!(legacy_parsed.validate().is_ok());
+    }
+}
+
+#[cfg(test)]
 mod invariant_severity_tests {
     use crate::invariant::{InvariantSeverity, InvariantViolation};
 
