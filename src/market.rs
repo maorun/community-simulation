@@ -115,21 +115,21 @@ pub struct Market {
     ///
     /// Maps skill IDs to a vector of prices, with one entry per simulation step.
     /// This data is useful for analyzing price trends and market dynamics.
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub skill_price_history: HashMap<SkillId, Vec<f64>>,
 
     /// Historical demand counts for each skill across all simulation steps
     ///
     /// Maps skill IDs to a vector of demand counts (number of persons needing the skill),
     /// with one entry per simulation step. Used for elasticity calculations.
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub demand_history: HashMap<SkillId, Vec<usize>>,
 
     /// Historical supply counts for each skill across all simulation steps
     ///
     /// Maps skill IDs to a vector of supply counts (number of persons providing the skill),
     /// with one entry per simulation step. Used for elasticity calculations.
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub supply_history: HashMap<SkillId, Vec<usize>>,
 
     /// Strategy used to update prices each step
