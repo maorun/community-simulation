@@ -720,4 +720,33 @@ mod comprehensive_scenarios {
         assert_eq!(export_err.category(), ErrorCategory::Export);
         assert!(export_err.validate().is_ok());
     }
+
+    /// Test: Scenario Metadata Tagging and Validation Scenario
+    /// Verifies scenario categorization, metadata retrieval, tagging, and validation
+    #[test]
+    fn test_scenario_metadata_tagging_and_validation() {
+        use crate::scenario::{Scenario, ScenarioCategory};
+
+        for scenario in Scenario::all() {
+            let cat = scenario.category();
+            let meta = scenario.metadata();
+            let tags = scenario.tags();
+
+            assert_eq!(meta.category, cat);
+            assert!(!tags.is_empty());
+            assert!(meta.complexity >= 0.0 && meta.complexity <= 1.0);
+            assert!(!meta.version.is_empty());
+            assert!(scenario.validate().is_ok());
+        }
+
+        // Test specific scenario metadata
+        assert_eq!(Scenario::Original.category(), ScenarioCategory::Standard);
+        assert!(Scenario::Original.tags().contains(&"baseline"));
+
+        assert_eq!(Scenario::AuctionPricing.category(), ScenarioCategory::Pricing);
+        assert!(Scenario::AuctionPricing.tags().contains(&"auction"));
+
+        assert_eq!(Scenario::ClimateChange.category(), ScenarioCategory::Environmental);
+        assert!(Scenario::ClimateChange.tags().contains(&"climate"));
+    }
 }
