@@ -749,4 +749,50 @@ mod comprehensive_scenarios {
         assert_eq!(Scenario::ClimateChange.category(), ScenarioCategory::Environmental);
         assert!(Scenario::ClimateChange.tags().contains(&"climate"));
     }
+
+    /// Test: List Commands Output Formatting Customization and Regression
+    #[test]
+    fn test_list_commands_output_formatting_regression() {
+        use crate::config::PresetName;
+        use crate::list_commands::{
+            format_preset_info, format_preset_info_with_options, list_presets,
+            list_presets_with_options, PresetFormatOptions,
+        };
+
+        // Verify standard formatting works
+        let standard_info = format_preset_info(&PresetName::SmallEconomy);
+        assert!(!standard_info.is_empty());
+        assert!(standard_info.contains("small_economy"));
+
+        // Verify customized formatting options
+        let custom_opts = PresetFormatOptions {
+            include_description: true,
+            include_parameters: false,
+            compact: false,
+            prefix: "REGRESSION_PREFIX ".to_string(),
+        };
+        let custom_info =
+            format_preset_info_with_options(&PresetName::CrisisScenario, &custom_opts);
+        assert!(custom_info.contains("REGRESSION_PREFIX crisis_scenario"));
+        assert!(custom_info.contains("Description:"));
+        assert!(!custom_info.contains("Parameters:"));
+
+        // Verify compact execution option
+        let compact_opts = PresetFormatOptions {
+            include_description: false,
+            include_parameters: false,
+            compact: true,
+            prefix: "# ".to_string(),
+        };
+        let compact_info =
+            format_preset_info_with_options(&PresetName::HighInflation, &compact_opts);
+        assert!(compact_info.starts_with("# high_inflation:"));
+
+        // Verify that list execution with custom options succeeds without errors
+        let result = list_presets_with_options(&custom_opts);
+        assert!(result.is_ok(), "list_presets_with_options should succeed");
+
+        let default_list_result = list_presets();
+        assert!(default_list_result.is_ok(), "list_presets should succeed");
+    }
 }
