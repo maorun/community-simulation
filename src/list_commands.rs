@@ -24,6 +24,37 @@ use crate::scenario::Scenario;
 /// list_presets().expect("Failed to list presets");
 /// ```
 pub fn list_presets() -> Result<(), Box<dyn std::error::Error>> {
+    list_presets_with_options(&PresetFormatOptions::default())
+}
+
+/// Options for customizing preset output formatting
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PresetFormatOptions {
+    /// Include preset description
+    pub include_description: bool,
+    /// Include configuration parameters
+    pub include_parameters: bool,
+    /// Use compact formatting
+    pub compact: bool,
+    /// Custom prefix/indentation for list items
+    pub prefix: String,
+}
+
+impl Default for PresetFormatOptions {
+    fn default() -> Self {
+        Self {
+            include_description: true,
+            include_parameters: true,
+            compact: false,
+            prefix: "  ".to_string(),
+        }
+    }
+}
+
+/// List all available preset configurations with custom formatting options
+pub fn list_presets_with_options(
+    options: &PresetFormatOptions,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Available preset configurations:");
     for preset in PresetName::all() {
         // Validate each preset to ensure it produces a valid configuration
@@ -35,18 +66,11 @@ pub fn list_presets() -> Result<(), Box<dyn std::error::Error>> {
             Box::new(msg) as Box<dyn std::error::Error>
         })?;
 
-        let config = SimulationConfig::from_preset(preset.clone());
-        println!("  {}", preset.as_str());
-        println!("    Description: {}", preset.description());
-        println!(
-            "    Parameters: {} persons, {} steps, ${:.0} initial money, ${:.0} base price, scenario: {:?}",
-            config.entity_count,
-            config.max_steps,
-            config.initial_money_per_person,
-            config.base_skill_price,
-            config.scenario
-        );
-        println!();
+        let formatted = format_preset_info_with_options(&preset, options);
+        print!("{}", formatted);
+        if !options.compact {
+            println!();
+        }
     }
     Ok(())
 }
@@ -108,17 +132,35 @@ pub fn list_scenarios() -> Result<(), Box<dyn std::error::Error>> {
 /// assert!(info.contains("Description:"));
 /// ```
 pub fn format_preset_info(preset: &PresetName) -> String {
+    format_preset_info_with_options(preset, &PresetFormatOptions::default())
+}
+
+/// Format preset information as a string with custom formatting options
+pub fn format_preset_info_with_options(
+    preset: &PresetName,
+    options: &PresetFormatOptions,
+) -> String {
     let config = SimulationConfig::from_preset(preset.clone());
-    format!(
-        "  {}\n    Description: {}\n    Parameters: {} persons, {} steps, ${:.0} initial money, ${:.0} base price, scenario: {:?}\n",
-        preset.as_str(),
-        preset.description(),
-        config.entity_count,
-        config.max_steps,
-        config.initial_money_per_person,
-        config.base_skill_price,
-        config.scenario
-    )
+    if options.compact {
+        format!("{}{}: {}\n", options.prefix, preset.as_str(), preset.description())
+    } else {
+        let mut s = format!("{}{}\n", options.prefix, preset.as_str());
+        if options.include_description {
+            s.push_str(&format!("{}    Description: {}\n", options.prefix, preset.description()));
+        }
+        if options.include_parameters {
+            s.push_str(&format!(
+                "{}    Parameters: {} persons, {} steps, ${:.0} initial money, ${:.0} base price, scenario: {:?}\n",
+                options.prefix,
+                config.entity_count,
+                config.max_steps,
+                config.initial_money_per_person,
+                config.base_skill_price,
+                config.scenario
+            ));
+        }
+        s
+    }
 }
 
 /// Format scenario information as a string
@@ -316,5 +358,46 @@ mod tests {
         }
 
         assert_eq!(default_count, 1, "Exactly one scenario should be marked as default");
+    }
+
+    #[test]
+    fn test_format_preset_info_with_options_customization() {
+        let preset = PresetName::SmallEconomy;
+
+        // Without description
+        let opts_no_desc = PresetFormatOptions {
+            include_description: false,
+            include_parameters: true,
+            compact: false,
+            prefix: "  ".to_string(),
+        };
+        let info_no_desc = format_preset_info_with_options(&preset, &opts_no_desc);
+        assert!(!info_no_desc.contains("Description:"));
+        assert!(info_no_desc.contains("Parameters:"));
+
+        // Without parameters
+        let opts_no_params = PresetFormatOptions {
+            include_description: true,
+            include_parameters: false,
+            compact: false,
+            prefix: "  ".to_string(),
+        };
+        let info_no_params = format_preset_info_with_options(&preset, &opts_no_params);
+        assert!(info_no_params.contains("Description:"));
+        assert!(!info_no_params.contains("Parameters:"));
+
+        // Compact
+        let opts_compact = PresetFormatOptions {
+            include_description: false,
+            include_parameters: false,
+            compact: true,
+            prefix: "- ".to_string(),
+        };
+        let info_compact = format_preset_info_with_options(&preset, &opts_compact);
+        assert!(info_compact.starts_with("- small_economy:"));
+
+        // List presets with options
+        let list_result = list_presets_with_options(&opts_no_desc);
+        assert!(list_result.is_ok());
     }
 }
