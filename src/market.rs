@@ -136,6 +136,14 @@ pub struct Market {
     #[serde(skip)]
     price_updater: PriceUpdater,
 
+    /// Transaction fee rate charged on trades in the market (0.0 to 1.0)
+    #[serde(default)]
+    pub transaction_fee: f64,
+
+    /// Total transaction fees collected by the market
+    #[serde(default)]
+    pub total_fees_collected: f64,
+
     /// Count of sales for each skill in the current step
     ///
     /// Used by the DynamicPricing scenario to track which skills were purchased.
@@ -193,6 +201,8 @@ impl Market {
             demand_history: HashMap::new(),
             supply_history: HashMap::new(),
             price_updater,
+            transaction_fee: 0.0,
+            total_fees_collected: 0.0,
             sales_this_step: HashMap::new(),
             cache: MarketStatsCache::default(),
         }
@@ -637,6 +647,67 @@ impl Market {
             )));
         }
 
+        if !self.transaction_fee.is_finite()
+            || self.transaction_fee.is_sign_negative()
+            || self.transaction_fee > 1.0
+        {
+            return Err(SimulationError::ValidationError(format!(
+                "transaction_fee must be between 0.0 and 1.0, got {}",
+                self.transaction_fee
+            )));
+        }
+
+        if !self.total_fees_collected.is_finite() || self.total_fees_collected.is_sign_negative() {
+            return Err(SimulationError::ValidationError(format!(
+                "total_fees_collected must be a non-negative finite value, got {}",
+                self.total_fees_collected
+            )));
+        }
+
+        Ok(())
+    }
+
+    /// Calculates the transaction fee for a given trade price.
+    ///
+    /// # Arguments
+    ///
+    /// * `price` - The base price of the transaction
+    ///
+    /// # Returns
+    ///
+    /// The calculated transaction fee amount
+    pub fn calculate_transaction_fee(&self, price: f64) -> f64 {
+        price * self.transaction_fee
+    }
+
+    /// Records a collected transaction fee, updating total fees collected.
+    ///
+    /// # Arguments
+    ///
+    /// * `amount` - The fee amount to record
+    pub fn record_transaction_fee(&mut self, amount: f64) {
+        if amount.is_finite() && !amount.is_sign_negative() {
+            self.total_fees_collected += amount;
+        }
+    }
+
+    /// Sets the transaction fee rate after validating it.
+    ///
+    /// # Arguments
+    ///
+    /// * `fee` - The new transaction fee rate (must be between 0.0 and 1.0)
+    ///
+    /// # Errors
+    ///
+    /// Returns `SimulationError::ValidationError` if the fee is outside `[0.0, 1.0]` or not finite.
+    pub fn set_transaction_fee(&mut self, fee: f64) -> Result<()> {
+        if !fee.is_finite() || fee.is_sign_negative() || fee > 1.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "transaction_fee must be between 0.0 and 1.0, got {}",
+                fee
+            )));
+        }
+        self.transaction_fee = fee;
         Ok(())
     }
 }
