@@ -47,6 +47,44 @@ impl fmt::Display for InvariantSeverity {
     }
 }
 
+impl InvariantSeverity {
+    /// Returns all available severity levels.
+    pub fn all() -> [InvariantSeverity; 4] {
+        [
+            InvariantSeverity::Low,
+            InvariantSeverity::Medium,
+            InvariantSeverity::High,
+            InvariantSeverity::Critical,
+        ]
+    }
+
+    /// Returns a descriptive string for this severity level.
+    pub fn description(&self) -> &str {
+        match self {
+            InvariantSeverity::Low => {
+                "Low severity invariant violation (minor discrepancy or warning)"
+            },
+            InvariantSeverity::Medium => "Medium severity invariant violation (standard deviation)",
+            InvariantSeverity::High => {
+                "High severity invariant violation (serious issue requiring investigation)"
+            },
+            InvariantSeverity::Critical => {
+                "Critical severity invariant violation (immediate action required)"
+            },
+        }
+    }
+
+    /// Validates the severity level.
+    pub fn validate(&self) -> crate::error::Result<()> {
+        if self.description().trim().is_empty() {
+            return Err(crate::error::SimulationError::ValidationError(
+                "Severity description cannot be empty".to_string(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 thread_local! {
     static SEVERITY_STORE: RefCell<HashMap<(String, usize, String), InvariantSeverity>> = RefCell::new(HashMap::new());
 }

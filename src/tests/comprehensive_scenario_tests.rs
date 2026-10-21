@@ -795,4 +795,23 @@ mod comprehensive_scenarios {
         let default_list_result = list_presets();
         assert!(default_list_result.is_ok(), "list_presets should succeed");
     }
+
+    /// Test: InvariantSeverity Description Mapping and Validation
+    #[test]
+    fn test_invariant_severity_description_and_validation() {
+        use crate::invariant::InvariantSeverity;
+
+        for severity in InvariantSeverity::all() {
+            let desc = severity.description();
+            assert!(!desc.is_empty());
+            assert!(severity.validate().is_ok());
+
+            match severity {
+                InvariantSeverity::Low => assert!(desc.contains("Low")),
+                InvariantSeverity::Medium => assert!(desc.contains("Medium")),
+                InvariantSeverity::High => assert!(desc.contains("High")),
+                InvariantSeverity::Critical => assert!(desc.contains("Critical")),
+            }
+        }
+    }
 }
