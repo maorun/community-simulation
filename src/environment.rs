@@ -32,6 +32,32 @@ impl Resource {
             Resource::Land => "Land",
         }
     }
+
+    /// Returns the degradation factor for this resource type.
+    ///
+    /// The degradation factor determines how severely resource consumption
+    /// or depletion impacts environmental sustainability and scarcity.
+    pub fn degradation_factor(&self) -> f64 {
+        match self {
+            Resource::Energy => 1.5,
+            Resource::Water => 1.2,
+            Resource::Materials => 1.0,
+            Resource::Land => 0.8,
+        }
+    }
+
+    /// Validates the resource definition and its degradation factor.
+    pub fn validate(&self) -> crate::error::Result<()> {
+        let factor = self.degradation_factor();
+        if !factor.is_finite() || factor.is_sign_negative() {
+            return Err(crate::error::SimulationError::ValidationError(format!(
+                "degradation_factor for {} must be a non-negative finite value, got {}",
+                self.name(),
+                factor
+            )));
+        }
+        Ok(())
+    }
 }
 
 /// Tracks environmental resource consumption and sustainability metrics.
@@ -312,5 +338,32 @@ mod tests {
         assert_eq!(Resource::Water.name(), "Water");
         assert_eq!(Resource::Materials.name(), "Materials");
         assert_eq!(Resource::Land.name(), "Land");
+    }
+
+    #[test]
+    fn test_resource_degradation_factor_and_validation() {
+        for resource in Resource::all() {
+            let factor = resource.degradation_factor();
+            assert!(
+                factor.is_finite(),
+                "Degradation factor for {} must be finite",
+                resource.name()
+            );
+            assert!(
+                factor >= 0.0,
+                "Degradation factor for {} must be non-negative",
+                resource.name()
+            );
+            assert!(
+                resource.validate().is_ok(),
+                "Validation should succeed for {}",
+                resource.name()
+            );
+        }
+
+        assert_eq!(Resource::Energy.degradation_factor(), 1.5);
+        assert_eq!(Resource::Water.degradation_factor(), 1.2);
+        assert_eq!(Resource::Materials.degradation_factor(), 1.0);
+        assert_eq!(Resource::Land.degradation_factor(), 0.8);
     }
 }
