@@ -154,3 +154,25 @@ fn test_currency_backward_compatibility() {
         assert!(person_money.is_finite());
     }
 }
+
+#[test]
+fn test_currency_custom_precision_and_rounding_integration() {
+    // Test custom precision integration in currency system and conversions
+    let mut system = CurrencySystem::new(Currency::with_precision("USD".to_string(), 1.0, 2));
+    system.add_currency(Currency::with_precision("BTC".to_string(), 0.000025, 6));
+    system.add_currency(Currency::with_precision("JPY".to_string(), 150.0, 0));
+
+    // Convert USD to BTC with 6 decimal places rounding
+    let usd_to_btc = system.convert(100.0, "USD", "BTC").unwrap();
+    // 100 USD -> 0.0025 BTC, precision 6
+    assert_eq!(usd_to_btc, 0.0025);
+
+    // Convert USD to JPY with 0 decimal places rounding
+    let usd_to_jpy = system.convert(10.0, "USD", "JPY").unwrap();
+    // 10 USD -> 1500 JPY, precision 0
+    assert_eq!(usd_to_jpy, 1500.0);
+
+    // Test precision bounds validation via Currency::with_precision panics
+    let result = std::panic::catch_unwind(|| Currency::with_precision("BAD".to_string(), 1.0, 15));
+    assert!(result.is_err());
+}
