@@ -32,10 +32,14 @@ pub struct Currency {
     /// Base currency = 1.0, other currencies valued relative to base.
     /// Must be positive.
     pub exchange_rate: f64,
+
+    /// Custom exchange rate rounding precision (number of decimal places, e.g., 2, 4).
+    /// Must be between 0 and 12 (inclusive).
+    pub rounding_precision: u8,
 }
 
 impl Currency {
-    /// Creates a new currency with the given ID and exchange rate.
+    /// Creates a new currency with the given ID and exchange rate, using default rounding precision (2).
     ///
     /// # Arguments
     ///
@@ -53,17 +57,59 @@ impl Currency {
     ///
     /// let currency = Currency::new("USD".to_string(), 1.0);
     /// assert_eq!(currency.id, "USD");
+    /// assert_eq!(currency.rounding_precision, 2);
     /// ```
     pub fn new(id: CurrencyId, exchange_rate: f64) -> Self {
-        assert!(exchange_rate > 0.0, "Exchange rate must be positive");
-        Currency { id, exchange_rate }
+        Self::with_precision(id, exchange_rate, 2)
     }
 
-    /// Converts an amount from this currency to another currency.
+    /// Creates a new currency with the given ID, exchange rate, and rounding precision.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - Unique identifier for the currency
+    /// * `exchange_rate` - Exchange rate relative to base currency (must be positive)
+    /// * `rounding_precision` - Number of decimal places for rounding (0 to 12)
+    ///
+    /// # Panics
+    ///
+    /// Panics if exchange_rate is not positive or if rounding_precision exceeds 12.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use community_simulation::currency::Currency;
+    ///
+    /// let currency = Currency::with_precision("JPY".to_string(), 0.01, 0);
+    /// assert_eq!(currency.id, "JPY");
+    /// assert_eq!(currency.rounding_precision, 0);
+    /// ```
+    pub fn with_precision(id: CurrencyId, exchange_rate: f64, rounding_precision: u8) -> Self {
+        assert!(exchange_rate > 0.0, "Exchange rate must be positive");
+        assert!(rounding_precision <= 12, "Rounding precision must be between 0 and 12");
+        Currency { id, exchange_rate, rounding_precision }
+    }
+
+    /// Rounds an amount according to this currency's precision settings.
+    ///
+    /// # Arguments
+    ///
+    /// * `amount` - Amount to round
+    ///
+    /// # Returns
+    ///
+    /// The rounded amount
+    pub fn round_amount(&self, amount: f64) -> f64 {
+        let factor = 10_f64.powi(self.rounding_precision as i32);
+        (amount * factor).round() / factor
+    }
+
+    /// Converts an amount from this currency to another currency, applying the target currency's rounding precision.
     ///
     /// The conversion is done through the base currency:
     /// 1. Convert from this currency to base (divide by this.exchange_rate)
     /// 2. Convert from base to target (multiply by target.exchange_rate)
+    /// 3. Round the result to the target currency's `rounding_precision`.
     ///
     /// # Arguments
     ///
@@ -72,28 +118,25 @@ impl Currency {
     ///
     /// # Returns
     ///
-    /// The equivalent amount in the target currency
+    /// The equivalent amount in the target currency, rounded to target precision
     ///
     /// # Examples
     ///
     /// ```
     /// use community_simulation::currency::Currency;
     ///
-    /// let usd = Currency::new("USD".to_string(), 1.0);
-    /// let eur = Currency::new("EUR".to_string(), 1.2);
+    /// let usd = Currency::with_precision("USD".to_string(), 1.0, 2);
+    /// let jpy = Currency::with_precision("JPY".to_string(), 150.0, 0);
     ///
-    /// // Convert 100 USD to EUR
-    /// let eur_amount = usd.convert_to(100.0, &eur);
-    /// assert!((eur_amount - 120.0).abs() < 0.001);
-    ///
-    /// // Convert back: 120 EUR to USD
-    /// let usd_amount = eur.convert_to(120.0, &usd);
-    /// assert!((usd_amount - 100.0).abs() < 0.001);
+    /// // Convert 10.003 USD to JPY (base 10.003 -> JPY 1500.45, rounded to 0 decimals)
+    /// let jpy_amount = usd.convert_to(10.003, &jpy);
+    /// assert_eq!(jpy_amount, 1500.0);
     /// ```
     pub fn convert_to(&self, amount: f64, target: &Currency) -> f64 {
         // Convert to base currency, then to target currency
         let base_amount = amount / self.exchange_rate;
-        base_amount * target.exchange_rate
+        let converted = base_amount * target.exchange_rate;
+        target.round_amount(converted)
     }
 }
 
@@ -283,10 +326,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_currency_creation() {
-        let currency = Currency::new("USD".to_string(), 1.0);
-        assert_eq!(currency.id, "USD");
-        assert_eq!(currency.exchange_rate, 1.0);
+    fn test_currency_precision_and_rounding() {
+        let currency = Currency::with_precision("CUSTOM".to_string(), 1.0, 3);
+        assert_eq!(currency.rounding_precision, 3);
+        let rounded = currency.round_amount(1.23456);
+        assert_eq!(rounded, 1.235);
+    }
+
+    #[test]
+    #[should_panic(expected = "Rounding precision must be between 0 and 12")]
+    fn test_currency_invalid_precision() {
+        Currency::with_precision("INVALID".to_string(), 1.0, 13);
     }
 
     #[test]
