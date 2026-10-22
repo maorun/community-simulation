@@ -814,4 +814,34 @@ mod comprehensive_scenarios {
             }
         }
     }
+
+    /// Test: Resource Degradation Factor and Validation Regression
+    #[test]
+    fn test_resource_degradation_factor_and_validation_regression() {
+        use crate::environment::Resource;
+
+        for resource in Resource::all() {
+            let factor = resource.degradation_factor();
+            assert!(
+                factor.is_finite(),
+                "Degradation factor for {} must be finite",
+                resource.name()
+            );
+            assert!(
+                factor >= 0.0,
+                "Degradation factor for {} must be non-negative",
+                resource.name()
+            );
+            assert!(
+                resource.validate().is_ok(),
+                "Validation should succeed for resource {}",
+                resource.name()
+            );
+        }
+
+        assert_eq!(Resource::Energy.degradation_factor(), 1.5);
+        assert_eq!(Resource::Water.degradation_factor(), 1.2);
+        assert_eq!(Resource::Materials.degradation_factor(), 1.0);
+        assert_eq!(Resource::Land.degradation_factor(), 0.8);
+    }
 }
