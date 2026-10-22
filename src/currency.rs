@@ -126,11 +126,11 @@ impl Currency {
     /// use community_simulation::currency::Currency;
     ///
     /// let usd = Currency::with_precision("USD".to_string(), 1.0, 2);
-    /// let jpy = Currency::with_precision("JPY".to_string(), 0.01, 0);
+    /// let jpy = Currency::with_precision("JPY".to_string(), 150.0, 0);
     ///
-    /// // Convert 100 USD to JPY (rate 0.01 -> base 100 -> JPY 10000, rounded to 0 decimals)
-    /// let jpy_amount = usd.convert_to(100.0, &jpy);
-    /// assert_eq!(jpy_amount, 10000.0);
+    /// // Convert 10.003 USD to JPY (base 10.003 -> JPY 1500.45, rounded to 0 decimals)
+    /// let jpy_amount = usd.convert_to(10.003, &jpy);
+    /// assert_eq!(jpy_amount, 1500.0);
     /// ```
     pub fn convert_to(&self, amount: f64, target: &Currency) -> f64 {
         // Convert to base currency, then to target currency
