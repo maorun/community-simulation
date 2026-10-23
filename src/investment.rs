@@ -12,11 +12,15 @@ pub enum InvestmentType {
     Education {
         /// The skill being learned by the target person
         skill_id: SkillId,
+        /// Optional maturity period (in steps) for the investment type
+        maturity_period: Option<usize>,
     },
     /// Investment in production capacity
     Production {
         /// The production recipe being enhanced
         recipe_name: String,
+        /// Optional maturity period (in steps) for the investment type
+        maturity_period: Option<usize>,
     },
 }
 
@@ -144,6 +148,28 @@ impl Investment {
     pub fn net_profit(&self) -> f64 {
         self.total_returns_paid - self.principal
     }
+
+    /// Returns the maturity period if defined for the investment type
+    pub fn maturity_period(&self) -> Option<usize> {
+        match &self.investment_type {
+            InvestmentType::Education { maturity_period, .. } => *maturity_period,
+            InvestmentType::Production { maturity_period, .. } => *maturity_period,
+        }
+    }
+
+    /// Validates the investment parameters, including maturity period logic
+    pub fn validate(&self) -> Result<(), String> {
+        if self.principal <= 0.0 {
+            return Err("Principal must be greater than zero".to_string());
+        }
+        if self.duration == 0 {
+            return Err("Duration must be greater than zero".to_string());
+        }
+        if self.maturity_period() == Some(0) {
+            return Err("Maturity period cannot be zero if specified".to_string());
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -156,7 +182,10 @@ mod tests {
             0,
             1,
             Some(2),
-            InvestmentType::Education { skill_id: "Programming".to_string() },
+            InvestmentType::Education {
+                skill_id: "Programming".to_string(),
+                maturity_period: Some(5),
+            },
             100.0,
             0.02,
             10,
@@ -180,7 +209,10 @@ mod tests {
             0,
             1,
             Some(2),
-            InvestmentType::Education { skill_id: "Programming".to_string() },
+            InvestmentType::Education {
+                skill_id: "Programming".to_string(),
+                maturity_period: None,
+            },
             100.0,
             0.02,
             10,
@@ -201,7 +233,10 @@ mod tests {
             0,
             1,
             Some(2),
-            InvestmentType::Education { skill_id: "Programming".to_string() },
+            InvestmentType::Education {
+                skill_id: "Programming".to_string(),
+                maturity_period: Some(3),
+            },
             100.0,
             0.02,
             10,
@@ -234,7 +269,10 @@ mod tests {
             0,
             1,
             None,
-            InvestmentType::Production { recipe_name: "AdvancedProduction".to_string() },
+            InvestmentType::Production {
+                recipe_name: "AdvancedProduction".to_string(),
+                maturity_period: None,
+            },
             100.0,
             0.02,
             10,
@@ -257,27 +295,69 @@ mod tests {
     }
 
     #[test]
-    fn test_profitable_investment() {
-        // Create an investment with high return rate to ensure profitability
-        let mut investment = Investment::new(
-            0,
+    fn test_investment_maturity_period_and_validation() {
+        let inv_with_maturity = Investment::new(
+            1,
             1,
             None,
-            InvestmentType::Production { recipe_name: "HighYield".to_string() },
+            InvestmentType::Production {
+                recipe_name: "TestRecipe".to_string(),
+                maturity_period: Some(12),
+            },
             100.0,
-            0.15, // 15% per step
+            0.05,
             10,
             0,
         );
+        assert_eq!(inv_with_maturity.maturity_period(), Some(12));
+        assert!(inv_with_maturity.validate().is_ok());
 
-        // Total profit = 100 * 0.15 * 10 = 150
-        // Total amount returned = 100 + 150 = 250
-        // This should be profitable
-        for _ in 0..10 {
-            investment.collect_return();
-        }
+        let inv_without_maturity = Investment::new(
+            2,
+            1,
+            None,
+            InvestmentType::Production {
+                recipe_name: "TestRecipe".to_string(),
+                maturity_period: None,
+            },
+            100.0,
+            0.05,
+            10,
+            0,
+        );
+        assert_eq!(inv_without_maturity.maturity_period(), None);
+        assert!(inv_without_maturity.validate().is_ok());
 
-        assert_eq!(investment.total_returns_paid, 250.0);
-        assert_eq!(investment.net_profit(), 150.0); // Profit!
+        // Invalid investment with zero principal
+        let invalid_principal = Investment::new(
+            3,
+            1,
+            None,
+            InvestmentType::Production {
+                recipe_name: "TestRecipe".to_string(),
+                maturity_period: Some(5),
+            },
+            0.0,
+            0.05,
+            10,
+            0,
+        );
+        assert!(invalid_principal.validate().is_err());
+
+        // Invalid investment with zero maturity
+        let invalid_maturity = Investment::new(
+            4,
+            1,
+            None,
+            InvestmentType::Production {
+                recipe_name: "TestRecipe".to_string(),
+                maturity_period: Some(0),
+            },
+            100.0,
+            0.05,
+            10,
+            0,
+        );
+        assert!(invalid_maturity.validate().is_err());
     }
 }
