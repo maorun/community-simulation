@@ -43,6 +43,31 @@ pub enum ErrorCategory {
     Export,
 }
 
+impl ErrorCategory {
+    /// Returns telemetry logging metadata for the error category.
+    pub fn telemetry_metadata(&self) -> (&'static str, u8, bool) {
+        // Returns (log_level, severity_score, requires_alert)
+        match self {
+            ErrorCategory::Configuration => ("WARN", 3, false),
+            ErrorCategory::Parsing => ("ERROR", 4, false),
+            ErrorCategory::Validation => ("WARN", 2, false),
+            ErrorCategory::Io => ("ERROR", 5, true),
+            ErrorCategory::Serialization => ("ERROR", 4, false),
+            ErrorCategory::Storage => ("ERROR", 5, true),
+            ErrorCategory::Export => ("ERROR", 4, false),
+        }
+    }
+
+    /// Formats telemetry log entry for the error category with contextual message.
+    pub fn format_telemetry(&self, message: &str) -> String {
+        let (level, severity, alert) = self.telemetry_metadata();
+        format!(
+            "[TELEMETRY] level={} category={} severity={} alert={} message=\"{}\"",
+            level, self, severity, alert, message
+        )
+    }
+}
+
 impl fmt::Display for ErrorCategory {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -474,5 +499,26 @@ mod tests {
         assert_eq!(format!("{}", ErrorCategory::Serialization), "SERIALIZATION");
         assert_eq!(format!("{}", ErrorCategory::Storage), "STORAGE");
         assert_eq!(format!("{}", ErrorCategory::Export), "EXPORT");
+    }
+
+    #[test]
+    fn test_error_category_telemetry_metadata() {
+        let (level, severity, alert) = ErrorCategory::Io.telemetry_metadata();
+        assert_eq!(level, "ERROR");
+        assert_eq!(severity, 5);
+        assert!(alert);
+
+        let (level_val, severity_val, alert_val) = ErrorCategory::Validation.telemetry_metadata();
+        assert_eq!(level_val, "WARN");
+        assert_eq!(severity_val, 2);
+        assert!(!alert_val);
+
+        let formatted = ErrorCategory::Io.format_telemetry("Disk full");
+        assert!(formatted.contains("[TELEMETRY]"));
+        assert!(formatted.contains("level=ERROR"));
+        assert!(formatted.contains("category=IO"));
+        assert!(formatted.contains("severity=5"));
+        assert!(formatted.contains("alert=true"));
+        assert!(formatted.contains("message=\"Disk full\""));
     }
 }

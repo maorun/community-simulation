@@ -719,6 +719,31 @@ mod comprehensive_scenarios {
         let export_err = SimulationError::ParquetExport("failed to write column".to_string());
         assert_eq!(export_err.category(), ErrorCategory::Export);
         assert!(export_err.validate().is_ok());
+
+        // Test comprehensive telemetry metadata and formatting validation across all ErrorCategories
+        let categories = vec![
+            ErrorCategory::Configuration,
+            ErrorCategory::Parsing,
+            ErrorCategory::Validation,
+            ErrorCategory::Io,
+            ErrorCategory::Serialization,
+            ErrorCategory::Storage,
+            ErrorCategory::Export,
+        ];
+
+        for cat in categories {
+            let (level, severity, requires_alert) = cat.telemetry_metadata();
+            assert!(!level.is_empty());
+            assert!(severity > 0);
+
+            let telemetry_log = cat.format_telemetry("Test telemetry message");
+            assert!(telemetry_log.contains("[TELEMETRY]"));
+            assert!(telemetry_log.contains(&format!("category={}", cat)));
+            assert!(telemetry_log.contains(&format!("level={}", level)));
+            assert!(telemetry_log.contains(&format!("severity={}", severity)));
+            assert!(telemetry_log.contains(&format!("alert={}", requires_alert)));
+            assert!(telemetry_log.contains("message=\"Test telemetry message\""));
+        }
     }
 
     /// Test: Scenario Metadata Tagging and Validation Scenario
