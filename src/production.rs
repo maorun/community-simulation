@@ -18,6 +18,11 @@ fn default_batch_size() -> usize {
     1
 }
 
+/// Default yield multiplier for a recipe
+fn default_yield_multiplier() -> f64 {
+    1.0
+}
+
 /// Represents a production recipe that combines two input skills into one output skill.
 ///
 /// Recipes define how skills can be combined in the economy, enabling supply chains
@@ -39,6 +44,9 @@ pub struct Recipe {
     /// Batch size produced by the recipe
     #[serde(default = "default_batch_size")]
     pub batch_size: usize,
+    /// Yield multiplier produced by the recipe
+    #[serde(default = "default_yield_multiplier")]
+    pub yield_multiplier: f64,
 }
 
 impl Recipe {
@@ -74,6 +82,7 @@ impl Recipe {
             cost_multiplier,
             execution_time: 1,
             batch_size: 1,
+            yield_multiplier: 1.0,
         }
     }
 
@@ -99,6 +108,7 @@ impl Recipe {
             cost_multiplier,
             execution_time,
             batch_size: 1,
+            yield_multiplier: 1.0,
         }
     }
 
@@ -124,6 +134,33 @@ impl Recipe {
             cost_multiplier,
             execution_time: 1,
             batch_size,
+            yield_multiplier: 1.0,
+        }
+    }
+
+    /// Creates a new production recipe with a specified yield multiplier.
+    ///
+    /// # Arguments
+    /// * `input_skill_1` - ID of the first input skill
+    /// * `input_skill_2` - ID of the second input skill
+    /// * `output_skill` - ID of the skill produced by this recipe
+    /// * `cost_multiplier` - Cost multiplier (typically 1.0-2.0)
+    /// * `yield_multiplier` - Yield multiplier produced by the recipe
+    pub fn with_yield_multiplier(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        yield_multiplier: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time: 1,
+            batch_size: 1,
+            yield_multiplier,
         }
     }
 
@@ -151,10 +188,72 @@ impl Recipe {
             cost_multiplier,
             execution_time,
             batch_size,
+            yield_multiplier: 1.0,
         }
     }
 
-    /// Validates the recipe parameters (e.g., positive execution time/duration and batch size).
+    /// Creates a new production recipe with specified execution time and yield multiplier.
+    pub fn with_execution_time_and_yield_multiplier(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        execution_time: usize,
+        yield_multiplier: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time,
+            batch_size: 1,
+            yield_multiplier,
+        }
+    }
+
+    /// Creates a new production recipe with specified batch size and yield multiplier.
+    pub fn with_batch_size_and_yield_multiplier(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        batch_size: usize,
+        yield_multiplier: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time: 1,
+            batch_size,
+            yield_multiplier,
+        }
+    }
+
+    /// Creates a new production recipe with specified execution time, batch size, and yield multiplier.
+    pub fn with_execution_time_batch_size_and_yield_multiplier(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        execution_time: usize,
+        batch_size: usize,
+        yield_multiplier: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time,
+            batch_size,
+            yield_multiplier,
+        }
+    }
+
+    /// Validates the recipe parameters (e.g., positive execution time/duration, batch size, and yield multiplier).
     pub fn validate(&self) -> Result<()> {
         if self.execution_time == 0 {
             return Err(SimulationError::ValidationError(
@@ -164,6 +263,11 @@ impl Recipe {
         if self.batch_size == 0 {
             return Err(SimulationError::ValidationError(
                 "Recipe batch size must be greater than 0".to_string(),
+            ));
+        }
+        if self.yield_multiplier <= 0.0 || !self.yield_multiplier.is_finite() {
+            return Err(SimulationError::ValidationError(
+                "Recipe yield multiplier must be greater than 0 and finite".to_string(),
             ));
         }
         Ok(())
