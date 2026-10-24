@@ -996,6 +996,24 @@ mod comprehensive_scenarios {
         );
         assert!(invalid_yield_nan.validate().is_err());
 
+        let invalid_yield_infinity = Recipe::with_yield_multiplier(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            f64::INFINITY,
+        );
+        assert!(invalid_yield_infinity.validate().is_err());
+
+        let invalid_yield_neg_infinity = Recipe::with_yield_multiplier(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            f64::NEG_INFINITY,
+        );
+        assert!(invalid_yield_neg_infinity.validate().is_err());
+
         // Backward compatibility: legacy JSON without yield_multiplier should default to 1.0 and validate successfully
         let legacy_json = r#"{"input_skill_1":"Programming","input_skill_2":"DataAnalysis","output_skill":"MachineLearning","cost_multiplier":1.5,"execution_time":1,"batch_size":1}"#;
         let deserialized: Recipe =
