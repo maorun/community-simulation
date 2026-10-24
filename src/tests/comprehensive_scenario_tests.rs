@@ -869,4 +869,65 @@ mod comprehensive_scenarios {
         assert_eq!(Resource::Materials.degradation_factor(), 1.0);
         assert_eq!(Resource::Land.degradation_factor(), 0.8);
     }
+
+    /// Test: Recipe batch size tracking, limits validation, and serialization regression
+    #[test]
+    fn test_recipe_batch_size_and_validation_regression() {
+        use crate::production::Recipe;
+
+        let recipe = Recipe::new(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+        );
+        assert_eq!(recipe.batch_size, 1);
+        assert!(recipe.validate().is_ok());
+
+        let custom_batch = Recipe::with_batch_size(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            10,
+        );
+        assert_eq!(custom_batch.batch_size, 10);
+        assert!(custom_batch.validate().is_ok());
+
+        let both_custom = Recipe::with_execution_time_and_batch_size(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            3,
+            5,
+        );
+        assert_eq!(both_custom.execution_time, 3);
+        assert_eq!(both_custom.batch_size, 5);
+        assert!(both_custom.validate().is_ok());
+
+        let invalid_batch = Recipe::with_batch_size(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            0,
+        );
+        assert_eq!(invalid_batch.batch_size, 0);
+        assert!(invalid_batch.validate().is_err());
+
+        // Backward compatibility: legacy JSON without batch_size should default to 1 and validate successfully
+        let legacy_json = r#"{"input_skill_1":"Programming","input_skill_2":"DataAnalysis","output_skill":"MachineLearning","cost_multiplier":1.5}"#;
+        let deserialized: Recipe =
+            serde_json::from_str(legacy_json).expect("should deserialize legacy recipe");
+        assert_eq!(deserialized.batch_size, 1);
+        assert!(deserialized.validate().is_ok());
+
+        // Serialization and round-trip
+        let serialized = serde_json::to_string(&both_custom).expect("serialize recipe");
+        let roundtrip: Recipe = serde_json::from_str(&serialized).expect("deserialize recipe");
+        assert_eq!(roundtrip.batch_size, 5);
+        assert_eq!(roundtrip.execution_time, 3);
+        assert!(roundtrip.validate().is_ok());
+    }
 }

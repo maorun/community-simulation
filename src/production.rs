@@ -13,6 +13,11 @@ fn default_execution_time() -> usize {
     1
 }
 
+/// Default batch size for a recipe
+fn default_batch_size() -> usize {
+    1
+}
+
 /// Represents a production recipe that combines two input skills into one output skill.
 ///
 /// Recipes define how skills can be combined in the economy, enabling supply chains
@@ -31,10 +36,13 @@ pub struct Recipe {
     /// Execution time in steps required to complete production
     #[serde(default = "default_execution_time")]
     pub execution_time: usize,
+    /// Batch size produced by the recipe
+    #[serde(default = "default_batch_size")]
+    pub batch_size: usize,
 }
 
 impl Recipe {
-    /// Creates a new production recipe with default execution time (1 step).
+    /// Creates a new production recipe with default execution time (1 step) and batch size (1).
     ///
     /// # Arguments
     /// * `input_skill_1` - ID of the first input skill
@@ -59,7 +67,14 @@ impl Recipe {
         output_skill: SkillId,
         cost_multiplier: f64,
     ) -> Self {
-        Recipe { input_skill_1, input_skill_2, output_skill, cost_multiplier, execution_time: 1 }
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time: 1,
+            batch_size: 1,
+        }
     }
 
     /// Creates a new production recipe with a specified execution time.
@@ -77,14 +92,78 @@ impl Recipe {
         cost_multiplier: f64,
         execution_time: usize,
     ) -> Self {
-        Recipe { input_skill_1, input_skill_2, output_skill, cost_multiplier, execution_time }
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time,
+            batch_size: 1,
+        }
     }
 
-    /// Validates the recipe parameters (e.g., positive execution time/duration).
+    /// Creates a new production recipe with a specified batch size.
+    ///
+    /// # Arguments
+    /// * `input_skill_1` - ID of the first input skill
+    /// * `input_skill_2` - ID of the second input skill
+    /// * `output_skill` - ID of the skill produced by this recipe
+    /// * `cost_multiplier` - Cost multiplier (typically 1.0-2.0)
+    /// * `batch_size` - Batch size produced by the recipe
+    pub fn with_batch_size(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        batch_size: usize,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time: 1,
+            batch_size,
+        }
+    }
+
+    /// Creates a new production recipe with specified execution time and batch size.
+    ///
+    /// # Arguments
+    /// * `input_skill_1` - ID of the first input skill
+    /// * `input_skill_2` - ID of the second input skill
+    /// * `output_skill` - ID of the skill produced by this recipe
+    /// * `cost_multiplier` - Cost multiplier (typically 1.0-2.0)
+    /// * `execution_time` - Number of simulation steps required for execution
+    /// * `batch_size` - Batch size produced by the recipe
+    pub fn with_execution_time_and_batch_size(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        execution_time: usize,
+        batch_size: usize,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time,
+            batch_size,
+        }
+    }
+
+    /// Validates the recipe parameters (e.g., positive execution time/duration and batch size).
     pub fn validate(&self) -> Result<()> {
         if self.execution_time == 0 {
             return Err(SimulationError::ValidationError(
                 "Recipe execution time (duration) must be greater than 0".to_string(),
+            ));
+        }
+        if self.batch_size == 0 {
+            return Err(SimulationError::ValidationError(
+                "Recipe batch size must be greater than 0".to_string(),
             ));
         }
         Ok(())
