@@ -1029,4 +1029,75 @@ mod comprehensive_scenarios {
         assert_eq!(roundtrip.execution_time, 3);
         assert!(roundtrip.validate().is_ok());
     }
+
+    /// Test: Recipe quality tier tracking, limits validation, and serialization regression
+    #[test]
+    fn test_recipe_quality_tier_and_validation_regression() {
+        use crate::production::Recipe;
+
+        let recipe = Recipe::new(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+        );
+        assert_eq!(recipe.quality_tier, 1);
+        assert!(recipe.validate().is_ok());
+
+        let custom_tier = Recipe::with_quality_tier(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            3,
+        );
+        assert_eq!(custom_tier.quality_tier, 3);
+        assert!(custom_tier.validate().is_ok());
+
+        let all_custom =
+            Recipe::with_execution_time_batch_size_yield_multiplier_energy_consumption_and_quality_tier(
+                "Programming".to_string(),
+                "DataAnalysis".to_string(),
+                "MachineLearning".to_string(),
+                1.5,
+                3,
+                5,
+                1.8,
+                25.0,
+                2,
+            );
+        assert_eq!(all_custom.execution_time, 3);
+        assert_eq!(all_custom.batch_size, 5);
+        assert_eq!(all_custom.yield_multiplier, 1.8);
+        assert_eq!(all_custom.energy_consumption, 25.0);
+        assert_eq!(all_custom.quality_tier, 2);
+        assert!(all_custom.validate().is_ok());
+
+        let invalid_tier_zero = Recipe::with_quality_tier(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            0,
+        );
+        assert_eq!(invalid_tier_zero.quality_tier, 0);
+        assert!(invalid_tier_zero.validate().is_err());
+
+        // Backward compatibility: legacy JSON without quality_tier should default to 1 and validate successfully
+        let legacy_json = r#"{"input_skill_1":"Programming","input_skill_2":"DataAnalysis","output_skill":"MachineLearning","cost_multiplier":1.5,"execution_time":1,"batch_size":1}"#;
+        let deserialized: Recipe =
+            serde_json::from_str(legacy_json).expect("should deserialize legacy recipe");
+        assert_eq!(deserialized.quality_tier, 1);
+        assert!(deserialized.validate().is_ok());
+
+        // Serialization and round-trip
+        let serialized = serde_json::to_string(&all_custom).expect("serialize recipe");
+        let roundtrip: Recipe = serde_json::from_str(&serialized).expect("deserialize recipe");
+        assert_eq!(roundtrip.quality_tier, 2);
+        assert_eq!(roundtrip.energy_consumption, 25.0);
+        assert_eq!(roundtrip.yield_multiplier, 1.8);
+        assert_eq!(roundtrip.batch_size, 5);
+        assert_eq!(roundtrip.execution_time, 3);
+        assert!(roundtrip.validate().is_ok());
+    }
 }
