@@ -47,6 +47,117 @@ mod recipe_execution_time_tests {
     }
 }
 
+mod recipe_energy_consumption_tests {
+    use crate::production::Recipe;
+
+    #[test]
+    fn test_recipe_energy_consumption_initialization() {
+        let recipe = Recipe::new(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+        );
+        assert_eq!(recipe.energy_consumption, 0.0);
+        assert!(recipe.validate().is_ok());
+
+        let custom = Recipe::with_energy_consumption(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            50.0,
+        );
+        assert_eq!(custom.energy_consumption, 50.0);
+        assert!(custom.validate().is_ok());
+
+        let all_custom =
+            Recipe::with_execution_time_batch_size_yield_multiplier_and_energy_consumption(
+                "Programming".to_string(),
+                "DataAnalysis".to_string(),
+                "MachineLearning".to_string(),
+                1.5,
+                3,
+                5,
+                1.8,
+                25.0,
+            );
+        assert_eq!(all_custom.execution_time, 3);
+        assert_eq!(all_custom.batch_size, 5);
+        assert_eq!(all_custom.yield_multiplier, 1.8);
+        assert_eq!(all_custom.energy_consumption, 25.0);
+        assert!(all_custom.validate().is_ok());
+    }
+
+    #[test]
+    fn test_recipe_energy_consumption_validation() {
+        let valid_zero = Recipe::with_energy_consumption(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            0.0,
+        );
+        assert!(valid_zero.validate().is_ok());
+
+        let valid_positive = Recipe::with_energy_consumption(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            100.5,
+        );
+        assert!(valid_positive.validate().is_ok());
+
+        let invalid_negative = Recipe::with_energy_consumption(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            -10.0,
+        );
+        assert!(invalid_negative.validate().is_err());
+
+        let invalid_nan = Recipe::with_energy_consumption(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            f64::NAN,
+        );
+        assert!(invalid_nan.validate().is_err());
+
+        let invalid_infinity = Recipe::with_energy_consumption(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            f64::INFINITY,
+        );
+        assert!(invalid_infinity.validate().is_err());
+    }
+
+    #[test]
+    fn test_recipe_energy_consumption_serialization_backward_compatibility() {
+        let json = r#"{"input_skill_1":"Programming","input_skill_2":"DataAnalysis","output_skill":"MachineLearning","cost_multiplier":1.5}"#;
+        let recipe: Recipe = serde_json::from_str(json).expect("should deserialize legacy recipe");
+        assert_eq!(recipe.energy_consumption, 0.0);
+        assert!(recipe.validate().is_ok());
+
+        let custom = Recipe::with_energy_consumption(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            25.0,
+        );
+        let serialized = serde_json::to_string(&custom).expect("serialize recipe");
+        let roundtrip: Recipe = serde_json::from_str(&serialized).expect("deserialize recipe");
+        assert_eq!(roundtrip.energy_consumption, 25.0);
+        assert!(roundtrip.validate().is_ok());
+    }
+}
+
 #[cfg(test)]
 mod market_volatility_tracking_tests {
     use crate::market::Market;

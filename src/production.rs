@@ -23,6 +23,11 @@ fn default_yield_multiplier() -> f64 {
     1.0
 }
 
+/// Default energy consumption for a recipe
+fn default_energy_consumption() -> f64 {
+    0.0
+}
+
 /// Represents a production recipe that combines two input skills into one output skill.
 ///
 /// Recipes define how skills can be combined in the economy, enabling supply chains
@@ -47,6 +52,9 @@ pub struct Recipe {
     /// Yield multiplier produced by the recipe
     #[serde(default = "default_yield_multiplier")]
     pub yield_multiplier: f64,
+    /// Energy consumption required for production
+    #[serde(default = "default_energy_consumption")]
+    pub energy_consumption: f64,
 }
 
 impl Recipe {
@@ -83,6 +91,7 @@ impl Recipe {
             execution_time: 1,
             batch_size: 1,
             yield_multiplier: 1.0,
+            energy_consumption: 0.0,
         }
     }
 
@@ -109,6 +118,7 @@ impl Recipe {
             execution_time,
             batch_size: 1,
             yield_multiplier: 1.0,
+            energy_consumption: 0.0,
         }
     }
 
@@ -135,6 +145,7 @@ impl Recipe {
             execution_time: 1,
             batch_size,
             yield_multiplier: 1.0,
+            energy_consumption: 0.0,
         }
     }
 
@@ -161,6 +172,34 @@ impl Recipe {
             execution_time: 1,
             batch_size: 1,
             yield_multiplier,
+            energy_consumption: 0.0,
+        }
+    }
+
+    /// Creates a new production recipe with a specified energy consumption.
+    ///
+    /// # Arguments
+    /// * `input_skill_1` - ID of the first input skill
+    /// * `input_skill_2` - ID of the second input skill
+    /// * `output_skill` - ID of the skill produced by this recipe
+    /// * `cost_multiplier` - Cost multiplier (typically 1.0-2.0)
+    /// * `energy_consumption` - Energy consumption required for production
+    pub fn with_energy_consumption(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        energy_consumption: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time: 1,
+            batch_size: 1,
+            yield_multiplier: 1.0,
+            energy_consumption,
         }
     }
 
@@ -189,6 +228,7 @@ impl Recipe {
             execution_time,
             batch_size,
             yield_multiplier: 1.0,
+            energy_consumption: 0.0,
         }
     }
 
@@ -209,6 +249,7 @@ impl Recipe {
             execution_time,
             batch_size: 1,
             yield_multiplier,
+            energy_consumption: 0.0,
         }
     }
 
@@ -229,6 +270,7 @@ impl Recipe {
             execution_time: 1,
             batch_size,
             yield_multiplier,
+            energy_consumption: 0.0,
         }
     }
 
@@ -250,10 +292,35 @@ impl Recipe {
             execution_time,
             batch_size,
             yield_multiplier,
+            energy_consumption: 0.0,
         }
     }
 
-    /// Validates the recipe parameters (e.g., positive execution time/duration, batch size, and yield multiplier).
+    /// Creates a new production recipe with specified execution time, batch size, yield multiplier, and energy consumption.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_execution_time_batch_size_yield_multiplier_and_energy_consumption(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        execution_time: usize,
+        batch_size: usize,
+        yield_multiplier: f64,
+        energy_consumption: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time,
+            batch_size,
+            yield_multiplier,
+            energy_consumption,
+        }
+    }
+
+    /// Validates the recipe parameters (e.g., positive execution time/duration, batch size, yield multiplier, and energy consumption).
     pub fn validate(&self) -> Result<()> {
         if self.execution_time == 0 {
             return Err(SimulationError::ValidationError(
@@ -268,6 +335,11 @@ impl Recipe {
         if self.yield_multiplier <= 0.0 || !self.yield_multiplier.is_finite() {
             return Err(SimulationError::ValidationError(
                 "Recipe yield multiplier must be greater than 0 and finite".to_string(),
+            ));
+        }
+        if self.energy_consumption < 0.0 || !self.energy_consumption.is_finite() {
+            return Err(SimulationError::ValidationError(
+                "Recipe energy consumption must be non-negative and finite".to_string(),
             ));
         }
         Ok(())
