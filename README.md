@@ -1,7 +1,7 @@
 # Economic Simulation Framework
 
 [![Rust CI](https://github.com/maorun/community-simulation/actions/workflows/rust.yml/badge.svg)](https://github.com/maorun/community-simulation/actions/workflows/rust.yml)
-[![codecov](https://codecov.io/gh/maorun/community-simulation/branch/master/graph/badge.svg)](https://github.com/maorun/community-simulation)
+[![codecov](https://codecov.io/gh/maorun/community-simulation/branch/master/graph/badge.svg)](https://codecov.io/gh/maorun/community-simulation)
 
 A high-performance, deterministic agent-based economic simulation framework written in Rust (Edition 2024, MSRV 1.88). It models a dynamic economy of individuals with unique skills engaging in trade, wealth accumulation, and social interactions within configurable market mechanisms.
 
