@@ -1100,4 +1100,95 @@ mod comprehensive_scenarios {
         assert_eq!(roundtrip.execution_time, 3);
         assert!(roundtrip.validate().is_ok());
     }
+
+    /// Test: Recipe labor requirement tracking, limits validation, and serialization regression
+    #[test]
+    fn test_recipe_labor_requirement_and_validation_regression() {
+        use crate::production::Recipe;
+
+        let recipe = Recipe::new(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+        );
+        assert_eq!(recipe.labor_requirement, 0.0);
+        assert!(recipe.validate().is_ok());
+
+        let custom_labor = Recipe::with_labor_requirement(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            12.5,
+        );
+        assert_eq!(custom_labor.labor_requirement, 12.5);
+        assert!(custom_labor.validate().is_ok());
+
+        let all_custom =
+            Recipe::with_execution_time_batch_size_yield_multiplier_energy_consumption_quality_tier_and_labor_requirement(
+                "Programming".to_string(),
+                "DataAnalysis".to_string(),
+                "MachineLearning".to_string(),
+                1.5,
+                3,
+                5,
+                1.8,
+                25.0,
+                2,
+                8.0,
+            );
+        assert_eq!(all_custom.execution_time, 3);
+        assert_eq!(all_custom.batch_size, 5);
+        assert_eq!(all_custom.yield_multiplier, 1.8);
+        assert_eq!(all_custom.energy_consumption, 25.0);
+        assert_eq!(all_custom.quality_tier, 2);
+        assert_eq!(all_custom.labor_requirement, 8.0);
+        assert!(all_custom.validate().is_ok());
+
+        let invalid_labor_negative = Recipe::with_labor_requirement(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            -2.0,
+        );
+        assert!(invalid_labor_negative.validate().is_err());
+
+        let invalid_labor_nan = Recipe::with_labor_requirement(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            f64::NAN,
+        );
+        assert!(invalid_labor_nan.validate().is_err());
+
+        let invalid_labor_infinity = Recipe::with_labor_requirement(
+            "Programming".to_string(),
+            "DataAnalysis".to_string(),
+            "MachineLearning".to_string(),
+            1.5,
+            f64::INFINITY,
+        );
+        assert!(invalid_labor_infinity.validate().is_err());
+
+        // Backward compatibility: legacy JSON without labor_requirement should default to 0.0 and validate successfully
+        let legacy_json = r#"{"input_skill_1":"Programming","input_skill_2":"DataAnalysis","output_skill":"MachineLearning","cost_multiplier":1.5,"execution_time":1,"batch_size":1,"quality_tier":1}"#;
+        let deserialized: Recipe =
+            serde_json::from_str(legacy_json).expect("should deserialize legacy recipe");
+        assert_eq!(deserialized.labor_requirement, 0.0);
+        assert!(deserialized.validate().is_ok());
+
+        // Serialization and round-trip
+        let serialized = serde_json::to_string(&all_custom).expect("serialize recipe");
+        let roundtrip: Recipe = serde_json::from_str(&serialized).expect("deserialize recipe");
+        assert_eq!(roundtrip.labor_requirement, 8.0);
+        assert_eq!(roundtrip.quality_tier, 2);
+        assert_eq!(roundtrip.energy_consumption, 25.0);
+        assert_eq!(roundtrip.yield_multiplier, 1.8);
+        assert_eq!(roundtrip.batch_size, 5);
+        assert_eq!(roundtrip.execution_time, 3);
+        assert!(roundtrip.validate().is_ok());
+    }
 }
