@@ -33,6 +33,11 @@ fn default_quality_tier() -> usize {
     1
 }
 
+/// Default labor requirement for a recipe
+fn default_labor_requirement() -> f64 {
+    0.0
+}
+
 /// Represents a production recipe that combines two input skills into one output skill.
 ///
 /// Recipes define how skills can be combined in the economy, enabling supply chains
@@ -63,6 +68,9 @@ pub struct Recipe {
     /// Quality tier produced by the recipe
     #[serde(default = "default_quality_tier")]
     pub quality_tier: usize,
+    /// Labor requirement for production
+    #[serde(default = "default_labor_requirement")]
+    pub labor_requirement: f64,
 }
 
 impl Recipe {
@@ -101,6 +109,7 @@ impl Recipe {
             yield_multiplier: 1.0,
             energy_consumption: 0.0,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -129,6 +138,7 @@ impl Recipe {
             yield_multiplier: 1.0,
             energy_consumption: 0.0,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -157,6 +167,7 @@ impl Recipe {
             yield_multiplier: 1.0,
             energy_consumption: 0.0,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -185,6 +196,7 @@ impl Recipe {
             yield_multiplier,
             energy_consumption: 0.0,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -213,6 +225,7 @@ impl Recipe {
             yield_multiplier: 1.0,
             energy_consumption,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -241,6 +254,36 @@ impl Recipe {
             yield_multiplier: 1.0,
             energy_consumption: 0.0,
             quality_tier,
+            labor_requirement: 0.0,
+        }
+    }
+
+    /// Creates a new production recipe with a specified labor requirement.
+    ///
+    /// # Arguments
+    /// * `input_skill_1` - ID of the first input skill
+    /// * `input_skill_2` - ID of the second input skill
+    /// * `output_skill` - ID of the skill produced by this recipe
+    /// * `cost_multiplier` - Cost multiplier (typically 1.0-2.0)
+    /// * `labor_requirement` - Labor requirement for production
+    pub fn with_labor_requirement(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        labor_requirement: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time: 1,
+            batch_size: 1,
+            yield_multiplier: 1.0,
+            energy_consumption: 0.0,
+            quality_tier: 1,
+            labor_requirement,
         }
     }
 
@@ -271,6 +314,7 @@ impl Recipe {
             yield_multiplier: 1.0,
             energy_consumption: 0.0,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -293,6 +337,7 @@ impl Recipe {
             yield_multiplier,
             energy_consumption: 0.0,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -315,6 +360,7 @@ impl Recipe {
             yield_multiplier,
             energy_consumption: 0.0,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -338,6 +384,7 @@ impl Recipe {
             yield_multiplier,
             energy_consumption: 0.0,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -363,6 +410,7 @@ impl Recipe {
             yield_multiplier,
             energy_consumption,
             quality_tier: 1,
+            labor_requirement: 0.0,
         }
     }
 
@@ -389,10 +437,39 @@ impl Recipe {
             yield_multiplier,
             energy_consumption,
             quality_tier,
+            labor_requirement: 0.0,
         }
     }
 
-    /// Validates the recipe parameters (e.g., positive execution time/duration, batch size, yield multiplier, energy consumption, and quality tier).
+    /// Creates a new production recipe with specified execution time, batch size, yield multiplier, energy consumption, quality tier, and labor requirement.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_execution_time_batch_size_yield_multiplier_energy_consumption_quality_tier_and_labor_requirement(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        execution_time: usize,
+        batch_size: usize,
+        yield_multiplier: f64,
+        energy_consumption: f64,
+        quality_tier: usize,
+        labor_requirement: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time,
+            batch_size,
+            yield_multiplier,
+            energy_consumption,
+            quality_tier,
+            labor_requirement,
+        }
+    }
+
+    /// Validates the recipe parameters (e.g., positive execution time/duration, batch size, yield multiplier, energy consumption, quality tier, and labor requirement).
     pub fn validate(&self) -> Result<()> {
         if self.execution_time == 0 {
             return Err(SimulationError::ValidationError(
@@ -417,6 +494,11 @@ impl Recipe {
         if self.quality_tier == 0 {
             return Err(SimulationError::ValidationError(
                 "Recipe quality tier must be greater than 0".to_string(),
+            ));
+        }
+        if self.labor_requirement < 0.0 || !self.labor_requirement.is_finite() {
+            return Err(SimulationError::ValidationError(
+                "Recipe labor requirement must be non-negative and finite".to_string(),
             ));
         }
         Ok(())
