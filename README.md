@@ -3,7 +3,9 @@
 [![Rust CI](https://github.com/maorun/community-simulation/actions/workflows/rust.yml/badge.svg)](https://github.com/maorun/community-simulation/actions/workflows/rust.yml)
 [![codecov](https://codecov.io/gh/maorun/community-simulation/branch/master/graph/badge.svg)](https://codecov.io/gh/maorun/community-simulation)
 
-A configurable economic simulation written in Rust that models a small economy of individuals with unique skills engaging in trade within a dynamic market. Perfect for exploring price formation, wealth distribution, market equilibrium, and economic policy effects.
+A high-performance, deterministic agent-based economic simulation framework written in Rust (Edition 2024, MSRV 1.88). It models a dynamic economy of individuals with unique skills engaging in trade, wealth accumulation, and social interactions within configurable market mechanisms.
+
+The framework supports multiple outputs—including a command-line interface binary, library crates (`rlib` and `cdylib`), and a WebAssembly browser playground—making it ideal for exploring price formation, wealth distribution, market equilibrium, and economic policy effects.
 
 ## What Can This Project Do?
 
