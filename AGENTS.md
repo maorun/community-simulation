@@ -73,6 +73,7 @@
 - If the engine cannot use the field yet, add the field to `ROADMAP.md` with the missing engine work. Do not merge the field without this entry.
 - Use the existing builder methods and `validate()` for a recipe or a config. Do not add a new `with_*` constructor for each field combination.
 - Before you add a field, search `ROADMAP.md` for open integration work on the same module. Finish that work first, unless the maintainer gives a different order.
+- When a pull request completes a `ROADMAP.md` entry, remove the entry in the same pull request. Describe the new behavior in `FEATURES.md`.
 
 # Testing and Verification Conventions
 
