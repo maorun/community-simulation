@@ -486,10 +486,14 @@ impl Recipe {
                 "Recipe yield multiplier must be greater than 0 and finite".to_string(),
             ));
         }
-        if self.energy_consumption < 0.0 || !self.energy_consumption.is_finite() {
-            return Err(SimulationError::ValidationError(
-                "Recipe energy consumption must be non-negative and finite".to_string(),
-            ));
+        if self.energy_consumption < 0.0
+            || !self.energy_consumption.is_finite()
+            || self.energy_consumption > MAX_RECIPE_ENERGY_CONSUMPTION
+        {
+            return Err(SimulationError::ValidationError(format!(
+                "Recipe energy consumption must be non-negative, finite and at most {}",
+                MAX_RECIPE_ENERGY_CONSUMPTION
+            )));
         }
         if self.quality_tier == 0 {
             return Err(SimulationError::ValidationError(
@@ -531,6 +535,115 @@ impl Recipe {
     pub fn calculate_cost(&self, input_price_1: f64, input_price_2: f64) -> f64 {
         (input_price_1 + input_price_2) * self.cost_multiplier
     }
+
+    /// Calculates the cost that a person pays to start one production run.
+    ///
+    /// The batch size spreads the input cost over the produced batch, so the
+    /// person pays `calculate_cost / batch_size` for the inputs. The labor
+    /// requirement adds `labor_requirement * labor_unit_price` to the cost.
+    ///
+    /// # Arguments
+    /// * `input_price_1` - Current market price of first input skill
+    /// * `input_price_2` - Current market price of second input skill
+    /// * `labor_unit_price` - Price of one labor unit (typically the base skill price)
+    ///
+    /// # Examples
+    /// ```
+    /// use community_simulation::production::Recipe;
+    ///
+    /// let mut recipe = Recipe::new("A".to_string(), "B".to_string(), "C".to_string(), 1.0);
+    /// recipe.batch_size = 2;
+    /// recipe.labor_requirement = 0.5;
+    /// // (10 + 10) * 1.0 / 2 + 0.5 * 10 = 15
+    /// assert_eq!(recipe.calculate_production_cost(10.0, 10.0, 10.0), 15.0);
+    /// ```
+    pub fn calculate_production_cost(
+        &self,
+        input_price_1: f64,
+        input_price_2: f64,
+        labor_unit_price: f64,
+    ) -> f64 {
+        let batch_size = self.batch_size.max(1) as f64;
+        let input_cost = self.calculate_cost(input_price_1, input_price_2) / batch_size;
+        let labor_cost = self.labor_requirement.max(0.0) * labor_unit_price;
+        clamp_price(input_cost + labor_cost)
+    }
+
+    /// Calculates the market price of the output skill.
+    ///
+    /// The price is `calculate_cost * yield_multiplier * quality_price_factor`.
+    ///
+    /// # Arguments
+    /// * `input_price_1` - Current market price of first input skill
+    /// * `input_price_2` - Current market price of second input skill
+    ///
+    /// # Examples
+    /// ```
+    /// use community_simulation::production::Recipe;
+    ///
+    /// let mut recipe = Recipe::new("A".to_string(), "B".to_string(), "C".to_string(), 1.0);
+    /// recipe.yield_multiplier = 2.0;
+    /// recipe.quality_tier = 3;
+    /// // (10 + 10) * 1.0 * 2.0 * 1.2 = 48
+    /// assert!((recipe.calculate_output_price(10.0, 10.0) - 48.0).abs() < 1e-9);
+    /// ```
+    pub fn calculate_output_price(&self, input_price_1: f64, input_price_2: f64) -> f64 {
+        clamp_price(
+            self.calculate_cost(input_price_1, input_price_2)
+                * self.yield_multiplier
+                * self.quality_price_factor(),
+        )
+    }
+
+    /// Returns the price factor for the quality tier.
+    ///
+    /// Tier 1 gives 1.0. Each higher tier adds [`QUALITY_TIER_PRICE_PREMIUM`].
+    pub fn quality_price_factor(&self) -> f64 {
+        let extra_tiers = self.quality_tier.saturating_sub(1) as f64;
+        1.0 + extra_tiers * QUALITY_TIER_PRICE_PREMIUM
+    }
+}
+
+/// Price premium per quality tier above tier 1 (0.1 = +10% per tier).
+pub const QUALITY_TIER_PRICE_PREMIUM: f64 = 0.1;
+
+/// Upper limit for the energy consumption of one recipe run.
+///
+/// The limit keeps the summed consumption of the environment finite.
+pub const MAX_RECIPE_ENERGY_CONSUMPTION: f64 = 1.0e9;
+
+/// Upper limit for a calculated production cost or output price.
+///
+/// The limit keeps each balance finite when a recipe has extreme multipliers.
+pub const MAX_PRODUCTION_PRICE: f64 = 1.0e12;
+
+/// Limits a price to the range `0.0..=MAX_PRODUCTION_PRICE`. A `NaN` value gives `0.0`.
+fn clamp_price(value: f64) -> f64 {
+    if value.is_nan() {
+        0.0
+    } else {
+        value.clamp(0.0, MAX_PRODUCTION_PRICE)
+    }
+}
+
+/// A production run that started but has not completed yet.
+///
+/// The engine creates a pending production when a recipe has an
+/// `execution_time` greater than 1. The person gets the output skill
+/// when the simulation reaches `completes_at_step`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PendingProduction {
+    /// Index of the producing entity in the engine entity list
+    pub entity_index: usize,
+    /// Output skill that the person gets at completion
+    pub output_skill: SkillId,
+    /// Market price of the output skill at the start of production
+    pub output_price: f64,
+    /// Simulation step at which the production completes
+    pub completes_at_step: usize,
+    /// Cost that the person paid at the start. The engine refunds it if the production fails.
+    #[serde(default)]
+    pub cost_paid: f64,
 }
 
 /// Generates a predefined set of production recipes for the simulation.

@@ -1,5 +1,6 @@
 mod comprehensive_scenario_tests;
 mod externality_tests;
+mod recipe_engine_integration_tests;
 mod recipe_execution_time_tests {
     use crate::production::Recipe;
 

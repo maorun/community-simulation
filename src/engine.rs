@@ -135,6 +135,12 @@ pub struct SimulationCheckpoint {
     pub mobility_quintiles: HashMap<usize, Vec<usize>>,
     /// Environmental resource tracking (if enabled)
     pub environment: Option<Environment>,
+    /// Production runs that have started but not completed yet
+    #[serde(default)]
+    pub pending_productions: Vec<crate::production::PendingProduction>,
+    /// Production recipes in use. `None` means the default recipes.
+    #[serde(default)]
+    pub production_recipes: Option<Vec<crate::production::Recipe>>,
     /// Voting system state (if enabled)
     pub voting_system: Option<crate::voting::VotingSystem>,
     /// Certification system tracking
@@ -237,8 +243,10 @@ pub struct SimulationEngine {
     agent_strategy: Option<Arc<dyn AgentStrategy>>,
     // Resource pool tracking: group_id -> (balance, total_contributions, total_withdrawals)
     resource_pools: HashMap<usize, (f64, f64, f64)>,
-    // Production system recipes (cached for performance)
-    production_recipes: Option<Vec<crate::production::Recipe>>,
+    // Production system recipes (shared, so a step can read them while it mutates the engine)
+    production_recipes: Option<Arc<Vec<crate::production::Recipe>>>,
+    // Production runs that have started but not completed yet
+    pending_productions: Vec<crate::production::PendingProduction>,
     // Environmental resource tracking (if enabled)
     environment: Option<Environment>,
     // Voting system for governance and collective decision-making (if enabled)
@@ -377,7 +385,7 @@ impl SimulationEngine {
 
         // Cache production recipes if production is enabled
         let production_recipes = if config.enable_production {
-            Some(crate::production::generate_default_recipes())
+            Some(Arc::new(crate::production::generate_default_recipes()))
         } else {
             None
         };
@@ -538,6 +546,7 @@ impl SimulationEngine {
             agent_strategy: None,
             resource_pools,
             production_recipes,
+            pending_productions: Vec::new(),
             environment,
             voting_system,
             event_bus,
@@ -2571,21 +2580,41 @@ impl SimulationEngine {
     ///
     /// Each person has a chance (based on config.production_probability) to try producing
     /// a new skill by combining two skills they already have. If they have the required inputs
-    /// and can afford the production cost, a new skill is learned.
+    /// and can afford the production cost, the production starts.
+    ///
+    /// The engine applies these recipe fields:
+    /// - `batch_size` divides the input cost.
+    /// - `labor_requirement` adds a labor cost of `labor_requirement * base_skill_price`.
+    /// - `yield_multiplier` and `quality_tier` raise the price of the output skill.
+    /// - `energy_consumption` consumes `Resource::Energy` when the environment is enabled.
+    ///   The engine consumes the energy at the start. It does not return the energy if the
+    ///   production fails later, because the energy is already spent.
+    /// - `execution_time` delays the output skill. A value of 1 completes the production
+    ///   in the same step. A higher value creates a `PendingProduction`.
     ///
     /// # Returns
-    /// The number of successful productions this step
+    /// The number of productions that completed this step
     fn attempt_production(&mut self) -> usize {
         if !self.config.enable_production {
             return 0;
         }
 
-        // Use cached recipes (already validated to exist when enable_production is true)
-        let recipes = self
-            .production_recipes
-            .as_ref()
-            .expect("production_recipes should be initialized when enable_production is true");
-        let mut productions_count = 0;
+        let mut productions_count = self.complete_due_productions();
+
+        // Share the cached recipes, so the loop can call `&mut self` methods.
+        // The pointer copy keeps the cache intact if a step panics and the engine recovers.
+        let recipes = Arc::clone(
+            self.production_recipes
+                .as_ref()
+                .expect("production_recipes should be initialized when enable_production is true"),
+        );
+
+        // Index of the running productions for a constant-time duplicate check
+        let mut producing: HashSet<(usize, SkillId)> = self
+            .pending_productions
+            .iter()
+            .map(|p| (p.entity_index, p.output_skill.clone()))
+            .collect();
 
         // Collect entity indices to avoid borrow checker issues
         let entity_indices: Vec<usize> = self
@@ -2611,8 +2640,14 @@ impl SimulationEngine {
                 .collect();
 
             // Find recipes that can be crafted with available skills
-            let craftable_recipes: Vec<&crate::production::Recipe> =
-                recipes.iter().filter(|recipe| recipe.can_craft(&available_skill_ids)).collect();
+            // Skip recipes that the person already produces, so the pick does not waste the attempt.
+            let craftable_recipes: Vec<&crate::production::Recipe> = recipes
+                .iter()
+                .filter(|recipe| {
+                    recipe.can_craft(&available_skill_ids)
+                        && !producing.contains(&(idx, recipe.output_skill.clone()))
+                })
+                .collect();
 
             if craftable_recipes.is_empty() {
                 continue;
@@ -2639,7 +2674,11 @@ impl SimulationEngine {
                     .map(|s| s.current_price)
                     .unwrap_or(self.config.base_skill_price);
 
-                let production_cost = recipe.calculate_cost(input1_price, input2_price);
+                let production_cost = recipe.calculate_production_cost(
+                    input1_price,
+                    input2_price,
+                    self.config.base_skill_price,
+                );
 
                 // Check if person can afford production
                 if !self.entities[idx].person_data.can_afford(production_cost) {
@@ -2649,50 +2688,119 @@ impl SimulationEngine {
                 // Deduct production cost
                 self.entities[idx].person_data.money -= production_cost;
 
-                // Create new skill at higher price (reflects value added)
-                let output_price = (input1_price + input2_price) * recipe.cost_multiplier;
-                let new_skill = Skill::new(recipe.output_skill.clone(), output_price);
+                // Consume energy for the production run (if the environment is enabled)
+                if recipe.energy_consumption > 0.0
+                    && let Some(ref mut environment) = self.environment
+                {
+                    let mut costs = HashMap::new();
+                    costs.insert(crate::environment::Resource::Energy, recipe.energy_consumption);
+                    environment.consume_resources(&costs);
+                }
 
-                // Add skill to person's learned skills
-                self.entities[idx].person_data.learned_skills.push(new_skill.clone());
+                // Output price reflects value added, yield and quality
+                let output_price = recipe.calculate_output_price(input1_price, input2_price);
 
-                // Update skill_providers cache with the newly learned skill
-                // Note: No duplicate check needed because has_skill() above ensures
-                // the person doesn't already have this skill (line 2152)
-                self.skill_providers
-                    .entry(new_skill.id.clone())
-                    .or_default()
-                    .push(self.entities[idx].id);
-
-                // Add skill to market if it doesn't exist yet
-                if !self.market.skills.contains_key(&new_skill.id) {
-                    self.market.skills.insert(new_skill.id.clone(), new_skill.clone());
-                    self.all_skill_ids.push(new_skill.id.clone());
-
-                    // Also add to black market if enabled
-                    if let Some(ref mut bm) = self.black_market {
-                        let bm_skill = Skill::new(
-                            new_skill.id.clone(),
-                            new_skill.current_price * self.config.black_market_price_multiplier,
-                        );
-                        bm.skills.insert(bm_skill.id.clone(), bm_skill);
+                if recipe.execution_time <= 1 {
+                    if self.finish_production(idx, &recipe.output_skill, output_price) {
+                        productions_count += 1;
+                    } else {
+                        self.entities[idx].person_data.money += production_cost;
                     }
+                } else {
+                    producing.insert((idx, recipe.output_skill.clone()));
+                    self.pending_productions.push(crate::production::PendingProduction {
+                        entity_index: idx,
+                        output_skill: recipe.output_skill.clone(),
+                        output_price,
+                        completes_at_step: self.current_step.saturating_add(recipe.execution_time),
+                        cost_paid: production_cost,
+                    });
                 }
 
                 debug!(
-                    "Person {} produced {} from {} + {} for ${:.2}",
+                    "Person {} started production of {} from {} + {} for ${:.2}",
                     self.entities[idx].id,
                     recipe.output_skill,
                     recipe.input_skill_1,
                     recipe.input_skill_2,
                     production_cost
                 );
-
-                productions_count += 1;
             }
         }
 
         productions_count
+    }
+
+    /// Completes each pending production that reached its completion step.
+    ///
+    /// If a production cannot give the skill, the engine refunds the paid cost.
+    ///
+    /// # Returns
+    /// The number of productions that gave a new skill to a person
+    fn complete_due_productions(&mut self) -> usize {
+        let current_step = self.current_step;
+        let (due, waiting): (Vec<_>, Vec<_>) = std::mem::take(&mut self.pending_productions)
+            .into_iter()
+            .partition(|p| p.completes_at_step <= current_step);
+        self.pending_productions = waiting;
+
+        let mut completed = 0;
+        for pending in due {
+            if self.finish_production(
+                pending.entity_index,
+                &pending.output_skill,
+                pending.output_price,
+            ) {
+                completed += 1;
+            } else if let Some(entity) = self.entities.get_mut(pending.entity_index) {
+                // The person got the skill by other means or left the simulation: refund the cost.
+                entity.person_data.money += pending.cost_paid;
+            }
+        }
+        completed
+    }
+
+    /// Gives the output skill of a production to a person and registers it in the market.
+    ///
+    /// # Returns
+    /// `true` if the person got the skill, `false` if the person already had the skill,
+    /// the entity is not active, or the entity does not exist
+    fn finish_production(&mut self, idx: usize, output_skill: &SkillId, output_price: f64) -> bool {
+        match self.entities.get(idx) {
+            Some(entity) if entity.active && !entity.person_data.has_skill(output_skill) => {},
+            _ => return false,
+        }
+
+        let new_skill = Skill::new(output_skill.clone(), output_price);
+
+        // Add skill to person's learned skills
+        self.entities[idx].person_data.learned_skills.push(new_skill.clone());
+
+        // Update skill_providers cache with the newly learned skill
+        // Note: No duplicate check needed because has_skill() above ensures
+        // the person doesn't already have this skill
+        self.skill_providers
+            .entry(new_skill.id.clone())
+            .or_default()
+            .push(self.entities[idx].id);
+
+        // Add skill to market if it doesn't exist yet
+        if !self.market.skills.contains_key(&new_skill.id) {
+            self.market.skills.insert(new_skill.id.clone(), new_skill.clone());
+            self.all_skill_ids.push(new_skill.id.clone());
+
+            // Also add to black market if enabled
+            if let Some(ref mut bm) = self.black_market {
+                let bm_skill = Skill::new(
+                    new_skill.id.clone(),
+                    new_skill.current_price * self.config.black_market_price_multiplier,
+                );
+                bm.skills.insert(bm_skill.id.clone(), bm_skill);
+            }
+        }
+
+        debug!("Person {} produced {}", self.entities[idx].id, output_skill);
+        true
     }
 
     #[expect(
@@ -6339,6 +6447,38 @@ impl SimulationEngine {
         &self.entities
     }
 
+    /// Get read-only access to the environment (if enabled).
+    pub fn get_environment(&self) -> Option<&Environment> {
+        self.environment.as_ref()
+    }
+
+    /// Get read-only access to production runs that have not completed yet.
+    pub fn get_pending_productions(&self) -> &[crate::production::PendingProduction] {
+        &self.pending_productions
+    }
+
+    /// Replaces the production recipes of the engine.
+    ///
+    /// The engine validates each recipe with [`Recipe::validate`](crate::production::Recipe::validate)
+    /// and rejects the whole list if one recipe is not valid. The function returns an
+    /// error if `enable_production` is false.
+    pub fn set_production_recipes(
+        &mut self,
+        recipes: Vec<crate::production::Recipe>,
+    ) -> crate::error::Result<()> {
+        if !self.config.enable_production {
+            return Err(crate::error::SimulationError::ValidationError(
+                "set_production_recipes requires enable_production to be true".to_string(),
+            ));
+        }
+        for recipe in &recipes {
+            recipe.validate()?;
+        }
+        self.production_recipes = Some(Arc::new(recipes));
+        Ok(())
+    }
+
+    /// Returns a mutable reference to all entities.
     pub fn get_entities_mut(&mut self) -> &mut Vec<crate::entity::Entity> {
         &mut self.entities
     }
@@ -6726,6 +6866,8 @@ impl SimulationEngine {
             min_money: self.min_money,
             max_money: self.max_money,
             mobility_quintiles: self.mobility_quintiles.clone(),
+            pending_productions: self.pending_productions.clone(),
+            production_recipes: self.production_recipes.as_ref().map(|r| r.as_ref().clone()),
             environment: self.environment.clone(),
             voting_system: self.voting_system.clone(),
             total_certifications_issued: self.total_certifications_issued,
@@ -6832,10 +6974,40 @@ impl SimulationEngine {
 
         // Cache production recipes if production is enabled
         let production_recipes = if checkpoint.config.enable_production {
-            Some(crate::production::generate_default_recipes())
+            let recipes = match checkpoint.production_recipes {
+                Some(recipes) => {
+                    if let Some(error) = recipes.iter().find_map(|r| r.validate().err()) {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            format!("invalid production recipe in checkpoint: {error}"),
+                        ));
+                    }
+                    recipes
+                },
+                None => crate::production::generate_default_recipes(),
+            };
+            Some(Arc::new(recipes))
         } else {
             None
         };
+
+        // Drop pending productions that point to a missing entity or carry a bad price
+        let entity_count = checkpoint.entities.len();
+        let pending_productions: Vec<crate::production::PendingProduction> = checkpoint
+            .pending_productions
+            .into_iter()
+            .filter(|p| {
+                let valid = p.entity_index < entity_count
+                    && p.output_price.is_finite()
+                    && (0.0..=crate::production::MAX_PRODUCTION_PRICE).contains(&p.output_price)
+                    && p.cost_paid.is_finite()
+                    && (0.0..=crate::production::MAX_PRODUCTION_PRICE).contains(&p.cost_paid);
+                if !valid {
+                    warn!("Dropping invalid pending production from checkpoint: {:?}", p);
+                }
+                valid
+            })
+            .collect();
 
         // Initialize event bus (events from previous run are not preserved)
         let event_bus = EventBus::new(checkpoint.config.enable_events);
@@ -6902,6 +7074,7 @@ impl SimulationEngine {
             agent_strategy: None,
             resource_pools: checkpoint.resource_pools,
             production_recipes,
+            pending_productions,
             environment: checkpoint.environment,
             voting_system: checkpoint.voting_system,
             event_bus,

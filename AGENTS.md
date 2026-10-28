@@ -33,6 +33,7 @@
 - `.github/workflows/coverage.yml` — manual workflow for generating test coverage reports.
 - `.clippy.toml` — Clippy complexity limits and lint rules.
 - `.rustfmt.toml` — code formatting rules for `cargo fmt`.
+- `ROADMAP.md` — prioritized list of ideas and open integration work.
 
 # Development Commands
 
@@ -61,6 +62,17 @@
 - Enforce simulation invariants via `src/invariant.rs` with appropriate `InvariantSeverity` levels.
 - Apply defensive numerical clamping to probabilities (`0.0..=1.0`), price multipliers, and tax rates.
 - Prevent floating-point underflows, overflows, or `NaN` values in financial balance calculations.
+
+# Integration of New Fields and Types
+
+- Wire each new field, enum variant, or config option into the engine in the same pull request.
+- Do not add a field that only a getter, a validator, or a test reads.
+- Make the engine read the field in `src/engine.rs` or in a module that the engine calls.
+- Before you open a pull request, run `rg "<field_name>" src --glob '!src/tests/**'`. Ignore the matches in the defining file. Make sure that at least one match remains in another module.
+- Write the regression test through `SimulationEngine`. Assert the changed simulation result, not only the field value.
+- If the engine cannot use the field yet, add the field to `ROADMAP.md` with the missing engine work. Do not merge the field without this entry.
+- Use the existing builder methods and `validate()` for a recipe or a config. Do not add a new `with_*` constructor for each field combination.
+- Before you add a field, search `ROADMAP.md` for open integration work on the same module. Finish that work first, unless the maintainer gives a different order.
 
 # Testing and Verification Conventions
 
