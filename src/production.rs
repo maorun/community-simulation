@@ -38,6 +38,11 @@ fn default_labor_requirement() -> f64 {
     0.0
 }
 
+/// Default waste rate for a recipe
+fn default_waste_rate() -> f64 {
+    0.0
+}
+
 /// Represents a production recipe that combines two input skills into one output skill.
 ///
 /// Recipes define how skills can be combined in the economy, enabling supply chains
@@ -71,6 +76,9 @@ pub struct Recipe {
     /// Labor requirement for production
     #[serde(default = "default_labor_requirement")]
     pub labor_requirement: f64,
+    /// Material waste rate in production (0.0 to 1.0)
+    #[serde(default = "default_waste_rate")]
+    pub waste_rate: f64,
 }
 
 impl Recipe {
@@ -110,6 +118,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -139,6 +148,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -168,6 +178,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -197,6 +208,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -226,6 +238,7 @@ impl Recipe {
             energy_consumption,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -255,6 +268,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -284,6 +298,30 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement,
+            waste_rate: 0.0,
+        }
+    }
+
+    /// Creates a new production recipe with a specified waste rate.
+    pub fn with_waste_rate(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        waste_rate: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time: 1,
+            batch_size: 1,
+            yield_multiplier: 1.0,
+            energy_consumption: 0.0,
+            quality_tier: 1,
+            labor_requirement: 0.0,
+            waste_rate,
         }
     }
 
@@ -315,6 +353,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -338,6 +377,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -361,6 +401,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -385,6 +426,7 @@ impl Recipe {
             energy_consumption: 0.0,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -411,6 +453,7 @@ impl Recipe {
             energy_consumption,
             quality_tier: 1,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -438,6 +481,7 @@ impl Recipe {
             energy_consumption,
             quality_tier,
             labor_requirement: 0.0,
+            waste_rate: 0.0,
         }
     }
 
@@ -466,6 +510,7 @@ impl Recipe {
             energy_consumption,
             quality_tier,
             labor_requirement,
+            waste_rate: 0.0,
         }
     }
 
@@ -503,6 +548,11 @@ impl Recipe {
         if self.labor_requirement < 0.0 || !self.labor_requirement.is_finite() {
             return Err(SimulationError::ValidationError(
                 "Recipe labor requirement must be non-negative and finite".to_string(),
+            ));
+        }
+        if self.waste_rate < 0.0 || self.waste_rate > 1.0 || !self.waste_rate.is_finite() {
+            return Err(SimulationError::ValidationError(
+                "Recipe waste rate must be between 0.0 and 1.0 and finite".to_string(),
             ));
         }
         Ok(())
@@ -588,9 +638,10 @@ impl Recipe {
     /// assert!((recipe.calculate_output_price(10.0, 10.0) - 48.0).abs() < 1e-9);
     /// ```
     pub fn calculate_output_price(&self, input_price_1: f64, input_price_2: f64) -> f64 {
+        let effective_yield = self.yield_multiplier * (1.0 - self.waste_rate);
         clamp_price(
             self.calculate_cost(input_price_1, input_price_2)
-                * self.yield_multiplier
+                * effective_yield
                 * self.quality_price_factor(),
         )
     }

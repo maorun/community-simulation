@@ -421,3 +421,73 @@ fn checkpoint_rejects_invalid_recipe() {
     json["production_recipes"][0]["batch_size"] = serde_json::json!(0);
     assert!(load_checkpoint_json(&json).is_err());
 }
+
+#[test]
+fn waste_rate_initialization_and_validation() {
+    let recipe = base_recipe();
+    assert_eq!(recipe.waste_rate, 0.0);
+    assert!(recipe.validate().is_ok());
+
+    let mut custom = Recipe::with_waste_rate(
+        INPUT_1.to_string(),
+        INPUT_2.to_string(),
+        OUTPUT.to_string(),
+        1.0,
+        0.25,
+    );
+    assert_eq!(custom.waste_rate, 0.25);
+    assert!(custom.validate().is_ok());
+
+    custom.waste_rate = -0.01;
+    assert!(custom.validate().is_err());
+
+    custom.waste_rate = 1.01;
+    assert!(custom.validate().is_err());
+
+    custom.waste_rate = f64::NAN;
+    assert!(custom.validate().is_err());
+
+    custom.waste_rate = f64::INFINITY;
+    assert!(custom.validate().is_err());
+}
+
+#[test]
+fn waste_rate_serialization_backward_compatibility() {
+    let legacy_json = r#"{
+        "input_skill_1": "InputOne",
+        "input_skill_2": "InputTwo",
+        "output_skill": "ProducedSkill",
+        "cost_multiplier": 1.0
+    }"#;
+    let recipe: Recipe =
+        serde_json::from_str(legacy_json).expect("should deserialize legacy recipe");
+    assert_eq!(recipe.waste_rate, 0.0);
+    assert!(recipe.validate().is_ok());
+
+    let mut custom = base_recipe();
+    custom.waste_rate = 0.4;
+    let serialized = serde_json::to_string(&custom).expect("serialize recipe");
+    let roundtrip: Recipe = serde_json::from_str(&serialized).expect("deserialize recipe");
+    assert_eq!(roundtrip.waste_rate, 0.4);
+    assert!(roundtrip.validate().is_ok());
+}
+
+#[test]
+fn waste_rate_calculation_effects() {
+    let price_of = |recipe: Recipe| {
+        let mut engine = engine_with(production_config(), recipe);
+        engine.step();
+        engine.get_entities()[0]
+            .person_data
+            .learned_skills
+            .last()
+            .unwrap()
+            .current_price
+    };
+    let plain = price_of(base_recipe());
+
+    let mut waste_recipe = base_recipe();
+    waste_recipe.waste_rate = 0.5;
+    let wasted_price = price_of(waste_recipe);
+    assert!((wasted_price - plain * 0.5).abs() < 1e-6);
+}
