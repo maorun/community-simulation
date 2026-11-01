@@ -43,6 +43,11 @@ fn default_waste_rate() -> f64 {
     0.0
 }
 
+/// Default setup cost for a recipe
+fn default_setup_cost() -> f64 {
+    0.0
+}
+
 /// Represents a production recipe that combines two input skills into one output skill.
 ///
 /// Recipes define how skills can be combined in the economy, enabling supply chains
@@ -79,6 +84,9 @@ pub struct Recipe {
     /// Material waste rate in production (0.0 to 1.0)
     #[serde(default = "default_waste_rate")]
     pub waste_rate: f64,
+    /// Setup cost required for production
+    #[serde(default = "default_setup_cost")]
+    pub setup_cost: f64,
 }
 
 impl Recipe {
@@ -119,6 +127,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -149,6 +158,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -179,6 +189,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -209,6 +220,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -239,6 +251,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -269,6 +282,7 @@ impl Recipe {
             quality_tier,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -299,6 +313,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -322,6 +337,31 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate,
+            setup_cost: 0.0,
+        }
+    }
+
+    /// Creates a new production recipe with a specified setup cost.
+    pub fn with_setup_cost(
+        input_skill_1: SkillId,
+        input_skill_2: SkillId,
+        output_skill: SkillId,
+        cost_multiplier: f64,
+        setup_cost: f64,
+    ) -> Self {
+        Recipe {
+            input_skill_1,
+            input_skill_2,
+            output_skill,
+            cost_multiplier,
+            execution_time: 1,
+            batch_size: 1,
+            yield_multiplier: 1.0,
+            energy_consumption: 0.0,
+            quality_tier: 1,
+            labor_requirement: 0.0,
+            waste_rate: 0.0,
+            setup_cost,
         }
     }
 
@@ -354,6 +394,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -378,6 +419,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -402,6 +444,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -427,6 +470,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -454,6 +498,7 @@ impl Recipe {
             quality_tier: 1,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -482,6 +527,7 @@ impl Recipe {
             quality_tier,
             labor_requirement: 0.0,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -511,6 +557,7 @@ impl Recipe {
             quality_tier,
             labor_requirement,
             waste_rate: 0.0,
+            setup_cost: 0.0,
         }
     }
 
@@ -553,6 +600,11 @@ impl Recipe {
         if self.waste_rate < 0.0 || self.waste_rate > 1.0 || !self.waste_rate.is_finite() {
             return Err(SimulationError::ValidationError(
                 "Recipe waste rate must be between 0.0 and 1.0 and finite".to_string(),
+            ));
+        }
+        if self.setup_cost < 0.0 || !self.setup_cost.is_finite() {
+            return Err(SimulationError::ValidationError(
+                "Recipe setup cost must be non-negative and finite".to_string(),
             ));
         }
         Ok(())
@@ -616,7 +668,8 @@ impl Recipe {
         let batch_size = self.batch_size.max(1) as f64;
         let input_cost = self.calculate_cost(input_price_1, input_price_2) / batch_size;
         let labor_cost = self.labor_requirement.max(0.0) * labor_unit_price;
-        clamp_price(input_cost + labor_cost)
+        let setup_cost = self.setup_cost.max(0.0);
+        clamp_price(input_cost + labor_cost + setup_cost)
     }
 
     /// Calculates the market price of the output skill.
