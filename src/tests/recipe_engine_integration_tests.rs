@@ -491,3 +491,67 @@ fn waste_rate_calculation_effects() {
     let wasted_price = price_of(waste_recipe);
     assert!((wasted_price - plain * 0.5).abs() < 1e-6);
 }
+
+#[test]
+fn setup_cost_initialization_and_validation() {
+    let recipe = base_recipe();
+    assert_eq!(recipe.setup_cost, 0.0);
+    assert!(recipe.validate().is_ok());
+
+    let mut custom = Recipe::with_setup_cost(
+        INPUT_1.to_string(),
+        INPUT_2.to_string(),
+        OUTPUT.to_string(),
+        1.0,
+        50.0,
+    );
+    assert_eq!(custom.setup_cost, 50.0);
+    assert!(custom.validate().is_ok());
+
+    custom.setup_cost = -1.0;
+    assert!(custom.validate().is_err());
+
+    custom.setup_cost = f64::NAN;
+    assert!(custom.validate().is_err());
+
+    custom.setup_cost = f64::INFINITY;
+    assert!(custom.validate().is_err());
+}
+
+#[test]
+fn setup_cost_serialization_backward_compatibility() {
+    let legacy_json = r#"{
+        "input_skill_1": "InputOne",
+        "input_skill_2": "InputTwo",
+        "output_skill": "ProducedSkill",
+        "cost_multiplier": 1.0
+    }"#;
+    let recipe: Recipe =
+        serde_json::from_str(legacy_json).expect("should deserialize legacy recipe");
+    assert_eq!(recipe.setup_cost, 0.0);
+    assert!(recipe.validate().is_ok());
+
+    let mut custom = base_recipe();
+    custom.setup_cost = 25.0;
+    let serialized = serde_json::to_string(&custom).expect("serialize recipe");
+    let roundtrip: Recipe = serde_json::from_str(&serialized).expect("deserialize recipe");
+    assert_eq!(roundtrip.setup_cost, 25.0);
+    assert!(roundtrip.validate().is_ok());
+}
+
+#[test]
+fn setup_cost_calculation_effects() {
+    let plain = {
+        let mut engine = engine_with(production_config(), base_recipe());
+        let before = money(&engine);
+        engine.step();
+        before - money(&engine)
+    };
+    let mut setup_recipe = base_recipe();
+    setup_recipe.setup_cost = 10.0;
+    let mut engine = engine_with(production_config(), setup_recipe);
+    let before = money(&engine);
+    engine.step();
+    let with_setup = before - money(&engine);
+    assert!((with_setup - (plain + 10.0)).abs() < 1e-6);
+}
