@@ -40,18 +40,6 @@ The score is for information. It does not change the priority.
 - **Goal:** Add a config option for custom recipes with `#[serde(default)]`. Validate each recipe with `Recipe::validate`.
 - **Acceptance test:** A TOML config with a custom recipe changes the production result.
 
-### `Resource.degradation_factor`
-
-- **Rank:** Feature model. Total 23/40 (harmony 6, research 6, practice 5, teaching 6). Effort S. Estimate.
-- **Code:** `src/environment.rs` (`Resource::degradation_factor`).
-- **Problem:** Only `validate()` and tests call the function. Sustainability scores ignore the factor.
-- **Goal:** Apply the factor in the sustainability score or in the resource consumption.
-- **Decision needed:** Choose one of the two options.
-  - Option A: `score = 1 - consumed * factor / reserves`. Consumption values stay the same.
-  - Option B: Multiply each consumption by the factor. This changes `total_consumption` and `remaining_reserves`.
-- **Acceptance test:** An engine run with `enable_environment` gives a lower `Energy` score than a `Land` score for equal consumption.
-- **Note:** Update the existing tests in `src/environment.rs` that expect the old score values.
-
 ## Priority 2: Total score 32 or more
 
 These items have a high value and a clear design. Do them after Priority 1.
@@ -153,9 +141,8 @@ These items extend existing features or protect the quality of the project.
 
 ### Resource scarcity and peak oil
 
-- **Rank:** Feature model. Total 30/40 (harmony 6, research 8, practice 8, teaching 8). Effort M. Estimate. Needs the entry "`Resource.degradation_factor`".
+- **Rank:** Feature model. Total 30/40 (harmony 6, research 8, practice 8, teaching 8). Effort M. Estimate.
 - **Code:** `src/environment.rs`.
-- **Dependency:** The item "`Resource.degradation_factor`" in this file.
 - **Goal:** Add finite resource pools with extraction rates. Extraction cost rises when the pool runs low.
 - **Goal:** Add alternative energy sources with higher start costs.
 - **Acceptance test:** In a long run, the price of the scarce resource rises and demand moves to the alternative.

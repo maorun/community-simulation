@@ -182,8 +182,8 @@ fn energy_consumption_reduces_energy_reserves() {
     let baseline = energy_after_step(0.0);
     let with_recipe_energy = energy_after_step(25.0);
     assert!(
-        (with_recipe_energy - baseline - 25.0).abs() < 1e-6,
-        "recipe energy must add 25.0 to the baseline {baseline}, got {with_recipe_energy}"
+        (with_recipe_energy - baseline - 25.0 * 1.5).abs() < 1e-6,
+        "recipe energy must add 25.0 x 1.5 (Energy degradation factor) to the baseline {baseline}, got {with_recipe_energy}"
     );
 }
 

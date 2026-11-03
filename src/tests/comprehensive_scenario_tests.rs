@@ -609,6 +609,52 @@ mod comprehensive_scenarios {
         );
     }
 
+    /// Test: Degradation factor scales effective resource consumption
+    /// Each trade consumes the same raw share of every resource. The effective
+    /// consumption must follow the degradation factor of each resource.
+    #[test]
+    fn test_degradation_factor_scales_engine_consumption() {
+        use crate::environment::Resource;
+
+        let make = |enable: bool| SimulationConfig {
+            entity_count: 20,
+            max_steps: 50,
+            initial_money_per_person: 100.0,
+            base_skill_price: 10.0,
+            min_skill_price: 1.0,
+            seed: 42,
+            scenario: Scenario::Original,
+            enable_environment: enable,
+            resource_cost_per_transaction: 2.0,
+            ..Default::default()
+        };
+
+        let mut engine = SimulationEngine::new(make(true));
+        let result = engine.run();
+        let stats = result.environment_statistics.expect("environment statistics expected");
+        let consumed = |r: Resource| stats.total_consumption[r.name()];
+
+        let land = consumed(Resource::Land);
+        assert!(land > 0.0, "trades must consume land");
+        assert!(
+            (consumed(Resource::Energy) / land - 1.5 / 0.8).abs() < 1e-6,
+            "energy/land ratio must equal the factor ratio"
+        );
+        assert!((consumed(Resource::Water) / land - 1.2 / 0.8).abs() < 1e-6);
+        assert!((consumed(Resource::Materials) / land - 1.0 / 0.8).abs() < 1e-6);
+
+        // Remaining reserves drop by the effective consumption.
+        let energy_left = stats.remaining_reserves["Energy"];
+        let energy_start = stats.initial_reserves["Energy"];
+        assert!((energy_start - energy_left - consumed(Resource::Energy)).abs() < 1e-6);
+
+        // Disabled environment stays untouched.
+        let mut off = SimulationEngine::new(make(false));
+        let off_result = off.run();
+        assert!(off_result.environment_statistics.is_none());
+        assert!(off.get_environment().is_none());
+    }
+
     /// Test: Environment Resources Scenario
     /// Verifies that resource consumption is tracked and affects sustainability
     /// Tests interaction between: trading, resource depletion, sustainability metrics
