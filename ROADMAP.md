@@ -32,13 +32,13 @@ The score is for information. It does not change the priority.
 - **Acceptance test:** An engine run with `enable_investments` pays the first return only after `maturity_period` steps.
 - **Acceptance test:** `investment_statistics` is `Some` in the result.
 
-### Recipe fields in the interactive mode and in the config
+### Recipe fields in the interactive mode
 
 - **Rank:** Feature model. Total 24/40 (harmony 6, research 5, practice 7, teaching 6). Effort S. Estimate.
-- **Code:** `src/production.rs` (`generate_default_recipes`), `src/engine.rs`, `src/config.rs`.
-- **Problem:** The engine only uses the default recipes. A user cannot set `batch_size`, `execution_time`, or other fields from a config file.
-- **Goal:** Add a config option for custom recipes with `#[serde(default)]`. Validate each recipe with `Recipe::validate`.
-- **Acceptance test:** A TOML config with a custom recipe changes the production result.
+- **Code:** `src/main.rs` (interactive wizard), `src/production.rs`.
+- **Problem:** A user cannot set `batch_size`, `execution_time`, or other recipe fields in the interactive wizard. The config file option `custom_recipes` exists.
+- **Goal:** Add wizard questions that create custom recipes. Write the recipes to `custom_recipes` in the config.
+- **Acceptance test:** A wizard run with a custom recipe produces a config that passes `SimulationConfig::validate`.
 
 ### `Resource.degradation_factor`
 

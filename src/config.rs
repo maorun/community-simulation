@@ -1228,6 +1228,15 @@ pub struct SimulationConfig {
     #[serde(default = "default_production_probability")]
     pub production_probability: f64,
 
+    /// Custom production recipes that replace the default recipes.
+    ///
+    /// If the list is empty, the engine uses the default recipes.
+    /// Each recipe must pass `Recipe::validate`.
+    /// Only allowed when enable_production is true.
+    /// Default: empty list
+    #[serde(default)]
+    pub custom_recipes: Vec<crate::production::Recipe>,
+
     /// Enable environmental resource tracking and sustainability metrics.
     ///
     /// When enabled, the simulation tracks resource consumption (Energy, Water, Materials, Land)
@@ -2422,6 +2431,7 @@ impl Default for SimulationConfig {
             enable_events: false,           // Disabled by default
             enable_production: false,       // Disabled by default
             production_probability: 0.05,   // 5% chance per step
+            custom_recipes: Vec::new(),     // Default recipes
             enable_satisficing: false,      // Disabled by default
             satisficing_threshold: 0.5,     // Accept "good enough" options (0.0-1.0)
             enable_environment: false,      // Disabled by default
@@ -3152,6 +3162,21 @@ impl SimulationConfig {
         }
 
         // Production system validation
+        // Validate custom recipes
+        if !self.custom_recipes.is_empty() && !self.enable_production {
+            return Err(SimulationError::ValidationError(
+                "custom_recipes requires enable_production to be true".to_string(),
+            ));
+        }
+        for (index, recipe) in self.custom_recipes.iter().enumerate() {
+            recipe.validate().map_err(|e| {
+                SimulationError::ValidationError(format!(
+                    "custom_recipes[{}] is invalid: {}",
+                    index, e
+                ))
+            })?;
+        }
+
         // Validate production_probability range unconditionally to prevent configuration issues
         // when toggling production on/off
         if !(0.0..=1.0).contains(&self.production_probability) {

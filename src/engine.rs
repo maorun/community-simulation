@@ -385,7 +385,18 @@ impl SimulationEngine {
 
         // Cache production recipes if production is enabled
         let production_recipes = if config.enable_production {
-            Some(Arc::new(crate::production::generate_default_recipes()))
+            // `new()` cannot return an error. Invalid custom recipes fall back to the defaults.
+            // `SimulationConfig::validate` rejects such recipes before the engine starts.
+            let custom_valid = !config.custom_recipes.is_empty()
+                && config.custom_recipes.iter().all(|r| r.validate().is_ok());
+            if !config.custom_recipes.is_empty() && !custom_valid {
+                log::warn!("custom_recipes contains an invalid recipe; using default recipes");
+            }
+            if custom_valid {
+                Some(Arc::new(config.custom_recipes.clone()))
+            } else {
+                Some(Arc::new(crate::production::generate_default_recipes()))
+            }
         } else {
             None
         };

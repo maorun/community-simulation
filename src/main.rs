@@ -1483,6 +1483,7 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             production_probability: args
                 .production_probability
                 .unwrap_or(SimulationConfig::default().production_probability),
+            custom_recipes: SimulationConfig::default().custom_recipes,
             enable_satisficing: args.enable_satisficing,
             satisficing_threshold: args
                 .satisficing_threshold
