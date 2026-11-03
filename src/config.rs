@@ -1402,6 +1402,24 @@ pub struct SimulationConfig {
     #[serde(default = "default_certification_cost")]
     pub certification_cost: f64,
 
+    /// Number of consecutive selling steps after which an uncertified high-quality seller
+    /// leaves the market for a skill (lemons market exit).
+    ///
+    /// A seller sells under value when the pooled price (market average perceived quality)
+    /// is below the price at the true quality of the skill. Valid certification prevents
+    /// the exit. Only used when enable_information_asymmetry is true.
+    /// Default: 0 (mechanism off, pooling price off)
+    #[serde(default)]
+    pub lemons_exit_threshold_steps: usize,
+
+    /// Margin by which the true quality of a skill must exceed the market average
+    /// perceived quality before the seller counts as selling under value.
+    ///
+    /// Must be finite and non-negative. Only used when lemons_exit_threshold_steps > 0.
+    /// Default: 0.0
+    #[serde(default)]
+    pub lemons_exit_quality_margin: f64,
+
     /// Enable skill certification system.
     ///
     /// When enabled, persons can get their skills certified by a central authority,
@@ -2449,6 +2467,8 @@ impl Default for SimulationConfig {
             enable_information_asymmetry: false, // Disabled by default
             inspection_cost: 1.0,
             certification_cost: 5.0,
+            lemons_exit_threshold_steps: 0,
+            lemons_exit_quality_margin: 0.0,
             enable_certification: false,        // Disabled by default
             certification_cost_multiplier: 2.0, // 2x base price per level
             certification_duration: Some(200),  // Certifications last 200 steps
@@ -3252,6 +3272,17 @@ impl SimulationConfig {
         }
 
         // Information asymmetry validation
+        if !self.lemons_exit_quality_margin.is_finite() || self.lemons_exit_quality_margin < 0.0 {
+            return Err(SimulationError::ValidationError(format!(
+                "lemons_exit_quality_margin must be finite and non-negative, got: {}",
+                self.lemons_exit_quality_margin
+            )));
+        }
+        if self.lemons_exit_threshold_steps > 0 && !self.enable_information_asymmetry {
+            return Err(SimulationError::ValidationError(
+                "lemons_exit_threshold_steps requires enable_information_asymmetry".to_string(),
+            ));
+        }
         if self.enable_information_asymmetry {
             if self.inspection_cost < 0.0 {
                 return Err(SimulationError::ValidationError(format!(

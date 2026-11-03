@@ -523,6 +523,15 @@ struct RunArgs {
     #[arg(long)]
     certification_cost: Option<f64>,
 
+    /// Consecutive under-value selling steps before an uncertified high-quality seller leaves the market (0 = off)
+    /// Only used when --enable-information-asymmetry is set
+    #[arg(long)]
+    lemons_exit_threshold_steps: Option<usize>,
+
+    /// Margin of true quality above the market average perceived quality for the lemons market exit
+    #[arg(long)]
+    lemons_exit_quality_margin: Option<f64>,
+
     /// Enable quality rating system for skills (0.0-5.0 scale)
     /// Skills have quality that improves with successful trades and decays when not used
     /// Higher quality enables higher prices, creating quality competition in the market
@@ -1276,6 +1285,12 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             if let Some(cost) = args.certification_cost {
                 cfg.certification_cost = cost;
             }
+            if let Some(steps) = args.lemons_exit_threshold_steps {
+                cfg.lemons_exit_threshold_steps = steps;
+            }
+            if let Some(margin) = args.lemons_exit_quality_margin {
+                cfg.lemons_exit_quality_margin = margin;
+            }
             if args.enable_certification {
                 cfg.enable_certification = true;
             }
@@ -1520,6 +1535,12 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             certification_cost: args
                 .certification_cost
                 .unwrap_or(SimulationConfig::default().certification_cost),
+            lemons_exit_threshold_steps: args
+                .lemons_exit_threshold_steps
+                .unwrap_or(SimulationConfig::default().lemons_exit_threshold_steps),
+            lemons_exit_quality_margin: args
+                .lemons_exit_quality_margin
+                .unwrap_or(SimulationConfig::default().lemons_exit_quality_margin),
             enable_certification: args.enable_certification,
             certification_cost_multiplier: args
                 .certification_cost_multiplier

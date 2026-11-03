@@ -185,6 +185,8 @@ Simulates asymmetric information between buyers and sellers where skill true qua
 
   Enable via `--enable-information-asymmetry` flag or configuration file with `enable_information_asymmetry: true`. Configurable parameters: `--inspection-cost` (default: 1.0) and `--certification-cost` (default: 5.0). Perfect for studying adverse selection, signaling mechanisms, screening strategies, and market efficiency under imperfect information.
 
+  - **Market Exit of High-Quality Sellers:** With `--lemons-exit-threshold-steps N` (default: 0, mechanism off) uncertified skills sell at a pooling price. The pooling price follows the average effective perceived quality of the market (+10% per quality point above 3.0), not the true quality. Certified skills sell at the price of their true quality. An uncertified seller whose `true_quality` exceeds the market average by more than `--lemons-exit-quality-margin` (default: 0.0, finite and non-negative) sells under value. After N consecutive steps of under-value sales the seller leaves the market for this skill and no longer appears in the supply. A valid certification prevents the exit. The mechanism needs no random draw, stays deterministic for a fixed seed, and changes nothing while the threshold is 0. A positive threshold without `enable_information_asymmetry` fails validation. The pooling price multiplies the final price of all skills, also when `enable_quality` is active, so both price effects add up. A checkpoint resume does not restore exited sellers. The result reports `lemons_market_statistics` with the number of exited sellers (`exited_sellers`) and the average true quality of the active providers (`avg_true_quality_active_providers`).
+
 ## Social Systems
 
 ### Reputation System

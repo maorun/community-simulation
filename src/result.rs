@@ -769,6 +769,15 @@ pub struct LoanStats {
     pub active_loans: usize,
 }
 
+/// Statistics about the lemons market exit of high-quality sellers
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LemonsMarketStats {
+    /// Number of sellers that left the market for a skill
+    pub exited_sellers: usize,
+    /// Average true quality of the active providers (one value for each provider and skill)
+    pub avg_true_quality_active_providers: f64,
+}
+
 /// Statistics about the investment system
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InvestmentStats {
@@ -1510,6 +1519,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub loan_statistics: Option<LoanStats>,
 
+    /// Lemons market statistics (only present if information asymmetry and the lemons exit are enabled)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lemons_market_statistics: Option<LemonsMarketStats>,
+
     /// Investment system statistics (only present if investments are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub investment_statistics: Option<InvestmentStats>,
@@ -1725,6 +1738,7 @@ impl SimulationResult {
     /// #     total_taxes_collected: None,
     /// #     total_taxes_redistributed: None,
     /// #     loan_statistics: None,
+    /// #     lemons_market_statistics: None,
     /// #     investment_statistics: None,
     /// #     contract_statistics: None,
     /// #     education_statistics: None,
@@ -4469,6 +4483,7 @@ mod tests {
             total_taxes_collected: None,
             total_taxes_redistributed: None,
             loan_statistics: None,
+            lemons_market_statistics: None,
             investment_statistics: None,
             contract_statistics: None,
             education_statistics: None,

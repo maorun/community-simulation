@@ -49,9 +49,8 @@ These items have a high value and a clear design. Do them after Priority 1.
 - **Rank:** Feature model. Total 38/40 (harmony 9, research 10, practice 9, teaching 10). Effort M.
 - **Source:** `issues/01_informationsasymmetrie_und_signaling.md`.
 - **Dependency:** `Recipe.quality_tier` (now a price factor).
-- **Goal:** Sellers know the true quality. Buyers see only the market average (lemons problem).
-- **Goal:** Add signals, for example certificates and guarantees. Signals cost money.
-- **Acceptance test:** Without signals, high-quality sellers leave the market in a controlled scenario.
+- **Goal:** Add guarantees as a second signal. A guarantee costs money. The seller pays the buyer if the quality is lower than the promised quality.
+- **Acceptance test:** In the lemons market scenario, guarantees keep more high-quality sellers in the market than no signal.
 
 ### Heuristics and bounded rationality
 
