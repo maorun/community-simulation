@@ -915,7 +915,7 @@ pub struct MonteCarloResult {
 /// Statistics about environmental resource consumption and sustainability
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EnvironmentStats {
-    /// Total resource consumption by resource type
+    /// Total effective resource consumption by resource type (raw amount times degradation factor)
     pub total_consumption: HashMap<String, f64>,
     /// Initial resource reserves by resource type
     pub initial_reserves: HashMap<String, f64>,

@@ -37,6 +37,8 @@ impl Resource {
     ///
     /// The degradation factor determines how severely resource consumption
     /// or depletion impacts environmental sustainability and scarcity.
+    /// `Environment::consume_resources` multiplies each raw amount by this
+    /// factor, so tracked consumption is the effective consumption.
     pub fn degradation_factor(&self) -> f64 {
         match self {
             Resource::Energy => 1.5,
@@ -115,11 +117,23 @@ impl Environment {
 
     /// Records resource consumption from an economic transaction.
     ///
+    /// Each raw amount is multiplied by the degradation factor of its resource.
+    /// The tracked `total_consumption` is therefore the effective consumption
+    /// including degradation. Negative and non-finite amounts are ignored.
+    ///
     /// # Arguments
-    /// * `resource_costs` - Map of resource types to amounts consumed
+    /// * `resource_costs` - Map of resource types to raw amounts consumed
     pub fn consume_resources(&mut self, resource_costs: &HashMap<Resource, f64>) {
         for (resource, &amount) in resource_costs {
-            *self.total_consumption.entry(*resource).or_insert(0.0) += amount;
+            let effective = amount * resource.degradation_factor();
+            if !effective.is_finite() || effective < 0.0 {
+                continue;
+            }
+            let total = self.total_consumption.entry(*resource).or_insert(0.0);
+            let updated = *total + effective;
+            if updated.is_finite() {
+                *total = updated;
+            }
         }
     }
 
@@ -238,15 +252,50 @@ mod tests {
 
         env.consume_resources(&costs);
 
-        assert_eq!(*env.total_consumption.get(&Resource::Energy).unwrap(), 100.0);
-        assert_eq!(*env.total_consumption.get(&Resource::Water).unwrap(), 50.0);
+        // Effective consumption = raw amount x degradation factor (Water: 50 x 1.2)
+        assert_eq!(*env.total_consumption.get(&Resource::Energy).unwrap(), 150.0); // 100 x 1.5
+        assert_eq!(*env.total_consumption.get(&Resource::Water).unwrap(), 60.0);
+    }
+
+    #[test]
+    fn test_consume_resources_ignores_invalid_amounts() {
+        let mut env = Environment::with_default_reserves();
+        let mut costs = HashMap::new();
+        costs.insert(Resource::Energy, f64::NAN);
+        costs.insert(Resource::Water, f64::INFINITY);
+        costs.insert(Resource::Materials, -10.0);
+        costs.insert(Resource::Land, 10.0);
+        env.consume_resources(&costs);
+
+        for resource in [Resource::Energy, Resource::Water, Resource::Materials] {
+            let total = env.total_consumption.get(&resource).copied().unwrap_or(0.0);
+            assert_eq!(total, 0.0, "invalid amount for {} must be ignored", resource.name());
+        }
+        assert!((env.total_consumption[&Resource::Land] - 8.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_degradation_factor_lowers_energy_score_below_land_score() {
+        let mut reserves = HashMap::new();
+        reserves.insert(Resource::Energy, 1000.0);
+        reserves.insert(Resource::Land, 1000.0);
+        let mut env = Environment::new(reserves);
+        let mut costs = HashMap::new();
+        costs.insert(Resource::Energy, 100.0);
+        costs.insert(Resource::Land, 100.0);
+        env.consume_resources(&costs);
+
+        let scores = env.sustainability_scores();
+        assert!(scores[&Resource::Energy] < scores[&Resource::Land]);
+        assert!((scores[&Resource::Energy] - (1.0 - 150.0 / 1000.0)).abs() < 1e-9);
+        assert!((scores[&Resource::Land] - (1.0 - 80.0 / 1000.0)).abs() < 1e-9);
     }
 
     #[test]
     fn test_sustainability_score() {
         let mut env = Environment::with_default_reserves();
         let mut costs = HashMap::new();
-        costs.insert(Resource::Energy, 50_000.0); // Consume half of energy
+        costs.insert(Resource::Energy, 50_000.0 / 1.5); // Effective consumption: half of energy
 
         env.consume_resources(&costs);
 
@@ -263,7 +312,8 @@ mod tests {
         let mut costs = HashMap::new();
         for resource in Resource::all() {
             let reserves = env.resource_reserves.get(&resource).copied().unwrap_or(0.0);
-            costs.insert(resource, reserves / 2.0); // Consume half of each
+            // Consume half of each (effective), so divide by the factor
+            costs.insert(resource, reserves / 2.0 / resource.degradation_factor());
         }
 
         env.consume_resources(&costs);
@@ -290,8 +340,9 @@ mod tests {
 
         env.consume_resources(&costs);
 
+        // 10,000 raw x 1.5 = 15,000 effective
         let remaining = env.remaining_reserves(Resource::Energy);
-        assert_eq!(remaining, 90_000.0);
+        assert_eq!(remaining, 85_000.0);
     }
 
     #[test]
@@ -316,7 +367,7 @@ mod tests {
 
         let scores = env.sustainability_scores();
         let energy_score = scores.get(&Resource::Energy).unwrap();
-        assert_eq!(*energy_score, -100.0, "No reserves but consumption should give negative score");
+        assert_eq!(*energy_score, -150.0, "No reserves but consumption should give negative score");
     }
 
     #[test]
