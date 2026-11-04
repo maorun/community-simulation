@@ -285,6 +285,12 @@ pub struct SimulationEngine {
     // Maps skill_id -> Vec of entity IDs that can provide that skill
     // This cache is rebuilt when skills change (learning, etc.)
     skill_providers: HashMap<SkillId, Vec<usize>>,
+    // Lemons market: average effective perceived quality of the market (pooling quality)
+    lemons_avg_quality: f64,
+    // Lemons market: consecutive under-value selling steps for each (seller index, skill)
+    lemons_under_value_streaks: HashMap<(usize, SkillId), usize>,
+    // Lemons market: number of sellers that left the market for a skill
+    lemons_exited_sellers: usize,
     // Invariant checker for simulation validation (if enabled)
     invariant_checker: Option<crate::invariant::InvariantChecker>,
     // Asset system tracking (if enabled)
@@ -581,6 +587,9 @@ impl SimulationEngine {
             action_log: None, // Will be set via enable_action_recording if needed
             externality_stats: crate::externality::ExternalityStats::new(),
             skill_providers,
+            lemons_avg_quality: 3.0,
+            lemons_under_value_streaks: HashMap::new(),
+            lemons_exited_sellers: 0,
             invariant_checker: None, // Will be initialized after construction if enabled
             assets: HashMap::new(),
             asset_counter: 0,
@@ -1941,6 +1950,7 @@ impl SimulationEngine {
                 None
             },
             loan_statistics,
+            lemons_market_statistics: self.lemons_market_statistics(),
             investment_statistics: None, // Investment system not yet fully implemented
             contract_statistics: if self.config.enable_contracts {
                 let active_contracts = self.contracts.values().filter(|c| c.is_active()).count();
@@ -2814,6 +2824,80 @@ impl SimulationEngine {
         true
     }
 
+    /// Returns true if the lemons market exit mechanism is active.
+    fn lemons_exit_active(&self) -> bool {
+        self.config.enable_information_asymmetry && self.config.lemons_exit_threshold_steps > 0
+    }
+
+    /// Updates the under-value selling streaks and removes sellers that reached the threshold.
+    ///
+    /// A seller that did not sell under value in this step loses the streak.
+    /// A seller with a valid certification does not leave the market.
+    fn update_lemons_exits(
+        &mut self,
+        under_value_sales: &std::collections::BTreeSet<(usize, SkillId)>,
+    ) {
+        let threshold = self.config.lemons_exit_threshold_steps;
+        self.lemons_under_value_streaks.retain(|key, _| under_value_sales.contains(key));
+        for key in under_value_sales {
+            let streak = self.lemons_under_value_streaks.entry(key.clone()).or_insert(0);
+            *streak = streak.saturating_add(1);
+            if *streak < threshold {
+                continue;
+            }
+            let certified = self
+                .market
+                .skills
+                .get(&key.1)
+                .and_then(|s| s.certification.as_ref())
+                .is_some_and(|c| !c.is_expired(self.current_step));
+            if certified {
+                continue;
+            }
+            // Entity ids equal entity indices in this engine (see skill_providers setup).
+            debug_assert_eq!(self.entities[key.0].id, key.0);
+            let entity_id = self.entities[key.0].id;
+            if let Some(providers) = self.skill_providers.get_mut(&key.1) {
+                let before = providers.len();
+                providers.retain(|&id| id != entity_id);
+                if providers.len() < before {
+                    self.lemons_exited_sellers += 1;
+                    debug!(
+                        "Person {} left the market for skill '{}' after {} under-value steps",
+                        entity_id, key.1, threshold
+                    );
+                }
+            }
+            self.lemons_under_value_streaks.remove(key);
+        }
+    }
+
+    /// Builds the lemons market statistics (average true quality of active providers).
+    fn lemons_market_statistics(&self) -> Option<crate::result::LemonsMarketStats> {
+        if !self.lemons_exit_active() {
+            return None;
+        }
+        let mut quality_sum = 0.0;
+        let mut provider_count = 0usize;
+        for skill_id in &self.all_skill_ids {
+            let Some(skill) = self.market.skills.get(skill_id) else {
+                continue;
+            };
+            let providers = self.skill_providers.get(skill_id).map_or(0, Vec::len);
+            quality_sum += skill.true_quality * providers as f64;
+            provider_count += providers;
+        }
+        let avg = if provider_count > 0 {
+            quality_sum / provider_count as f64
+        } else {
+            0.0
+        };
+        Some(crate::result::LemonsMarketStats {
+            exited_sellers: self.lemons_exited_sellers,
+            avg_true_quality_active_providers: if avg.is_finite() { avg } else { 0.0 },
+        })
+    }
+
     #[expect(
         clippy::collapsible_if,
         reason = "preserve existing nested control flow"
@@ -3053,6 +3137,26 @@ impl SimulationEngine {
         // The cache is updated when skills are learned (see production skill learning)
         // Note: Entities never become inactive during simulation, so no cache invalidation needed
         let skill_providers = &self.skill_providers;
+
+        // Lemons market: pooling quality is the average effective perceived quality of all skills.
+        // The sum follows the order of all_skill_ids to stay deterministic.
+        let lemons_active = self.lemons_exit_active();
+        if lemons_active {
+            let mut quality_sum = 0.0;
+            let mut skill_count = 0usize;
+            for skill_id in &self.all_skill_ids {
+                if let Some(skill) = self.market.skills.get(skill_id) {
+                    quality_sum += skill.effective_perceived_quality(self.current_step);
+                    skill_count += 1;
+                }
+            }
+            if skill_count > 0 {
+                self.lemons_avg_quality = (quality_sum / skill_count as f64).clamp(0.0, 5.0);
+            }
+        }
+        // Sellers that sold under value in this step (ordered for deterministic processing)
+        let mut lemons_under_value_sales: std::collections::BTreeSet<(usize, SkillId)> =
+            std::collections::BTreeSet::new();
 
         // Performance optimization: Pre-allocate trades_to_execute with capacity based on entity count.
         // Typical simulations have ~0.5-1.0 successful trades per entity per step.
@@ -3574,6 +3678,28 @@ impl SimulationEngine {
                     }
                 }
 
+                // Lemons market: certified skills sell at the price of their true quality.
+                // Uncertified skills sell at the pooling price of the average market quality.
+                let mut lemons_sells_under_value = false;
+                if lemons_active && seller_id.is_some() {
+                    if let Some(skill) = self.market.skills.get(&needed_skill_id) {
+                        let certified = skill
+                            .certification
+                            .as_ref()
+                            .is_some_and(|c| !c.is_expired(self.current_step));
+                        let true_quality = skill.true_quality.clamp(0.0, 5.0);
+                        let pricing_quality = if certified {
+                            true_quality
+                        } else {
+                            self.lemons_avg_quality
+                        };
+                        final_price *= 1.0 + (pricing_quality - 3.0) * 0.1;
+                        lemons_sells_under_value = !certified
+                            && true_quality
+                                > self.lemons_avg_quality + self.config.lemons_exit_quality_margin;
+                    }
+                }
+
                 // Apply distance-based cost multiplier if enabled
                 if self.config.distance_cost_factor > 0.0 {
                     if let Some(seller_entity_idx) = seller_id {
@@ -3635,6 +3761,10 @@ impl SimulationEngine {
                                 option.priority_score
                             );
 
+                        if lemons_sells_under_value {
+                            lemons_under_value_sales
+                                .insert((seller_entity_idx, needed_skill_id.clone()));
+                        }
                         trades_to_execute.push((
                             buyer_idx,
                             seller_entity_idx,
@@ -3731,6 +3861,10 @@ impl SimulationEngine {
                     black_market_volume += black_market_price;
                 }
             }
+        }
+
+        if lemons_active {
+            self.update_lemons_exits(&lemons_under_value_sales);
         }
 
         // Execute all trades (prices already adjusted for black market trades)
@@ -6768,7 +6902,8 @@ impl SimulationEngine {
             } else {
                 None
             },
-            loan_statistics: None,       // Simplified
+            loan_statistics: None, // Simplified
+            lemons_market_statistics: self.lemons_market_statistics(),
             investment_statistics: None, // Simplified for interactive mode
             contract_statistics: None,
             education_statistics: None,
@@ -7109,7 +7244,12 @@ impl SimulationEngine {
             action_log: checkpoint.action_log,
             externality_stats: checkpoint.externality_stats,
             skill_providers,
+            lemons_avg_quality: 3.0,
+            lemons_under_value_streaks: HashMap::new(),
+            lemons_exited_sellers: 0,
             invariant_checker: None, // Invariants will be re-initialized after loading
+            // NOTE: The lemons market exit state (exited sellers, streaks) is not persisted
+            // in checkpoints. When resuming, exited sellers return to the supply.
             // NOTE: Assets are not persisted in checkpoints yet. When resuming,
             // asset data is lost and persons' owned_assets vectors will be incorrect.
             // This is a known limitation. To use assets, avoid checkpoint resume

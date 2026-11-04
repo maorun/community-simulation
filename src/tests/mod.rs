@@ -343,6 +343,7 @@ mod final_80_percent_push;
 mod final_push_tests;
 mod information_asymmetry_tests;
 mod laser_focus_80;
+mod lemons_market_tests;
 mod nepotism_tests;
 mod profit_tax_tests;
 mod proptest_tests;

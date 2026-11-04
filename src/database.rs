@@ -382,6 +382,7 @@ mod tests {
             total_taxes_collected: None,
             total_taxes_redistributed: None,
             loan_statistics: None,
+            lemons_market_statistics: None,
             investment_statistics: None,
             contract_statistics: None,
             education_statistics: None,
