@@ -17,7 +17,7 @@ use crate::{
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info, trace, warn};
 use rand::prelude::IndexedRandom;
-use rand::rngs::StdRng;
+use rand::rngs::ChaCha12Rng;
 use rand::seq::SliceRandom;
 use rand::{RngExt, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -68,13 +68,30 @@ pub struct TechnologyBreakthrough {
     pub step_occurred: usize,
 }
 
+/// Random number generator of the engine.
+///
+/// `ChaCha12Rng` is the algorithm behind `rand::rngs::StdRng` in rand 0.10, so a fixed seed
+/// gives the same random stream as before. Unlike `StdRng`, its algorithm is stable and its
+/// state can be saved in a checkpoint.
+pub type SimRng = ChaCha12Rng;
+
 /// Checkpoint structure for saving and restoring simulation state.
 ///
 /// This structure captures all the stateful information needed to resume
-/// a simulation from a specific point. The random number generator state
-/// is not included; instead, the RNG is reseeded based on the current step.
+/// a simulation from a specific point. The checkpoint stores the random number
+/// generator state, so a resumed run matches an uninterrupted run. Old checkpoints
+/// without this state reseed the RNG based on the current step.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimulationCheckpoint {
+    /// Serialized state of the engine RNG (seed, stream and word position).
+    /// Old checkpoints lack this field and reseed the RNG on load.
+    #[serde(default)]
+    pub rng_state: Option<Vec<u8>>,
+    /// Providers per skill in engine order, sorted by skill ID. The order feeds seller
+    /// choices, so a resumed run needs it unchanged. Old checkpoints lack this field and
+    /// rebuild the providers from the entities.
+    #[serde(default)]
+    pub skill_providers: Vec<(SkillId, Vec<usize>)>,
     /// Configuration used for this simulation
     pub config: SimulationConfig,
     /// All entities in the simulation
@@ -223,7 +240,7 @@ pub struct SimulationEngine {
     /// Secondary market for black market trades (if enabled)
     black_market: Option<Market>,
     pub current_step: usize,
-    rng: StdRng,
+    rng: SimRng,
     all_skill_ids: Vec<SkillId>,
     /// Demand generator for determining number of needed skills per person
     demand_generator: DemandGenerator,
@@ -359,7 +376,7 @@ impl SimulationEngine {
         reason = "preserve existing nested control flow"
     )]
     pub fn new(config: SimulationConfig) -> Self {
-        let mut rng = StdRng::seed_from_u64(config.seed);
+        let mut rng = SimRng::seed_from_u64(config.seed);
         let price_updater = PriceUpdater::from(config.scenario.clone());
         let demand_generator = DemandGenerator::from(config.demand_strategy.clone());
         let mut market = Market::new(
@@ -870,7 +887,7 @@ impl SimulationEngine {
     // This is the version from feat/economic-simulation-model
     fn initialize_entities(
         config: &SimulationConfig,
-        rng: &mut StdRng,
+        rng: &mut SimRng,
         market: &mut Market,
     ) -> Vec<Entity> {
         // Create all unique skills for the market (one per person)
@@ -7281,8 +7298,8 @@ impl SimulationEngine {
     /// Saves the current simulation state to a checkpoint file.
     ///
     /// The checkpoint includes all stateful information needed to resume the simulation
-    /// at the current step. The RNG state is not saved; when resuming, the RNG will be
-    /// reseeded based on the current step for reproducibility.
+    /// at the current step, including the RNG state. A run that resumes from the checkpoint
+    /// gives the same result as an uninterrupted run with the same seed.
     ///
     /// # Arguments
     ///
@@ -7312,6 +7329,13 @@ impl SimulationEngine {
         info!("Saving checkpoint at step {} to {:?}", self.current_step, path.as_ref());
 
         let checkpoint = SimulationCheckpoint {
+            rng_state: Some(self.rng.serialize_state().to_vec()),
+            skill_providers: {
+                let mut providers: Vec<(SkillId, Vec<usize>)> =
+                    self.skill_providers.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+                providers.sort_by(|a, b| a.0.cmp(&b.0));
+                providers
+            },
             config: self.config.clone(),
             entities: self.entities.clone(),
             market: self.market.clone(),
@@ -7387,8 +7411,8 @@ impl SimulationEngine {
     /// Loads a simulation state from a checkpoint file.
     ///
     /// This function creates a new SimulationEngine with the state restored from
-    /// the checkpoint. The RNG is reseeded based on the checkpoint's current step
-    /// to ensure reproducible behavior.
+    /// the checkpoint. The RNG state comes from the checkpoint. An old checkpoint without
+    /// RNG state reseeds the RNG based on the checkpoint's current step.
     ///
     /// **Note:** Plugins are not persisted in checkpoints. After loading a checkpoint,
     /// you must re-register any plugins that were previously registered before
@@ -7440,11 +7464,28 @@ impl SimulationEngine {
             checkpoint.environment_consumption_effective = true;
         }
 
-        // Reseed RNG based on the checkpoint's current step to ensure reproducibility
-        // We combine the original seed with the current step to get a deterministic but
-        // step-dependent seed
-        let seed = checkpoint.config.seed.wrapping_add(checkpoint.current_step as u64);
-        let rng = StdRng::seed_from_u64(seed);
+        let rng = match checkpoint.rng_state.as_deref() {
+            Some(bytes) => {
+                let state = <[u8; 49]>::try_from(bytes).map_err(|_| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!("invalid rng_state: expected 49 bytes, found {}", bytes.len()),
+                    )
+                })?;
+                if state[48] & 0xF0 != 0 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "invalid rng_state: word position exceeds 68 bits",
+                    ));
+                }
+                SimRng::deserialize_state(&state)
+            },
+            None => {
+                // Old checkpoint without RNG state: derive a deterministic, step-dependent seed.
+                let seed = checkpoint.config.seed.wrapping_add(checkpoint.current_step as u64);
+                SimRng::seed_from_u64(seed)
+            },
+        };
 
         info!(
             "Checkpoint loaded: resuming from step {} with {} entities",
@@ -7524,6 +7565,29 @@ impl SimulationEngine {
                     skill_providers.entry(skill.id.clone()).or_default().push(entity.id);
                 }
             }
+        }
+
+        // A checkpoint with saved providers keeps the exact engine order.
+        // An empty list only occurs in old checkpoints, because every simulation has skills.
+        if !checkpoint.skill_providers.is_empty() {
+            let entity_count = checkpoint.entities.len();
+            let mut saved: HashMap<SkillId, Vec<usize>> =
+                HashMap::with_capacity(checkpoint.skill_providers.len());
+            for (skill_id, providers) in &checkpoint.skill_providers {
+                if providers.iter().any(|&id| id >= entity_count) {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!("invalid skill_providers: unknown entity for skill {skill_id}"),
+                    ));
+                }
+                if saved.insert(skill_id.clone(), providers.clone()).is_some() {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!("invalid skill_providers: duplicate skill {skill_id}"),
+                    ));
+                }
+            }
+            skill_providers = saved;
         }
 
         // Sellers that left the market must not return to the supply.

@@ -144,7 +144,16 @@ fn test_checkpoint_restores_investment_state() {
     }
     // The restored id counter must not collide with existing ids.
     for _ in 0..10 {
+        a.step();
         b.step();
+    }
+    // The checkpoint keeps the RNG state, so the resumed run matches the original run.
+    assert_eq!(a.get_investments().len(), b.get_investments().len());
+    for (id, inv) in a.get_investments() {
+        let other = &b.get_investments()[id];
+        assert_eq!(inv.returns_paid, other.returns_paid);
+        assert_eq!(inv.target_id, other.target_id);
+        assert_eq!(inv.skill_granted, other.skill_granted);
     }
     let max_id = b.get_investments().keys().max().copied().expect("ids");
     assert_eq!(max_id + 1, b.get_investments().len(), "ids must stay unique and dense");
@@ -355,12 +364,14 @@ fn test_checkpoint_keeps_skill_state_and_does_not_relearn() {
         .map(|i| i.id)
         .collect();
     for _ in 0..10 {
+        a.step();
         b.step();
     }
+    assert_eq!(learned(&a), learned(&b), "the resumed run learns the same skills");
     for id in resolved_ids {
         assert!(b.get_investments()[&id].skill_resolved, "resolved flag must stay set");
     }
-    // Only investments that mature after the load may add skills; none repeats.
+    // Only investments that mature after the load add skills; none repeats.
     let new_resolved = b
         .get_investments()
         .values()
