@@ -54,6 +54,12 @@ pub struct Investment {
     pub total_returns_paid: f64,
     /// Whether the investment has completed its duration
     pub is_completed: bool,
+    /// Whether the target learned the financed skill through this investment
+    #[serde(default)]
+    pub skill_granted: bool,
+    /// Whether the maturity check for the financed skill is done (learned or not needed)
+    #[serde(default)]
+    pub skill_resolved: bool,
 }
 
 impl Investment {
@@ -106,6 +112,8 @@ impl Investment {
             returns_paid: 0,
             total_returns_paid: 0.0,
             is_completed: false,
+            skill_granted: false,
+            skill_resolved: false,
         }
     }
 
