@@ -753,7 +753,8 @@ fn test_adaptive_strategies() {
 fn test_strategy_evolution() {
     let config = test_config().max_steps(30).entity_count(20).build();
 
-    let config_evolution = SimulationConfig { enable_strategy_evolution: true, ..config };
+    let config_evolution =
+        SimulationConfig { enable_strategy_evolution: true, enable_friendships: true, ..config };
 
     let mut engine = SimulationEngine::new(config_evolution);
     engine.run();

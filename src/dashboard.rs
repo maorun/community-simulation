@@ -314,9 +314,9 @@ mod tests {
 
     #[test]
     fn generate_dashboard_html_handles_empty_data() {
-        let config = SimulationConfig { max_steps: 0, entity_count: 0, ..Default::default() };
-        let mut engine = SimulationEngine::new(config);
-        let result = engine.run();
+        // `SimulationEngine` rejects an empty config (zero steps), so clear the history.
+        let mut result = sample_result();
+        result.skill_price_history.clear();
         let html = generate_dashboard_html(&result);
         assert!(html.contains("<!DOCTYPE html>"));
         assert!(html.contains("\"skill_price_history\":{}"));

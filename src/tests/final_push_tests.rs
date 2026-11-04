@@ -732,6 +732,7 @@ fn test_engine_with_trust_networks() {
     let config = SimulationConfig {
         entity_count: 16,
         max_steps: 30,
+        enable_friendships: true,
         enable_trust_networks: true,
         ..Default::default()
     };

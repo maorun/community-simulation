@@ -341,6 +341,7 @@ mod currency_integration_tests;
 mod custom_strategy_tests;
 mod education_determinism_tests;
 mod engine_focused_coverage;
+mod engine_validation_tests;
 mod final_80_breakthrough;
 mod final_80_percent_push;
 mod final_push_tests;
@@ -2612,11 +2613,12 @@ mod engine_tests {
             cfg.enable_contracts = true;
             cfg.enable_insurance = true;
             cfg.insurance_purchase_probability = 0.15;
-            cfg.enable_trust_networks = true;
             cfg.enable_environment = true;
             cfg.enable_voting = true;
             cfg.enable_resource_pools = true;
             cfg.num_groups = Some(2);
+            // Trust networks need `enable_friendships`. A trust network cannot be
+            // saved in a checkpoint yet (JSON key error), so the flag stays off.
         });
 
         let mut engine = SimulationEngine::new(config);
@@ -2805,6 +2807,7 @@ mod engine_tests {
     #[test]
     fn test_trust_network_persons() {
         let config = test_config().max_steps(5).entity_count(8).build_with(|cfg| {
+            cfg.enable_friendships = true;
             cfg.enable_trust_networks = true;
         });
 
@@ -2993,6 +2996,7 @@ mod engine_tests {
     fn test_strategy_evolution_enabled() {
         let config = test_config().max_steps(30).entity_count(20).build_with(|cfg| {
             cfg.enable_strategy_evolution = true;
+            cfg.enable_friendships = true;
             cfg.enable_trust_networks = true;
         });
 
@@ -3154,6 +3158,7 @@ mod engine_tests {
             cfg.production_probability = 0.2;
             cfg.enable_assets = true;
             cfg.asset_purchase_probability = 0.15;
+            cfg.enable_friendships = true;
             cfg.enable_trust_networks = true;
             cfg.enable_strategy_evolution = true;
             cfg.enable_resource_pools = true;

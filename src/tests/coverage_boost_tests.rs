@@ -528,6 +528,7 @@ fn test_engine_with_contracts_enabled() {
         max_steps: 10,
         entity_count: 20,
         enable_contracts: true,
+        min_contract_duration: 5,
         max_contract_duration: 5,
         ..Default::default()
     };

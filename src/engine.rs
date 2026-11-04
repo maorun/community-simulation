@@ -371,11 +371,44 @@ pub struct SimulationEngine {
 }
 
 impl SimulationEngine {
+    /// Creates a new simulation engine after it validates the configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SimulationError::ValidationError` if `config.validate()` fails.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use community_simulation::{SimulationConfig, SimulationEngine};
+    ///
+    /// let engine = SimulationEngine::try_new(SimulationConfig::default());
+    /// assert!(engine.is_ok());
+    ///
+    /// let mut bad = SimulationConfig::default();
+    /// bad.max_steps = 0;
+    /// assert!(SimulationEngine::try_new(bad).is_err());
+    /// ```
+    pub fn try_new(config: SimulationConfig) -> Result<Self, crate::error::SimulationError> {
+        config.validate()?;
+        Ok(Self::build(config))
+    }
+
+    /// Creates a new simulation engine.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the configuration is invalid. Use [`SimulationEngine::try_new`]
+    /// to get the validation error as a `Result`.
+    pub fn new(config: SimulationConfig) -> Self {
+        Self::try_new(config).unwrap_or_else(|e| panic!("invalid SimulationConfig: {e}"))
+    }
+
     #[expect(
         clippy::collapsible_if,
         reason = "preserve existing nested control flow"
     )]
-    pub fn new(config: SimulationConfig) -> Self {
+    fn build(config: SimulationConfig) -> Self {
         let mut rng = SimRng::seed_from_u64(config.seed);
         let price_updater = PriceUpdater::from(config.scenario.clone());
         let demand_generator = DemandGenerator::from(config.demand_strategy.clone());
@@ -7449,6 +7482,12 @@ impl SimulationEngine {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let mut checkpoint: SimulationCheckpoint = serde_json::from_reader(reader)?;
+        checkpoint.config.validate().map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("invalid config in checkpoint: {e}"),
+            )
+        })?;
 
         // Old checkpoints store raw consumption. The environment now tracks effective
         // consumption (raw amount times degradation factor). Convert old values once.

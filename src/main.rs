@@ -872,7 +872,8 @@ fn run_wizard(no_color: bool) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Continue with simulation using the wizard-generated config
-    let mut engine = SimulationEngine::new(config.clone());
+    let mut engine = SimulationEngine::try_new(config.clone())
+        .map_err(|e| format!("Invalid wizard configuration: {}", e))?;
 
     // Run the simulation
     let start = Instant::now();
@@ -1711,7 +1712,7 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             SimulationEngine::load_checkpoint(&checkpoint_path)
                 .map_err(|e| format!("Failed to load checkpoint from {}: {}", checkpoint_path, e))?
         } else {
-            SimulationEngine::new(config)
+            SimulationEngine::try_new(config)?
         };
 
         // Enable action recording if requested
@@ -1805,7 +1806,7 @@ fn run_interactive_mode(config: SimulationConfig) -> Result<(), Box<dyn std::err
         SimulationEngine::load_checkpoint(&checkpoint_path)
             .map_err(|e| format!("Failed to load checkpoint from {}: {}", checkpoint_path, e))?
     } else {
-        SimulationEngine::new(config.clone())
+        SimulationEngine::try_new(config.clone())?
     };
 
     // Create readline editor for interactive input
@@ -2394,20 +2395,20 @@ fn run_monte_carlo(
     // Run simulations in parallel using Rayon
     let results: Vec<_> = (0..num_runs)
         .into_par_iter()
-        .map(|run_idx| {
+        .map(|run_idx| -> Result<_, community_simulation::SimulationError> {
             let mut config = base_config.clone();
             config.seed = base_seed + run_idx as u64;
 
             info!("Starting run {}/{} (seed: {})", run_idx + 1, num_runs, config.seed);
 
-            let mut engine = SimulationEngine::new(config);
+            let mut engine = SimulationEngine::try_new(config)?;
             // Disable progress bar for individual runs in Monte Carlo mode
             let result = engine.run_with_progress(false);
 
             info!("Completed run {}/{}", run_idx + 1, num_runs);
-            result
+            Ok(result)
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
 
     let total_duration = start_time.elapsed();
 
@@ -2512,7 +2513,7 @@ fn run_parameter_sweep(
 
     // Run the parameter sweep
     let result =
-        ParameterSweepResult::run_sweep(base_config, parameter_range, runs_per_point, false);
+        ParameterSweepResult::run_sweep(base_config, parameter_range, runs_per_point, false)?;
 
     let duration = start_time.elapsed();
 

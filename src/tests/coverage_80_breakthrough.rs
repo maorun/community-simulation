@@ -175,13 +175,13 @@ fn test_high_volatility_scenario() {
     assert_eq!(result.total_steps, 5);
 }
 
-/// Test scenario with very high price elasticity
+/// Test scenario with the maximum valid price elasticity (the validator caps it at 1.0)
 #[test]
 fn test_high_price_elasticity() {
     let config = SimulationConfig {
         entity_count: 10,
         max_steps: 5,
-        price_elasticity_factor: 2.0,
+        price_elasticity_factor: 1.0,
         ..Default::default()
     };
 
@@ -299,8 +299,10 @@ fn test_engine_with_features() {
     // Enable various features
     config.enable_loans = true;
     config.enable_contracts = true;
+    config.enable_education = true;
     config.enable_mentorship = true;
     config.enable_resource_pools = true;
+    config.num_groups = Some(2);
     config.enable_trade_agreements = true;
     config.enable_insurance = true;
     config.enable_environment = true;
@@ -337,13 +339,13 @@ fn test_engine_partial_features() {
     assert_eq!(result.total_steps, 3);
 }
 
-/// Test config with extreme volatility
+/// Test config with the maximum valid volatility (the validator caps it at 0.5)
 #[test]
 fn test_extreme_volatility() {
     let config = SimulationConfig {
         entity_count: 5,
         max_steps: 3,
-        volatility_percentage: 1.0, // 100% volatility
+        volatility_percentage: 0.5, // maximum valid volatility
         ..Default::default()
     };
 
