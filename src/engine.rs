@@ -5602,6 +5602,7 @@ impl SimulationEngine {
             total_invested,
             total_returns_paid,
             avg_roi_percentage,
+            skills_granted: ids.iter().filter(|id| self.investments[**id].skill_granted).count(),
         })
     }
 
@@ -5631,6 +5632,32 @@ impl SimulationEngine {
             if self.current_step < inv.created_at_step.saturating_add(maturity) {
                 continue;
             }
+            // At maturity the target learns the financed skill once. The principal paid
+            // for it, so the learning costs the target no extra money.
+            if !inv.skill_resolved {
+                let grant = match (&inv.investment_type, inv.target_id) {
+                    (crate::investment::InvestmentType::Education { skill_id, .. }, Some(t))
+                        if t < self.entities.len() && self.entities[t].active =>
+                    {
+                        Some((t, skill_id.clone()))
+                    },
+                    _ => None,
+                };
+                if let Some((t, skill_id)) = grant {
+                    // `finish_production` learns nothing if the target already has the skill.
+                    let learned = match self.market.skills.get(&skill_id).map(|s| s.current_price) {
+                        Some(price) => self.finish_production(t, &skill_id, price),
+                        None => false,
+                    };
+                    if let Some(inv) = self.investments.get_mut(&id) {
+                        inv.skill_resolved = true;
+                        inv.skill_granted = learned;
+                    }
+                }
+            }
+            let Some(inv) = self.investments.get_mut(&id) else {
+                continue;
+            };
             let (investor, target, payment) = (inv.investor_id, inv.target_id, inv.return_per_step);
             let Some(target) = target else { continue };
             if investor >= self.entities.len()
@@ -5671,8 +5698,16 @@ impl SimulationEngine {
                 continue;
             }
             let target = others[self.rng.random_range(0..others.len())];
-            let Some(skill_id) =
-                self.entities[target].person_data.own_skills.first().map(|s| s.id.clone())
+            // The financed skill is one the target does not have yet. Sorted ids keep
+            // the random choice independent of HashMap order.
+            let mut candidates: Vec<&SkillId> = self
+                .market
+                .skills
+                .keys()
+                .filter(|id| !self.entities[target].person_data.has_skill(id))
+                .collect();
+            candidates.sort();
+            let Some(skill_id) = candidates.as_slice().choose(&mut self.rng).map(|s| (*s).clone())
             else {
                 continue;
             };

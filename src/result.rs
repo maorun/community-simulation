@@ -793,6 +793,9 @@ pub struct InvestmentStats {
     pub total_returns_paid: f64,
     /// Average ROI percentage across all completed investments
     pub avg_roi_percentage: f64,
+    /// Number of skills that targets learned through education investments
+    #[serde(default)]
+    pub skills_granted: usize,
 }
 
 /// Statistics about the contract system
