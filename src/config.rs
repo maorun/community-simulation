@@ -1108,8 +1108,8 @@ pub struct SimulationConfig {
     ///
     /// When enabled, a share of the persons uses a rule of thumb to choose a seller:
     /// cheapest seller, trust friends, or follow the majority.
-    /// The other persons keep the standard behavior. Heuristics do not apply when
-    /// `enable_nepotism` is on, because nepotism has its own seller choice.
+    /// The other persons keep the standard behavior. `validate()` rejects
+    /// this option together with `enable_nepotism`, because nepotism has its own seller choice.
     /// Default: false
     #[serde(default)]
     pub enable_heuristic_agents: bool,
@@ -3157,6 +3157,13 @@ impl SimulationConfig {
                  Solution: Set heuristic_agent_share within [0.0, 1.0].",
                 self.heuristic_agent_share
             )));
+        }
+        if self.enable_heuristic_agents && self.enable_nepotism {
+            return Err(SimulationError::ValidationError(
+                "Feature Conflict Error: enable_heuristic_agents cannot be combined with enable_nepotism. \
+                 Nepotism selects the seller, so the heuristic rules would have no effect. \
+                 Solution: Disable enable_heuristic_agents or disable enable_nepotism.".to_string(),
+            ));
         }
 
         // Nepotism system validation
