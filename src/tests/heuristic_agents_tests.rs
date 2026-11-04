@@ -82,14 +82,8 @@ fn test_heuristic_agents_are_deterministic() {
 #[test]
 fn test_share_is_ignored_when_flag_is_off() {
     // The share value must not matter while the flag is off.
-    // Education is off here: its skill choice is not deterministic without the flag.
-    let plain = |share: f64| {
-        let mut config = heuristic_config(false, share);
-        config.enable_education = false;
-        config
-    };
-    let a = SimulationEngine::new(plain(0.5)).run();
-    let b = SimulationEngine::new(plain(1.0)).run();
+    let a = SimulationEngine::new(heuristic_config(false, 0.5)).run();
+    let b = SimulationEngine::new(heuristic_config(false, 1.0)).run();
 
     assert!(a.heuristic_statistics.is_none());
     assert!(b.heuristic_statistics.is_none());
