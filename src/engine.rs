@@ -4,6 +4,7 @@ use crate::{
     crisis::CrisisEvent,
     environment::Environment,
     event::EventBus,
+    investment::{Investment, InvestmentId},
     loan::{Loan, LoanId},
     person::{Person, PersonId, Strategy},
     plugin::{
@@ -162,6 +163,12 @@ pub struct SimulationCheckpoint {
     /// Insurance system tracking
     pub insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
     pub insurance_counter: usize,
+    /// Investment system state (empty when investments are disabled)
+    #[serde(default)]
+    pub investments: HashMap<InvestmentId, Investment>,
+    /// Next free investment identifier
+    #[serde(default)]
+    pub next_investment_id: InvestmentId,
     pub total_insurance_policies_issued: usize,
     pub total_insurance_claims_paid: usize,
     pub total_premiums_collected: f64,
@@ -266,6 +273,9 @@ pub struct SimulationEngine {
     // Insurance system tracking
     insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
     insurance_counter: usize,
+    // Investment system tracking
+    investments: HashMap<InvestmentId, Investment>,
+    next_investment_id: InvestmentId,
     total_insurance_policies_issued: usize,
     total_insurance_claims_paid: usize,
     total_premiums_collected: f64,
@@ -575,6 +585,8 @@ impl SimulationEngine {
             nepotism_stats,
             insurances: HashMap::new(),
             insurance_counter: 0,
+            investments: HashMap::new(),
+            next_investment_id: 0,
             total_insurance_policies_issued: 0,
             total_insurance_claims_paid: 0,
             total_premiums_collected: 0.0,
@@ -1951,7 +1963,7 @@ impl SimulationEngine {
             },
             loan_statistics,
             lemons_market_statistics: self.lemons_market_statistics(),
-            investment_statistics: None, // Investment system not yet fully implemented
+            investment_statistics: self.investment_statistics(),
             contract_statistics: if self.config.enable_contracts {
                 let active_contracts = self.contracts.values().filter(|c| c.is_active()).count();
 
@@ -4375,6 +4387,11 @@ impl SimulationEngine {
             self.process_loan_payments();
         }
 
+        // Process investments - collect matured returns, then create new investments
+        if self.config.enable_investments {
+            self.process_investments();
+        }
+
         // Apply technological progress - increase skill efficiency
         if self.config.tech_growth_rate > 0.0 {
             for skill in self.market.skills.values_mut() {
@@ -5416,6 +5433,146 @@ impl SimulationEngine {
             self.entities[loan.lender_id].person_data.lent_loans.retain(|&id| id != loan_id);
 
             self.total_loans_repaid += 1;
+        }
+    }
+
+    /// Returns all investments of the simulation (empty when investments are disabled).
+    pub fn get_investments(&self) -> &HashMap<InvestmentId, Investment> {
+        &self.investments
+    }
+
+    /// Builds the investment statistics, or `None` when investments are disabled.
+    fn investment_statistics(&self) -> Option<crate::result::InvestmentStats> {
+        if !self.config.enable_investments {
+            return None;
+        }
+        let mut ids: Vec<&InvestmentId> = self.investments.keys().collect();
+        ids.sort();
+        // Sorted ids keep the float sums independent of HashMap order.
+        let completed: Vec<&Investment> = ids
+            .iter()
+            .map(|id| &self.investments[*id])
+            .filter(|inv| inv.is_completed)
+            .collect();
+        let total_invested: f64 = ids.iter().map(|id| self.investments[*id].principal).sum();
+        let total_returns_paid: f64 =
+            ids.iter().map(|id| self.investments[*id].total_returns_paid).sum();
+        let avg_roi_percentage = if completed.is_empty() {
+            0.0
+        } else {
+            completed.iter().map(|inv| inv.roi_percentage()).sum::<f64>() / completed.len() as f64
+        };
+        Some(crate::result::InvestmentStats {
+            total_investments_created: self.investments.len(),
+            total_investments_completed: completed.len(),
+            active_investments: self.investments.len() - completed.len(),
+            total_invested,
+            total_returns_paid,
+            avg_roi_percentage,
+        })
+    }
+
+    /// Runs the investment phase for the current step.
+    ///
+    /// Money model: an investment is a transfer, not a mint. The investor hands the
+    /// principal to the target person, who funds their education. The target then pays
+    /// `return_per_step` back to the investor. This keeps the total money constant, so
+    /// the money conservation invariant holds. No return is paid before
+    /// `maturity_period` steps have passed since `created_at_step`. A target that cannot
+    /// afford a payment skips that step; the payment stays due. Disabled investments
+    /// draw no random numbers and change no state.
+    fn process_investments(&mut self) {
+        // 1. Collect returns for matured investments (sorted ids keep float sums deterministic).
+        let mut ids: Vec<InvestmentId> = self
+            .investments
+            .iter()
+            .filter(|(_, inv)| !inv.is_completed)
+            .map(|(id, _)| *id)
+            .collect();
+        ids.sort_unstable();
+        for id in ids {
+            let Some(inv) = self.investments.get_mut(&id) else {
+                continue;
+            };
+            let maturity = inv.maturity_period().unwrap_or(0);
+            if self.current_step < inv.created_at_step.saturating_add(maturity) {
+                continue;
+            }
+            let (investor, target, payment) = (inv.investor_id, inv.target_id, inv.return_per_step);
+            let Some(target) = target else { continue };
+            if investor >= self.entities.len()
+                || target >= self.entities.len()
+                || !payment.is_finite()
+                // Inactive parties pause the payment; the return stays due until they act again.
+                || !self.entities[target].active
+                || !self.entities[investor].active
+                || self.entities[target].person_data.money < payment
+            {
+                continue;
+            }
+            let paid = inv.collect_return();
+            self.entities[target].person_data.money -= paid;
+            self.entities[investor].person_data.money += paid;
+            if inv.is_completed {
+                self.entities[investor].person_data.active_investments.retain(|&i| i != id);
+            }
+        }
+
+        // 2. Create new investments.
+        let probability = self.config.investment_probability.clamp(0.0, 1.0);
+        let n = self.entities.len();
+        for investor in 0..n {
+            let entity = &self.entities[investor];
+            if !entity.active
+                || !entity.person_data.money.is_finite()
+                || entity.person_data.money < self.config.min_money_to_invest
+            {
+                continue;
+            }
+            if self.rng.random::<f64>() >= probability {
+                continue;
+            }
+            let others: Vec<usize> =
+                (0..n).filter(|&i| i != investor && self.entities[i].active).collect();
+            if others.is_empty() {
+                continue;
+            }
+            let target = others[self.rng.random_range(0..others.len())];
+            let Some(skill_id) =
+                self.entities[target].person_data.own_skills.first().map(|s| s.id.clone())
+            else {
+                continue;
+            };
+            // Stake: 10% of money, scaled by patience-driven propensity.
+            let money = self.entities[investor].person_data.money;
+            let principal =
+                (money * 0.1 * self.entities[investor].person_data.investment_propensity())
+                    .min(money);
+            if !principal.is_finite() || principal <= 0.0 {
+                continue;
+            }
+            let duration = self.config.investment_duration.max(1);
+            // Maturity: returns start after half the duration (at least one step).
+            let maturity_period = Some((duration / 2).max(1));
+            let id = self.next_investment_id;
+            self.next_investment_id += 1;
+            let investment = Investment::new(
+                id,
+                investor,
+                Some(target),
+                crate::investment::InvestmentType::Education { skill_id, maturity_period },
+                principal,
+                self.config.investment_return_rate.clamp(0.0, 1.0),
+                duration,
+                self.current_step,
+            );
+            if investment.validate().is_err() {
+                continue;
+            }
+            self.entities[investor].person_data.money -= principal;
+            self.entities[target].person_data.money += principal;
+            self.entities[investor].person_data.active_investments.push(id);
+            self.investments.insert(id, investment);
         }
     }
 
@@ -6904,7 +7061,7 @@ impl SimulationEngine {
             },
             loan_statistics: None, // Simplified
             lemons_market_statistics: self.lemons_market_statistics(),
-            investment_statistics: None, // Simplified for interactive mode
+            investment_statistics: self.investment_statistics(),
             contract_statistics: None,
             education_statistics: None,
             mentorship_statistics: None,
@@ -7028,6 +7185,8 @@ impl SimulationEngine {
             nepotism_stats: self.nepotism_stats.clone(),
             insurances: self.insurances.clone(),
             insurance_counter: self.insurance_counter,
+            investments: self.investments.clone(),
+            next_investment_id: self.next_investment_id,
             total_insurance_policies_issued: self.total_insurance_policies_issued,
             total_insurance_claims_paid: self.total_insurance_claims_paid,
             total_premiums_collected: self.total_premiums_collected,
@@ -7232,6 +7391,8 @@ impl SimulationEngine {
             nepotism_stats: checkpoint.nepotism_stats,
             insurances: checkpoint.insurances,
             insurance_counter: checkpoint.insurance_counter,
+            investments: checkpoint.investments,
+            next_investment_id: checkpoint.next_investment_id,
             total_insurance_policies_issued: checkpoint.total_insurance_policies_issued,
             total_insurance_claims_paid: checkpoint.total_insurance_claims_paid,
             total_premiums_collected: checkpoint.total_premiums_collected,

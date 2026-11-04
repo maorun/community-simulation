@@ -2747,6 +2747,38 @@ impl SimulationConfig {
             )));
         }
 
+        // Investment parameters
+        if self.enable_investments {
+            if !(0.0..=1.0).contains(&self.investment_return_rate) {
+                return Err(SimulationError::ValidationError(format!(
+                    "Configuration Error: investment_return_rate must be between 0.0 and 1.0. \
+                     Current value: {}",
+                    self.investment_return_rate
+                )));
+            }
+            if !(0.0..=1.0).contains(&self.investment_probability) {
+                return Err(SimulationError::ValidationError(format!(
+                    "Configuration Error: investment_probability must be between 0.0 and 1.0. \
+                     Current value: {}",
+                    self.investment_probability
+                )));
+            }
+            if self.investment_duration == 0 {
+                return Err(SimulationError::ValidationError(
+                    "Configuration Error: investment_duration must be greater than 0. \
+                     Current value: 0"
+                        .to_string(),
+                ));
+            }
+            if !self.min_money_to_invest.is_finite() || self.min_money_to_invest < 0.0 {
+                return Err(SimulationError::ValidationError(format!(
+                    "Configuration Error: min_money_to_invest must be non-negative. \
+                     Current value: {}",
+                    self.min_money_to_invest
+                )));
+            }
+        }
+
         // Feature dependency validations
         // Credit rating system validation
         if self.enable_credit_rating && !self.enable_loans {
