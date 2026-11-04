@@ -4229,10 +4229,8 @@ impl SimulationEngine {
                     .cloned()
                     .collect();
 
-                // HashMap order is random. Heuristic runs need a stable order for determinism.
-                if self.config.enable_heuristic_agents {
-                    potential_skills.sort_by(|a, b| a.id.cmp(&b.id));
-                }
+                // HashMap order is random. Sort by ID so that a fixed seed gives the same choice.
+                potential_skills.sort_by(|a, b| a.id.cmp(&b.id));
 
                 if potential_skills.is_empty() {
                     continue;
