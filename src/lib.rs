@@ -112,6 +112,7 @@ pub mod environment;
 pub mod error;
 pub mod event;
 pub mod externality;
+pub mod heuristics;
 pub mod insurance;
 pub mod invariant;
 pub mod investment;

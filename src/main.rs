@@ -694,6 +694,14 @@ struct RunArgs {
     #[arg(long, default_value_t = false)]
     enable_nepotism: bool,
 
+    /// Enable heuristic (rule-of-thumb) agents
+    #[arg(long, default_value_t = false)]
+    enable_heuristic_agents: bool,
+
+    /// Share of persons that use a heuristic (0.0 to 1.0)
+    #[arg(long)]
+    heuristic_agent_share: Option<f64>,
+
     /// Weight of nepotism/favoritism in partner selection (0.0 to 1.0)
     #[arg(long)]
     nepotism_bias: Option<f64>,
@@ -906,6 +914,12 @@ fn apply_social_systems_overrides(cfg: &mut SimulationConfig, args: &RunArgs) {
     }
     if args.enable_nepotism {
         cfg.enable_nepotism = true;
+    }
+    if args.enable_heuristic_agents {
+        cfg.enable_heuristic_agents = true;
+    }
+    if let Some(share) = args.heuristic_agent_share {
+        cfg.heuristic_agent_share = share;
     }
     if let Some(bias) = args.nepotism_bias {
         cfg.nepotism_bias = bias;
@@ -1478,6 +1492,8 @@ fn run_simulation(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             enable_trust_networks: args.enable_trust_networks,
             enable_influence: args.enable_influence,
             enable_nepotism: args.enable_nepotism,
+            enable_heuristic_agents: args.enable_heuristic_agents,
+            heuristic_agent_share: args.heuristic_agent_share.unwrap_or(0.5),
             nepotism_bias: args.nepotism_bias.unwrap_or(SimulationConfig::default().nepotism_bias),
             nepotism_outgroup_penalty: args
                 .nepotism_outgroup_penalty

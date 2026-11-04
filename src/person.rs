@@ -347,6 +347,24 @@ pub enum Strategy {
     Frugal,
 }
 
+/// Rule-of-thumb seller selection rule for boundedly rational agents.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Heuristic {
+    /// Buy from the seller with the lowest adjusted price.
+    CheapestSeller,
+    /// Buy from a friend when one offers the skill.
+    TrustFriends,
+    /// Buy from the seller with the most sales in the previous step.
+    FollowMajority,
+}
+
+impl Heuristic {
+    /// All heuristic rules in a fixed order.
+    pub fn all_variants() -> [Heuristic; 3] {
+        [Heuristic::CheapestSeller, Heuristic::TrustFriends, Heuristic::FollowMajority]
+    }
+}
+
 impl Strategy {
     /// Returns the spending multiplier for this strategy.
     /// This multiplier is applied to determine how much of their money a person
@@ -719,6 +737,10 @@ pub struct Person {
     /// Behavioral strategy that affects spending decisions.
     /// Determines how aggressively this person spends money to acquire needed skills.
     pub strategy: Strategy,
+    /// Optional rule-of-thumb seller selection rule.
+    /// None means the person keeps the standard (optimizing) behavior.
+    #[serde(default)]
+    pub heuristic: Option<Heuristic>,
     /// Specialization strategy affecting skill quality and pricing.
     /// Determines whether this person focuses on few skills (specialist) or many (generalist).
     pub specialization_strategy: SpecializationStrategy,
@@ -848,11 +870,12 @@ impl Person {
             lent_loans: Vec::new(),
             active_investments: Vec::new(), // Start with no investments
             strategy,
+            heuristic: None, // Optimizing by default
             specialization_strategy: SpecializationStrategy::default(), // Start with balanced
             learned_skills: Vec::new(), // Start with no learned skills
-            friends: HashSet::new(),    // Start with no friends
+            friends: HashSet::new(), // Start with no friends
             trade_agreement_ids: Vec::new(), // Start with no trade agreements
-            group_id: None,             // Start with no group assignment
+            group_id: None,  // Start with no group assignment
             location,
             skill_qualities: HashMap::new(), // Start with empty quality map (populated when quality enabled)
             credit_score: CreditScore::new(), // Start with default credit score

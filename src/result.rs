@@ -1567,6 +1567,10 @@ pub struct SimulationResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nepotism_statistics: Option<crate::nepotism::NepotismStats>,
 
+    /// Heuristic agent statistics (only present if heuristic agents are enabled)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub heuristic_statistics: Option<crate::heuristics::HeuristicStats>,
+
     /// Trade agreement system statistics (only present if trade agreements are enabled)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trade_agreement_statistics: Option<crate::trade_agreement::TradeAgreementStatistics>,
@@ -1750,6 +1754,7 @@ impl SimulationResult {
     /// #     influence_statistics: None,
     /// #     trust_network_statistics: None,
     /// #     nepotism_statistics: None,
+    /// #     heuristic_statistics: None,
     /// #     trade_agreement_statistics: None,
     /// #     insurance_statistics: None,
     /// #     asset_statistics: None,
@@ -4495,6 +4500,7 @@ mod tests {
             influence_statistics: None,
             trust_network_statistics: None,
             nepotism_statistics: None,
+            heuristic_statistics: None,
             trade_agreement_statistics: None,
             insurance_statistics: None,
             asset_statistics: None,
