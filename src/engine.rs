@@ -179,6 +179,41 @@ pub struct SimulationCheckpoint {
     pub action_log: Option<crate::replay::ActionLog>,
     /// Externality tracking (if enabled)
     pub externality_stats: crate::externality::ExternalityStats,
+    /// Lemons market: under-value streaks, sorted by (seller index, skill)
+    #[serde(default)]
+    pub lemons_under_value_streaks: Vec<((usize, SkillId), usize)>,
+    /// Lemons market: sellers that left the market, sorted by (seller index, skill)
+    #[serde(default)]
+    pub lemons_exited_pairs: Vec<(usize, SkillId)>,
+    /// Lemons market: number of sellers that left the market
+    #[serde(default)]
+    pub lemons_exited_sellers: usize,
+    /// Lemons market: pooling quality. `None` in old checkpoints (start value applies).
+    #[serde(default)]
+    pub lemons_avg_quality: Option<f64>,
+    /// Heuristic agents: sales per seller in the previous step, sorted by seller
+    #[serde(default)]
+    pub heuristic_previous_sales: Vec<(usize, usize)>,
+    /// Heuristic agents: sales per seller in the current step, sorted by seller
+    #[serde(default)]
+    pub heuristic_current_sales: Vec<(usize, usize)>,
+    /// True when `environment.total_consumption` holds effective consumption
+    /// (raw amount times degradation factor, since the degradation change).
+    /// Old checkpoints lack this flag and hold raw consumption.
+    #[serde(default)]
+    pub environment_consumption_effective: bool,
+}
+
+fn sorted_streaks(map: &HashMap<(usize, SkillId), usize>) -> Vec<((usize, SkillId), usize)> {
+    let mut v: Vec<_> = map.iter().map(|(k, c)| (k.clone(), *c)).collect();
+    v.sort();
+    v
+}
+
+fn sorted_counts(map: &HashMap<usize, usize>) -> Vec<(usize, usize)> {
+    let mut v: Vec<_> = map.iter().map(|(k, c)| (*k, *c)).collect();
+    v.sort();
+    v
 }
 
 pub struct SimulationEngine {
@@ -305,6 +340,9 @@ pub struct SimulationEngine {
     lemons_under_value_streaks: HashMap<(usize, SkillId), usize>,
     // Lemons market: number of sellers that left the market for a skill
     lemons_exited_sellers: usize,
+    // Lemons market: (seller index, skill) pairs that left the market.
+    // Only filled while the exit mechanism is active. Checkpoints keep it.
+    lemons_exited_pairs: std::collections::BTreeSet<(usize, SkillId)>,
     // Invariant checker for simulation validation (if enabled)
     invariant_checker: Option<crate::invariant::InvariantChecker>,
     // Asset system tracking (if enabled)
@@ -608,6 +646,7 @@ impl SimulationEngine {
             lemons_avg_quality: 3.0,
             lemons_under_value_streaks: HashMap::new(),
             lemons_exited_sellers: 0,
+            lemons_exited_pairs: std::collections::BTreeSet::new(),
             invariant_checker: None, // Will be initialized after construction if enabled
             assets: HashMap::new(),
             asset_counter: 0,
@@ -2894,6 +2933,7 @@ impl SimulationEngine {
                 providers.retain(|&id| id != entity_id);
                 if providers.len() < before {
                     self.lemons_exited_sellers += 1;
+                    self.lemons_exited_pairs.insert(key.clone());
                     debug!(
                         "Person {} left the market for skill '{}' after {} under-value steps",
                         entity_id, key.1, threshold
@@ -5490,6 +5530,45 @@ impl SimulationEngine {
         }
     }
 
+    #[cfg(test)]
+    /// Returns the number of sellers that left the market for a skill (lemons market).
+    pub(crate) fn lemons_exited_sellers_count(&self) -> usize {
+        self.lemons_exited_sellers
+    }
+
+    #[cfg(test)]
+    /// Returns the pooling quality (lemons market).
+    pub(crate) fn lemons_avg_quality_value(&self) -> f64 {
+        self.lemons_avg_quality
+    }
+
+    #[cfg(test)]
+    /// Returns the under-value streaks as a sorted list (lemons market).
+    pub(crate) fn lemons_streaks_sorted(&self) -> Vec<((usize, SkillId), usize)> {
+        sorted_streaks(&self.lemons_under_value_streaks)
+    }
+
+    #[cfg(test)]
+    /// Returns the sellers that left the market as a sorted list (lemons market).
+    pub(crate) fn lemons_exited_pairs(&self) -> Vec<(usize, SkillId)> {
+        self.lemons_exited_pairs.iter().cloned().collect()
+    }
+
+    #[cfg(test)]
+    /// Returns the cached providers of a skill.
+    pub(crate) fn providers_of(&self, skill_id: &str) -> Vec<usize> {
+        self.skill_providers.get(skill_id).cloned().unwrap_or_default()
+    }
+
+    #[cfg(test)]
+    /// Returns the heuristic sales counters (previous, current) as sorted lists.
+    pub(crate) fn heuristic_sales_sorted(&self) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
+        (
+            sorted_counts(&self.heuristic_previous_sales),
+            sorted_counts(&self.heuristic_current_sales),
+        )
+    }
+
     /// Returns all investments of the simulation (empty when investments are disabled).
     pub fn get_investments(&self) -> &HashMap<InvestmentId, Investment> {
         &self.investments
@@ -7253,6 +7332,13 @@ impl SimulationEngine {
             technology_breakthroughs: self.technology_breakthroughs.clone(),
             action_log: self.action_log.clone(),
             externality_stats: self.externality_stats.clone(),
+            lemons_under_value_streaks: sorted_streaks(&self.lemons_under_value_streaks),
+            lemons_exited_pairs: self.lemons_exited_pairs.iter().cloned().collect(),
+            lemons_exited_sellers: self.lemons_exited_sellers,
+            lemons_avg_quality: Some(self.lemons_avg_quality),
+            heuristic_previous_sales: sorted_counts(&self.heuristic_previous_sales),
+            heuristic_current_sales: sorted_counts(&self.heuristic_current_sales),
+            environment_consumption_effective: true,
         };
 
         let file = File::create(path)?;
@@ -7303,7 +7389,21 @@ impl SimulationEngine {
 
         let file = File::open(path)?;
         let reader = BufReader::new(file);
-        let checkpoint: SimulationCheckpoint = serde_json::from_reader(reader)?;
+        let mut checkpoint: SimulationCheckpoint = serde_json::from_reader(reader)?;
+
+        // Old checkpoints store raw consumption. The environment now tracks effective
+        // consumption (raw amount times degradation factor). Convert old values once.
+        if !checkpoint.environment_consumption_effective {
+            if let Some(environment) = checkpoint.environment.as_mut() {
+                for (resource, amount) in environment.total_consumption.iter_mut() {
+                    let converted = *amount * resource.degradation_factor();
+                    if converted.is_finite() {
+                        *amount = converted;
+                    }
+                }
+            }
+            checkpoint.environment_consumption_effective = true;
+        }
 
         // Reseed RNG based on the checkpoint's current step to ensure reproducibility
         // We combine the original seed with the current step to get a deterministic but
@@ -7391,6 +7491,13 @@ impl SimulationEngine {
             }
         }
 
+        // Sellers that left the market must not return to the supply.
+        for (entity_id, skill_id) in &checkpoint.lemons_exited_pairs {
+            if let Some(providers) = skill_providers.get_mut(skill_id) {
+                providers.retain(|id| id != entity_id);
+            }
+        }
+
         Ok(Self {
             config: checkpoint.config,
             entities: checkpoint.entities,
@@ -7448,8 +7555,8 @@ impl SimulationEngine {
             trade_agreement_counter: checkpoint.trade_agreement_counter,
             trust_network: checkpoint.trust_network,
             nepotism_stats: checkpoint.nepotism_stats,
-            heuristic_previous_sales: HashMap::new(),
-            heuristic_current_sales: HashMap::new(),
+            heuristic_previous_sales: checkpoint.heuristic_previous_sales.into_iter().collect(),
+            heuristic_current_sales: checkpoint.heuristic_current_sales.into_iter().collect(),
             insurances: checkpoint.insurances,
             insurance_counter: checkpoint.insurance_counter,
             investments: checkpoint.investments,
@@ -7466,12 +7573,14 @@ impl SimulationEngine {
             action_log: checkpoint.action_log,
             externality_stats: checkpoint.externality_stats,
             skill_providers,
-            lemons_avg_quality: 3.0,
-            lemons_under_value_streaks: HashMap::new(),
-            lemons_exited_sellers: 0,
+            lemons_avg_quality: checkpoint
+                .lemons_avg_quality
+                .filter(|q| q.is_finite())
+                .map_or(3.0, |q| q.clamp(0.0, 5.0)),
+            lemons_under_value_streaks: checkpoint.lemons_under_value_streaks.into_iter().collect(),
+            lemons_exited_sellers: checkpoint.lemons_exited_sellers,
+            lemons_exited_pairs: checkpoint.lemons_exited_pairs.into_iter().collect(),
             invariant_checker: None, // Invariants will be re-initialized after loading
-            // NOTE: The lemons market exit state (exited sellers, streaks) is not persisted
-            // in checkpoints. When resuming, exited sellers return to the supply.
             // NOTE: Assets are not persisted in checkpoints yet. When resuming,
             // asset data is lost and persons' owned_assets vectors will be incorrect.
             // This is a known limitation. To use assets, avoid checkpoint resume
