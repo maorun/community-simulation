@@ -1,3 +1,4 @@
+mod checkpoint_state_tests;
 mod comprehensive_scenario_tests;
 mod custom_recipes_tests;
 mod externality_tests;
