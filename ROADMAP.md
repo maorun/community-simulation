@@ -21,17 +21,6 @@ Each item below is an integration gap. The engine does not use the field, or a u
 Finish this work before you add new fields. See "Integration of New Fields and Types" in `AGENTS.md`.
 The score is for information. It does not change the priority.
 
-### `InvestmentType.maturity_period` and the investment system
-
-- **Rank:** Feature model. Total 31/40 (harmony 8, research 8, practice 8, teaching 7). Effort L. Estimate.
-- **Code:** `src/investment.rs`, `src/engine.rs` (`investment_statistics: None`).
-- **Problem:** The engine does not create, pay, or complete investments. `maturity_period` has no effect.
-- **Goal:** Add the investment phase to `step()`. Persons create investments, receive returns, and complete them.
-- **Goal:** Pay no return before `maturity_period` ends.
-- **Config:** `enable_investments` and the related parameters exist in `src/config.rs`. Use them.
-- **Acceptance test:** An engine run with `enable_investments` pays the first return only after `maturity_period` steps.
-- **Acceptance test:** `investment_statistics` is `Some` in the result.
-
 ### Recipe fields in the interactive mode
 
 - **Rank:** Feature model. Total 24/40 (harmony 6, research 5, practice 7, teaching 6). Effort S. Estimate.
