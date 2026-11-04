@@ -117,3 +117,21 @@ fn test_config_without_heuristic_fields_deserializes_with_defaults() {
     assert!(!config.enable_heuristic_agents);
     assert_eq!(config.heuristic_agent_share, 0.5);
 }
+
+#[test]
+fn test_validate_rejects_heuristic_agents_with_nepotism() {
+    let mut both = heuristic_config(true, 0.5);
+    both.enable_nepotism = true;
+    match both.validate() {
+        Err(crate::error::SimulationError::ValidationError(msg)) => {
+            assert!(msg.contains("enable_heuristic_agents"), "unexpected message: {msg}");
+            assert!(msg.contains("enable_nepotism"), "unexpected message: {msg}");
+        },
+        other => panic!("expected ValidationError, got {other:?}"),
+    }
+
+    let mut only_nepotism = heuristic_config(false, 0.5);
+    only_nepotism.enable_nepotism = true;
+    assert!(only_nepotism.validate().is_ok());
+    assert!(heuristic_config(true, 0.5).validate().is_ok());
+}
