@@ -585,7 +585,7 @@ Comprehensive validation of all configuration parameters with clear error messag
 
 ### Checkpoint System
 
-Save and resume simulation state at any point. Automatically save checkpoints at regular intervals during long simulations. Resume from saved checkpoints to continue interrupted simulations without starting from scratch. Useful for multi-hour simulations, distributed computing, incremental analysis, and crash recovery. Checkpoints are stored in JSON format with complete simulation state including entities, market data, loans, and statistics. Old checkpoints without the flag `environment_consumption_effective` hold raw environment consumption. The load step multiplies each value by the degradation factor of its resource once.
+Save and resume simulation state at any point. Automatically save checkpoints at regular intervals during long simulations. Resume from saved checkpoints to continue interrupted simulations without starting from scratch. Useful for multi-hour simulations, distributed computing, incremental analysis, and crash recovery. Checkpoints are stored in JSON format with complete simulation state including entities, market data, loans, and statistics. Old checkpoints without the flag `environment_consumption_effective` hold raw environment consumption. The load step multiplies each value by the degradation factor of its resource once. Checkpoints store the state of the random number generator (`rng_state`, ChaCha12) and the provider order per skill. A run that you save at step k, load and continue to step N gives the same result as an uninterrupted run with the same seed. Old checkpoints without `rng_state` load as before and reseed the generator from the seed and the current step.
 
 ## Development & Debugging
 

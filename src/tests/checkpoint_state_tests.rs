@@ -142,11 +142,10 @@ fn heuristic_resume_matches_an_uninterrupted_run() {
     straight.save_checkpoint(&file.0).expect("save");
     let mut restored = SimulationEngine::load_checkpoint(&file.0).expect("load");
 
-    // The step right after the resume reads the saved sales. The previous-step counters
-    // must match. The current counters differ, because load reseeds the RNG.
+    // The checkpoint keeps the RNG state, so both runs stay identical.
     straight.step();
     restored.step();
-    assert_eq!(restored.heuristic_sales_sorted().0, straight.heuristic_sales_sorted().0);
+    assert_eq!(restored.heuristic_sales_sorted(), straight.heuristic_sales_sorted());
 }
 
 #[test]
@@ -203,4 +202,161 @@ fn new_checkpoint_does_not_multiply_consumption_again() {
     first.save_checkpoint(&file.0).expect("save again");
     let second = SimulationEngine::load_checkpoint(&file.0).expect("load again");
     assert!((consumption(&second, Resource::Energy) - energy).abs() < 1e-9);
+}
+
+/// Config with several systems that draw random numbers.
+fn rng_resume_config() -> SimulationConfig {
+    let mut config = test_config().entity_count(60).max_steps(60).seed(2024).build();
+    config.enable_friendships = true;
+    config.enable_education = true;
+    config.learning_probability = 0.3;
+    config.learning_cost_multiplier = 0.2;
+    config.enable_investments = true;
+    config.investment_probability = 0.5;
+    config.investment_duration = 10;
+    config.min_money_to_invest = 50.0;
+    config.enable_heuristic_agents = true;
+    config.heuristic_agent_share = 0.5;
+    config
+}
+
+/// Money per entity id, sorted by id.
+fn money_by_id(engine: &SimulationEngine) -> Vec<(usize, f64)> {
+    let mut money: Vec<(usize, f64)> =
+        engine.get_entities().iter().map(|e| (e.id, e.person_data.money)).collect();
+    money.sort_by_key(|(id, _)| *id);
+    money
+}
+
+/// Price per skill id, sorted by id.
+fn prices_sorted(engine: &SimulationEngine) -> Vec<(String, f64)> {
+    let market = engine.get_market();
+    let mut prices: Vec<(String, f64)> = market
+        .skills
+        .keys()
+        .map(|id| (id.to_string(), market.get_price(id).expect("price")))
+        .collect();
+    prices.sort_by(|a, b| a.0.cmp(&b.0));
+    prices
+}
+
+#[test]
+fn resumed_run_matches_an_uninterrupted_run() {
+    let total_steps = 40;
+    let saved_at = 15;
+
+    let mut straight = SimulationEngine::new(rng_resume_config());
+    for _ in 0..total_steps {
+        straight.step();
+    }
+
+    let mut first_part = SimulationEngine::new(rng_resume_config());
+    for _ in 0..saved_at {
+        first_part.step();
+    }
+    let file = TempCheckpoint::new("rng_resume");
+    first_part.save_checkpoint(&file.0).expect("save");
+    let mut resumed = SimulationEngine::load_checkpoint(&file.0).expect("load");
+    for _ in saved_at..total_steps {
+        resumed.step();
+    }
+
+    let straight_result = straight.get_current_result();
+    let resumed_result = resumed.get_current_result();
+    assert!(straight_result.trades_per_step.iter().sum::<usize>() > 0, "trades must happen");
+    assert_eq!(resumed_result.trades_per_step, straight_result.trades_per_step);
+    assert_eq!(
+        resumed_result.final_money_distribution,
+        straight_result.final_money_distribution
+    );
+    assert_eq!(money_by_id(&resumed), money_by_id(&straight));
+    assert_eq!(prices_sorted(&resumed), prices_sorted(&straight));
+    assert_eq!(resumed.get_investments().len(), straight.get_investments().len());
+}
+
+#[test]
+fn checkpoint_without_rng_state_still_loads() {
+    let mut engine = SimulationEngine::new(rng_resume_config());
+    for _ in 0..10 {
+        engine.step();
+    }
+    let file = TempCheckpoint::new("no_rng_state");
+    engine.save_checkpoint(&file.0).expect("save");
+    let text = std::fs::read_to_string(&file.0).expect("read");
+    let mut value: serde_json::Value = serde_json::from_str(&text).expect("json");
+    let object = value.as_object_mut().expect("object");
+    assert!(object.remove("rng_state").is_some(), "checkpoint must contain rng_state");
+    assert!(object.remove("skill_providers").is_some(), "checkpoint must contain providers");
+    std::fs::write(&file.0, serde_json::to_string(&value).expect("json")).expect("write");
+
+    let mut restored = SimulationEngine::load_checkpoint(&file.0).expect("old checkpoint loads");
+    assert_eq!(restored.get_current_step(), 10);
+    restored.step();
+    assert_eq!(restored.get_current_step(), 11);
+}
+
+/// Saves a checkpoint, edits its JSON and returns the load result.
+fn load_edited(
+    label: &str,
+    edit: impl FnOnce(&mut serde_json::Map<String, serde_json::Value>),
+) -> std::io::Result<SimulationEngine> {
+    let mut engine = SimulationEngine::new(rng_resume_config());
+    for _ in 0..5 {
+        engine.step();
+    }
+    let file = TempCheckpoint::new(label);
+    engine.save_checkpoint(&file.0).expect("save");
+    let text = std::fs::read_to_string(&file.0).expect("read");
+    let mut value: serde_json::Value = serde_json::from_str(&text).expect("json");
+    edit(value.as_object_mut().expect("object"));
+    std::fs::write(&file.0, serde_json::to_string(&value).expect("json")).expect("write");
+    SimulationEngine::load_checkpoint(&file.0)
+}
+
+#[test]
+fn checkpoint_with_wrong_rng_state_length_is_rejected() {
+    let result = load_edited("rng_len", |o| {
+        o.insert("rng_state".into(), serde_json::json!([1, 2, 3]));
+    });
+    assert_eq!(result.err().map(|e| e.kind()), Some(std::io::ErrorKind::InvalidData));
+}
+
+#[test]
+fn checkpoint_with_out_of_range_provider_is_rejected() {
+    let result = load_edited("providers_range", |o| {
+        o.insert("skill_providers".into(), serde_json::json!([["Skill0", [100000]]]));
+    });
+    assert_eq!(result.err().map(|e| e.kind()), Some(std::io::ErrorKind::InvalidData));
+}
+
+#[test]
+fn checkpoint_with_duplicate_provider_skill_is_rejected() {
+    let result = load_edited("providers_dup", |o| {
+        o.insert("skill_providers".into(), serde_json::json!([["Skill0", [0]], ["Skill0", [1]]]));
+    });
+    assert_eq!(result.err().map(|e| e.kind()), Some(std::io::ErrorKind::InvalidData));
+}
+
+#[test]
+fn provider_order_survives_a_checkpoint_round_trip() {
+    let mut engine = SimulationEngine::new(rng_resume_config());
+    for _ in 0..25 {
+        engine.step();
+    }
+    let file = TempCheckpoint::new("provider_order");
+    engine.save_checkpoint(&file.0).expect("save");
+    let restored = SimulationEngine::load_checkpoint(&file.0).expect("load");
+    for id in engine.get_market().skills.keys() {
+        assert_eq!(restored.providers_of(id), engine.providers_of(id));
+    }
+}
+
+#[test]
+fn checkpoint_with_invalid_rng_word_position_is_rejected() {
+    let result = load_edited("rng_nibble", |o| {
+        let mut bytes = vec![0u8; 49];
+        bytes[48] = 0xF0;
+        o.insert("rng_state".into(), serde_json::json!(bytes));
+    });
+    assert_eq!(result.err().map(|e| e.kind()), Some(std::io::ErrorKind::InvalidData));
 }
