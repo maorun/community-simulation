@@ -148,6 +148,7 @@ fn test_mentorship() {
     let config = SimulationConfig {
         entity_count: 15,
         max_steps: 25,
+        enable_education: true,
         enable_mentorship: true,
         ..Default::default()
     };
@@ -321,13 +322,13 @@ fn test_education() {
     }
 }
 
-/// Test high volatility
+/// Test the maximum valid volatility (the validator caps it at 0.5)
 #[test]
 fn test_high_volatility() {
     let config = SimulationConfig {
         entity_count: 10,
         max_steps: 15,
-        volatility_percentage: 0.8,
+        volatility_percentage: 0.5,
         ..Default::default()
     };
     let mut engine = SimulationEngine::new(config);

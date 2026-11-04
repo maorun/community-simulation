@@ -136,7 +136,7 @@ impl ScenarioComparisonResult {
         // Run simulations for each scenario in parallel
         let comparison_points: Vec<_> = scenarios
             .par_iter()
-            .map(|scenario| {
+            .map(|scenario| -> Result<ScenarioComparisonPoint> {
                 info!(
                     "{}",
                     format!("Running {} runs for scenario: {:?}", runs_per_scenario, scenario)
@@ -146,15 +146,15 @@ impl ScenarioComparisonResult {
                 // Run multiple simulations with different seeds for this scenario
                 let results: Vec<_> = (0..runs_per_scenario)
                     .into_par_iter()
-                    .map(|run_idx| {
+                    .map(|run_idx| -> Result<_> {
                         let mut config = base_config.clone();
                         config.scenario = scenario.clone();
                         config.seed = base_seed + run_idx as u64;
 
-                        let mut engine = SimulationEngine::new(config);
-                        engine.run_with_progress(false)
+                        let mut engine = SimulationEngine::try_new(config)?;
+                        Ok(engine.run_with_progress(false))
                     })
-                    .collect();
+                    .collect::<Result<Vec<_>>>()?;
 
                 // Calculate aggregate statistics for this scenario
                 let avg_money_values: Vec<f64> =
@@ -173,7 +173,7 @@ impl ScenarioComparisonResult {
                     results.iter().map(|r| r.reputation_statistics.average).collect();
                 let avg_reputation_stats = calculate_statistics(&avg_reputation_values);
 
-                ScenarioComparisonPoint {
+                Ok(ScenarioComparisonPoint {
                     scenario: scenario.clone(),
                     results,
                     avg_money_stats,
@@ -181,9 +181,9 @@ impl ScenarioComparisonResult {
                     total_trades_stats,
                     avg_reputation_stats,
                     confidence: None,
-                }
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         // Determine winners based on different criteria
         let winners = Self::determine_winners(&comparison_points);

@@ -134,10 +134,12 @@ fn test_engine_with_many_features_enabled() {
     config.enable_black_market = true;
     config.enable_environment = true;
     config.enable_voting = true;
+    config.enable_friendships = true;
     config.enable_trust_networks = true;
     config.enable_externalities = true;
     config.enable_technology_breakthroughs = true;
     config.enable_resource_pools = true;
+    config.num_groups = Some(2);
 
     let mut engine = SimulationEngine::new(config);
 

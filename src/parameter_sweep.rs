@@ -225,10 +225,10 @@ impl GridSweepResult {
         let points = configurations
             .par_iter()
             .enumerate()
-            .map(|(configuration_index, configuration)| {
+            .map(|(configuration_index, configuration)| -> Result<GridSweepPoint> {
                 let results: Vec<_> = (0..runs_per_configuration)
                     .into_par_iter()
-                    .map(|run_index| {
+                    .map(|run_index| -> Result<_> {
                         let mut config = base_config.clone();
                         config.scenario = configuration.scenario.clone();
                         config.entity_count = configuration.persons;
@@ -236,12 +236,12 @@ impl GridSweepResult {
                         config.enable_crisis_events = true;
                         config.seed = base_seed
                             + (configuration_index * runs_per_configuration + run_index) as u64;
-                        SimulationEngine::new(config).run_with_progress(false)
+                        Ok(SimulationEngine::try_new(config)?.run_with_progress(false))
                     })
-                    .collect();
+                    .collect::<Result<Vec<_>>>()?;
 
                 let average = |values: Vec<f64>| calculate_statistics(&values).mean;
-                GridSweepPoint {
+                Ok(GridSweepPoint {
                     configuration: configuration.clone(),
                     avg_money: average(
                         results.iter().map(|result| result.money_statistics.average).collect(),
@@ -264,9 +264,9 @@ impl GridSweepResult {
                             .map(|result| result.trade_volume_statistics.total_volume)
                             .collect(),
                     ),
-                }
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
         let total_simulations = configurations.len() * runs_per_configuration;
 
         Ok(Self { runs_per_configuration, base_seed, points, total_simulations })
@@ -306,12 +306,16 @@ impl GridSweepResult {
 
 impl ParameterSweepResult {
     /// Create a new ParameterSweepResult by running simulations across a parameter range
+    ///
+    /// # Errors
+    ///
+    /// Returns `SimulationError::ValidationError` if a swept configuration is invalid.
     pub fn run_sweep(
         base_config: SimulationConfig,
         parameter_range: ParameterRange,
         runs_per_point: usize,
         _show_progress: bool,
-    ) -> Self {
+    ) -> Result<Self> {
         let parameter_name = parameter_range.name().to_string();
         let values = parameter_range.values();
         let base_seed = base_config.seed;
@@ -327,7 +331,7 @@ impl ParameterSweepResult {
         let sweep_points: Vec<ParameterSweepPoint> = values
             .par_iter()
             .enumerate()
-            .map(|(idx, &value)| {
+            .map(|(idx, &value)| -> Result<ParameterSweepPoint> {
                 info!(
                     "Testing {} = {:.4} ({}/{})...",
                     parameter_name,
@@ -343,15 +347,15 @@ impl ParameterSweepResult {
                 // Run multiple simulations with different seeds
                 let results: Vec<SimulationResult> = (0..runs_per_point)
                     .into_par_iter()
-                    .map(|run_idx| {
+                    .map(|run_idx| -> Result<SimulationResult> {
                         let mut run_config = config.clone();
                         run_config.seed = base_seed + (idx * runs_per_point + run_idx) as u64;
 
-                        let mut engine = SimulationEngine::new(run_config);
+                        let mut engine = SimulationEngine::try_new(run_config)?;
                         // Disable progress bar for individual runs in parameter sweep
-                        engine.run_with_progress(false)
+                        Ok(engine.run_with_progress(false))
                     })
-                    .collect();
+                    .collect::<Result<Vec<_>>>()?;
 
                 // Calculate aggregated statistics
                 let avg_moneys: Vec<f64> =
@@ -370,7 +374,7 @@ impl ParameterSweepResult {
                     avg_moneys.iter().sum::<f64>() / avg_moneys.len() as f64
                 );
 
-                ParameterSweepPoint {
+                Ok(ParameterSweepPoint {
                     parameter_value: value,
                     parameter_name: parameter_name.clone(),
                     results,
@@ -378,13 +382,13 @@ impl ParameterSweepResult {
                     gini_coefficient_stats: calculate_statistics(&gini_coefficients),
                     total_trades_stats: calculate_statistics(&total_trades),
                     avg_reputation_stats: calculate_statistics(&avg_reputations),
-                }
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         let total_simulations = values.len() * runs_per_point;
 
-        Self { parameter_name, runs_per_point, base_seed, sweep_points, total_simulations }
+        Ok(Self { parameter_name, runs_per_point, base_seed, sweep_points, total_simulations })
     }
 
     /// Save parameter sweep results to a JSON file
@@ -597,7 +601,8 @@ mod tests {
 
         let parameter_range = ParameterRange::InitialMoney { min: 80.0, max: 120.0, steps: 2 };
 
-        let result = ParameterSweepResult::run_sweep(config, parameter_range, 2, false);
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 2, false)
+            .expect("sweep must succeed");
 
         assert_eq!(result.parameter_name, "initial_money");
         assert_eq!(result.runs_per_point, 2);
@@ -768,7 +773,8 @@ mod tests {
         };
 
         let parameter_range = ParameterRange::InitialMoney { min: 80.0, max: 120.0, steps: 2 };
-        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, false);
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, false)
+            .expect("sweep must succeed");
 
         // Save to temp file
         let temp_file = Builder::new().suffix(".json").tempfile().unwrap();
@@ -823,7 +829,8 @@ mod tests {
         };
 
         let parameter_range = ParameterRange::BasePrice { min: 8.0, max: 12.0, steps: 2 };
-        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, false);
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, false)
+            .expect("sweep must succeed");
 
         // Should not panic
         result.print_summary();
@@ -925,7 +932,8 @@ mod tests {
         };
 
         let parameter_range = ParameterRange::SavingsRate { min: 0.0, max: 0.1, steps: 2 };
-        let result = ParameterSweepResult::run_sweep(config.clone(), parameter_range, 1, false);
+        let result = ParameterSweepResult::run_sweep(config.clone(), parameter_range, 1, false)
+            .expect("sweep must succeed");
 
         assert_eq!(result.parameter_name, "savings_rate");
         assert_eq!(result.sweep_points.len(), 2);
@@ -934,7 +942,8 @@ mod tests {
 
         // Test sweep with transaction fee
         let parameter_range2 = ParameterRange::TransactionFee { min: 0.0, max: 0.05, steps: 2 };
-        let result2 = ParameterSweepResult::run_sweep(config, parameter_range2, 1, false);
+        let result2 = ParameterSweepResult::run_sweep(config, parameter_range2, 1, false)
+            .expect("sweep must succeed");
 
         assert_eq!(result2.parameter_name, "transaction_fee");
         assert_eq!(result2.sweep_points.len(), 2);
@@ -976,7 +985,8 @@ mod tests {
         };
 
         let parameter_range = ParameterRange::InitialMoney { min: 100.0, max: 100.0, steps: 1 };
-        let result = ParameterSweepResult::run_sweep(config, parameter_range, 3, false);
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 3, false)
+            .expect("sweep must succeed");
 
         assert_eq!(result.sweep_points.len(), 1);
         let point = &result.sweep_points[0];
@@ -1026,7 +1036,8 @@ mod tests {
         let parameter_range = ParameterRange::InitialMoney { min: 80.0, max: 120.0, steps: 2 };
 
         // Should work with show_progress = true
-        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, true);
+        let result = ParameterSweepResult::run_sweep(config, parameter_range, 1, true)
+            .expect("sweep must succeed");
         assert_eq!(result.sweep_points.len(), 2);
     }
 

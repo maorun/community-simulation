@@ -436,6 +436,7 @@ fn test_engine_with_adaptive_strategies() {
 fn test_engine_with_resource_pools() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_resource_pools = true;
+    config.num_groups = Some(2);
     config.max_steps = 10;
 
     let mut engine = SimulationEngine::new(config);
@@ -1017,6 +1018,7 @@ fn test_engine_all_features_enabled() {
     config.enable_voting = true;
     config.enable_market_segments = true;
     config.enable_resource_pools = true;
+    config.num_groups = Some(2);
     config.enable_trade_agreements = true;
     config.enable_externalities = true;
     config.enable_adaptive_strategies = true;
@@ -1137,6 +1139,7 @@ fn test_all_scenario_types_execution() {
 fn test_resource_pools_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
     config.enable_resource_pools = true;
+    config.num_groups = Some(2);
     config.max_steps = 15;
 
     let mut engine = SimulationEngine::new(config);
@@ -1201,6 +1204,7 @@ fn test_friendships_comprehensive() {
 #[test]
 fn test_trust_networks_comprehensive() {
     let mut config = SimulationConfig::from_preset(crate::config::PresetName::QuickTest);
+    config.enable_friendships = true;
     config.enable_trust_networks = true;
     config.max_steps = 15;
 

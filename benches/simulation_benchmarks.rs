@@ -21,7 +21,9 @@ fn bench_engine_initialization(c: &mut Criterion) {
                     tech_growth_rate: 0.0,
                     ..Default::default()
                 };
-                black_box(SimulationEngine::new(config));
+                black_box(
+                    SimulationEngine::try_new(config).expect("benchmark config must be valid"),
+                );
             });
         });
     }
@@ -48,7 +50,10 @@ fn bench_single_step(c: &mut Criterion) {
             };
 
             b.iter_batched(
-                || SimulationEngine::new(config.clone()),
+                || {
+                    SimulationEngine::try_new(config.clone())
+                        .expect("benchmark config must be valid")
+                },
                 |mut engine| {
                     engine.step();
                     black_box(engine);
@@ -85,7 +90,8 @@ fn bench_full_simulation(c: &mut Criterion) {
                         ..Default::default()
                     };
 
-                    let mut engine = SimulationEngine::new(config);
+                    let mut engine =
+                        SimulationEngine::try_new(config).expect("benchmark config must be valid");
                     black_box(engine.run());
                 });
             },
@@ -120,7 +126,8 @@ fn bench_scenarios(c: &mut Criterion) {
                         ..Default::default()
                     };
 
-                    let mut engine = SimulationEngine::new(config);
+                    let mut engine =
+                        SimulationEngine::try_new(config).expect("benchmark config must be valid");
                     black_box(engine.run());
                 });
             },
@@ -273,7 +280,7 @@ fn bench_serialization(c: &mut Criterion) {
         ..Default::default()
     };
 
-    let mut engine = SimulationEngine::new(config);
+    let mut engine = SimulationEngine::try_new(config).expect("benchmark config must be valid");
     let result = engine.run();
 
     // Benchmark JSON serialization

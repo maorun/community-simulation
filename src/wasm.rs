@@ -90,7 +90,9 @@ fn run_simulation_json(options_json: &str) -> Result<String, String> {
     let options = serde_json::from_str::<WasmSimulationOptions>(options_json)
         .map_err(|error| format!("Invalid simulation options: {error}"))?;
     let config = SimulationConfig::try_from(options)?;
-    serde_json::to_string(&SimulationEngine::new(config).run())
+    let mut engine = SimulationEngine::try_new(config)
+        .map_err(|error| format!("Invalid simulation configuration: {error}"))?;
+    serde_json::to_string(&engine.run())
         .map_err(|error| format!("Could not serialize result: {error}"))
 }
 
