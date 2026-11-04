@@ -263,6 +263,10 @@ pub struct SimulationEngine {
     trust_network: Option<crate::trust_network::TrustNetwork>,
     // Nepotism and favoritism tracking (if enabled)
     nepotism_stats: Option<crate::nepotism::NepotismStats>,
+    // Sales per seller entity index in the previous step (only kept for heuristic agents)
+    heuristic_previous_sales: HashMap<usize, usize>,
+    // Sales per seller entity index in the current step (only kept for heuristic agents)
+    heuristic_current_sales: HashMap<usize, usize>,
     // Insurance system tracking
     insurances: HashMap<crate::insurance::InsuranceId, crate::insurance::Insurance>,
     insurance_counter: usize,
@@ -573,6 +577,8 @@ impl SimulationEngine {
             trade_agreement_counter: 0,
             trust_network,
             nepotism_stats,
+            heuristic_previous_sales: HashMap::new(),
+            heuristic_current_sales: HashMap::new(),
             insurances: HashMap::new(),
             insurance_counter: 0,
             total_insurance_policies_issued: 0,
@@ -903,6 +909,15 @@ impl SimulationEngine {
             }
 
             entities.push(entity);
+        }
+
+        // Assign rule-of-thumb heuristics (uses its own RNG, so the main RNG stays untouched)
+        if config.enable_heuristic_agents {
+            crate::heuristics::assign_heuristics(
+                &mut entities,
+                config.heuristic_agent_share,
+                config.seed,
+            );
         }
 
         // Infect initial persons if health system is enabled
@@ -2241,6 +2256,11 @@ impl SimulationEngine {
                 .as_ref()
                 .map(|trust_network| trust_network.get_statistics()),
             nepotism_statistics: self.nepotism_stats.clone(),
+            heuristic_statistics: if self.config.enable_heuristic_agents {
+                Some(crate::heuristics::HeuristicStats::from_entities(&self.entities))
+            } else {
+                None
+            },
             trade_agreement_statistics: if self.config.enable_trade_agreements {
                 // Calculate trade agreement statistics
                 let active_agreements = self
@@ -2904,6 +2924,10 @@ impl SimulationEngine {
     )]
     pub fn step(&mut self) {
         self.market.reset_demand_counts();
+        if self.config.enable_heuristic_agents {
+            // Sales of the finished step become the "majority" signal of this step
+            self.heuristic_previous_sales = std::mem::take(&mut self.heuristic_current_sales);
+        }
         for entity in self.entities.iter_mut() {
             if entity.active {
                 entity.person_data.needed_skills.clear();
@@ -3486,9 +3510,23 @@ impl SimulationEngine {
                     // Performance optimization: Compute seller_id once and reuse throughout purchase logic.
                     // This avoids repeated Option pattern matching in subsequent conditional blocks
                     // (reputation, friendship, trade agreements, quality, specialization, distance, execution).
-                    skill_providers
-                        .get(&needed_skill_id)
-                        .and_then(|providers| providers.first().copied())
+                    let providers = skill_providers.get(&needed_skill_id);
+                    let heuristic_choice = match (
+                        self.config.enable_heuristic_agents,
+                        self.entities[buyer_idx].person_data.heuristic,
+                        providers,
+                    ) {
+                        (true, Some(rule), Some(list)) => crate::heuristics::select_seller(
+                            rule,
+                            buyer_idx,
+                            list,
+                            &self.entities,
+                            &self.heuristic_previous_sales,
+                        ),
+                        _ => None,
+                    };
+                    heuristic_choice
+                        .or_else(|| providers.and_then(|providers| providers.first().copied()))
                 };
 
                 // Apply reputation-based price multiplier for the seller
@@ -3776,6 +3814,12 @@ impl SimulationEngine {
                                 trade_is_nepotistic,
                                 trade_is_inner_circle,
                                 trade_welfare_loss,
+                            );
+                        }
+                        if self.config.enable_heuristic_agents {
+                            crate::heuristics::record_sale(
+                                &mut self.heuristic_current_sales,
+                                seller_entity_idx,
                             );
                         }
                         self.entities[buyer_idx]
@@ -4165,13 +4209,18 @@ impl SimulationEngine {
                 let learner_id = self.entities[i].id;
 
                 // Find skills this person doesn't have yet
-                let potential_skills: Vec<Skill> = self
+                let mut potential_skills: Vec<Skill> = self
                     .market
                     .skills
                     .values()
                     .filter(|skill| !self.entities[i].person_data.has_skill(&skill.id))
                     .cloned()
                     .collect();
+
+                // HashMap order is random. Heuristic runs need a stable order for determinism.
+                if self.config.enable_heuristic_agents {
+                    potential_skills.sort_by(|a, b| a.id.cmp(&b.id));
+                }
 
                 if potential_skills.is_empty() {
                     continue;
@@ -4204,6 +4253,13 @@ impl SimulationEngine {
                     // Attempt to learn the skill
                     if self.entities[i].person_data.learn_skill(skill_to_learn.clone(), final_cost)
                     {
+                        // Heuristic agents need the learner as an extra seller to choose from
+                        if self.config.enable_heuristic_agents {
+                            self.skill_providers
+                                .entry(skill_to_learn.id.clone())
+                                .or_default()
+                                .push(self.entities[i].id);
+                        }
                         if let Some(mid) = mentor_id {
                             // Successful mentored learning
                             let cost_savings = base_learning_cost - final_cost;
@@ -6915,6 +6971,11 @@ impl SimulationEngine {
             influence_statistics: None,   // Simplified
             trust_network_statistics: None, // Simplified
             nepotism_statistics: self.nepotism_stats.clone(),
+            heuristic_statistics: if self.config.enable_heuristic_agents {
+                Some(crate::heuristics::HeuristicStats::from_entities(&self.entities))
+            } else {
+                None
+            },
             trade_agreement_statistics: None,         // Simplified
             insurance_statistics: None,               // Simplified
             asset_statistics: None,                   // Simplified for interactive mode
@@ -7230,6 +7291,8 @@ impl SimulationEngine {
             trade_agreement_counter: checkpoint.trade_agreement_counter,
             trust_network: checkpoint.trust_network,
             nepotism_stats: checkpoint.nepotism_stats,
+            heuristic_previous_sales: HashMap::new(),
+            heuristic_current_sales: HashMap::new(),
             insurances: checkpoint.insurances,
             insurance_counter: checkpoint.insurance_counter,
             total_insurance_policies_issued: checkpoint.total_insurance_policies_issued,

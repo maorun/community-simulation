@@ -1104,6 +1104,23 @@ pub struct SimulationConfig {
     #[serde(default)]
     pub enable_nepotism: bool,
 
+    /// Enable heuristic (boundedly rational) agents.
+    ///
+    /// When enabled, a share of the persons uses a rule of thumb to choose a seller:
+    /// cheapest seller, trust friends, or follow the majority.
+    /// The other persons keep the standard behavior. Heuristics do not apply when
+    /// `enable_nepotism` is on, because nepotism has its own seller choice.
+    /// Default: false
+    #[serde(default)]
+    pub enable_heuristic_agents: bool,
+
+    /// Share of persons that use a heuristic (0.0 to 1.0).
+    ///
+    /// Only used when `enable_heuristic_agents` is true.
+    /// Default: 0.5
+    #[serde(default = "default_heuristic_agent_share")]
+    pub heuristic_agent_share: f64,
+
     /// Weight of nepotism/favoritism in partner selection decisions (0.0 to 1.0).
     ///
     /// - 0.0: Purely meritocratic / economic choice (lowest price / best reputation).
@@ -2229,6 +2246,10 @@ fn default_rl_discount_factor() -> f64 {
     0.9 // Moderately forward-looking
 }
 
+fn default_heuristic_agent_share() -> f64 {
+    0.5 // Half of the persons use a heuristic
+}
+
 fn default_rl_epsilon() -> f64 {
     0.1 // 10% exploration
 }
@@ -2438,6 +2459,8 @@ impl Default for SimulationConfig {
             trade_agreement_duration: 100,  // Agreements last 100 steps
             enable_trust_networks: false,   // Disabled by default
             enable_influence: false,        // Disabled by default
+            enable_heuristic_agents: false, // Disabled by default
+            heuristic_agent_share: default_heuristic_agent_share(), // 0.5
             enable_nepotism: false,         // Disabled by default
             nepotism_bias: 0.3,             // 30% default favoritism bias
             nepotism_outgroup_penalty: 0.15, // 15% default outgroup surcharge
@@ -3091,6 +3114,17 @@ impl SimulationConfig {
                      Solution: Set enable_friendships=true or disable influence tracking.".to_string(),
                 ));
             }
+        }
+
+        // Heuristic agent validation
+        if !self.heuristic_agent_share.is_finite()
+            || !(0.0..=1.0).contains(&self.heuristic_agent_share)
+        {
+            return Err(SimulationError::ValidationError(format!(
+                "Configuration Error: heuristic_agent_share must be between 0.0 and 1.0, got {}. \
+                 Solution: Set heuristic_agent_share within [0.0, 1.0].",
+                self.heuristic_agent_share
+            )));
         }
 
         // Nepotism system validation

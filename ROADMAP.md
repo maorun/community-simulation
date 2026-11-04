@@ -52,15 +52,6 @@ These items have a high value and a clear design. Do them after Priority 1.
 - **Goal:** Add guarantees as a second signal. A guarantee costs money. The seller pays the buyer if the quality is lower than the promised quality.
 - **Acceptance test:** In the lemons market scenario, guarantees keep more high-quality sellers in the market than no signal.
 
-### Heuristics and bounded rationality
-
-- **Rank:** Feature model. Total 34/40 (harmony 9, research 8, practice 8, teaching 9). Effort S.
-- **Code:** `src/person.rs`, `src/plugin.rs` (`AgentStrategy`).
-- **Dependency:** The existing reinforcement learning.
-- **Goal:** Add rule-of-thumb strategies, for example "buy from the cheapest seller", "trust friends", and "follow the majority".
-- **Goal:** Compare the strategies with optimizing agents.
-- **Acceptance test:** A scenario with both agent types shows a measurable difference in average wealth.
-
 ### Market power and cartels
 
 - **Rank:** Feature model. Total 34/40 (harmony 7, research 9, practice 10, teaching 8). Effort L.
