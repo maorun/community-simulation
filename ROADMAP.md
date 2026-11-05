@@ -210,6 +210,17 @@ These items have a medium value. Start them when the items above are done or blo
 - **Goal:** Run the same seed with `RAYON_NUM_THREADS=1` and with several threads.
 - **Acceptance test:** Both runs give identical results.
 
+### Save trust networks in checkpoints
+
+- **Rank:** Maintenance model. Total 24/40 (reach 6, safety 8, speed 5, unblocks 5). Effort S. Estimate.
+- **Code:** `src/trust_network.rs` (`TrustNetwork::trust_cache`), `src/engine.rs` (`SimulationCheckpoint.trust_network`, `save_checkpoint`).
+- **Problem:** `save_checkpoint` fails when `enable_trust_networks` is on. `serde_json` returns the error "key must be a string".
+- **Cause:** `trust_cache` is a `HashMap<(PersonId, PersonId), TrustLevel>`. JSON object keys must be strings, so a tuple key cannot be written.
+- **Goal:** Make the trust network serializable. Skip the cache with `#[serde(skip)]` and rebuild it after load, or write it as a sorted list of pairs.
+- **Goal:** Keep old checkpoints readable. Keep the run after a resume identical to an uninterrupted run.
+- **Acceptance test:** A run with `enable_friendships` and `enable_trust_networks` saves a checkpoint, loads it, and continues. The result is equal to an uninterrupted run with the same seed.
+- **Note:** Turn on `enable_trust_networks` again in `test_checkpoint_with_many_features_enabled` in `src/tests/mod.rs`. Remove the comment about the JSON key error.
+
 ### Real-time dashboard and WASM playground
 
 - **Rank:** Feature model. Total 24/40 (harmony 5, research 5, practice 6, teaching 8). Effort M.
